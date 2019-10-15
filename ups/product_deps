@@ -61,6 +61,7 @@ table_fragment_end
 
 product          version
 dunetpc          v08_32_01
+cetbuildtools	 v7_12_01	-	only_for_build
 end_product_list
 
 
