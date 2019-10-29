@@ -14,7 +14,7 @@
 #include "fhiclcpp/ParameterSet.h"
 #include "art/Framework/Principal/Event.h"
 
-#include "dunetpc/dune/DuneObj/ProtoDUNEBeamEvent.h"
+#include "dune/DuneObj/ProtoDUNEBeamEvent.h"
 #include "ProtoDUNEDataUtils.h"
 #include "lardataobj/RecoBase/Track.h"
 
