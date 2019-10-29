@@ -25,11 +25,13 @@ ENDIF()
 
 
 set(CMAKE_MODULE_PATH $ENV{CANVAS_ROOT_IO_DIR}/Modules
-		      $ENV{CETBUILDTOOLS_DIR}/Modules
-		      ${CMAKE_MODULE_PATH})
+                      $ENV{CETBUILDTOOLS_DIR}/Modules
+                      ${CMAKE_MODULE_PATH})
 
 include(CetCMakeEnv)
 cet_cmake_env()
+
+set_install_root()
 
 cet_set_compiler_flags(DIAGS CAUTIOUS
   WERROR
@@ -40,7 +42,37 @@ cet_set_compiler_flags(DIAGS CAUTIOUS
 cet_report_compiler_flags()
 
 # these are minimum required versions, not the actual product versions
-find_ups_product( dunetpc )
+find_ups_product( dunetpc v08_31_01)
+find_ups_product( larcoreobj )
+find_ups_product( larcore v1_00_00 )
+find_ups_product( larevt v1_00_00 )
+find_ups_product( lardataobj )
+find_ups_product( lardataalg )
+find_ups_product( lardata v1_00_00 )
+find_ups_product( larpandora v1_00_00 )
+find_ups_product( pandora )
+find_ups_product( larreco v1_00_00 )
+find_ups_product( larana v1_00_00 )
+find_ups_product( nutools v1_00_00 )
+find_ups_product( nug4 )
+find_ups_product( nugen )
+find_ups_product( genie )
+find_ups_product( nurandom )
+find_ups_product( art v1_09_00 )
+find_ups_product(art_root_io)
+find_ups_product( clhep v2_1_3_0 )
+find_ups_product( messagefacility v1_10_00 )
+find_ups_product( cetbuildtools v3_10_00 )
+find_ups_product( postgresql v9_1_5 )
+find_ups_product( lbne_raw_data )
+find_ups_product( dune_raw_data )
+find_ups_product( dunepdsprce v0_0_3 )
+find_ups_product( artdaq_core v01_03_6 )
+find_ups_product( ifdh_art )
+find_ups_product( ifdhc )
+find_ups_geant4( )
+find_ups_product( systematicstools v00_01_01 )
+find_ups_product( nusystematics v00_01_01 )
 
 # macros for dictionary and simple_plugin
 include(ArtDictionary)
@@ -48,7 +80,7 @@ include(ArtMake)
 include(BuildPlugins)
 
 # ADD SOURCE CODE SUBDIRECTORIES HERE
-#add_subdirectory(protoduneana)
+add_subdirectory(protoduneana)
 
 # Unit tests.
 #add_subdirectory(test)

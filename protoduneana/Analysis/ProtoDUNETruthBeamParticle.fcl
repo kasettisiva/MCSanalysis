@@ -1,0 +1,10 @@
+BEGIN_PROLOG
+
+ProtoDUNETruthBeamParticle_params:
+{
+      module_type:          "ProtoDUNETruthBeamParticle"
+      Pdg:                  [0] # use zero to select all 
+      SaveOnlyGoodParticle: false
+}
+
+END_PROLOG

@@ -1,0 +1,11 @@
+BEGIN_PROLOG
+
+default_readbeaminfo:
+{ 
+  module_type: "ReadBeamInfo"
+  BeamLabel: "generator" 
+}
+
+protodune_readbeaminfo: @local::default_readbeaminfo
+
+END_PROLOG

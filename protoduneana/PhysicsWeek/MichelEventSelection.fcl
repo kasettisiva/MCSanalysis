@@ -1,0 +1,24 @@
+#include "trackfinderalgorithms.fcl"
+#include "calorimetry_dune35t.fcl"
+
+BEGIN_PROLOG
+
+MichelEventSelection:
+{
+  module_type: "MichelEventSelection"
+
+  FidVolCut: 5
+  
+  TrackModuleLabel: "pmtrack"
+  NNetModuleLabel: "emtrkmichelid:emtrkmichel"
+  ParticleModuleLabel: "largeant"
+
+  Bestview: 2
+
+  CalorimetryAlg: @local::dune35t_calorimetryalgmc
+  
+  MichelCloseHitRadius: 8.0
+  CloseHitsThreshold: 8
+  CNNThreshSelect: 0.9
+}
+END_PROLOG

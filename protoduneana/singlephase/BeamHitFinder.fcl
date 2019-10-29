@@ -1,0 +1,13 @@
+BEGIN_PROLOG
+
+protodune_beamhitfinder:
+{
+  module_type:          "BeamHitFinder"
+  HitModuleLabel:      "hitpdune"
+  BeamPos:              [-27, 423, 0]
+  BeamDir:              [-0.19, -0.13, 0.97]
+  Tolerance:            20
+  ToleranceWire:        20
+}
+
+END_PROLOG

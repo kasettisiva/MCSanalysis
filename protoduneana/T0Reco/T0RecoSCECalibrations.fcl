@@ -1,0 +1,22 @@
+BEGIN_PROLOG
+
+T0RecoSCECalibrations: {
+ module_type      : "T0RecoSCECalibrations"
+ TrackProducer    : "pandoraTrack"
+ HitProducer      : "pandoraTrack"
+ T0Producer       : "pandora"
+ FlashProducer    : "opflashInternal"
+ TriggerProducer  : "opflashExternal"
+ CaloProducer     : "pandoracalo"
+ Resolution       : 25.0  # cm
+ PEmin            : 20.0  # PE
+ TimeRes          : 10.0  # us
+ RecoT0TimeOffset : -6.0  # us
+ Data             : "true"
+ debug            : false
+ UseMC            : false
+ CathodeOnly      : false
+ }
+ 
+END_PROLOG
+

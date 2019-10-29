@@ -1,0 +1,28 @@
+# add "#include another.fcl" statements out of PROLOG block, e.g.:
+# #include "trackfinderalgorithms.fcl"
+
+BEGIN_PROLOG
+
+cluster_counter:
+{
+   module_type:          "ClusterCounter"
+
+   ClusterModuleLabel:   "linecluster"
+   MinSize:              10
+}
+
+
+
+cluster_counter2:               @local::cluster_counter
+cluster_counter2.module_type:   "ClusterCounter2"
+
+cluster_counter3:               @local::cluster_counter
+cluster_counter3.module_type:   "ClusterCounter3"
+
+cluster_counter4:               @local::cluster_counter
+cluster_counter4.module_type:   "ClusterCounter4"
+
+cluster_counter5:               @local::cluster_counter
+cluster_counter5.module_type:   "ClusterCounter5"
+
+END_PROLOG

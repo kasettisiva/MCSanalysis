@@ -1,0 +1,43 @@
+#include "ProtoDUNEBeamlineUtils.fcl"
+
+BEGIN_PROLOG
+
+pion_abscex_filter: {
+  module_type: "PionAbsCexSelection"
+  TrackerTag: "pandoraTrack"
+  PFParticleTag: "pandora"
+  ShowerTag: "pandoraShower"
+  CalorimetryTag: "pandoracalo"
+  CalorimetryParameters: {
+    PlaneID:      2
+    betap:        0.212
+    Rho:          1.383
+    Efield:       0.50
+    Wion:         23.6e-6
+    alpha:        0.93
+    norm_factor:  0.983
+    calib_factor: 6.155e-3
+    X_correction: "/dune/app/users/apaudel/v071100/run5387_new/run_5387_Xcalibration.root"
+  }
+  GeneratorTag:           "generator"
+  BeamlineUtils: @local::standard_protodunebeamlineutils
+
+  UseMVA: "false"
+
+  #Cuts in cm
+  TrackStartXCut: [6., 14.]
+  TrackStartYCut: [-5., 10.]
+  TrackStartZCut: [30., 36.]
+
+  TrackEndZCut: 195.
+
+  TrackDirCut: .93
+
+  StrictNTracks: false
+
+  DaughterCNNCut: 0.1
+  Chi2PIDCut: 50.
+  dEdX_template_name:     "/dune/data/users/calcuttj/dEdxrestemplates.root"
+}
+
+END_PROLOG

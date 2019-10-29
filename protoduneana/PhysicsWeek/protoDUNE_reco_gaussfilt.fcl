@@ -1,0 +1,16 @@
+#include "protoDUNE_reco.fcl"
+
+# Gaussian filter, with normalization scaled to match previous settings w.r.t. hit amplitude
+# This may impact the dE/dx calculation, which needs to be adjusted to accuont for the increase in hit area
+# Better to adjust hit thresholds instead of using these factors, but doing this for now to make sure no hits are lost...
+services.SignalShapingServiceDUNE.ColFilter:       "1.14*1.53*(x>0.0)*gaus"
+services.SignalShapingServiceDUNE.ColFilterParams: [ 1.0, 0.0, 0.1 ]
+services.SignalShapingServiceDUNE.IndUFilter:       "1.53*(x>0.0)*gaus"
+services.SignalShapingServiceDUNE.IndUFilterParams: [ 1.0, 0.0, 0.1 ]
+services.SignalShapingServiceDUNE.IndVFilter:       "1.36*1.53*(x>0.0)*gaus"
+services.SignalShapingServiceDUNE.IndVFilterParams: [ 1.0, 0.0, 0.1 ]
+
+#physics.producers.gaushit.MinSig:    [4.4, 4.4, 4.4] #scaled up from MicroBooNE to match pDUNE-SP wire length (what we should use if remove factors added in before "(x>0.0)" in filter above)
+#physics.producers.gaushit.MinWidth:  [1.0, 1.0, 1.0]
+
+# NOTE:  if remove factors before "(x>0.0)" in filter, may need lower ROI-finding thresholds as well by factor of 3.4/4.4

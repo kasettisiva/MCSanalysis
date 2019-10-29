@@ -1,0 +1,154 @@
+#include "hitfindermodules_dune.fcl"
+#include "filters.fcl"
+#include "signalservices_dune.fcl"
+#include "caldata_dune.fcl"
+#include "trackfindermodules_dune.fcl"
+#include "ecalibration.fcl"
+#include "triggeralgo_service.fcl"
+#include "photpropservices_dune.fcl"
+#include "ProtoDUNEDataUtils.fcl"
+#include "ProtoDUNEBeamlineFilter.fcl"
+#include "ProtoDUNEBeamlineUtils.fcl"
+
+BEGIN_PROLOG
+
+pionanalysis:
+{
+  module_type: "PionCrossSectionAnalyzer"
+  SpacePointModuleLabel:  "reco3d"
+  BeamModuleLabel:        "beamevent"
+  TrackModuleLabel:       "pandoraTrack"
+  TimeDecoderModuleLabel: "timingrawdecoder:daq"
+
+  CalorimetryTag:         "pandoracalo"
+  TrackerTag:             "pandoraTrack"
+  ShowerTag:              "pandoraShower"
+  PFParticleTag:          "pandora"
+  GeneratorTag:           "generator"
+  Verbose:                true
+  DataUtils: @local::standard_protodunedatautils
+  BeamlineUtils: @local::standard_protodunebeamlineutils
+
+
+  
+  #####Track stitching
+  BrokenTrackZ_low:   220
+  BrokenTrackZ_high:  230
+  StitchTrackZ_low:   232
+  StitchTrackZ_high:  240
+  StitchXTol:         10
+  StitchYTol:         10
+
+  CalorimetryParameters: {
+    PlaneID:      2
+    betap:        0.212
+    Rho:          1.383
+    Efield:       0.50
+    Wion:         23.6e-6
+    alpha:        0.93
+    norm_factor:  0.983
+    calib_factor: 6.155e-3
+    X_correction: "/dune/app/users/apaudel/v071100/run5387_new/run_5387_Xcalibration.root"
+  }
+
+  BrokenTrackParameters: {
+    BrokenTrackZ_low:  220
+    BrokenTrackZ_high: 230
+                       
+    StitchTrackZ_low:  232 
+    StitchTrackZ_high: 240
+                       
+    StitchXTol:        10
+    StitchYTol:        10
+  }
+
+
+}
+
+END_PROLOG
+
+
+
+#process_name: pionanalysis
+#
+#services:
+#{
+#  #Load the service that manages root files for histograms.
+#  TFileService: { fileName: "Beam.root" }
+#  RandomNumberGenerator: {}                     #ART native random number generator
+#  @table::protodune_services
+#  message:      @local::standard_info
+#  FileCatalogMetadata: @local::art_file_catalog_mc
+#}
+#
+##source is now a root file
+#source:
+#{
+#  module_type: RootInput
+#  maxEvents:  -1            # Number of events to create
+#}
+#
+#outputs:
+#{
+# #out1:
+# #{
+# #  module_type: RootOutput
+# #  fileName:    "Beam.root"    #default file name, can override from command line with -o or --output
+# #  dataTier: "reconstructed"
+# #  fastCloning: false
+# #} 
+#}
+#
+#physics:
+#{
+# producers:{
+#
+#  }
+# filters:  {
+#    f1: @local::standard_protodunebeamlinefilter_Proton_1GeV
+#	
+# }
+# 
+# fpath: [f1]
+
+# analyzers:{
+#   pionanalysis:
+#   {
+#     module_type: "pion"
+#
+#     SpacePointModuleLabel:  "reco3d"
+#     BeamModuleLabel:        "beamevent"
+#     TrackModuleLabel:       "pandoraTrack"
+#     TimeDecoderModuleLabel: "timingrawdecoder:daq"
+#
+#     CalorimetryTag:         "pandoracalo"
+#     TrackerTag:             "pandoraTrack"
+#     ShowerTag:              "pandoraShower"
+#     PFParticleTag:          "pandora"
+#     GeneratorTag:           "generator"
+#     Verbose:                true
+#     DataUtils: @local::standard_protodunedatautils
+#
+#     SelectEvents: [fpath]
+#   }
+# }
+ 
+ 
+ #define the producer and filter modules for this path, order matters, 
+ #filters reject all following items.  see lines starting physics.producers below
+# ana:  [ pionanalysis ]
+# #ana: []
+# 
+# #define the output stream, there could be more than one if using filters 
+## stream1:  [ out1 ]
+#
+# #trigger_paths is a keyword and contains the paths that modify the art::event, 
+# #ie filters and producers
+# #trigger_paths: [reco] 
+#
+# #end_paths is a keyword and contains the paths that do not modify the art::Event, 
+# #ie analyzers and output streams.  these all run simultaneously
+# #end_paths:     [ stream1, ana ] 
+# end_paths:     [  ana ] 
+#}
+

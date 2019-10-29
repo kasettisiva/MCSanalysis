@@ -1,0 +1,28 @@
+#include "protoDUNE_reco.fcl"
+
+process_name: RecoSpAndCnn
+
+#services.message.destinations.LogStandardOut.threshold:  "INFO"
+
+source.inputCommands:     ["keep *_*_*_*", "drop *_*_*_Reco*" ]
+
+# reconstruction (producers)
+
+physics.producers.reco3d1: @local::standard_spacepointsolver
+physics.producers.reco3d1.HitLabel: "linecluster"
+
+physics.reco:          [ rns, caldata, gaushit, reco3d, hitpdune, linecluster, reco3d1, emtrkmichelid, pmtrack ]
+physics.trigger_paths: [ reco ]
+
+# analysis (analyzers)
+
+physics.analyzers.readspandcnn:
+{
+   module_type:             "ReadSpacePointAndCnn"
+
+   HitsModuleLabel:         "linecluster"
+   SpacePointModuleLabel:   "reco3d1"
+   CnnModuleLabel:          "emtrkmichelid:emtrkmichel"
+}
+physics.ana:       [ readspandcnn ]
+physics.end_paths: [ ana, stream1 ]

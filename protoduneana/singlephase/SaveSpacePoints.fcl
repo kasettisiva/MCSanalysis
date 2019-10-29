@@ -1,0 +1,12 @@
+BEGIN_PROLOG
+
+proto_savesps:
+{
+  module_type:            "SaveSpacePoints"
+  SpacePointModuleLabel:  "reco3d"
+  BeamModuleLabel:        "beamevent"
+  TrackModuleLabel:       "pandoraTrack"
+  TimeDecoderModuleLabel: "timingrawdecoder:daq"
+}
+
+END_PROLOG
