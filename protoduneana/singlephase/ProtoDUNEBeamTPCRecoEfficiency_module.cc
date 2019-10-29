@@ -10,7 +10,7 @@
 #include "art/Framework/Core/ModuleMacros.h" 
 #include "art/Framework/Principal/Event.h" 
 
-#include "protoduneana/Analysis/ProtoDUNEDataUtils.h"
+#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEDataUtils.h"
 #include "protoduneana/Analysis/ProtoDUNEPFParticleUtils.h"
 #include "lardataobj/RawData/RDTimeStamp.h"
 #include "dune/Protodune/singlephase/CTB/data/pdspctb.h"

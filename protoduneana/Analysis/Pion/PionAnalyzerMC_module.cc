@@ -33,10 +33,10 @@
 #include "protoduneana/Analysis/ProtoDUNEShowerUtils.h"
 #include "protoduneana/Analysis/ProtoDUNETruthUtils.h"
 #include "protoduneana/Analysis/ProtoDUNEPFParticleUtils.h"
-#include "protoduneana/Analysis/ProtoDUNEDataUtils.h"
+
 #include "protoduneana/Analysis/ProtoDUNEBeamlineUtils.h"
 #include "protoduneana/Analysis/ProtoDUNEBeamCuts.h"
-
+#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEDataUtils.h"
 #include "lardataobj/RecoBase/SpacePoint.h"
 #include "lardataobj/RecoBase/PointCharge.h"
 #include "lardataobj/RecoBase/Track.h"

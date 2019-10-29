@@ -46,7 +46,7 @@
 #include "protoduneana/Analysis/ProtoDUNEShowerUtils.h"
 #include "protoduneana/Analysis/ProtoDUNETruthUtils.h"
 #include "protoduneana/Analysis/ProtoDUNEPFParticleUtils.h"
-#include "protoduneana/Analysis/ProtoDUNEDataUtils.h"
+#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEDataUtils.h"
 #include "protoduneana/Analysis/ProtoDUNEBeamlineUtils.h"
 
 #include "larevt/SpaceChargeServices/SpaceChargeService.h"

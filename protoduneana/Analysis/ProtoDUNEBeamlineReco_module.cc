@@ -16,8 +16,7 @@
 #include "art/Framework/Core/ModuleMacros.h"
 #include "messagefacility/MessageLogger/MessageLogger.h"
 #include "fhiclcpp/ParameterSet.h"
-
-#include "protoduneana/Analysis/ProtoDUNEDataUtils.h"
+#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEDataUtils.h"
 #include "protoduneana/Analysis/ProtoDUNEBeamlineUtils.h"
 
 #include "lardataobj/RecoBase/Track.h"

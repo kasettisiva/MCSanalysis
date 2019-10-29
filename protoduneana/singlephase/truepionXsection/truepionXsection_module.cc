@@ -57,7 +57,7 @@
 #include "protoduneana/Analysis/ProtoDUNEShowerUtils.h"
 #include "protoduneana/Analysis/ProtoDUNETruthUtils.h"
 #include "protoduneana/Analysis/ProtoDUNEPFParticleUtils.h"
-#include "protoduneana/Analysis/ProtoDUNEDataUtils.h"
+#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEDataUtils.h"
 
 #include "TFile.h"
 #include "TTree.h"

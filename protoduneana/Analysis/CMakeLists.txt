@@ -25,7 +25,6 @@ art_make(BASENAME_ONLY
   larsim_Simulation
   lardataobj_RawData
   lardataobj_Simulation
-  dune-raw-data_Services_ChannelMap_PdspChannelMapService_service
   dune_DuneObj
   larsim_MCCheater_PhotonBackTrackerService_service           
   larsim_MCCheater_BackTrackerService_service           
@@ -35,6 +34,7 @@ art_make(BASENAME_ONLY
   ${ROOT_BASIC_LIB_LIST}
   MODULE_LIBRARIES
   ProtoDUNEAnaUtils
+  ProtoDUNEDataUtils
   )
 install_headers()
 install_fhicl()
