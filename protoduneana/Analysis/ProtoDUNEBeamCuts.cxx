@@ -136,9 +136,13 @@ bool protoana::ProtoDUNEBeamCuts::IsBeamlike( const recob::Shower & shower, art:
    double startZ = shower.ShowerStart().Z();
 
    auto startDir = shower.Direction();
-   double showerDirX = startDir.X();
-   double showerDirY = startDir.Y();
-   double showerDirZ = startDir.Z();
+
+   //flip the direction if pointing backward
+   double flip = ( startDir.Z() < 0. ? -1. : 1. );
+
+   double showerDirX = flip * startDir.X();
+   double showerDirY = flip * startDir.Y();
+   double showerDirZ = flip * startDir.Z();
 
    double deltaX = startX - theBeamVals.X;
    double deltaY = startY - theBeamVals.Y;

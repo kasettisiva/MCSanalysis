@@ -15,7 +15,6 @@
 #include "art/Framework/Principal/Event.h"
 
 #include "dune/DuneObj/ProtoDUNEBeamEvent.h"
-#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEDataUtils.h"
 #include "lardataobj/RecoBase/Track.h"
 
 #include <set>

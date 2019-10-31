@@ -581,6 +581,25 @@ const std::vector<const recob::Hit*> protoana::ProtoDUNEPFParticleUtils::GetPFPa
   return pfpHits;
 }
 
+const std::vector< art::Ptr< recob::Hit > > protoana::ProtoDUNEPFParticleUtils::GetPFParticleHits_Ptrs(const recob::PFParticle &particle, art::Event const &evt, const std::string particleLabel) const{
+
+  const std::vector<const recob::Cluster*> pfpClusters = GetPFParticleClusters(particle,evt,particleLabel);
+  auto allClusters = evt.getValidHandle<std::vector<recob::Cluster>>(particleLabel);
+  const art::FindManyP<recob::Hit> findHits(allClusters,evt,particleLabel);
+
+  std::vector< art::Ptr< recob::Hit > > pfpHits;
+ 
+  // Store all of the hits in a single vector 
+  for(auto cluster : pfpClusters){
+    const std::vector<art::Ptr<recob::Hit>> clusterHits = findHits.at(cluster->ID());
+    for(auto hit : clusterHits){
+      pfpHits.push_back(hit);
+    }
+  }
+
+  return pfpHits;
+}
+
 // Get the number of hits
 unsigned int protoana::ProtoDUNEPFParticleUtils::GetNumberPFParticleHits(const recob::PFParticle &particle, art::Event const &evt, const std::string particleLabel) const{
 
