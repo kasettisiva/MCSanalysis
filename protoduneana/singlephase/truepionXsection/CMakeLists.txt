@@ -1,3 +1,4 @@
+find_ups_product( dunetpc )
 art_make(BASENAME_ONLY
   MODULE_LIBRARIES
   ${ART_FRAMEWORK_CORE}
