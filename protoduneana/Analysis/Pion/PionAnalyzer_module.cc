@@ -32,7 +32,6 @@
 #include "protoduneana/Analysis/ProtoDUNEShowerUtils.h"
 #include "protoduneana/Analysis/ProtoDUNETruthUtils.h"
 #include "protoduneana/Analysis/ProtoDUNEPFParticleUtils.h"
-#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEDataUtils.h"
 #include "protoduneana/Analysis/ProtoDUNEBeamlineUtils.h"
 
 #include "lardataobj/RecoBase/SpacePoint.h"
@@ -129,7 +128,6 @@ private:
   std::string dEdX_template_name;
   TFile dEdX_template_file;
   bool fVerbose;             
-  fhicl::ParameterSet dataUtil;
   fhicl::ParameterSet beamlineUtil;
   double fBrokenTrackZ_low, fBrokenTrackZ_high;
   double fStitchTrackZ_low, fStitchTrackZ_high;
@@ -155,7 +153,6 @@ pionana::PionAnalyzer::PionAnalyzer(fhicl::ParameterSet const& p)
   dEdX_template_name(p.get<std::string>("dEdX_template_name")),
   dEdX_template_file( dEdX_template_name.c_str(), "OPEN" ),
   fVerbose(p.get<bool>("Verbose")),
-  dataUtil(p.get<fhicl::ParameterSet>("DataUtils")),
   beamlineUtil( p.get<fhicl::ParameterSet>("BeamlineUtils")),
 
   fBrokenTrackZ_low( p.get<double>("BrokenTrackZ_low") ),
