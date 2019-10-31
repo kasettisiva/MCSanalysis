@@ -53,10 +53,10 @@
 #include "dune/DuneObj/ProtoDUNEBeamEvent.h"
 #include "larevt/SpaceChargeServices/SpaceChargeService.h"
 
-#include "protoduneana/Analysis/ProtoDUNETrackUtils.h"
-#include "protoduneana/Analysis/ProtoDUNEShowerUtils.h"
-#include "protoduneana/Analysis/ProtoDUNETruthUtils.h"
-#include "protoduneana/Analysis/ProtoDUNEPFParticleUtils.h"
+#include "dune/Protodune/singlephase/DataUtils/ProtoDUNETrackUtils.h"
+#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEShowerUtils.h"
+#include "dune/Protodune/singlephase/DataUtils/ProtoDUNETruthUtils.h"
+#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEPFParticleUtils.h"
 #include "dune/Protodune/singlephase/DataUtils/ProtoDUNEDataUtils.h"
 
 #include "TFile.h"

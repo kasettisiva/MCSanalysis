@@ -21,7 +21,7 @@ art_make(BASENAME_ONLY
   larsim_MCCheater_ParticleInventoryService_service
   larreco_RecoAlg
   ${ROOT_BASIC_LIB_LIST}
-  ProtoDUNEAnaUtils
+  ProtoDUNEDataUtils
   )
 install_headers()
 install_fhicl()

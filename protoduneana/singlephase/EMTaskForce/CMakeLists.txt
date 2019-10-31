@@ -4,8 +4,8 @@ art_make(BASENAME_ONLY
   ${ART_FRAMEWORK_PRINCIPAL}
   ${ART_FRAMEWORK_SERVICES_REGISTRY}
   ${ART_FRAMEWORK_SERVICES_BASIC}
-  ${ART_ROOT_IO_TFILE_SUPPORT} ${ROOT_CORE}
-  ${ART_ROOT_IO_TFILESERVICE_SERVICE}
+  ${ART_FRAMEWORK_SERVICES_OPTIONAL}
+  ${ART_FRAMEWORK_SERVICES_OPTIONAL_TFILESERVICE_SERVICE}
   ${ART_PERSISTENCY_COMMON}
   canvas
   art_Persistency_Provenance
@@ -14,6 +14,7 @@ art_make(BASENAME_ONLY
   cetlib cetlib_except
   lardataobj_RecoBase
   lardata_Utilities
+  lardata_ArtDataHelper
   larcorealg_Geometry
   nusimdata_SimulationBase
   larsim_MCCheater_PhotonBackTrackerService_service           
@@ -26,3 +27,4 @@ art_make(BASENAME_ONLY
 install_headers()
 install_fhicl()
 install_source()
+

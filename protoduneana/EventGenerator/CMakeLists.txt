@@ -26,7 +26,7 @@ art_make( BASENAME_ONLY
                         ${SQLITE3}
                         ${ROOT_EG}
                         ${IFDH}
-			ProtoDUNEAnaUtils
+			ProtoDUNEDataUtils
  )
 
 
