@@ -3,7 +3,7 @@
 # The *parent* line must the first non-commented line and defines this product and version
 # The version must be of the form vxx_yy_zz (e.g. v01_02_03).
 
-parent protoduneana v08_33_00_02
+parent protoduneana v08_34_00
 
 defaultqual e17
 
@@ -60,7 +60,7 @@ table_fragment_end
 # Add the dependent product and version
 
 product          version
-dunetpc          v08_33_00_02
+dunetpc          v08_43_00
 cetbuildtools	 v7_12_01	-	only_for_build
 end_product_list
 
