@@ -13,6 +13,7 @@ art_make(BASENAME_ONLY
   ${ART_UTILITIES}
   ${MF_MESSAGELOGGER}
   cetlib cetlib_except
+  larreco_Calorimetry
   lardataobj_RecoBase
   lardata_Utilities
   lardata_ArtDataHelper
@@ -24,6 +25,8 @@ art_make(BASENAME_ONLY
   larreco_RecoAlg
   ${ROOT_BASIC_LIB_LIST}
   ProtoDUNEDataUtils
+  ${ART_ROOT_IO_TFILE_SUPPORT} ${ROOT_CORE}
+  ${ART_ROOT_IO_TFILESERVICE_SERVICE}
   )
 install_headers()
 install_fhicl()

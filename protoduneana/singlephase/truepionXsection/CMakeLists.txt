@@ -1,18 +1,7 @@
 find_ups_product( dunetpc )
+
 art_make(BASENAME_ONLY
   MODULE_LIBRARIES
-  ${ART_FRAMEWORK_CORE}
-  ${ART_FRAMEWORK_PRINCIPAL}
-  ${ART_FRAMEWORK_SERVICES_REGISTRY}
-  ${ART_FRAMEWORK_SERVICES_BASIC}
-  ${ART_ROOT_IO_TFILE_SUPPORT} ${ROOT_CORE}
-  ${ART_ROOT_IO_TFILESERVICE_SERVICE}
-  ${ART_PERSISTENCY_COMMON}
-  canvas
-  art_Persistency_Provenance
-  ${ART_UTILITIES}
-  ${MF_MESSAGELOGGER}
-  cetlib cetlib_except
   lardataobj_RecoBase
   lardata_Utilities
   larcorealg_Geometry
@@ -23,6 +12,21 @@ art_make(BASENAME_ONLY
   larreco_RecoAlg
   ${ROOT_BASIC_LIB_LIST}
   ProtoDUNEDataUtils
+  larsim_Simulation
+  lardataobj_Simulation
+  lardataobj_RawData
+  ${ART_FRAMEWORK_CORE}
+  ${ART_FRAMEWORK_PRINCIPAL}
+  ${ART_FRAMEWORK_SERVICES_REGISTRY}
+  ${ART_FRAMEWORK_SERVICES_BASIC}
+  art_root_io
+  ${ART_ROOT_IO_TFILE_SUPPORT} ${ROOT_CORE}
+  ${ART_ROOT_IO_TFILESERVICE_SERVICE}
+  art_Persistency_Common canvas
+  art_Persistency_Provenance canvas
+  art_Utilities canvas
+  ${MF_MESSAGELOGGER}
+  cetlib cetlib_except
   )
 install_headers()
 install_fhicl()
