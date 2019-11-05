@@ -2,7 +2,6 @@
 #include "services_dune.fcl"
 
 
-
 process_name: PionAna
 
 services:
@@ -53,3 +52,4 @@ physics.analyzers.pionana.SelectEvents: []
 physics.analyzers.pionana.NSliceCheck: 3
 physics.analyzers.pionana.CalorimetryTag: "pandoracaloSCE"
 physics.analyzers.pionana.HitTag: "hitpdune"
+#physics.analyzers.pionana.SaveHits: true

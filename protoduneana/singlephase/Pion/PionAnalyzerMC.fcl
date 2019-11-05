@@ -28,6 +28,7 @@ pionanalysis:
   BeamCuts: @local::Prod2BeamCuts 
 
   CalibrationPars: @local::CalorimetryParameters
+  SaveHits: false
 
 }
 

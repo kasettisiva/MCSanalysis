@@ -370,6 +370,11 @@ private:
   std::vector< double > reco_daughter_shower_none_score;
   std::vector< double > reco_daughter_shower_michel_score;
 
+  //New hits info
+  std::vector< double > hitsX, hitsY, hitsZ;
+  std::vector< std::vector< double > > reco_daughter_hitsX, reco_daughter_hitsY, reco_daughter_hitsZ;
+  std::vector< std::vector< double > > reco_daughter_shower_hitsX, reco_daughter_shower_hitsY, reco_daughter_shower_hitsZ;
+
 
   int nTrackDaughters, nShowerDaughters;
 
@@ -394,6 +399,7 @@ private:
   protoana::ProtoDUNEBeamCuts beam_cuts;
   fhicl::ParameterSet CalibrationPars;
   protoana::ProtoDUNECalibration calibration;
+  bool fSaveHits;
 };
 
 
@@ -413,7 +419,8 @@ pionana::PionAnalyzerMC::PionAnalyzerMC(fhicl::ParameterSet const& p)
   fNSliceCheck( p.get< int >("NSliceCheck") ),
   BeamPars(p.get<fhicl::ParameterSet>("BeamPars")),
   BeamCuts(p.get<fhicl::ParameterSet>("BeamCuts")),
-  CalibrationPars(p.get<fhicl::ParameterSet>("CalibrationPars"))
+  CalibrationPars(p.get<fhicl::ParameterSet>("CalibrationPars")),
+  fSaveHits( p.get<bool>( "SaveHits" ) )
 {
 
   templates[ 211 ]  = (TProfile*)dEdX_template_file.Get( "dedx_range_pi"  );
@@ -956,6 +963,13 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
       double y = thisTrack->Trajectory().LocationAtPoint(i).Y();
       double z = thisTrack->Trajectory().LocationAtPoint(i).Z();
 
+      if( fSaveHits ){
+        //saving all hit coordinates for beamtrack
+        hitsX.push_back(thisTrack->Trajectory().LocationAtPoint(i).X());
+        hitsY.push_back(thisTrack->Trajectory().LocationAtPoint(i).Y());
+        hitsZ.push_back(thisTrack->Trajectory().LocationAtPoint(i).Z());
+      }
+
       int slice = std::floor( ( thisTrack->Trajectory().LocationAtPoint(i).Z() - z0 ) / pitch );
       hitsToSlices[ theHit ] = slice;
       slicesToHits[ slice ].push_back( theHit );
@@ -1259,6 +1273,24 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
       reco_daughter_endX.push_back( daughterTrack->Trajectory().End().X() );
       reco_daughter_endY.push_back( daughterTrack->Trajectory().End().Y() );
       reco_daughter_endZ.push_back( daughterTrack->Trajectory().End().Z() );
+
+      //Write out Hits of Daughter Track Particles
+      if( fSaveHits ){
+        reco_daughter_hitsX.push_back( std::vector< double >() );
+        reco_daughter_hitsY.push_back( std::vector< double >() );
+        reco_daughter_hitsZ.push_back( std::vector< double >() );
+
+        for(size_t j = 0; j < daughterTrack->NumberTrajectoryPoints(); ++j){
+
+          reco_daughter_hitsX.back().push_back( daughterTrack->Trajectory().LocationAtPoint(j).X() );
+          reco_daughter_hitsY.back().push_back( daughterTrack->Trajectory().LocationAtPoint(j).Y() );
+          reco_daughter_hitsZ.back().push_back( daughterTrack->Trajectory().LocationAtPoint(j).Z() );
+
+          //std::cout << "Daughter | X = " << daughterTrack->Trajectory().LocationAtPoint(j).X() << " |Y = " << daughterTrack->Trajectory().LocationAtPoint(j).Y() << " |Z = " << daughterTrack->Trajectory().LocationAtPoint(j).Z() << std::endl;
+
+        }
+      }
+
 
       double delta_start = sqrt( ( reco_daughter_startX.back() - endX )*( reco_daughter_startX.back() - endX ) + 
                                  ( reco_daughter_startY.back() - endY )*( reco_daughter_startY.back() - endY ) +
@@ -1572,6 +1604,31 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
 
 
       reco_daughter_shower_len.push_back( daughterShowerFromRecoTrack->Length() );
+
+      //Write out Hits of Daughter Shower Particles, need to associate hits with space points
+      if( fSaveHits ){
+        reco_daughter_shower_hitsX.push_back( std::vector< double >() );
+        reco_daughter_shower_hitsY.push_back( std::vector< double >() );
+        reco_daughter_shower_hitsZ.push_back( std::vector< double >() );
+
+        const std::vector< const recob::Hit*> sh_hits = showerUtil.GetRecoShowerHits(*daughterShowerFromRecoTrack, evt, fShowerTag);
+        art::FindManyP< recob::SpacePoint > spFromShowerHits(sh_hits, evt, "pandora");
+     
+        for(size_t j = 0; j < sh_hits.size(); j++){
+
+          std::vector< art::Ptr< recob::SpacePoint >> sp = spFromShowerHits.at(j);
+          if( !sp.empty() ){
+                  //sp[0] apparently there can be more spacePoints for one shower Hit...?
+
+                  reco_daughter_shower_hitsX.back().push_back(sp[0]->XYZ()[0]); 
+                  reco_daughter_shower_hitsY.back().push_back(sp[0]->XYZ()[1]);
+                  reco_daughter_shower_hitsZ.back().push_back(sp[0]->XYZ()[2]);
+                  
+                  //std::cout << "SHOWER Daughter | X = " << sp[0]->XYZ()[0] << " |Y = " << sp[0]->XYZ()[1] << " |Z = " << sp[0]->XYZ()[2] << std::endl;
+
+          }
+        }
+      }
 
       std::cout << "Looking at shower dedx: ";
       std::cout << daughterShowerFromRecoTrack->dEdx().size() << std::endl;
@@ -2475,6 +2532,21 @@ void pionana::PionAnalyzerMC::beginJob()
   fTree->Branch("reco_beam_truth_daughter_shower_true_lens", &reco_beam_truth_daughter_shower_true_lens);
   fTree->Branch("reco_beam_truth_daughter_shower_good_reco", &reco_beam_truth_daughter_shower_good_reco);
 
+
+  if( fSaveHits ){
+    fTree->Branch( "hitsX", &hitsX );
+    fTree->Branch( "hitsY", &hitsY );
+    fTree->Branch( "hitsZ", &hitsZ );
+
+    fTree->Branch( "reco_daughter_hitsX", &reco_daughter_hitsX );
+    fTree->Branch( "reco_daughter_hitsY", &reco_daughter_hitsY );
+    fTree->Branch( "reco_daughter_hitsZ", &reco_daughter_hitsZ );
+
+    fTree->Branch( "reco_daughter_shower_hitsX", &reco_daughter_shower_hitsX );
+    fTree->Branch( "reco_daughter_shower_hitsY", &reco_daughter_shower_hitsY );
+    fTree->Branch( "reco_daughter_shower_hitsZ", &reco_daughter_shower_hitsZ );
+  }
+
 }
 
 void pionana::PionAnalyzerMC::endJob()
@@ -2809,6 +2881,20 @@ void pionana::PionAnalyzerMC::reset()
   reco_daughter_shower_truth_ID.clear();
   reco_daughter_shower_truth_Origin.clear();
   reco_daughter_shower_truth_ParID.clear();
+
+  //New Hits info
+  hitsX.clear();
+  hitsY.clear();
+  hitsZ.clear();
+
+  reco_daughter_hitsX.clear();
+  reco_daughter_hitsY.clear();
+  reco_daughter_hitsZ.clear();
+
+  reco_daughter_shower_hitsX.clear();
+  reco_daughter_shower_hitsY.clear();
+  reco_daughter_shower_hitsZ.clear();
+  //
 
 }
 
