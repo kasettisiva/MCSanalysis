@@ -36,6 +36,9 @@
 #include "dune/Protodune/singlephase/DataUtils/ProtoDUNEBeamlineUtils.h"
 #include "dune/Protodune/singlephase/DataUtils/ProtoDUNEBeamCuts.h"
 #include "dune/Protodune/singlephase/DataUtils/ProtoDUNEDataUtils.h"
+
+#include "dune/Protodune/singlephase/DataUtils/ProtoDUNECalibration.h"
+
 #include "lardataobj/RecoBase/SpacePoint.h"
 #include "lardataobj/RecoBase/PointCharge.h"
 #include "lardataobj/RecoBase/Track.h"
@@ -175,6 +178,7 @@ private:
   double trackDirX, trackDirY, trackDirZ;
   double trackEndDirX, trackEndDirY, trackEndDirZ;
   std::vector< double > dEdX, dQdX, resRange;
+  std::vector< double > calibrated_dEdX;
   int beamTrackID;
 
   std::string reco_beam_truth_EndProcess, alt_reco_beam_truth_EndProcess; //What process ended the reco beam particle
@@ -388,6 +392,8 @@ private:
   fhicl::ParameterSet BeamPars;
   fhicl::ParameterSet BeamCuts;
   protoana::ProtoDUNEBeamCuts beam_cuts;
+  fhicl::ParameterSet CalibrationPars;
+  protoana::ProtoDUNECalibration calibration;
 };
 
 
@@ -406,7 +412,8 @@ pionana::PionAnalyzerMC::PionAnalyzerMC(fhicl::ParameterSet const& p)
   fVerbose(p.get<bool>("Verbose")),
   fNSliceCheck( p.get< int >("NSliceCheck") ),
   BeamPars(p.get<fhicl::ParameterSet>("BeamPars")),
-  BeamCuts(p.get<fhicl::ParameterSet>("BeamCuts"))
+  BeamCuts(p.get<fhicl::ParameterSet>("BeamCuts")),
+  CalibrationPars(p.get<fhicl::ParameterSet>("CalibrationPars"))
 {
 
   templates[ 211 ]  = (TProfile*)dEdX_template_file.Get( "dedx_range_pi"  );
@@ -414,6 +421,7 @@ pionana::PionAnalyzerMC::PionAnalyzerMC(fhicl::ParameterSet const& p)
   templates[ 13 ]   = (TProfile*)dEdX_template_file.Get( "dedx_range_mu"  );
   templates[ 2212 ] = (TProfile*)dEdX_template_file.Get( "dedx_range_pro" );
 
+  calibration = protoana::ProtoDUNECalibration( CalibrationPars );
   beam_cuts = protoana::ProtoDUNEBeamCuts( BeamCuts );
 
   // Call appropriate consumes<>() for any products to be retrieved by this module.
@@ -1218,6 +1226,12 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
       dEdX.push_back( calo_dEdX[i] );
       resRange.push_back( calo_range[i] );
     }
+    ////////////////////////////////////////////
+    
+    //New Calibration
+    std::vector< float > new_dEdX = calibration.GetCalibratedCalorimetry(  *thisTrack, evt, fTrackerTag, fCalorimetryTag );
+    std::cout << "n dEdX: " << dEdX.size() << " " << new_dEdX.size() << std::endl;
+    for( size_t i = 0; i < new_dEdX.size(); ++i ){ calibrated_dEdX.push_back( new_dEdX[i] ); }
     ////////////////////////////////////////////
 
 
@@ -2155,6 +2169,7 @@ void pionana::PionAnalyzerMC::beginJob()
   fTree->Branch("beamTrackID", &beamTrackID);
   fTree->Branch("dQdX", &dQdX);
   fTree->Branch("dEdX", &dEdX);
+  fTree->Branch("calibrated_dEdX", &calibrated_dEdX);
   fTree->Branch("resRange", &resRange);
   fTree->Branch("nBeamParticles", &nBeamParticles);
 
@@ -2673,6 +2688,7 @@ void pionana::PionAnalyzerMC::reset()
 
   dQdX.clear();
   dEdX.clear();
+  calibrated_dEdX.clear();
   vtxX = -1.;
   vtxY = -1.;
   vtxZ = -1.;

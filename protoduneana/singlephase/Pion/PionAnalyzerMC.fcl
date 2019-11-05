@@ -1,6 +1,7 @@
 #include "filters.fcl"
 #include "triggeralgo_service.fcl"
 #include "ProtoDUNEBeamCuts.fcl"
+#include "ProtoDUNECalibration.fcl"
 
 BEGIN_PROLOG
 
@@ -25,6 +26,8 @@ pionanalysis:
 
   BeamPars: @local::BeamCuts_MCC11
   BeamCuts: @local::Prod2BeamCuts 
+
+  CalibrationPars: @local::CalorimetryParameters
 
 }
 
