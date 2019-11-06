@@ -20,7 +20,7 @@ pionanalysis:
   GeneratorTag:           "generator"
   dEdX_template_name:     "/dune/data/users/calcuttj/dEdxrestemplates.root"
   Verbose:                true
-  NSliceCheck:            2
+  NSliceCheck:            1
 
   SelectEvents: []
 
