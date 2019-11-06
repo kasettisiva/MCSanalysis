@@ -27,7 +27,7 @@ pionanalysis:
   BeamPars: @local::BeamCuts_MCC11
   BeamCuts: @local::Prod2BeamCuts 
 
-  CalibrationPars: @local::CalorimetryParameters
+  CalibrationPars: @local::CalorimetryParameters_SPProd2_MC_SCE
   SaveHits: false
 
 }
