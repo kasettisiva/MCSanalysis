@@ -166,6 +166,7 @@ private:
 
   std::vector< int > vertex_IDs, endZ_IDs, startZ_IDs;
   std::vector< std::vector< double > > vertex_dRs, endZ_dRs, startZ_dRs;
+  std::vector< int > vertex_hits_slices;
   std::vector< double > centroid_dR;
 
 
@@ -1072,11 +1073,18 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
     int n_slices = 0;
     auto itHits = slicesToHits.rbegin();
     std::cout << "SliceCheck: " << fNSliceCheck << std::endl;
+
+    std::vector< int > temp_hits_slices;
+
     while( n_slices < fNSliceCheck && itHits != slicesToHits.rend() ){
       
       std::cout << n_slices << std::endl;
+
       std::vector< const recob::Hit * > temp_hits = itHits->second;
       vertex_hits.insert( vertex_hits.end(), temp_hits.begin(), temp_hits.end() );
+
+      std::vector<int> hits_slices = std::vector<int>(temp_hits.size(), n_slices );
+      temp_hits_slices.insert( temp_hits_slices.end(), hits_slices.begin(), hits_slices.end() );
 
       ++itHits; 
       ++n_slices;
@@ -1086,6 +1094,7 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
       std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( *(vertex_hits[i]) );
       for( size_t j = 0; j < ides.size(); ++j ){
         vertex_IDs.push_back( ides[j]->trackID );
+        vertex_hits_slices.push_back( temp_hits_slices[i] );
       }
     }
 
@@ -2467,6 +2476,9 @@ void pionana::PionAnalyzerMC::beginJob()
   fTree->Branch("endZ_dRs", &endZ_dRs);
   fTree->Branch("startZ_dRs", &startZ_dRs);
 
+  fTree->Branch("vertex_hits_slices", &vertex_hits_slices);
+
+
   fTree->Branch("centroid_dR", &centroid_dR);
 
   fTree->Branch("true_beam_daughter_PDGs", &true_beam_daughter_PDGs);
@@ -2657,6 +2669,7 @@ void pionana::PionAnalyzerMC::reset()
   endZ_dRs.clear();
   startZ_dRs.clear();
 
+  vertex_hits_slices.clear();
   centroid_dR.clear();
 
   nPi0_truth = 0;
