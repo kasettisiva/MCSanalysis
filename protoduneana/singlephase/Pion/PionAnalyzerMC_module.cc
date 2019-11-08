@@ -37,7 +37,8 @@
 #include "dune/Protodune/singlephase/DataUtils/ProtoDUNEBeamCuts.h"
 #include "dune/Protodune/singlephase/DataUtils/ProtoDUNEDataUtils.h"
 
-#include "dune/Protodune/singlephase/DataUtils/ProtoDUNECalibration.h"
+//#include "dune/Protodune/singlephase/DataUtils/ProtoDUNECalibration.h"
+#include "protoduneana/Utilities/ProtoDUNECalibration.h"
 
 #include "lardataobj/RecoBase/SpacePoint.h"
 #include "lardataobj/RecoBase/PointCharge.h"
@@ -106,10 +107,6 @@ private:
   int subrun;
   int event;
 
-  int MC;
-
-
-
 
   /******************************/
   //Truth level info of the primary beam particle
@@ -154,11 +151,17 @@ private:
   std::vector< int > true_beam_grand_daughter_PDGs, true_beam_grand_daughter_IDs, true_beam_grand_daughter_ParIDs;
 
   //How many of each true particle came out of the true primary beam particle?
+  //int true_daughter_nPiPlus, true_daughter_nPiMinus, true_daughter_nPi0;
+  //int true_daughter_nProton, true_daughter_nNeutron, true_daughter_nNucleus;
   int nPiPlus_truth, nPiMinus_truth, nPi0_truth;
   int nProton_truth, nNeutron_truth, nNucleus_truth;
   /*****************************/
 
   //Matched to vertex/slice?
+  //
+  //
+  //
+  //EDIT: REMOVE SOME -- COMMENT BETTER 
   int vertex_type = kUnmatched;
   int vertex_slice;
   int endZ_slice, startZ_slice;
@@ -168,10 +171,11 @@ private:
   std::vector< std::vector< double > > vertex_dRs, endZ_dRs, startZ_dRs;
   std::vector< int > vertex_hits_slices;
   std::vector< double > centroid_dR;
-
+  ////////////////////////
 
 
   //Reconstructed track info
+  //EDIT: STANDARDIZE
   double startX, startY, startZ;
   double endX, endY, endZ;
   double vtxX, vtxY, vtxZ; 
@@ -181,7 +185,12 @@ private:
   std::vector< double > dEdX, dQdX, resRange;
   std::vector< double > calibrated_dEdX;
   int beamTrackID;
+  ////////////////////////
 
+  
+
+  //EDIT: STANDARDIZE
+  //EndProcess --> endProcess ? 
   std::string reco_beam_truth_EndProcess, alt_reco_beam_truth_EndProcess; //What process ended the reco beam particle
   std::string reco_beam_truth_Process, alt_reco_beam_truth_Process;    //What process created the reco beam particle
   
@@ -192,27 +201,49 @@ private:
   bool reco_beam_good, alt_reco_beam_good; //Does the true particle contributing most to the 
                        //reconstructed beam track coincide with the actual
                        //beam particle that generated the event
+
+
+  //EDIT: reco_beam_passes_beam_cuts;
+  //also fix
   bool passes_beam_cuts;                       
 
+  //EDIT: reco_beam_true_byHits_purity
+  //also throw in byE
   double alt_reco_beam_purity;                      
   
+  //EDIT: reco_beam_flipped
   bool flipped;
-                       
+  
+  //EDIT: GET RID OF THESE
   bool elastic_candidate, found_elastic_scatter;
+
+  //EDIT: true_beam_nElasticScatters
   int  nElasticScatters;
+
+  //EDIT: true_beam_elastic_xxx
   std::vector< double > elastic_costheta, elastic_X, elastic_Y, elastic_Z;
+
+  //EDIT: REMOVE THESE
   int nReconstructed;
   std::vector< int > reconstructedIDs;
+
+
+  //EDIT: reco_daughter_true_byXXX_isPrimary 
   bool daughter_is_primary;
 
 
+  //EDIT: true_beam_processes
   std::vector< std::string > processes;
 
+  //EDIT: STANDARDIZE
   int reco_beam_truth_origin, alt_reco_beam_truth_origin; //What is the origin of the reconstructed beam track?
 
+  //EDIT: REMOVE
   double traj_cos;
-  bool view_0_hits_in_TPC5, view_1_hits_in_TPC5, view_2_hits_in_TPC5;
 
+  //EDIT: quality_reco_xxx
+  bool view_0_hits_in_TPC5, view_1_hits_in_TPC5, view_2_hits_in_TPC5;
+  ///BR-MS
   std::vector< double > view_0_wire, view_0_tick;
   std::vector< double > view_1_wire, view_1_tick;
   std::vector< double > view_2_wire, view_2_tick;
@@ -221,6 +252,7 @@ private:
   double view_0_wire_backtrack, view_1_wire_backtrack, view_2_wire_backtrack;
 
   double max_lateral, max_segment; 
+  //////
 
   double reco_beam_Chi2_proton;
   int    reco_beam_Chi2_ndof;
@@ -233,6 +265,7 @@ private:
 
   //Truth-level info of the reconstructed particles coming out of the 
   //reconstructed beam track
+  //EDIT: REMOVE -- MERGE WITH reco_daughter_true_byY_XXX
   std::vector< bool >   reco_beam_truth_daughter_good_reco;
   std::vector< int >    reco_beam_truth_daughter_true_PDGs;
   std::vector< int >    reco_beam_truth_daughter_true_IDs;
@@ -242,7 +275,10 @@ private:
   std::vector< bool >   reco_beam_truth_daughter_shower_good_reco;
   std::vector< int >    reco_beam_truth_daughter_shower_true_PDGs;
   std::vector< int >    reco_beam_truth_daughter_shower_true_IDs;
-
+  ///////////////////////////
+  
+  //EDIT: STANDARDIZE
+  //End_P --> endP, etc.
   double reco_beam_truth_End_Px,   alt_reco_beam_truth_End_Px;
   double reco_beam_truth_End_Py,   alt_reco_beam_truth_End_Py;
   double reco_beam_truth_End_Pz,   alt_reco_beam_truth_End_Pz;
@@ -254,15 +290,24 @@ private:
   double reco_beam_truth_Start_Pz, alt_reco_beam_truth_Start_Pz;
   double reco_beam_truth_Start_E,  alt_reco_beam_truth_Start_E;
   double reco_beam_truth_Start_P,  alt_reco_beam_truth_Start_P;
+  //////////////////////////
 
 
 
 
   //Reco-level info of the reconstructed daughters coming out of the
   //reconstructed beam tracl
+  //
+  //
+  //EDIT: daughter_xxx --> daughter_trk_xxx
+  //
   std::vector< int > reco_daughter_trackID;
+
+  //quality_reco_daughter_trk_byY_completeness...
   std::vector< double > reco_daughter_completeness;
   std::vector< double > reco_daughter_purity;
+
+  //EDIT: truth --> true_byY_xxx
   std::vector< int > reco_daughter_truth_PDG;
   std::vector< int > reco_daughter_truth_ID;
   std::vector< int > reco_daughter_truth_Origin;
@@ -287,19 +332,23 @@ private:
   std::vector< double > alt_reco_daughter_truth_endZ;
 
   //Alternative Reco values
+  //EDIT: track_score --> trkScore, etc.
   std::vector< int > reco_daughter_PFP_ID;
   std::vector< double > reco_daughter_PFP_track_score;
   std::vector< double > reco_daughter_PFP_em_score;
   std::vector< double > reco_daughter_PFP_michel_score;
+  
+  //REMOVE
   std::vector< double > reco_daughter_PFP_none_score;
 
 
+  //EDIT: reco_daughter_PFP_true_byY_XXX
   std::vector< int > alt_reco_daughter_PFP_truth_PDG;
   std::vector< int > alt_reco_daughter_PFP_truth_ID;
   std::vector< int > alt_reco_daughter_PFP_truth_Origin;
   std::vector< int > alt_reco_daughter_PFP_truth_ParID;
   std::vector< std::string > alt_reco_daughter_PFP_truth_Process;
-  std::vector< double > alt_reco_daughter_PFP_truth_purity;
+  std::vector< double > alt_reco_daughter_PFP_truth_purity;///EDIT: quality
   std::vector< size_t > alt_reco_daughter_PFP_truth_shared_hits, alt_reco_daughter_PFP_truth_em_hits;
 
   std::vector< double > alt_reco_daughter_PFP_truth_len;
@@ -309,12 +358,16 @@ private:
   std::vector< double > alt_reco_daughter_PFP_truth_endX;
   std::vector< double > alt_reco_daughter_PFP_truth_endY;
   std::vector< double > alt_reco_daughter_PFP_truth_endZ;
+  //////////////////////////////////////
 
+  //EDIT: REMOVE PMA
   std::vector< int > reco_daughter_PMA_ID;
   std::vector< std::vector< double > > reco_daughter_PMA_dEdX, reco_daughter_PMA_resRange;
   std::vector< double > reco_daughter_PMA_Chi2_proton;
   std::vector< int >    reco_daughter_PMA_Chi2_ndof;
 
+
+  //EDIT: reco_daughter_allTrack_XXX
   std::vector< int > reco_daughter_pandora2_ID;
   std::vector< std::vector< double > > reco_daughter_pandora2_dQdX, reco_daughter_pandora2_dEdX, reco_daughter_pandora2_resRange;
   std::vector< std::vector< double > > reco_daughter_pandora2_dQdX_SCE, reco_daughter_pandora2_dEdX_SCE, reco_daughter_pandora2_resRange_SCE;
@@ -322,6 +375,7 @@ private:
   std::vector< double > reco_daughter_pandora2_Chi2_proton;
   std::vector< int >    reco_daughter_pandora2_Chi2_ndof;
 
+  //EDIT: REMOVE PMA
   std::vector< double > reco_daughter_PMA_startX, reco_daughter_PMA_endX;
   std::vector< double > reco_daughter_PMA_startY, reco_daughter_PMA_endY;
   std::vector< double > reco_daughter_PMA_startZ, reco_daughter_PMA_endZ;
@@ -336,6 +390,9 @@ private:
   //
 
 
+  //EDIT: STANDARDIZE
+  //
+  //EDIT: reco_daughter_show_true_byHits_PDG
   std::vector< int > alt_reco_daughter_shower_truth_PDG;
   std::vector< int > alt_reco_daughter_shower_truth_ID;
   std::vector< int > alt_reco_daughter_shower_truth_Origin;
@@ -343,12 +400,15 @@ private:
   std::vector< std::string > alt_reco_daughter_shower_truth_Process;
   std::vector< double > alt_reco_daughter_shower_truth_purity;
 
+  //EDIT: reco_daughter_show_ID
   std::vector< int > reco_daughter_showerID;
   std::vector< int > reco_daughter_shower_truth_PDG;
   std::vector< int > reco_daughter_shower_truth_ID;
   std::vector< int > reco_daughter_shower_truth_Origin;
   std::vector< int > reco_daughter_shower_truth_ParID;
   std::vector< std::vector< double > > reco_daughter_dEdX, reco_daughter_dQdX, reco_daughter_resRange;
+
+  
   std::vector< std::vector< double > > reco_daughter_shower_dEdX, reco_daughter_shower_dQdX, reco_daughter_shower_resRange;
   std::vector< double > reco_daughter_startX, reco_daughter_endX;
   std::vector< double > reco_daughter_startY, reco_daughter_endY;
@@ -374,16 +434,26 @@ private:
   std::vector< double > reco_daughter_shower_michel_score;
 
   //New hits info
+  //reco_beam_spacePts_(X,Y,Z)
   std::vector< double > hitsX, hitsY, hitsZ;
+  //reco_daughter_(trk/show)_spacePts_(X,Y,Z)
   std::vector< std::vector< double > > reco_daughter_hitsX, reco_daughter_hitsY, reco_daughter_hitsZ;
   std::vector< std::vector< double > > reco_daughter_shower_hitsX, reco_daughter_shower_hitsY, reco_daughter_shower_hitsZ;
 
 
+  //reco_beam_n(Track/Shower)Daughters
   int nTrackDaughters, nShowerDaughters;
 
+  //reco_beam_type (track vs shower -- 13 vs 11)
   int type;
+
+
+  ///CHUCK
   int nBeamParticles;
 
+
+
+  ////New section -- mechanical class members
   std::map< int, TProfile* > templates;
 
   //FCL pars
@@ -1488,7 +1558,10 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
           }
         }
 
+        //EDIT: Definitely delete good_reco
         reco_beam_truth_daughter_good_reco.push_back( found_daughter );
+
+        //EDIT: Merge with reco_daughter_truth_xxx
         if( found_daughter ){
           reco_beam_truth_daughter_true_PDGs.push_back( true_beam_daughter_PDGs[loc] ); 
           reco_beam_truth_daughter_true_IDs.push_back( true_beam_daughter_IDs[loc] );
@@ -1795,7 +1868,10 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
           }
         }
 
+        //EDIT: Definitely delete good_reco
         reco_beam_truth_daughter_shower_good_reco.push_back( found_daughter );
+
+        //EDIT: Merge with reco_daughter_shower_truth  
         if( found_daughter ){
           reco_beam_truth_daughter_shower_true_PDGs.push_back( true_beam_daughter_PDGs[loc] ); 
           reco_beam_truth_daughter_shower_true_IDs.push_back( true_beam_daughter_IDs[loc] );
@@ -2269,7 +2345,6 @@ void pionana::PionAnalyzerMC::beginJob()
   fTree->Branch("subrun", &subrun);
   fTree->Branch("event", &event);
   fTree->Branch("type", &type);
-  fTree->Branch("MC", &MC);
 
 
   fTree->Branch("startX", &startX);
@@ -2648,7 +2723,6 @@ void pionana::PionAnalyzerMC::reset()
   type = -1;
   nBeamParticles = 0;
   
-  MC = 0;
   nProton_truth = 0;
   nNeutron_truth = 0;
   nNucleus_truth = 0;

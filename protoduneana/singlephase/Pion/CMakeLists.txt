@@ -15,6 +15,7 @@ art_make(BASENAME_ONLY
   larsim_MCCheater_ParticleInventoryService_service
   larreco_RecoAlg
   ${ROOT_BASIC_LIB_LIST}
+  ProtoDUNEUtilities
   ProtoDUNEDataUtils
   ${ART_FRAMEWORK_CORE}
   ${ART_FRAMEWORK_PRINCIPAL}
