@@ -210,7 +210,7 @@ private:
   double reco_beam_true_byE_endPx,   reco_beam_true_byHits_endPx;
   double reco_beam_true_byE_endPy,   reco_beam_true_byHits_endPy;
   double reco_beam_true_byE_endPz,   reco_beam_true_byHits_endPz;
-  double reco_beam_true_byE_endE,    reco_beam_true_byHits_End_E;
+  double reco_beam_true_byE_endE,    reco_beam_true_byHits_endE;
   double reco_beam_true_byE_endP,    reco_beam_true_byHits_endP;
                                    
   double reco_beam_true_byE_startPx, reco_beam_true_byHits_startPx;
@@ -556,7 +556,7 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
           reco_beam_true_byHits_endP  = sqrt( reco_beam_true_byHits_endPx*reco_beam_true_byHits_endPx 
                                        + reco_beam_true_byHits_endPy*reco_beam_true_byHits_endPy 
                                        + reco_beam_true_byHits_endPz*reco_beam_true_byHits_endPz );
-          reco_beam_true_byHits_End_E  = beam_match.particle->E( np - 2 );
+          reco_beam_true_byHits_endE  = beam_match.particle->E( np - 2 );
         }
 
         auto list = truthUtil.GetMCParticleListByHits( *thisTrack, evt, fTrackerTag, fHitTag );
@@ -2158,7 +2158,7 @@ void pionana::PionAnalyzerMC::beginJob()
   fTree->Branch("reco_beam_true_byHits_endPx", &reco_beam_true_byHits_endPx);
   fTree->Branch("reco_beam_true_byHits_endPy", &reco_beam_true_byHits_endPy);
   fTree->Branch("reco_beam_true_byHits_endPz", &reco_beam_true_byHits_endPz);
-  fTree->Branch("reco_beam_true_byHits_End_E", &reco_beam_true_byHits_End_E);
+  fTree->Branch("reco_beam_true_byHits_endE", &reco_beam_true_byHits_endE);
   fTree->Branch("reco_beam_true_byHits_endP", &reco_beam_true_byHits_endP);
 
   fTree->Branch("reco_beam_true_byHits_startPx", &reco_beam_true_byHits_startPx);
@@ -2277,7 +2277,7 @@ void pionana::PionAnalyzerMC::reset()
   reco_beam_true_byHits_endPx = 0.;
   reco_beam_true_byHits_endPy = 0.;
   reco_beam_true_byHits_endPz = 0.;
-  reco_beam_true_byHits_End_E = 0.;
+  reco_beam_true_byHits_endE = 0.;
   reco_beam_true_byHits_endP = 0.;
 
   reco_beam_true_byHits_startPx = 0.;
