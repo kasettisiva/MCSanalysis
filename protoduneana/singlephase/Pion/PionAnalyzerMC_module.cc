@@ -312,18 +312,18 @@ private:
   //////////////////////////////////////
 
   //EDIT: reco_daughter_allTrack_XXX
-  std::vector< int > reco_daughter_pandora2_ID;
-  std::vector< std::vector< double > > reco_daughter_pandora2_dQdX, reco_daughter_pandora2_dEdX, reco_daughter_pandora2_resRange;
-  std::vector< std::vector< double > > reco_daughter_pandora2_dQdX_SCE, reco_daughter_pandora2_dEdX_SCE, reco_daughter_pandora2_resRange_SCE;
-  std::vector< std::vector< double > > reco_daughter_pandora2_calibrated_dEdX, reco_daughter_pandora2_calibrated_dEdX_SCE;
-  std::vector< double > reco_daughter_pandora2_Chi2_proton;
-  std::vector< int >    reco_daughter_pandora2_Chi2_ndof;
+  std::vector< int > reco_daughter_allTrack_ID;
+  std::vector< std::vector< double > > reco_daughter_allTrack_dQdX, reco_daughter_allTrack_dEdX, reco_daughter_allTrack_resRange;
+  std::vector< std::vector< double > > reco_daughter_allTrack_dQdX_SCE, reco_daughter_allTrack_dEdX_SCE, reco_daughter_allTrack_resRange_SCE;
+  std::vector< std::vector< double > > reco_daughter_allTrack_calibrated_dEdX, reco_daughter_allTrack_calibrated_dEdX_SCE;
+  std::vector< double > reco_daughter_allTrack_Chi2_proton;
+  std::vector< int >    reco_daughter_allTrack_Chi2_ndof;
 
-  std::vector< double > reco_daughter_pandora2_startX, reco_daughter_pandora2_endX;
-  std::vector< double > reco_daughter_pandora2_startY, reco_daughter_pandora2_endY;
-  std::vector< double > reco_daughter_pandora2_startZ, reco_daughter_pandora2_endZ;
-  std::vector< double > reco_daughter_pandora2_dR;
-  std::vector< double > reco_daughter_pandora2_to_vertex;
+  std::vector< double > reco_daughter_allTrack_startX, reco_daughter_allTrack_endX;
+  std::vector< double > reco_daughter_allTrack_startY, reco_daughter_allTrack_endY;
+  std::vector< double > reco_daughter_allTrack_startZ, reco_daughter_allTrack_endZ;
+  std::vector< double > reco_daughter_allTrack_dR;
+  std::vector< double > reco_daughter_allTrack_to_vertex;
   //
 
 
@@ -1667,7 +1667,7 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
         std::cout << "pandora2 track: " << pandora2Track << std::endl;
 
         if( pandora2Track ){
-          reco_daughter_pandora2_ID.push_back( pandora2Track->ID() );
+          reco_daughter_allTrack_ID.push_back( pandora2Track->ID() );
 
           std::vector< anab::Calorimetry > dummy_calo = trackUtil.GetRecoTrackCalorimetry(*pandora2Track, evt, "pandora2Track", "pandora2calo");
           std::vector< anab::Calorimetry > dummy_caloSCE = trackUtil.GetRecoTrackCalorimetry(*pandora2Track, evt, "pandora2Track", "pandora2caloSCE");
@@ -1683,45 +1683,45 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
           std::vector< float > cali_dEdX = calibration.GetCalibratedCalorimetry(  *pandora2Track, evt, "pandora2Track", "pandora2calo" );
           std::vector< float > cali_dEdX_SCE = calibration.GetCalibratedCalorimetry(  *pandora2Track, evt, "pandora2Track", "pandora2caloSCE" );
  
-          reco_daughter_pandora2_resRange.push_back( std::vector<double>() );
-          reco_daughter_pandora2_dEdX.push_back( std::vector<double>() );
-          reco_daughter_pandora2_dQdX.push_back( std::vector<double>() );
+          reco_daughter_allTrack_resRange.push_back( std::vector<double>() );
+          reco_daughter_allTrack_dEdX.push_back( std::vector<double>() );
+          reco_daughter_allTrack_dQdX.push_back( std::vector<double>() );
 
           for( size_t j = 0; j < dummy_dEdx.size(); ++j ){
-            reco_daughter_pandora2_resRange.back().push_back( dummy_Range[j] );
-            reco_daughter_pandora2_dEdX.back().push_back( dummy_dEdx[j] );
-            reco_daughter_pandora2_dQdX.back().push_back( dummy_dQdx[j] );
+            reco_daughter_allTrack_resRange.back().push_back( dummy_Range[j] );
+            reco_daughter_allTrack_dEdX.back().push_back( dummy_dEdx[j] );
+            reco_daughter_allTrack_dQdX.back().push_back( dummy_dQdx[j] );
           }
 
-          reco_daughter_pandora2_resRange_SCE.push_back( std::vector<double>() );
-          reco_daughter_pandora2_dEdX_SCE.push_back( std::vector<double>() );
-          reco_daughter_pandora2_dQdX_SCE.push_back( std::vector<double>() );
+          reco_daughter_allTrack_resRange_SCE.push_back( std::vector<double>() );
+          reco_daughter_allTrack_dEdX_SCE.push_back( std::vector<double>() );
+          reco_daughter_allTrack_dQdX_SCE.push_back( std::vector<double>() );
 
           for( size_t j = 0; j < dummy_dEdx_SCE.size(); ++j ){
-            reco_daughter_pandora2_resRange_SCE.back().push_back( dummy_Range_SCE[j] );
-            reco_daughter_pandora2_dEdX_SCE.back().push_back( dummy_dEdx_SCE[j] );
-            reco_daughter_pandora2_dQdX_SCE.back().push_back( dummy_dQdx_SCE[j] );
+            reco_daughter_allTrack_resRange_SCE.back().push_back( dummy_Range_SCE[j] );
+            reco_daughter_allTrack_dEdX_SCE.back().push_back( dummy_dEdx_SCE[j] );
+            reco_daughter_allTrack_dQdX_SCE.back().push_back( dummy_dQdx_SCE[j] );
           }
 
-          reco_daughter_pandora2_calibrated_dEdX.push_back( std::vector<double>() );
-          reco_daughter_pandora2_calibrated_dEdX_SCE.push_back( std::vector<double>() );
+          reco_daughter_allTrack_calibrated_dEdX.push_back( std::vector<double>() );
+          reco_daughter_allTrack_calibrated_dEdX_SCE.push_back( std::vector<double>() );
           for( size_t j = 0; j < cali_dEdX.size(); ++j ){
-            reco_daughter_pandora2_calibrated_dEdX.back().push_back( cali_dEdX[j] );
+            reco_daughter_allTrack_calibrated_dEdX.back().push_back( cali_dEdX[j] );
           }
           for( size_t j = 0; j < cali_dEdX_SCE.size(); ++j ){
-            reco_daughter_pandora2_calibrated_dEdX_SCE.back().push_back( cali_dEdX_SCE[j] );
+            reco_daughter_allTrack_calibrated_dEdX_SCE.back().push_back( cali_dEdX_SCE[j] );
           } 
 
-          std::pair< double, int > this_chi2_ndof = trackUtil.Chi2PID( reco_daughter_pandora2_dEdX.back(), reco_daughter_pandora2_resRange.back(), templates[ 2212 ] );
-          reco_daughter_pandora2_Chi2_proton.push_back( this_chi2_ndof.first );
-          reco_daughter_pandora2_Chi2_ndof.push_back( this_chi2_ndof.second );
+          std::pair< double, int > this_chi2_ndof = trackUtil.Chi2PID( reco_daughter_allTrack_dEdX.back(), reco_daughter_allTrack_resRange.back(), templates[ 2212 ] );
+          reco_daughter_allTrack_Chi2_proton.push_back( this_chi2_ndof.first );
+          reco_daughter_allTrack_Chi2_ndof.push_back( this_chi2_ndof.second );
 
-          reco_daughter_pandora2_startX.push_back( pandora2Track->Trajectory().Start().X() );
-          reco_daughter_pandora2_startY.push_back( pandora2Track->Trajectory().Start().Y() );
-          reco_daughter_pandora2_startZ.push_back( pandora2Track->Trajectory().Start().Z() );
-          reco_daughter_pandora2_endX.push_back(   pandora2Track->Trajectory().End().X() );
-          reco_daughter_pandora2_endY.push_back(   pandora2Track->Trajectory().End().Y() );
-          reco_daughter_pandora2_endZ.push_back(   pandora2Track->Trajectory().End().Z() );
+          reco_daughter_allTrack_startX.push_back( pandora2Track->Trajectory().Start().X() );
+          reco_daughter_allTrack_startY.push_back( pandora2Track->Trajectory().Start().Y() );
+          reco_daughter_allTrack_startZ.push_back( pandora2Track->Trajectory().Start().Z() );
+          reco_daughter_allTrack_endX.push_back(   pandora2Track->Trajectory().End().X() );
+          reco_daughter_allTrack_endY.push_back(   pandora2Track->Trajectory().End().Y() );
+          reco_daughter_allTrack_endZ.push_back(   pandora2Track->Trajectory().End().Z() );
 
           //Match the daughters to a slice
           //First, check whether the start or end of the daughter track are closer
@@ -1745,10 +1745,10 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
           );
 
           if ( to_end_of_daughter < to_start_of_daughter ){
-            reco_daughter_pandora2_to_vertex.push_back( to_end_of_daughter );
+            reco_daughter_allTrack_to_vertex.push_back( to_end_of_daughter );
           }
           else{
-            reco_daughter_pandora2_to_vertex.push_back( to_start_of_daughter );
+            reco_daughter_allTrack_to_vertex.push_back( to_start_of_daughter );
           }
 
           double dr_start = std::numeric_limits<double>::max();
@@ -1791,39 +1791,39 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
             //min_index = min_end_index; 
 
             std::cout << "dr between track and daughter: " << dr_end << std::endl;
-            reco_daughter_pandora2_dR.push_back( dr_end );
+            reco_daughter_allTrack_dR.push_back( dr_end );
  
           }
           else{
             //min_index = min_start_index; 
             std::cout << "dr between track and daughter: " << dr_start << std::endl;
-            reco_daughter_pandora2_dR.push_back( dr_start );
+            reco_daughter_allTrack_dR.push_back( dr_start );
           }
 
         }
         else{
-          reco_daughter_pandora2_ID.push_back( -1 );
-          reco_daughter_pandora2_resRange.push_back( std::vector<double>() );
-          reco_daughter_pandora2_dEdX.push_back( std::vector<double>() );
-          reco_daughter_pandora2_dQdX.push_back( std::vector<double>() );
-          reco_daughter_pandora2_resRange_SCE.push_back( std::vector<double>() );
-          reco_daughter_pandora2_dEdX_SCE.push_back( std::vector<double>() );
-          reco_daughter_pandora2_dQdX_SCE.push_back( std::vector<double>() );
+          reco_daughter_allTrack_ID.push_back( -1 );
+          reco_daughter_allTrack_resRange.push_back( std::vector<double>() );
+          reco_daughter_allTrack_dEdX.push_back( std::vector<double>() );
+          reco_daughter_allTrack_dQdX.push_back( std::vector<double>() );
+          reco_daughter_allTrack_resRange_SCE.push_back( std::vector<double>() );
+          reco_daughter_allTrack_dEdX_SCE.push_back( std::vector<double>() );
+          reco_daughter_allTrack_dQdX_SCE.push_back( std::vector<double>() );
 
-          reco_daughter_pandora2_calibrated_dEdX.push_back( std::vector<double>() );
-          reco_daughter_pandora2_calibrated_dEdX_SCE.push_back( std::vector<double>() );
+          reco_daughter_allTrack_calibrated_dEdX.push_back( std::vector<double>() );
+          reco_daughter_allTrack_calibrated_dEdX_SCE.push_back( std::vector<double>() );
 
 
-          reco_daughter_pandora2_Chi2_proton.push_back( -999. );
-          reco_daughter_pandora2_Chi2_ndof.push_back( 0 );
-          reco_daughter_pandora2_startX.push_back( -1. );
-          reco_daughter_pandora2_startY.push_back( -1. );
-          reco_daughter_pandora2_startZ.push_back( -1. );
-          reco_daughter_pandora2_endX.push_back(   -1. );
-          reco_daughter_pandora2_endY.push_back(   -1. );
-          reco_daughter_pandora2_endZ.push_back(   -1. );
-          reco_daughter_pandora2_to_vertex.push_back( -1. );
-          reco_daughter_pandora2_dR.push_back( -1. );
+          reco_daughter_allTrack_Chi2_proton.push_back( -999. );
+          reco_daughter_allTrack_Chi2_ndof.push_back( 0 );
+          reco_daughter_allTrack_startX.push_back( -1. );
+          reco_daughter_allTrack_startY.push_back( -1. );
+          reco_daughter_allTrack_startZ.push_back( -1. );
+          reco_daughter_allTrack_endX.push_back(   -1. );
+          reco_daughter_allTrack_endY.push_back(   -1. );
+          reco_daughter_allTrack_endZ.push_back(   -1. );
+          reco_daughter_allTrack_to_vertex.push_back( -1. );
+          reco_daughter_allTrack_dR.push_back( -1. );
         }
       }
       catch( const cet::exception &e ){
@@ -1943,28 +1943,28 @@ void pionana::PionAnalyzerMC::beginJob()
   fTree->Branch("reco_daughter_PFP_true_byHits_endY", &reco_daughter_PFP_true_byHits_endY);
   fTree->Branch("reco_daughter_PFP_true_byHits_endZ", &reco_daughter_PFP_true_byHits_endZ);
 
-  fTree->Branch("reco_daughter_pandora2_ID", &reco_daughter_pandora2_ID);
-  fTree->Branch("reco_daughter_pandora2_dEdX", &reco_daughter_pandora2_dEdX);
-  fTree->Branch("reco_daughter_pandora2_dQdX", &reco_daughter_pandora2_dQdX);
-  fTree->Branch("reco_daughter_pandora2_resRange", &reco_daughter_pandora2_resRange);
-  fTree->Branch("reco_daughter_pandora2_dQdX_SCE", &reco_daughter_pandora2_dQdX_SCE);
-  fTree->Branch("reco_daughter_pandora2_dEdX_SCE", &reco_daughter_pandora2_dEdX);
-  fTree->Branch("reco_daughter_pandora2_resRange_SCE", &reco_daughter_pandora2_resRange);
+  fTree->Branch("reco_daughter_allTrack_ID", &reco_daughter_allTrack_ID);
+  fTree->Branch("reco_daughter_allTrack_dEdX", &reco_daughter_allTrack_dEdX);
+  fTree->Branch("reco_daughter_allTrack_dQdX", &reco_daughter_allTrack_dQdX);
+  fTree->Branch("reco_daughter_allTrack_resRange", &reco_daughter_allTrack_resRange);
+  fTree->Branch("reco_daughter_allTrack_dQdX_SCE", &reco_daughter_allTrack_dQdX_SCE);
+  fTree->Branch("reco_daughter_allTrack_dEdX_SCE", &reco_daughter_allTrack_dEdX);
+  fTree->Branch("reco_daughter_allTrack_resRange_SCE", &reco_daughter_allTrack_resRange);
 
-  fTree->Branch("reco_daughter_pandora2_calibrated_dEdX", &reco_daughter_pandora2_calibrated_dEdX);
-  fTree->Branch("reco_daughter_pandora2_calibrated_dEdX_SCE", &reco_daughter_pandora2_calibrated_dEdX_SCE);
+  fTree->Branch("reco_daughter_allTrack_calibrated_dEdX", &reco_daughter_allTrack_calibrated_dEdX);
+  fTree->Branch("reco_daughter_allTrack_calibrated_dEdX_SCE", &reco_daughter_allTrack_calibrated_dEdX_SCE);
 
-  fTree->Branch("reco_daughter_pandora2_Chi2_proton", &reco_daughter_pandora2_Chi2_proton);
-  fTree->Branch("reco_daughter_pandora2_Chi2_ndof", &reco_daughter_pandora2_Chi2_ndof);
+  fTree->Branch("reco_daughter_allTrack_Chi2_proton", &reco_daughter_allTrack_Chi2_proton);
+  fTree->Branch("reco_daughter_allTrack_Chi2_ndof", &reco_daughter_allTrack_Chi2_ndof);
 
-  fTree->Branch("reco_daughter_pandora2_startX", &reco_daughter_pandora2_startX);
-  fTree->Branch("reco_daughter_pandora2_startY", &reco_daughter_pandora2_startY);
-  fTree->Branch("reco_daughter_pandora2_startZ", &reco_daughter_pandora2_startZ);
-  fTree->Branch("reco_daughter_pandora2_endX", &reco_daughter_pandora2_endX);
-  fTree->Branch("reco_daughter_pandora2_endY", &reco_daughter_pandora2_endY);
-  fTree->Branch("reco_daughter_pandora2_endZ", &reco_daughter_pandora2_endZ);
-  fTree->Branch("reco_daughter_pandora2_dR", &reco_daughter_pandora2_dR);
-  fTree->Branch("reco_daughter_pandora2_to_vertex", &reco_daughter_pandora2_to_vertex);
+  fTree->Branch("reco_daughter_allTrack_startX", &reco_daughter_allTrack_startX);
+  fTree->Branch("reco_daughter_allTrack_startY", &reco_daughter_allTrack_startY);
+  fTree->Branch("reco_daughter_allTrack_startZ", &reco_daughter_allTrack_startZ);
+  fTree->Branch("reco_daughter_allTrack_endX", &reco_daughter_allTrack_endX);
+  fTree->Branch("reco_daughter_allTrack_endY", &reco_daughter_allTrack_endY);
+  fTree->Branch("reco_daughter_allTrack_endZ", &reco_daughter_allTrack_endZ);
+  fTree->Branch("reco_daughter_allTrack_dR", &reco_daughter_allTrack_dR);
+  fTree->Branch("reco_daughter_allTrack_to_vertex", &reco_daughter_allTrack_to_vertex);
   //////
 
 
@@ -2437,28 +2437,28 @@ void pionana::PionAnalyzerMC::reset()
   reco_daughter_PFP_true_byHits_endY.clear();
   reco_daughter_PFP_true_byHits_endZ.clear();
 
-  reco_daughter_pandora2_ID.clear();
-  reco_daughter_pandora2_dEdX.clear();
-  reco_daughter_pandora2_dQdX.clear();
-  reco_daughter_pandora2_resRange.clear();
-  reco_daughter_pandora2_dEdX_SCE.clear();
-  reco_daughter_pandora2_dQdX_SCE.clear();
-  reco_daughter_pandora2_resRange_SCE.clear();
+  reco_daughter_allTrack_ID.clear();
+  reco_daughter_allTrack_dEdX.clear();
+  reco_daughter_allTrack_dQdX.clear();
+  reco_daughter_allTrack_resRange.clear();
+  reco_daughter_allTrack_dEdX_SCE.clear();
+  reco_daughter_allTrack_dQdX_SCE.clear();
+  reco_daughter_allTrack_resRange_SCE.clear();
 
-  reco_daughter_pandora2_calibrated_dEdX.clear();
-  reco_daughter_pandora2_calibrated_dEdX_SCE.clear();
+  reco_daughter_allTrack_calibrated_dEdX.clear();
+  reco_daughter_allTrack_calibrated_dEdX_SCE.clear();
 
-  reco_daughter_pandora2_Chi2_proton.clear();
-  reco_daughter_pandora2_Chi2_ndof.clear();
+  reco_daughter_allTrack_Chi2_proton.clear();
+  reco_daughter_allTrack_Chi2_ndof.clear();
 
-  reco_daughter_pandora2_startX.clear();
-  reco_daughter_pandora2_startY.clear();
-  reco_daughter_pandora2_startZ.clear();
-  reco_daughter_pandora2_endX.clear();
-  reco_daughter_pandora2_endY.clear();
-  reco_daughter_pandora2_endZ.clear();
-  reco_daughter_pandora2_dR.clear();
-  reco_daughter_pandora2_to_vertex.clear();
+  reco_daughter_allTrack_startX.clear();
+  reco_daughter_allTrack_startY.clear();
+  reco_daughter_allTrack_startZ.clear();
+  reco_daughter_allTrack_endX.clear();
+  reco_daughter_allTrack_endY.clear();
+  reco_daughter_allTrack_endZ.clear();
+  reco_daughter_allTrack_dR.clear();
+  reco_daughter_allTrack_to_vertex.clear();
   ///////
   
 
