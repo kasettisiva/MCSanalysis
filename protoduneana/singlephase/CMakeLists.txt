@@ -1,4 +1,3 @@
-add_subdirectory(dEdxcalibration)
 add_subdirectory(XYZcalibration)
 add_subdirectory(michelremoving)
 add_subdirectory(protonanalysis)
