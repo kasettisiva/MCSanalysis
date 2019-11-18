@@ -156,6 +156,7 @@ private:
   //Decay products from pi0s
   ////EDIT: Rename this?
   std::vector< int > true_beam_Pi0_decay_PDG, true_beam_Pi0_decay_ID;
+  std::vector< double > true_beam_Pi0_decay_startP;
   std::vector< int > true_beam_grand_daughter_PDG, true_beam_grand_daughter_ID, true_beam_grand_daughter_parID;
 
   //How many of each true particle came out of the true primary beam particle?
@@ -179,7 +180,8 @@ private:
   double reco_beam_len;
   double reco_beam_trackDirX, reco_beam_trackDirY, reco_beam_trackDirZ;
   double reco_beam_trackEndDirX, reco_beam_trackEndDirY, reco_beam_trackEndDirZ;
-  std::vector< double > reco_beam_dEdX, reco_beam_dQdX, reco_beam_resRange;
+  std::vector< double > reco_beam_dEdX, reco_beam_dQdX, reco_beam_resRange, reco_beam_TrkPitch;
+  std::vector< double > reco_beam_calo_wire, reco_beam_calo_tick;
   std::vector< double > reco_beam_calibrated_dEdX;
   int reco_beam_trackID;
   bool reco_beam_flipped;
@@ -485,6 +487,7 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
   // outputNames: track, em, none, michel
   anab::MVAReader<recob::Hit,4> hitResults(evt, /*fNNetModuleLabel*/ "emtrkmichelid:emtrkmichel" );
 
+  auto allHits = evt.getValidHandle<std::vector<recob::Hit> >(fHitTag);
 
   auto recoTracks = evt.getValidHandle<std::vector<recob::Track> >(fTrackerTag);
   art::FindManyP<recob::Hit> findHits(recoTracks,evt,fTrackerTag);
@@ -710,6 +713,7 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
           auto pi0_decay_part = plist[ pi0_decay_daughter_ID ];
           true_beam_Pi0_decay_PDG.push_back( pi0_decay_part->PdgCode() );
           true_beam_Pi0_decay_ID.push_back( pi0_decay_part->TrackId() );
+          true_beam_Pi0_decay_startP.push_back( pi0_decay_part->P() );
         }
       }
 
@@ -858,7 +862,7 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
       int slice = std::floor( ( thisTrack->Trajectory().LocationAtPoint(i).Z() - z0 ) / pitch );
       hitsToSlices[ theHit ] = slice;
       slicesToHits[ slice ].push_back( theHit );
-      std::cout << "Position: " <<  x << " " << y << " " << z << " Hit Wire: " << theHit->WireID().Wire << " " 
+      std::cout << i << " Position: " <<  x << " " << y << " " << z << " Hit Wire: " << theHit->WireID().Wire << " " 
                 << theHit->PeakTime()  << " " << theHit->StartTick() << " " << theHit->EndTick() << std::endl;
       /*std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( *theHit );
       for( size_t j = 0; j < ides.size(); ++j ){
@@ -973,12 +977,25 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
     auto calo_dQdX = calo[0].dQdx();
     auto calo_dEdX = calo[0].dEdx();
     auto calo_range = calo[0].ResidualRange();
+    auto TpIndices = calo[0].TpIndices();
+    std::cout << TpIndices.size() << std::endl;
     for( size_t i = 0; i < calo_dQdX.size(); ++i ){
       reco_beam_dQdX.push_back( calo_dQdX[i] );
       reco_beam_dEdX.push_back( calo_dEdX[i] );
       reco_beam_resRange.push_back( calo_range[i] );
+      reco_beam_TrkPitch.push_back( calo[0].TrkPitchVec()[i] );
+
+      std::cout << TpIndices[i] << std::endl;
+      recob::Hit theHit = (*allHits)[ TpIndices[i] ];
+      reco_beam_calo_wire.push_back( theHit.WireID().Wire );
+      reco_beam_calo_tick.push_back( theHit.PeakTime() );
+      //auto theHit = trajPtsToHits[ TpIndices[i] ];
+      //std::cout << i << " Pt: " << TpIndices[i] << " Hit: " << theHit->WireID().Wire << " " << theHit->View() << std::endl;
     }
     ////////////////////////////////////////////
+
+    auto TpIndices1 = calo[1].TpIndices();
+    auto TpIndices2 = calo[2].TpIndices();
     
     //New Calibration
     std::vector< float > new_dEdX = calibration.GetCalibratedCalorimetry(  *thisTrack, evt, fTrackerTag, fCalorimetryTag );
@@ -1893,6 +1910,9 @@ void pionana::PionAnalyzerMC::beginJob()
   fTree->Branch("reco_beam_dEdX", &reco_beam_dEdX);
   fTree->Branch("reco_beam_calibrated_dEdX", &reco_beam_calibrated_dEdX);
   fTree->Branch("reco_beam_resRange", &reco_beam_resRange);
+  fTree->Branch("reco_beam_TrkPitch", &reco_beam_TrkPitch);
+  fTree->Branch("reco_beam_calo_wire", &reco_beam_calo_wire);
+  fTree->Branch("reco_beam_calo_tick", &reco_beam_calo_tick);
   fTree->Branch("reco_beam_nTrackDaughters", &reco_beam_nTrackDaughters);
   fTree->Branch("reco_beam_nShowerDaughters", &reco_beam_nShowerDaughters);
   fTree->Branch("reco_beam_flipped", &reco_beam_flipped);
@@ -2078,6 +2098,7 @@ void pionana::PionAnalyzerMC::beginJob()
 
   fTree->Branch("true_beam_Pi0_decay_ID", &true_beam_Pi0_decay_ID);
   fTree->Branch("true_beam_Pi0_decay_PDG", &true_beam_Pi0_decay_PDG);
+  fTree->Branch("true_beam_Pi0_decay_startP", &true_beam_Pi0_decay_startP);
   fTree->Branch("true_beam_grand_daughter_ID", &true_beam_grand_daughter_ID);
   fTree->Branch("true_beam_grand_daughter_parID", &true_beam_grand_daughter_parID);
   fTree->Branch("true_beam_grand_daughter_PDG", &true_beam_grand_daughter_PDG);
@@ -2345,6 +2366,7 @@ void pionana::PionAnalyzerMC::reset()
   true_beam_daughter_Process.clear();
 
   true_beam_Pi0_decay_ID.clear();
+  true_beam_Pi0_decay_startP.clear();
   true_beam_Pi0_decay_PDG.clear();
   true_beam_grand_daughter_ID.clear();
   true_beam_grand_daughter_parID.clear();
@@ -2385,6 +2407,9 @@ void pionana::PionAnalyzerMC::reset()
   reco_daughter_shower_len.clear(); 
 
   reco_beam_resRange.clear();
+  reco_beam_TrkPitch.clear();
+  reco_beam_calo_wire.clear();
+  reco_beam_calo_tick.clear();
 
   reco_daughter_dQdX.clear();
   reco_daughter_dEdX.clear();
