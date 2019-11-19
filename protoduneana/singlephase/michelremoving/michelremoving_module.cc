@@ -75,7 +75,7 @@
 #include "stdio.h"
 #include <iterator>
 
-const int kMaxTracks  = 100;
+const int kMaxTracks  = 30;
 
 using namespace std;
 

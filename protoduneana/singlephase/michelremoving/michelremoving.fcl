@@ -1,13 +1,15 @@
 #include "services_dune.fcl"
 #include "hitfindermodules_dune.fcl"
 #include "filters.fcl"
+#include "ProtoDUNEUnstableHVFilter.fcl"
 #include "signalservices_dune.fcl"
 #include "caldata_dune.fcl"
 #include "trackfindermodules_dune.fcl"
 #include "ecalibration.fcl"
 #include "triggeralgo_service.fcl"
 #include "photpropservices_dune.fcl"
-
+#include "ProtoDUNEDataUtils.fcl"
+#include "ProtoDUNEFembFilter.fcl"
 
 
 process_name: michelremoving
@@ -33,7 +35,12 @@ physics:
  producers:{
 
   }
-filters:{} 
+filters:	
+ {
+#  filter:   @local::pdsp_fembfilter_all
+f1: @local::HVfilter
+   } 
+   fpath: [f1]
 
  analyzers:{
    michelremoving:
@@ -51,7 +58,8 @@ ana:  [ michelremoving ]
 
 
 physics.analyzers.michelremoving.TrackModuleLabel:        "pandoraTrack"
-physics.analyzers.michelremoving.CalorimetryModuleLabel:  "pandoracalo"
+physics.analyzers.michelremoving.CalorimetryModuleLabel:  "pandoracaloSCE"
 #physics.analyzers.michelremoving.HitsModuleLabel:  "gaushit"
-physics.analyzers.michelremoving.HitsModuleLabel:  "linecluster"
+physics.analyzers.michelremoving.HitsModuleLabel:  "hitpdune"
 physics.analyzers.michelremoving.SaveTrackInfo: true
+physics.analyzers.velocity.SelectEvents: [fpath]
