@@ -1,18 +1,7 @@
-include_directories( $ENV{LIBWDA_FQ_DIR}/include )
-include_directories( $ENV{IFDH_ART_INC} )
-include_directories( $ENV{IFDHC_FQ_DIR}/inc )
-include_directories( $ENV{IFBEAM_FQ_DIR}/include )
-
-cet_find_library( WDALIB NAMES wda PATHS ENV LIBWDA_LIB NO_DEFAULT_PATH )
-cet_find_library( IFBEAMSERVICE NAMES IFBeam_service PATHS ENV IFDH_ART_LIB NO_DEFAULT_PATH )
-cet_find_library( IFBEAM NAMES ifbeam PATHS ENV IFBEAM_LIB   NO_DEFAULT_PATH )
-
 
 art_make( LIBRARY_NAME ProtoDUNEUtilities
 	  LIB_LIBRARIES
                         dune_ArtSupport
-                        ${IFBEAM}
-                        ${IFBEAMSERVICE}
                         lardataobj_RawData
                         lardataobj_RecoBase
                         larreco_RecoAlg
@@ -41,10 +30,9 @@ art_make( LIBRARY_NAME ProtoDUNEUtilities
                         art_Persistency_Provenance canvas
                         art_Utilities canvas
                         ${MF_MESSAGELOGGER}
+                        ${FHICLCPP}
                         cetlib cetlib_except
                         ${ROOT_BASIC_LIB_LIST}
-	  MODULE_LIBRARIES
-	  ProtoDUNEUtilities
 )
 
 install_headers()
