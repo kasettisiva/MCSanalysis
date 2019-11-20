@@ -73,6 +73,13 @@ find_ups_product( ifdhc )
 find_ups_geant4( )
 find_ups_product( systematicstools v00_01_01 )
 find_ups_product( nusystematics v00_01_01 )
+if(DEFINED ENV{HEP_HPC_DIR} )
+  find_ups_product( hep_hpc )
+endif()
+if(DEFINED ENV{HDF5_DIR} )
+  find_ups_product( hdf5 )
+  cet_find_library(HDF5 NAMES hdf5 PATHS ENV HDF5_LIB NO_DEFAULT_PATH)
+endif()
 
 # macros for dictionary and simple_plugin
 include(ArtDictionary)

@@ -22,10 +22,9 @@ art_make(BASENAME_ONLY
   larsim_MCCheater_ParticleInventoryService_service
   larreco_RecoAlg
   ${ROOT_BASIC_LIB_LIST}
+  hep_hpc_hdf5
+  ${HDF5}
   )
-if(DEFINED ENV{HEP_HPC_DIR})
-  add_subdirectory(hdf)
-endif()
 
 install_headers()
 install_fhicl()
