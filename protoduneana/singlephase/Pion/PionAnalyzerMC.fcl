@@ -2,6 +2,7 @@
 #include "triggeralgo_service.fcl"
 #include "ProtoDUNEBeamCuts.fcl"
 #include "ProtoDUNECalibration.fcl"
+#include "ProtoDUNEBeamlineUtils.fcl"
 
 BEGIN_PROLOG
 
@@ -19,6 +20,8 @@ pionanalysis:
   PFParticleTag:          "pandora"
   GeneratorTag:           "generator"
   dEdX_template_name:     "/dune/data/users/calcuttj/dEdxrestemplates.root"
+  BeamModuleLabel:        "beamevent"
+  BeamlineUtils: @local::standard_protodunebeamlineutils
   Verbose:                true
   NSliceCheck:            1
 

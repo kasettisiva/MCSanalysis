@@ -106,6 +106,7 @@ private:
   int run;
   int subrun;
   int event;
+  int MC;
 
 
   /////////////////////////////////////////////
@@ -139,7 +140,7 @@ private:
   std::vector< double > true_beam_elastic_costheta, true_beam_elastic_X, true_beam_elastic_Y, true_beam_elastic_Z;
   std::vector< std::string > true_beam_processes;
   //////////////////////////////////////////////////////
-
+  
   //////////////////////////////////////////////////////
   //Truth level info of the daughter MCParticles coming out of the 
   //true primary particle
@@ -225,9 +226,14 @@ private:
   //////////////////////////
 
 
-
-
-
+  /////////////////////////////////////////////////////
+  //Info from the BI if using Real Data
+  /////////////////////////////////////////////////////
+  double data_BI_P;
+  std::vector< int > data_BI_PDG_candidates;
+  double data_BI_X, data_BI_Y, data_BI_Z;
+  int data_BI_nFibersP1, data_BI_nFibersP2, data_BI_nFibersP3;
+  ////////////////////////////////////////////////////
 
 
 
@@ -401,6 +407,8 @@ private:
   std::string fShowerTag;     
   std::string fPFParticleTag; 
   std::string fGeneratorTag;
+  std::string fBeamModuleLabel;
+  protoana::ProtoDUNEBeamlineUtils fBeamlineUtils;
   std::string dEdX_template_name;
   TFile dEdX_template_file;
   bool fVerbose;             
@@ -424,6 +432,8 @@ pionana::PionAnalyzerMC::PionAnalyzerMC(fhicl::ParameterSet const& p)
   fShowerTag(p.get<std::string>("ShowerTag")),
   fPFParticleTag(p.get<std::string>("PFParticleTag")),
   fGeneratorTag(p.get<std::string>("GeneratorTag")),
+  fBeamModuleLabel(p.get<std::string>("BeamModuleLabel")),
+  fBeamlineUtils(p.get< fhicl::ParameterSet >("BeamlineUtils")),
   dEdX_template_name(p.get<std::string>("dEdX_template_name")),
   dEdX_template_file( dEdX_template_name.c_str(), "OPEN" ),
   fVerbose(p.get<bool>("Verbose")),
@@ -456,6 +466,9 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
   subrun = evt.subRun();
   event = evt.id().event();
 
+  if( !evt.isRealData() ) MC = 1;
+  else MC = 0;
+
    
   // Get various utilities 
   protoana::ProtoDUNEPFParticleUtils                    pfpUtil;
@@ -480,6 +493,44 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
   }
   ////////////////////////////
   
+  // Getting the BI from the data events
+  if( evt.isRealData() ){
+    auto beamHandle = evt.getValidHandle<std::vector<beam::ProtoDUNEBeamEvent>>(fBeamModuleLabel);
+    
+    std::vector<art::Ptr<beam::ProtoDUNEBeamEvent>> beamVec;
+    if( beamHandle.isValid()){
+      art::fill_ptr_vector(beamVec, beamHandle);
+    }
+
+    const beam::ProtoDUNEBeamEvent & beamEvent = *(beamVec.at(0)); //Should just have one
+
+    if( !fBeamlineUtils.IsGoodBeamlineTrigger( evt ) ){
+      std::cout << "Failed quality check" << std::endl;
+      return;
+    }
+
+    int nTracks = beamEvent.GetBeamTracks().size();
+    std::vector< double > momenta = beamEvent.GetRecoBeamMomenta();
+    int nMomenta = momenta.size();
+
+    if( !( nMomenta == 1 && nTracks == 1 ) ){
+      std::cout << "Malformed tracks and momenta" << std::endl;
+      return;
+    }
+    
+    data_BI_P = momenta[0];
+
+    data_BI_X = beamEvent.GetBeamTracks()[0].Trajectory().End().X();
+    data_BI_Y = beamEvent.GetBeamTracks()[0].Trajectory().End().Y();
+    data_BI_Z = beamEvent.GetBeamTracks()[0].Trajectory().End().Z();
+    std::vector< int > pdg_cands = fBeamlineUtils.GetPID( beamEvent, 1. );
+    data_BI_PDG_candidates.insert( data_BI_PDG_candidates.end(), pdg_cands.begin(), pdg_cands.end() );
+
+    data_BI_nFibersP1 = beamEvent.GetActiveFibers( "XBPF022697" ).size();
+    data_BI_nFibersP2 = beamEvent.GetActiveFibers( "XBPF022701" ).size();
+    data_BI_nFibersP3 = beamEvent.GetActiveFibers( "XBPF022702" ).size();
+  }
+  ////////////////////////////
   
 
   // Helper to get hits and the 4 associated CNN outputs
@@ -1884,6 +1935,7 @@ void pionana::PionAnalyzerMC::beginJob()
   fTree->Branch("run", &run);
   fTree->Branch("subrun", &subrun);
   fTree->Branch("event", &event);
+  fTree->Branch("MC", &MC);
 
 
 
@@ -2123,6 +2175,16 @@ void pionana::PionAnalyzerMC::beginJob()
   fTree->Branch("true_beam_processes", &true_beam_processes);
   fTree->Branch("reco_daughter_true_byE_isPrimary", &reco_daughter_true_byE_isPrimary);
 
+  fTree->Branch("data_BI_P", &data_BI_P);
+  fTree->Branch("data_BI_X", &data_BI_X);
+  fTree->Branch("data_BI_Y", &data_BI_Y);
+  fTree->Branch("data_BI_Z", &data_BI_Z);
+  fTree->Branch("data_BI_nFibersP1", &data_BI_nFibersP1);
+  fTree->Branch("data_BI_nFibersP2", &data_BI_nFibersP2);
+  fTree->Branch("data_BI_nFibersP3", &data_BI_nFibersP3);
+  fTree->Branch("data_BI_PDG_candidates", &data_BI_PDG_candidates);
+
+
   fTree->Branch("quality_reco_view_0_hits_in_TPC5", &quality_reco_view_0_hits_in_TPC5);
   fTree->Branch("quality_reco_view_1_hits_in_TPC5", &quality_reco_view_1_hits_in_TPC5);
   fTree->Branch("quality_reco_view_2_hits_in_TPC5", &quality_reco_view_2_hits_in_TPC5);
@@ -2314,6 +2376,18 @@ void pionana::PionAnalyzerMC::reset()
 
   reco_daughter_true_byE_isPrimary = false;
   reco_beam_Chi2_proton = 999.;
+
+
+  data_BI_P = 0.;
+  data_BI_X = 0.;
+  data_BI_Y = 0.;
+  data_BI_Z = 0.;
+  data_BI_nFibersP1 = 0;
+  data_BI_nFibersP2 = 0;
+  data_BI_nFibersP3 = 0;
+  data_BI_PDG_candidates.clear();
+
+
   quality_reco_view_0_hits_in_TPC5 = false;
   quality_reco_view_1_hits_in_TPC5 = false;
   quality_reco_view_2_hits_in_TPC5 = false;
