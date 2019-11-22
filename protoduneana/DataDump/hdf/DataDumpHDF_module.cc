@@ -112,29 +112,36 @@ void pdune::DataDumpHDF::analyze(art::Event const& e)
 
   auto const& wires =
     e.getValidHandle<std::vector<recob::Wire> >("caldata:dataprep");
-   std::vector<recob::Wire> const& wireVector(*wires);
-/*
-  for (auto & wire : * wires){
-    int channel = wire.Channel();
-    std::cout<<"Channel = "<<channel<<std::endl;
-    if (channel<2080 || channel > 2559) continue;
-    //for (auto & adc : wire.Signal()){
-    for (size_t i = 0; i < wire.Signal().size(); ++i){
-      //outfile<<channel<<" "<<i<<" "<<wire.Signal()[i]<<std::endl;
-//      channel.push_back(channel_no);
-//      tick.push_back(i);
-//      adc.push_back(wire.Signal()[i]);
-      //wiresigs.insert(run, subrun, event, wire.Signal()[i]);
-      wiresigs.insert(event_id.data(), channel, i, wire.Signal()[i]);
-    }
-  }
-*/
+   //std::vector<recob::Wire> const& wireVector(*wires);
+
+   int fill_channel = 2080;
+   for (auto & wire : * wires){
+	   int channel = wire.Channel();
+	   std::cout<<"Channel = "<<channel<<std::endl;
+	   if (channel<2080 || channel > 2559) continue;
+	   if (channel != fill_channel){
+		   for  (int j = 0; j < 6000; j++)
+			   wiresigs.insert(event_id.data(), 0.);
+	   }
+	   else{
+		   int nticks = wire.Signal().size();
+		   for (int j = 0; j < nticks; j++){
+			   float adc = wire.Signal()[j];
+			   wiresigs.insert(event_id.data(), adc);
+		   }
+		   if (nticks <6000){
+			   for (int j = nticks; j < 6000; j++)
+				   wiresigs.insert(event_id.data(), 0.);
+		   }
+	   }
+	   fill_channel++;
+}
+
 
    // Note: the following code has two assumptions:
    //    1. channels as a whole should not be missing; 
    //    2. missing ticks are only the last few.
-
-  for (int i=2080; i<=2559; i++){
+  /*for (int i=2080; i<=2559; i++){
     std::cout<<"Channel = "<<i<<std::endl;
     int nticks = wireVector.at(i).Signal().size();
     for (int j = 0; j < nticks; j++){
@@ -148,7 +155,7 @@ void pdune::DataDumpHDF::analyze(art::Event const& e)
         }
     }
   }
-
+*/
   
   //fTree->Fill();
   //outfile.close();
