@@ -31,7 +31,7 @@
 #include "hep_hpc/hdf5/File.hpp"
 #include "hep_hpc/hdf5/Ntuple.hpp"
 
-using wire_nt_t = hep_hpc::hdf5::Ntuple<unsigned int, unsigned short, unsigned short, float>;
+using wire_nt_t = hep_hpc::hdf5::Ntuple<unsigned int, float>;
 
 inline std::array<unsigned int, 3>
 get_eid(art::Event const& e)
@@ -107,11 +107,13 @@ void pdune::DataDumpHDF::analyze(art::Event const& e)
 
   hep_hpc::hdf5::File hdffile(Form("r%de%d.h5",run,event), H5F_ACC_TRUNC);
 
-  wire_nt_t wiresigs(hdffile, "wiresigs", {{"eid",3}, "channel", "tick", "adc"});
+  //wire_nt_t wiresigs(hdffile, "wiresigs", {{"eid",4}});
+  wire_nt_t wiresigs(hdffile, "wiresigs", {{"eid",3}, "adc"});
 
   auto const& wires =
     e.getValidHandle<std::vector<recob::Wire> >("caldata:dataprep");
-
+   std::vector<recob::Wire> const& wireVector(*wires);
+/*
   for (auto & wire : * wires){
     int channel = wire.Channel();
     std::cout<<"Channel = "<<channel<<std::endl;
@@ -122,9 +124,32 @@ void pdune::DataDumpHDF::analyze(art::Event const& e)
 //      channel.push_back(channel_no);
 //      tick.push_back(i);
 //      adc.push_back(wire.Signal()[i]);
+      //wiresigs.insert(run, subrun, event, wire.Signal()[i]);
       wiresigs.insert(event_id.data(), channel, i, wire.Signal()[i]);
     }
   }
+*/
+
+   // Note: the following code has two assumptions:
+   //    1. channels as a whole should not be missing; 
+   //    2. missing ticks are only the last few.
+
+  for (int i=2080; i<=2559; i++){
+    std::cout<<"Channel = "<<i<<std::endl;
+    int nticks = wireVector.at(i).Signal().size();
+    for (int j = 0; j < nticks; j++){
+	float adc = wireVector.at(i).Signal()[j];
+	wiresigs.insert(event_id.data(), adc);
+    }
+    if (nticks <6000){
+        for (int j = nticks; j < 6000; j++){
+            float adc = 0.;
+	    wiresigs.insert(event_id.data(), adc);
+        }
+    }
+  }
+
+  
   //fTree->Fill();
   //outfile.close();
 }
