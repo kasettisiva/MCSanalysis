@@ -31,7 +31,8 @@
 #include "hep_hpc/hdf5/File.hpp"
 #include "hep_hpc/hdf5/Ntuple.hpp"
 
-using wire_nt_t = hep_hpc::hdf5::Ntuple<unsigned int, unsigned short, unsigned short, float>;
+using wire_nt_t = hep_hpc::hdf5::Ntuple<float>;
+using evt_nt_t = hep_hpc::hdf5::Ntuple<unsigned int, double>;
 
 inline std::array<unsigned int, 3>
 get_eid(art::Event const& e)
@@ -56,19 +57,21 @@ public:
   DataDumpHDF& operator=(DataDumpHDF&&) = delete;
 
   // Required functions.
-  void analyze(art::Event const& e) override;
+  void analyze(art::Event const& e) noexcept;
+  void beginJob();
+  virtual ~DataDumpHDF() noexcept;
 
-private:
+
+protected:
 
 //geo::GeometryCore const* fGeom;
   //TTree *fTree;
-  unsigned int run;
-  unsigned int subrun;
-  unsigned int event;
   double evttime;
 //  std::vector<unsigned short> channel;
 //  std::vector<unsigned short> tick;
 //  std::vector<float> adc;
+  hep_hpc::hdf5::File hdffile;
+
 };
 
 
@@ -78,16 +81,17 @@ pdune::DataDumpHDF::DataDumpHDF(fhicl::ParameterSet const& p)
 {
   // Call appropriate consumes<>() for any products to be retrieved by this module.
 }
+pdune::DataDumpHDF::~DataDumpHDF() noexcept
+{
+}
 
-void pdune::DataDumpHDF::analyze(art::Event const& e)
+
+void pdune::DataDumpHDF::analyze(art::Event const& e) noexcept
 {
 
 //fGeom = &*(art::ServiceHandle<geo::Geometry>());
 
-  run = e.run();
-  subrun = e.subRun();
-  event = e.id().event();
-
+  hdffile = hep_hpc::hdf5::File(Form("r%d_e%d.h5",e.run(),e.event()), H5F_ACC_TRUNC);
   auto event_id = get_eid(e);
 
   art::Timestamp ts = e.time();
@@ -105,28 +109,43 @@ void pdune::DataDumpHDF::analyze(art::Event const& e)
 
   //std::ofstream outfile (Form("r%de%d.txt",run,event));
 
-  hep_hpc::hdf5::File hdffile(Form("r%de%d.h5",run,event), H5F_ACC_TRUNC);
-
-  wire_nt_t wiresigs(hdffile, "wiresigs", {{"eid",3}, "channel", "tick", "adc"});
+  //wire_nt_t wiresigs(hdffile, "wiresigs", {{"eid",4}});
+  wire_nt_t wiresigs(hdffile, "wiresigs", {"adc"});
+  evt_nt_t evtids(hdffile, "evtids", {{"eid",3}, "evttime"});
+  evtids.insert(event_id.data(), evttime);
 
   auto const& wires =
     e.getValidHandle<std::vector<recob::Wire> >("caldata:dataprep");
+   //std::vector<recob::Wire> const& wireVector(*wires);
 
-  for (auto & wire : * wires){
-    int channel = wire.Channel();
-    std::cout<<"Channel = "<<channel<<std::endl;
-    if (channel<2080 || channel > 2559) continue;
-    //for (auto & adc : wire.Signal()){
-    for (size_t i = 0; i < wire.Signal().size(); ++i){
-      //outfile<<channel<<" "<<i<<" "<<wire.Signal()[i]<<std::endl;
-//      channel.push_back(channel_no);
-//      tick.push_back(i);
-//      adc.push_back(wire.Signal()[i]);
-      wiresigs.insert(event_id.data(), channel, i, wire.Signal()[i]);
-    }
-  }
-  //fTree->Fill();
-  //outfile.close();
+   int fill_channel = 2080;
+   for (auto & wire : * wires){
+	   int channel = wire.Channel();
+	   if (channel<2080 || channel > 2559) continue;
+	   std::cout<<"Channel = "<<channel<<std::endl;
+	   if (channel != fill_channel){
+		   for  (int j = 0; j < 6000; j++)
+			   wiresigs.insert(0.);
+	   }
+	   else{
+		   int nticks = wire.Signal().size();
+		   for (int j = 0; j < nticks; j++){
+			   float adc = wire.Signal()[j];
+			   wiresigs.insert(adc);
+		   }
+		   if (nticks <6000){
+			   for (int j = nticks; j < 6000; j++)
+				   wiresigs.insert(0.);
+		   }
+	   }
+	   fill_channel++;
+   }
+   std::cout<<"event_time: "<<evttime<<std::endl;
+
+}
+
+void pdune::DataDumpHDF::beginJob()
+{
 }
 
 DEFINE_ART_MODULE(pdune::DataDumpHDF)
