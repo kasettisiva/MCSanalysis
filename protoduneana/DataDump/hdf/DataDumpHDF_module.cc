@@ -27,6 +27,7 @@
 
 #include <fstream>
 #include <vector>
+#include <algorithm>
 
 #include "hep_hpc/hdf5/File.hpp"
 #include "hep_hpc/hdf5/Ntuple.hpp"
@@ -38,6 +39,11 @@ inline std::array<unsigned int, 3>
 get_eid(art::Event const& e)
 {
   return { e.run(), e.subRun(), e.id().event() };
+}
+
+bool chIncrease(art::Ptr<recob::Wire> const & w1,
+                art::Ptr<recob::Wire> const & w2){
+  return (w1->Channel()<w2->Channel());
 }
 
 namespace pdune {
@@ -114,33 +120,35 @@ void pdune::DataDumpHDF::analyze(art::Event const& e) noexcept
   evt_nt_t evtids(hdffile, "evtids", {{"eid",3}, "evttime"});
   evtids.insert(event_id.data(), evttime);
 
-  auto const& wires =
-    e.getValidHandle<std::vector<recob::Wire> >("caldata:dataprep");
-   //std::vector<recob::Wire> const& wireVector(*wires);
+  art::Handle < std::vector < recob::Wire > > wireListHandle;
+  std::vector < art::Ptr < recob::Wire > > wires;
+  if (e.getByLabel("caldata:dataprep", wireListHandle)) {
+    art::fill_ptr_vector(wires, wireListHandle);
+  }
 
-   int fill_channel = 2080;
-   for (auto & wire : * wires){
-	   int channel = wire.Channel();
-	   if (channel<2080 || channel > 2559) continue;
-	   std::cout<<"Channel = "<<channel<<std::endl;
-	   if (channel != fill_channel){
-		   for  (int j = 0; j < 6000; j++)
-			   wiresigs.insert(0.);
-	   }
-	   else{
-		   int nticks = wire.Signal().size();
-		   for (int j = 0; j < nticks; j++){
-			   float adc = wire.Signal()[j];
-			   wiresigs.insert(adc);
-		   }
-		   if (nticks <6000){
-			   for (int j = nticks; j < 6000; j++)
-				   wiresigs.insert(0.);
-		   }
-	   }
-	   fill_channel++;
-   }
-   std::cout<<"event_time: "<<evttime<<std::endl;
+  std::sort(wires.begin(), wires.end(), chIncrease);
+//  auto const& wires =
+//    e.getValidHandle<std::vector<recob::Wire> >("caldata:dataprep");
+//   //std::vector<recob::Wire> const& wireVector(*wires);
+
+  for (auto & wire : wires){
+    int channel = wire->Channel();
+    if (!((channel>=2080 && channel < 2560)||
+          (channel>=7200 && channel < 7680)||
+          (channel>=12320 && channel < 12800))) continue;
+    if (channel%100==0) std::cout<<"Channel = "<<channel<<std::endl;
+
+    int nticks = wire->Signal().size();
+    for (int j = 0; j < nticks; j++){
+      float adc = wire->Signal()[j];
+      wiresigs.insert(adc);
+    }
+    if (nticks <6000){
+      for (int j = nticks; j < 6000; j++)
+        wiresigs.insert(0.);
+    }
+  }
+  std::cout<<"event_time: "<<evttime<<std::endl;
 
 }
 
