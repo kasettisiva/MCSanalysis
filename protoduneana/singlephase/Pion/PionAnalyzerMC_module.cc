@@ -29,6 +29,7 @@
 #include "lardataobj/AnalysisBase/CosmicTag.h"
 #include "lardataobj/AnalysisBase/T0.h"
 #include "larcore/Geometry/Geometry.h"
+#include "larreco/RecoAlg/TrackMomentumCalculator.h"
 
 #include "dune/Protodune/singlephase/DataUtils/ProtoDUNETrackUtils.h"
 #include "dune/Protodune/singlephase/DataUtils/ProtoDUNEShowerUtils.h"
@@ -387,6 +388,11 @@ private:
   std::vector< double > reco_daughter_Chi2_proton;
   std::vector< int >    reco_daughter_Chi2_ndof;
 
+  std::vector< double > reco_daughter_momByRange_proton;
+  std::vector< double > reco_daughter_momByRange_muon;
+  std::vector< double > reco_daughter_allTrack_momByRange_proton;
+  std::vector< double > reco_daughter_allTrack_momByRange_muon;
+
 
 
   ///Reconstructed Daughter Info
@@ -494,6 +500,7 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
   art::ServiceHandle< cheat::ParticleInventoryService > pi_serv;
   protoana::ProtoDUNETruthUtils                         truthUtil;
   art::ServiceHandle < geo::Geometry > fGeometryService;
+  trkf::TrackMomentumCalculator track_p_calc;
   ////////////////////////////////////////
   
 
@@ -1284,6 +1291,9 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
       reco_daughter_endY.push_back( daughterTrack->Trajectory().End().Y() );
       reco_daughter_endZ.push_back( daughterTrack->Trajectory().End().Z() );
 
+      reco_daughter_momByRange_proton.push_back( track_p_calc.GetTrackMomentum( daughterTrack->Length(), 2212 ) );
+      reco_daughter_momByRange_muon.push_back( track_p_calc.GetTrackMomentum(   daughterTrack->Length(), 13  ) );
+
       //Write out Hits of Daughter Track Particles
       if( fSaveHits ){
         reco_daughter_spacePts_X.push_back( std::vector< double >() );
@@ -1885,6 +1895,9 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
           reco_daughter_allTrack_endY.push_back(   pandora2Track->Trajectory().End().Y() );
           reco_daughter_allTrack_endZ.push_back(   pandora2Track->Trajectory().End().Z() );
 
+          reco_daughter_allTrack_momByRange_proton.push_back( track_p_calc.GetTrackMomentum( pandora2Track->Length(), 2212 ) );
+          reco_daughter_allTrack_momByRange_muon.push_back(   track_p_calc.GetTrackMomentum( pandora2Track->Length(), 13  ) );
+
           //Match the daughters to a slice
           //First, check whether the start or end of the daughter track are closer
           double d_startX = pandora2Track->Trajectory().Start().X();
@@ -2325,6 +2338,10 @@ void pionana::PionAnalyzerMC::beginJob()
 
   fTree->Branch("reco_daughter_Chi2_proton", &reco_daughter_Chi2_proton);
   fTree->Branch("reco_daughter_Chi2_ndof", &reco_daughter_Chi2_ndof);
+  fTree->Branch("reco_daughter_momByRange_proton", &reco_daughter_momByRange_proton);
+  fTree->Branch("reco_daughter_momByRange_muon", &reco_daughter_momByRange_muon);
+  fTree->Branch("reco_daughter_allTrack_momByRange_proton", &reco_daughter_allTrack_momByRange_proton);
+  fTree->Branch("reco_daughter_allTrack_momByRange_muon", &reco_daughter_allTrack_momByRange_muon);
 
   fTree->Branch("reco_daughter_shower_Chi2_proton", &reco_daughter_shower_Chi2_proton);
   fTree->Branch("reco_daughter_shower_Chi2_ndof", &reco_daughter_shower_Chi2_ndof);
@@ -2530,6 +2547,10 @@ void pionana::PionAnalyzerMC::reset()
 
   reco_daughter_Chi2_proton.clear();
   reco_daughter_Chi2_ndof.clear();
+  reco_daughter_momByRange_proton.clear();
+  reco_daughter_momByRange_muon.clear();
+  reco_daughter_allTrack_momByRange_proton.clear();
+  reco_daughter_allTrack_momByRange_muon.clear();
 
   reco_daughter_shower_Chi2_proton.clear();
   reco_daughter_shower_Chi2_ndof.clear();
