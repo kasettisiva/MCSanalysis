@@ -28,6 +28,7 @@
 #include "nusimdata/SimulationBase/MCTruth.h"
 #include "lardataobj/AnalysisBase/CosmicTag.h"
 #include "lardataobj/AnalysisBase/T0.h"
+#include "larcore/Geometry/Geometry.h"
 
 #include "dune/Protodune/singlephase/DataUtils/ProtoDUNETrackUtils.h"
 #include "dune/Protodune/singlephase/DataUtils/ProtoDUNEShowerUtils.h"
@@ -138,6 +139,8 @@ private:
 
   int  true_beam_nElasticScatters;
   std::vector< double > true_beam_elastic_costheta, true_beam_elastic_X, true_beam_elastic_Y, true_beam_elastic_Z;
+  double true_beam_IDE_totalDep;
+  bool true_beam_IDE_found_in_recoVtx;
   std::vector< std::string > true_beam_processes;
   //////////////////////////////////////////////////////
   
@@ -477,6 +480,7 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
   art::ServiceHandle<cheat::BackTrackerService>         bt_serv;
   art::ServiceHandle< cheat::ParticleInventoryService > pi_serv;
   protoana::ProtoDUNETruthUtils                         truthUtil;
+  art::ServiceHandle < geo::Geometry > fGeometryService;
   ////////////////////////////////////////
   
 
@@ -1191,6 +1195,51 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
         reco_beam_vertex_dRs.push_back( temp_dRs );
 
       }
+
+
+      double IDE_max_z = 0.; 
+      const sim::IDE * max_IDE = 0x0;
+
+      for( size_t i = 0; i < vertex_hits.size(); ++i ){
+        std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( *(vertex_hits[i]) );
+        for( size_t j = 0; j < ides.size(); ++j ){
+          if( ides[j]->trackID == true_beam_ID ){
+            //std::cout << "Found Track: " << ides[j]->trackID << " Hit: " << i << " ide: " <<  j <<  " " << ides[j] << std::endl;
+            //std::cout << "\t" << ides[j]->x << " " << ides[j]->y << " " << ides[j]->z << " " << ides[j]->energy << std::endl;
+            if( ides[j]->z > IDE_max_z ){
+              IDE_max_z = ides[j]->z;
+              max_IDE = ides[j];
+            }
+          }
+        }
+      }
+      
+      std::cout << "Looking at IDEs" << std::endl;
+      auto view2_IDEs = bt_serv->TrackIdToSimIDEs_Ps( true_beam_ID, fGeometryService->View(2) );
+      std::sort( view2_IDEs.begin(), view2_IDEs.end(), sort_IDEs );
+
+      double new_total_dE = 0.;
+      if( max_IDE ){
+        true_beam_IDE_found_in_recoVtx = true;
+        for( size_t i = 0; i < view2_IDEs.size(); ++i ){
+          auto theIDE = view2_IDEs[i]; 
+
+          if( theIDE->z > IDE_max_z )
+            break;
+
+          //std::cout << view2_IDEs[i]->z << " " << view2_IDEs[i]->energy << std::endl;
+          new_total_dE += view2_IDEs[i]->energy;
+        }
+      }
+      else{
+        true_beam_IDE_found_in_recoVtx = false;
+        for( size_t i = 0; i < view2_IDEs.size(); ++i ){
+          new_total_dE += view2_IDEs[i]->energy;
+        }
+      }
+      true_beam_IDE_totalDep = new_total_dE;
+      std::cout << "New total: " << new_total_dE << std::endl;
+
     }
 
 
@@ -2112,16 +2161,20 @@ void pionana::PionAnalyzerMC::beginJob()
   fTree->Branch("true_beam_startDirY", &true_beam_startDirY);
   fTree->Branch("true_beam_startDirZ", &true_beam_startDirZ);
 
+/*
   fTree->Branch("true_beam_nElasticScatters", &true_beam_nElasticScatters);
   fTree->Branch("true_beam_elastic_costheta", &true_beam_elastic_costheta);
   fTree->Branch("true_beam_elastic_X", &true_beam_elastic_X);
   fTree->Branch("true_beam_elastic_Y", &true_beam_elastic_Y);
   fTree->Branch("true_beam_elastic_Z", &true_beam_elastic_Z);
+  */
   fTree->Branch("true_beam_nElasticScatters", &true_beam_nElasticScatters);
   fTree->Branch("true_beam_elastic_costheta", &true_beam_elastic_costheta);
   fTree->Branch("true_beam_elastic_X", &true_beam_elastic_X);
   fTree->Branch("true_beam_elastic_Y", &true_beam_elastic_Y);
   fTree->Branch("true_beam_elastic_Z", &true_beam_elastic_Z);
+  fTree->Branch("true_beam_IDE_totalDep",    &true_beam_IDE_totalDep);
+  fTree->Branch("true_beam_IDE_found_in_recoVtx",    &true_beam_IDE_found_in_recoVtx);
 
   fTree->Branch("true_daughter_nPi0", &true_daughter_nPi0);
   fTree->Branch("true_daughter_nPiPlus", &true_daughter_nPiPlus);
@@ -2336,6 +2389,8 @@ void pionana::PionAnalyzerMC::reset()
   true_beam_elastic_X.clear();
   true_beam_elastic_Y.clear();
   true_beam_elastic_Z.clear();
+  true_beam_IDE_totalDep = 0.;
+  true_beam_IDE_found_in_recoVtx = false;
 
   reco_beam_true_byE_endProcess ="";
   reco_beam_true_byE_process ="";
