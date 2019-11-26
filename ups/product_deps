@@ -3,7 +3,7 @@
 # The *parent* line must the first non-commented line and defines this product and version
 # The version must be of the form vxx_yy_zz (e.g. v01_02_03).
 
-parent protoduneana v08_34_00
+parent protoduneana v08_36_01
 
 defaultqual e17
 
@@ -60,23 +60,24 @@ table_fragment_end
 # Add the dependent product and version
 
 product          version
-dunetpc          v08_34_00
-cetbuildtools	 v7_12_01	-	only_for_build
+dunetpc          v08_36_01
+hep_hpc          v0_11_00       -       optional
+cetbuildtools	 v7_14_00	-	only_for_build
 end_product_list
 
 
 # We now define allowed qualifiers and the corresponding qualifiers for the depdencies.
 # Make a table by adding columns before "notes".
 # e15  - with gcc 6.4.0 and -std=c++14
-qualifier	dunetpc         notes
-c2:py3:debug	c2:py3:debug	-nq-
-c2:py3:prof	c2:py3:prof	-nq-
-e17:py3:debug	e17:py3:debug	-nq-
-e17:py3:prof	e17:py3:prof	-nq-
-c2:debug	c2:debug	-nq-
-c2:prof		c2:prof		-nq-
-e17:debug	e17:debug	-nq-
-e17:prof	e17:prof	-nq-
+qualifier	dunetpc         hep_hpc notes
+c2:py3:debug	c2:py3:debug	c2:py3:debug    -nq-
+c2:py3:prof	c2:py3:prof	c2:py3:prof     -nq-
+e17:py3:debug	e17:py3:debug	e17:py3:debug   -nq-
+e17:py3:prof	e17:py3:prof    e17:py3:prof    -nq-
+c2:debug	c2:debug	c2:debug        -nq-
+c2:prof		c2:prof         c2:prof         -nq-
+e17:debug	e17:debug       e17:debug       -nq-
+e17:prof	e17:prof        e17:prof        -nq-
 end_qualifier_list
 
 # Preserve tabs and formatting in emacs and vi / vim:
