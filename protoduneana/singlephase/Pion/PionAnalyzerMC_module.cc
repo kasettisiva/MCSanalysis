@@ -335,7 +335,7 @@ private:
   std::vector< double > reco_daughter_PFP_true_byHits_startE;
   std::vector< double > reco_daughter_PFP_true_byHits_startP;
 
-  std::vector< std::string > reco_daughter_pFP_true_byHits_endProcess;
+  std::vector< std::string > reco_daughter_PFP_true_byHits_endProcess;
 
   //////////////////////////////////////
 
