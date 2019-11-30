@@ -368,6 +368,7 @@ private:
   std::vector< double > reco_daughter_shower_true_byHits_startPy;
   std::vector< double > reco_daughter_shower_true_byHits_startPz;
   std::vector< double > reco_daughter_shower_true_byHits_startP;
+  std::vector< std::string>  reco_daughter_shower_true_byHits_endProcess;
   //EDIT: reco_daughter_show_ID
   std::vector< int > reco_daughter_showerID;
   std::vector< int > reco_daughter_shower_true_byE_PDG;
@@ -378,6 +379,7 @@ private:
   std::vector< double > reco_daughter_shower_true_byE_startPy;
   std::vector< double > reco_daughter_shower_true_byE_startPz;
   std::vector< double > reco_daughter_shower_true_byE_startP;
+  std::vector< std::string>  reco_daughter_shower_true_byE_endProcess;
   std::vector< std::vector< double > > reco_daughter_dEdX, reco_daughter_dQdX, reco_daughter_resRange;
 
   
@@ -1696,7 +1698,7 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
           reco_daughter_shower_true_byE_startPy.push_back( trueDaughterParticle->Py());
           reco_daughter_shower_true_byE_startPz.push_back( trueDaughterParticle->Pz());
           reco_daughter_shower_true_byE_startP.push_back( trueDaughterParticle->P());
-
+          reco_daughter_shower_true_byE_endProcess.push_back( trueDaughterParticle->EndProcess());
         }
         else{
           reco_daughter_shower_true_byE_PDG.push_back( -1 );
@@ -1707,6 +1709,7 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
           reco_daughter_shower_true_byE_startPy.push_back(-999.);
           reco_daughter_shower_true_byE_startPz.push_back(-999.);
           reco_daughter_shower_true_byE_startP.push_back(-999.);
+          reco_daughter_shower_true_byE_endProcess.push_back("empty");
         }
 
         const simb::MCParticle * match = truthUtil.GetMCParticleByHits( *daughterShowerFromRecoTrack, evt, fShowerTag, fHitTag ).particle;
@@ -1725,7 +1728,7 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
           reco_daughter_shower_true_byHits_startPy.push_back( match->Py());
           reco_daughter_shower_true_byHits_startPz.push_back( match->Pz());
           reco_daughter_shower_true_byHits_startP.push_back( match->P());
-
+          reco_daughter_shower_true_byHits_endProcess.push_back( match->EndProcess());
         }
         else{
           reco_daughter_shower_true_byHits_PDG.push_back( -1 );
@@ -1737,7 +1740,7 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
           reco_daughter_shower_true_byHits_startPy.push_back(-999.);
           reco_daughter_shower_true_byHits_startPz.push_back(-999.);
           reco_daughter_shower_true_byHits_startP.push_back(-999.);
-
+          reco_daughter_shower_true_byHits_endProcess.push_back("empty");
         }
 
         auto list = truthUtil.GetMCParticleListByHits( *daughterShowerFromRecoTrack, evt, fShowerTag, fHitTag );
@@ -2198,6 +2201,8 @@ void pionana::PionAnalyzerMC::beginJob()
   fTree->Branch("reco_daughter_shower_true_byE_startPy", &reco_daughter_shower_true_byE_startPy);
   fTree->Branch("reco_daughter_shower_true_byE_startPz", &reco_daughter_shower_true_byE_startPz);
   fTree->Branch("reco_daughter_shower_true_byE_startP", &reco_daughter_shower_true_byE_startP);
+  fTree->Branch("reco_daughter_shower_true_byE_endProcess", &reco_daughter_shower_true_byE_endProcess);
+
 
   fTree->Branch("reco_daughter_shower_true_byHits_PDG", &reco_daughter_shower_true_byHits_PDG);
   fTree->Branch("reco_daughter_shower_true_byHits_ID", &reco_daughter_shower_true_byHits_ID);
@@ -2210,6 +2215,8 @@ void pionana::PionAnalyzerMC::beginJob()
   fTree->Branch("reco_daughter_shower_true_byHits_startPy", &reco_daughter_shower_true_byHits_startPy);
   fTree->Branch("reco_daughter_shower_true_byHits_startPz", &reco_daughter_shower_true_byHits_startPz);
   fTree->Branch("reco_daughter_shower_true_byHits_startP", &reco_daughter_shower_true_byHits_startP);
+  fTree->Branch("reco_daughter_shower_true_byHits_endProcess", &reco_daughter_shower_true_byHits_endProcess);
+
 
   ///Reconstructed info -- daughter
   fTree->Branch("reco_daughter_showerID", &reco_daughter_showerID);
@@ -2763,6 +2770,8 @@ void pionana::PionAnalyzerMC::reset()
   reco_daughter_shower_true_byHits_startPy.clear();
   reco_daughter_shower_true_byHits_startPz.clear();
   reco_daughter_shower_true_byHits_startP.clear();
+  reco_daughter_shower_true_byHits_endProcess.clear();
+
 
 
 
@@ -2777,6 +2786,8 @@ void pionana::PionAnalyzerMC::reset()
   reco_daughter_shower_true_byE_startPy.clear();
   reco_daughter_shower_true_byE_startPz.clear();
   reco_daughter_shower_true_byE_startP.clear();
+  reco_daughter_shower_true_byE_endProcess.clear();
+
 
 
 
