@@ -74,8 +74,8 @@
 // Maximum number of beam particles to save
 const int NMAXDAUGTHERS = 15;
 
-const int kMaxTracks  = 1000;
-const int kMaxHits = 10000;
+// const int kMaxTracks  = 1000;
+// const int kMaxHits = 10000;
 //double prim_energy=0.0;
 
 namespace protoana {

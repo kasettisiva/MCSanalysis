@@ -22,7 +22,7 @@
 
 #include "dune/Protodune/singlephase/DataUtils/ProtoDUNEShowerUtils.h"
 #include "dune/Protodune/singlephase/DataUtils/ProtoDUNETruthUtils.h"
-#include "ShowerProcess.h"
+#include "protoduneana/singlephase/EMTaskForce/ShowerProcess.h"
 
 namespace pizero {
 
@@ -128,6 +128,12 @@ class PiZeroProcess {
 
   // Const access to private members.
   const simb::MCParticle* pi0() const { return _pi0; }
+  const ShowerProcess* showerProcess1() const {
+    return &*_shProcess1;
+  }
+  const ShowerProcess* showerProcess2() const {
+    return &*_shProcess2;
+  }
   const simb::MCParticle* photon1() const {
     return _shProcess1? _shProcess1->mcparticle(): 0x0;
   }
@@ -145,6 +151,12 @@ class PiZeroProcess {
   }
   const recob::Track* track2() const {
     return _shProcess2? _shProcess2->track(): 0x0;
+  }
+  const Cone* cone1() const {
+    return _shProcess1? _shProcess1->cone(): 0x0;
+  }
+  const Cone* cone2() const {
+    return _shProcess2? _shProcess2->cone(): 0x0;
   }
   const art::Event* evt() const { return &_evt; }
   std::string showerLabel() const { return _showerLabel; }

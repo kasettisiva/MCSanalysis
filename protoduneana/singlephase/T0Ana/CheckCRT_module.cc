@@ -368,6 +368,7 @@ void pdsp::CheckCRT::analyze(art::Event const& e)
   std::vector< art::Ptr<recob::Track> > pandoratrks;
   if (e.getByLabel("pandoraTrack", pandoratrkHandle))
     art::fill_ptr_vector(pandoratrks, pandoratrkHandle);
+  else return;
   
   art::Handle< std::vector<recob::PFParticle> > pfpListHandle;
   e.getByLabel("pandora", pfpListHandle);

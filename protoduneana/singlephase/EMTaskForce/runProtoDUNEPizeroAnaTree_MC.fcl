@@ -37,11 +37,11 @@ physics:
   pdAnaTree:          @local::proto_AnaTree
  }
  ana:  [ pdAnaTree ]
- 
+
  end_paths:     [ ana ]
 
 }
 
 outputs: {}
-physics.analyzers.pdAnaTree.ShowerCalorimetryTag: "pandoraShowercaloSCE" 
-physics.analyzers.pdAnaTree.CalorimetryTag: "pandoraSCE" 
+# physics.analyzers.pdAnaTree.ShowerCalorimetryTag: "pandoraShowercaloSCE"
+# physics.analyzers.pdAnaTree.CalorimetryTag: "pandoracaloSCE"

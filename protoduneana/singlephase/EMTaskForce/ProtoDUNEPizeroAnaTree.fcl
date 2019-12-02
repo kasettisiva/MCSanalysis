@@ -18,6 +18,8 @@ proto_AnaTree:
    PFParticleTag:           "pandora"
    GeneratorTag:            "generator"
    HitTag:                  "gaushit"
+   UseMCforReco:            true
+   PlotCoords:              true
    Verbose:                 0
    DataUtils:               @local::standard_protodunedatautils
    BeamLineUtils:           @local::standard_protodunebeamlineutils

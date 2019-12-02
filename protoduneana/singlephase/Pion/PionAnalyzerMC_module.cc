@@ -338,6 +338,9 @@ private:
   std::vector< double > reco_daughter_PFP_true_byHits_startPz;
   std::vector< double > reco_daughter_PFP_true_byHits_startE;
   std::vector< double > reco_daughter_PFP_true_byHits_startP;
+
+  std::vector< std::string > reco_daughter_PFP_true_byHits_endProcess;
+
   //////////////////////////////////////
 
   //EDIT: reco_daughter_allTrack_XXX
@@ -365,13 +368,22 @@ private:
   std::vector< int > reco_daughter_shower_true_byHits_parID;
   std::vector< std::string > reco_daughter_shower_true_byHits_process;
   std::vector< double > reco_daughter_shower_true_byHits_purity;
-
+  std::vector< double > reco_daughter_shower_true_byHits_startPx;
+  std::vector< double > reco_daughter_shower_true_byHits_startPy;
+  std::vector< double > reco_daughter_shower_true_byHits_startPz;
+  std::vector< double > reco_daughter_shower_true_byHits_startP;
+  std::vector< std::string>  reco_daughter_shower_true_byHits_endProcess;
   //EDIT: reco_daughter_show_ID
   std::vector< int > reco_daughter_showerID;
   std::vector< int > reco_daughter_shower_true_byE_PDG;
   std::vector< int > reco_daughter_shower_true_byE_ID;
   std::vector< int > reco_daughter_shower_true_byE_origin;
   std::vector< int > reco_daughter_shower_true_byE_parID;
+  std::vector< double > reco_daughter_shower_true_byE_startPx;
+  std::vector< double > reco_daughter_shower_true_byE_startPy;
+  std::vector< double > reco_daughter_shower_true_byE_startPz;
+  std::vector< double > reco_daughter_shower_true_byE_startP;
+  std::vector< std::string>  reco_daughter_shower_true_byE_endProcess;
   std::vector< std::vector< double > > reco_daughter_dEdX, reco_daughter_dQdX, reco_daughter_resRange;
 
   
@@ -1686,14 +1698,22 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
             pi_serv->TrackIdToMCTruth_P(trueDaughterParticle->TrackId())->Origin()
           );
           reco_daughter_shower_true_byE_parID.push_back( trueDaughterParticle->Mother() );
-
+          reco_daughter_shower_true_byE_startPx.push_back( trueDaughterParticle->Px());
+          reco_daughter_shower_true_byE_startPy.push_back( trueDaughterParticle->Py());
+          reco_daughter_shower_true_byE_startPz.push_back( trueDaughterParticle->Pz());
+          reco_daughter_shower_true_byE_startP.push_back( trueDaughterParticle->P());
+          reco_daughter_shower_true_byE_endProcess.push_back( trueDaughterParticle->EndProcess());
         }
         else{
           reco_daughter_shower_true_byE_PDG.push_back( -1 );
           reco_daughter_shower_true_byE_ID.push_back( -1 );
           reco_daughter_shower_true_byE_origin.push_back( -1 );
           reco_daughter_shower_true_byE_parID.push_back( -1 );
-
+          reco_daughter_shower_true_byE_startPx.push_back(-999.);
+          reco_daughter_shower_true_byE_startPy.push_back(-999.);
+          reco_daughter_shower_true_byE_startPz.push_back(-999.);
+          reco_daughter_shower_true_byE_startP.push_back(-999.);
+          reco_daughter_shower_true_byE_endProcess.push_back("empty");
         }
 
         const simb::MCParticle * match = truthUtil.GetMCParticleByHits( *daughterShowerFromRecoTrack, evt, fShowerTag, fHitTag ).particle;
@@ -1708,6 +1728,11 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
           reco_daughter_shower_true_byHits_origin.push_back( 
             pi_serv->TrackIdToMCTruth_P(match->TrackId())->Origin()
           );
+          reco_daughter_shower_true_byHits_startPx.push_back( match->Px());
+          reco_daughter_shower_true_byHits_startPy.push_back( match->Py());
+          reco_daughter_shower_true_byHits_startPz.push_back( match->Pz());
+          reco_daughter_shower_true_byHits_startP.push_back( match->P());
+          reco_daughter_shower_true_byHits_endProcess.push_back( match->EndProcess());
         }
         else{
           reco_daughter_shower_true_byHits_PDG.push_back( -1 );
@@ -1715,6 +1740,11 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
           reco_daughter_shower_true_byHits_origin.push_back( -1 );
           reco_daughter_shower_true_byHits_parID.push_back( -1 );
           reco_daughter_shower_true_byHits_process.push_back( "empty" );
+          reco_daughter_shower_true_byHits_startPx.push_back(-999.);
+          reco_daughter_shower_true_byHits_startPy.push_back(-999.);
+          reco_daughter_shower_true_byHits_startPz.push_back(-999.);
+          reco_daughter_shower_true_byHits_startP.push_back(-999.);
+          reco_daughter_shower_true_byHits_endProcess.push_back("empty");
         }
 
         auto list = truthUtil.GetMCParticleListByHits( *daughterShowerFromRecoTrack, evt, fShowerTag, fHitTag );
@@ -1812,6 +1842,7 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
                           sqrt(match.particle->Px()*match.particle->Px() + 
                                   match.particle->Py()*match.particle->Py() + 
                                   match.particle->Pz()*match.particle->Pz()) );
+          reco_daughter_PFP_true_byHits_endProcess.push_back( match.particle->EndProcess());
 
         }
         else{
@@ -1823,18 +1854,19 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
           reco_daughter_PFP_true_byHits_sharedHits.push_back( 0 ); 
           reco_daughter_PFP_true_byHits_emHits.push_back( 0 ); 
 
-          reco_daughter_PFP_true_byHits_len.push_back( 0. );
-          reco_daughter_PFP_true_byHits_startX.push_back( 0. );
-          reco_daughter_PFP_true_byHits_startY.push_back( 0. );
-          reco_daughter_PFP_true_byHits_startZ.push_back( 0. );
-          reco_daughter_PFP_true_byHits_endX.push_back( 0. );
-          reco_daughter_PFP_true_byHits_endY.push_back( 0. );
-          reco_daughter_PFP_true_byHits_endZ.push_back( 0. );
-          reco_daughter_PFP_true_byHits_startPx.push_back( 0. );
-          reco_daughter_PFP_true_byHits_startPy.push_back( 0. );
-          reco_daughter_PFP_true_byHits_startPz.push_back( 0. );
-          reco_daughter_PFP_true_byHits_startP.push_back( 0. );
-          reco_daughter_PFP_true_byHits_startE.push_back( 0. );
+          reco_daughter_PFP_true_byHits_len.push_back( -999. );
+          reco_daughter_PFP_true_byHits_startX.push_back( -999. );
+          reco_daughter_PFP_true_byHits_startY.push_back( -999. );
+          reco_daughter_PFP_true_byHits_startZ.push_back( -999. );
+          reco_daughter_PFP_true_byHits_endX.push_back( -999. );
+          reco_daughter_PFP_true_byHits_endY.push_back( -999. );
+          reco_daughter_PFP_true_byHits_endZ.push_back( -999. );
+          reco_daughter_PFP_true_byHits_startPx.push_back( -999. );
+          reco_daughter_PFP_true_byHits_startPy.push_back( -999. );
+          reco_daughter_PFP_true_byHits_startPz.push_back( -999. );
+          reco_daughter_PFP_true_byHits_startP.push_back( -999. );
+          reco_daughter_PFP_true_byHits_startE.push_back( -999. );
+          reco_daughter_PFP_true_byHits_endProcess.push_back("empty");
         }
       }
 
@@ -2208,6 +2240,7 @@ void pionana::PionAnalyzerMC::beginJob()
   fTree->Branch("reco_daughter_PFP_true_byHits_startPz", &reco_daughter_PFP_true_byHits_startPz);
   fTree->Branch("reco_daughter_PFP_true_byHits_startP", &reco_daughter_PFP_true_byHits_startP);
   fTree->Branch("reco_daughter_PFP_true_byHits_startE", &reco_daughter_PFP_true_byHits_startE);
+  fTree->Branch("reco_daughter_PFP_true_byHits_endProcess", &reco_daughter_PFP_true_byHits_endProcess);
 
   fTree->Branch("reco_daughter_allTrack_ID", &reco_daughter_allTrack_ID);
   fTree->Branch("reco_daughter_allTrack_dEdX", &reco_daughter_allTrack_dEdX);
@@ -2239,6 +2272,13 @@ void pionana::PionAnalyzerMC::beginJob()
   fTree->Branch("reco_daughter_shower_true_byE_ID", &reco_daughter_shower_true_byE_ID);
   fTree->Branch("reco_daughter_shower_true_byE_origin", &reco_daughter_shower_true_byE_origin);
   fTree->Branch("reco_daughter_shower_true_byE_parID", &reco_daughter_shower_true_byE_parID);
+ 
+  fTree->Branch("reco_daughter_shower_true_byE_startPx", &reco_daughter_shower_true_byE_startPx);
+  fTree->Branch("reco_daughter_shower_true_byE_startPy", &reco_daughter_shower_true_byE_startPy);
+  fTree->Branch("reco_daughter_shower_true_byE_startPz", &reco_daughter_shower_true_byE_startPz);
+  fTree->Branch("reco_daughter_shower_true_byE_startP", &reco_daughter_shower_true_byE_startP);
+  fTree->Branch("reco_daughter_shower_true_byE_endProcess", &reco_daughter_shower_true_byE_endProcess);
+
 
   fTree->Branch("reco_daughter_shower_true_byHits_PDG", &reco_daughter_shower_true_byHits_PDG);
   fTree->Branch("reco_daughter_shower_true_byHits_ID", &reco_daughter_shower_true_byHits_ID);
@@ -2246,6 +2286,13 @@ void pionana::PionAnalyzerMC::beginJob()
   fTree->Branch("reco_daughter_shower_true_byHits_parID", &reco_daughter_shower_true_byHits_parID);
   fTree->Branch("reco_daughter_shower_true_byHits_process", &reco_daughter_shower_true_byHits_process);
   fTree->Branch("reco_daughter_shower_true_byHits_purity", &reco_daughter_shower_true_byHits_purity);
+
+  fTree->Branch("reco_daughter_shower_true_byHits_startPx", &reco_daughter_shower_true_byHits_startPx);
+  fTree->Branch("reco_daughter_shower_true_byHits_startPy", &reco_daughter_shower_true_byHits_startPy);
+  fTree->Branch("reco_daughter_shower_true_byHits_startPz", &reco_daughter_shower_true_byHits_startPz);
+  fTree->Branch("reco_daughter_shower_true_byHits_startP", &reco_daughter_shower_true_byHits_startP);
+  fTree->Branch("reco_daughter_shower_true_byHits_endProcess", &reco_daughter_shower_true_byHits_endProcess);
+
 
   ///Reconstructed info -- daughter
   fTree->Branch("reco_daughter_showerID", &reco_daughter_showerID);
@@ -2769,6 +2816,7 @@ void pionana::PionAnalyzerMC::reset()
   reco_daughter_PFP_true_byHits_startPz.clear();
   reco_daughter_PFP_true_byHits_startP.clear();
   reco_daughter_PFP_true_byHits_startE.clear();
+  reco_daughter_PFP_true_byHits_endProcess.clear();
 
   reco_daughter_allTrack_ID.clear();
   reco_daughter_allTrack_dEdX.clear();
@@ -2802,12 +2850,30 @@ void pionana::PionAnalyzerMC::reset()
   reco_daughter_shower_true_byHits_process.clear();
   reco_daughter_shower_true_byHits_purity.clear();
   reco_daughter_true_byHits_purity.clear();
+  reco_daughter_shower_true_byHits_startPx.clear();
+  reco_daughter_shower_true_byHits_startPy.clear();
+  reco_daughter_shower_true_byHits_startPz.clear();
+  reco_daughter_shower_true_byHits_startP.clear();
+  reco_daughter_shower_true_byHits_endProcess.clear();
+
+
+
+
 
   reco_daughter_showerID.clear();
   reco_daughter_shower_true_byE_PDG.clear();
   reco_daughter_shower_true_byE_ID.clear();
   reco_daughter_shower_true_byE_origin.clear();
   reco_daughter_shower_true_byE_parID.clear();
+
+  reco_daughter_shower_true_byE_startPx.clear();
+  reco_daughter_shower_true_byE_startPy.clear();
+  reco_daughter_shower_true_byE_startPz.clear();
+  reco_daughter_shower_true_byE_startP.clear();
+  reco_daughter_shower_true_byE_endProcess.clear();
+
+
+
 
   //New Hits info
   reco_beam_spacePts_X.clear();
