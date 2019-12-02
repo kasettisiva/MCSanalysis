@@ -199,6 +199,10 @@ private:
   int reco_beam_type;
   double reco_beam_Chi2_proton;
   int    reco_beam_Chi2_ndof;
+
+  std::vector< double > reco_beam_cosmic_candidate_upper_hits;
+  std::vector< double > reco_beam_cosmic_candidate_lower_hits;
+  std::vector< int > reco_beam_cosmic_candidate_ID;
   ////////////////////////
 
   
@@ -2019,6 +2023,78 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
 
 
 
+
+    //New: Trying to identify cosmics
+    
+    if( quality_reco_view_2_wire.size() ){
+    
+      std::map< int, std::pair< double, double > > UpperCosmicROILimits, LowerCosmicROILimits;
+      std::map< int, int > wire_to_n_ticks;
+      std::map< int, double > wire_to_avg_ticks;
+      for( size_t i = 0; i < quality_reco_view_2_wire.size(); ++i ){
+        wire_to_n_ticks[ int(quality_reco_view_2_wire[i]) ]++;
+        wire_to_avg_ticks[ int(quality_reco_view_2_wire[i]) ] += quality_reco_view_2_tick[i];
+      }
+
+      double max_tick = 0.;
+      double min_tick = 99999.;
+      for( auto it = wire_to_n_ticks.begin(); it != wire_to_n_ticks.end(); ++it ){
+        wire_to_avg_ticks[ it->first ] /= it->second;
+
+        if( wire_to_avg_ticks[ it->first ] > max_tick ){
+          max_tick = wire_to_avg_ticks[ it->first ];
+        }
+        if( wire_to_avg_ticks[ it->first ] < min_tick ){
+          min_tick = wire_to_avg_ticks[ it->first ];
+        }
+      }
+
+
+
+      std::cout << "Min tick: " << min_tick << " Max tick: " << max_tick << std::endl;
+      std::cout << "Min wire: " << wire_to_avg_ticks.begin()->first << " Max wire: " << wire_to_avg_ticks.rbegin()->first << std::endl;
+
+      //1st Get all the reco tracks -- or PFP?
+      for( size_t i = 0; i < recoTracks->size(); ++i ){
+
+        if( (*recoTracks)[i].ID() == thisTrack->ID() ) continue;
+
+        int nUpperCosmicROI = 0;
+        int nLowerCosmicROI = 0;
+        std::cout << "Checking Track " << (*recoTracks)[i].ID() << std::endl;
+
+        auto planeHits = trackUtil.GetRecoTrackHitsFromPlane( (*recoTracks)[i], evt, fTrackerTag, 2 );
+        for( size_t j = 0; j < planeHits.size(); ++j ){
+          auto theHit = planeHits[j];
+          if( theHit->WireID().TPC == 1 ){                    
+            
+            if( int(theHit->WireID().Wire) > wire_to_avg_ticks.begin()->first && int(theHit->WireID().Wire) < wire_to_avg_ticks.rbegin()->first &&
+                theHit->PeakTime() > min_tick && theHit->PeakTime() < max_tick ){
+              
+              if( theHit->PeakTime() > wire_to_avg_ticks[ int(theHit->WireID().Wire) ] ){
+                ++nUpperCosmicROI; 
+              }
+              else{
+                ++nLowerCosmicROI; 
+              }
+
+            }
+
+          }
+        }
+        
+        std::cout << "NHits in Upper ROI: " << nUpperCosmicROI << std::endl;
+        std::cout << "NHits in Lower ROI: " << nLowerCosmicROI << std::endl;
+
+        if( nLowerCosmicROI || nUpperCosmicROI ){
+          reco_beam_cosmic_candidate_lower_hits.push_back( nLowerCosmicROI );
+          reco_beam_cosmic_candidate_upper_hits.push_back( nUpperCosmicROI );
+          reco_beam_cosmic_candidate_ID.push_back( (*recoTracks)[i].ID() );
+        }
+
+      }
+    }
+
   }
   else if( thisShower ){
     std::cout << "Beam particle is shower-like" << std::endl;
@@ -2336,6 +2412,10 @@ void pionana::PionAnalyzerMC::beginJob()
   fTree->Branch("reco_beam_Chi2_proton", &reco_beam_Chi2_proton);
   fTree->Branch("reco_beam_Chi2_ndof", &reco_beam_Chi2_ndof);
 
+  fTree->Branch("reco_beam_cosmic_candidate_lower_hits", &reco_beam_cosmic_candidate_lower_hits);
+  fTree->Branch("reco_beam_cosmic_candidate_upper_hits", &reco_beam_cosmic_candidate_upper_hits);
+  fTree->Branch("reco_beam_cosmic_candidate_ID", &reco_beam_cosmic_candidate_ID);
+
   fTree->Branch("reco_daughter_Chi2_proton", &reco_daughter_Chi2_proton);
   fTree->Branch("reco_daughter_Chi2_ndof", &reco_daughter_Chi2_ndof);
   fTree->Branch("reco_daughter_momByRange_proton", &reco_daughter_momByRange_proton);
@@ -2507,6 +2587,10 @@ void pionana::PionAnalyzerMC::reset()
 
   reco_daughter_true_byE_isPrimary = false;
   reco_beam_Chi2_proton = 999.;
+
+  reco_beam_cosmic_candidate_lower_hits.clear();
+  reco_beam_cosmic_candidate_upper_hits.clear();
+  reco_beam_cosmic_candidate_ID.clear();
 
 
   data_BI_P = 0.;
