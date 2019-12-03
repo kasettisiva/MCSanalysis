@@ -1,3 +1,5 @@
+#include "ProtoDUNEFembFilter.fcl"
+#include "ProtoDUNEUnstableHVFilter.fcl"
 #include "services_dune.fcl"
 #include "ProtoDUNEelectronAnaTree.fcl"
 #include "protodune_tools_dune.fcl"
@@ -32,6 +34,13 @@ source:
 
 physics:
 {
+ filters:
+ {
+   fHVfilter: @local::HVfilter
+   fFEMBfilter: @local::pdsp_fembfilter_beamside
+
+ }
+ fpath: [fHVfilter,fFEMBfilter]
  analyzers:
  {
   pdAnaTree:          @local::proto_AnaTree
@@ -43,4 +52,5 @@ physics:
 }
 
 outputs: {}
-physics.analyzers.pdAnaTree.ShowerCalorimetryTag: "pandoraShowercaloSCE" 
+physics.analyzers.pdAnaTree.ShowerCalorimetryTag: "pandoraShowercaloSCE"
+physics.analyzers.pdAnaTree.SelectEvents: [fpath] 
