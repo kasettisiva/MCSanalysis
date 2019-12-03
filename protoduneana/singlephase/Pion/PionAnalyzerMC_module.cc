@@ -152,7 +152,7 @@ private:
   std::vector< int > true_beam_daughter_PDG;
   std::vector< int > true_beam_daughter_ID;
   std::vector< double > true_beam_daughter_len;
-  std::vector< std::string > true_beam_daughter_Process;
+  std::vector< std::string > true_beam_daughter_Process, true_beam_daughter_endProcess;
 
   std::vector< double > true_beam_daughter_startX, true_beam_daughter_startY, true_beam_daughter_startZ;
   std::vector< double > true_beam_daughter_startP, true_beam_daughter_startPx, true_beam_daughter_startPy, true_beam_daughter_startPz;
@@ -171,6 +171,7 @@ private:
   std::vector< double > true_beam_Pi0_decay_startP;
   std::vector< int > true_beam_grand_daughter_PDG, true_beam_grand_daughter_ID, true_beam_grand_daughter_parID;
   std::vector< int > true_beam_grand_daughter_nHits;
+  std::vector< std::string > true_beam_grand_daughter_Process, true_beam_grand_daughter_endProcess;
 
   //How many of each true particle came out of the true primary beam particle?
   int true_daughter_nPiPlus, true_daughter_nPiMinus, true_daughter_nPi0;
@@ -802,6 +803,7 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
       true_beam_daughter_startP.push_back( part->P() );
 
       true_beam_daughter_Process.push_back( part->Process() );
+      true_beam_daughter_endProcess.push_back( part->EndProcess() );
 
       std::cout << "Proccess: " << part->Process() << std::endl; 
       std::cout << "PID: " << pid << std::endl;
@@ -838,6 +840,8 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
         true_beam_grand_daughter_ID.push_back(  grand_daughter_part->TrackId() );
         true_beam_grand_daughter_parID.push_back(  part->TrackId() );
         true_beam_grand_daughter_nHits.push_back( truthUtil.GetMCParticleHits( *grand_daughter_part, evt, fHitTag ).size() );
+        true_beam_grand_daughter_Process.push_back( grand_daughter_part->Process() );
+        true_beam_grand_daughter_endProcess.push_back( grand_daughter_part->EndProcess() );
       }
 
       true_beam_daughter_reco_byHits_PFP_ID.push_back( std::vector<int>() );
@@ -2435,6 +2439,7 @@ void pionana::PionAnalyzerMC::beginJob()
   fTree->Branch("true_beam_daughter_endY", &true_beam_daughter_endY);
   fTree->Branch("true_beam_daughter_endZ", &true_beam_daughter_endZ);
   fTree->Branch("true_beam_daughter_Process", &true_beam_daughter_Process);
+  fTree->Branch("true_beam_daughter_endProcess", &true_beam_daughter_endProcess);
   fTree->Branch("true_beam_daughter_nHits", &true_beam_daughter_nHits);
 
   fTree->Branch("true_beam_daughter_reco_byHits_PFP_ID", &true_beam_daughter_reco_byHits_PFP_ID);
@@ -2446,6 +2451,8 @@ void pionana::PionAnalyzerMC::beginJob()
   fTree->Branch("true_beam_grand_daughter_parID", &true_beam_grand_daughter_parID);
   fTree->Branch("true_beam_grand_daughter_PDG", &true_beam_grand_daughter_PDG);
   fTree->Branch("true_beam_grand_daughter_nHits", &true_beam_grand_daughter_nHits);
+  fTree->Branch("true_beam_grand_daughter_Process", &true_beam_grand_daughter_Process);
+  fTree->Branch("true_beam_grand_daughter_endProcess", &true_beam_grand_daughter_endProcess);
 
   ////Matching reco to truth
   fTree->Branch("reco_beam_true_byE_endProcess", &reco_beam_true_byE_endProcess);
@@ -2753,6 +2760,7 @@ void pionana::PionAnalyzerMC::reset()
   true_beam_daughter_endY.clear();
   true_beam_daughter_endZ.clear();
   true_beam_daughter_Process.clear();
+  true_beam_daughter_endProcess.clear();
   true_beam_daughter_nHits.clear();
 
   true_beam_daughter_reco_byHits_PFP_ID.clear();
@@ -2764,6 +2772,8 @@ void pionana::PionAnalyzerMC::reset()
   true_beam_grand_daughter_parID.clear();
   true_beam_grand_daughter_PDG.clear();
   true_beam_grand_daughter_nHits.clear();
+  true_beam_grand_daughter_Process.clear();
+  true_beam_grand_daughter_endProcess.clear();
   true_beam_daughter_ID.clear();
 
   reco_beam_nTrackDaughters = -1;
