@@ -22,7 +22,7 @@ services.RawDigitPrepService.AdcChannelToolNames: @local::protodune_dataprep_too
 source:
 {
   module_type: RootInput
-  maxEvents: 30000
+  maxEvents: 1
   fileNames: ["detsim_single_protoDUNE.root"]
 }
 
