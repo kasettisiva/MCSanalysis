@@ -2078,6 +2078,10 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
           reco_daughter_allTrack_endZ.push_back(   -1. );
           reco_daughter_allTrack_to_vertex.push_back( -1. );
           reco_daughter_allTrack_dR.push_back( -1. );
+          reco_daughter_allTrack_momByRange_proton.push_back(-999.);
+          reco_daughter_allTrack_momByRange_muon.push_back(-999.);
+
+
         }
       }
       catch( const cet::exception &e ){
