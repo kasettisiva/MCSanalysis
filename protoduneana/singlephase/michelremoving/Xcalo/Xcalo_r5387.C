@@ -143,16 +143,34 @@ void Xcalo_r5387::Loop()
   //////////////////////////////////////////////////////////////////////////////
 
   TFile *file = new TFile(Form("Xcalo_r%d.root",run),"recreate");
-  Long64_t nentries = fChain->GetEntriesFast();
+  TTree t1("t1","a simple Tree with simple variables");//creating a tree example
+  Int_t run_number;
+  Double_t event_time1;
+  Float_t global_med_0,global_med_1,global_med_2; 
+  t1.Branch("run_number",&run_number,"run_number/I");
+  t1.Branch("event_time1",&event_time1,"event_time1/D");
+  t1.Branch("global_med_0",&global_med_0,"global_med_0/F");
+  t1.Branch("global_med_1",&global_med_1,"global_med_1/F");
+  t1.Branch("global_med_2",&global_med_2,"global_med_2/F");
+  Int_t runvalue=0;
+  Double_t time1=0;
+  //Filling the TTree
+
+ Long64_t nentries = fChain->GetEntriesFast();
   Long64_t nbytes = 0, nb = 0;
-  for (Long64_t jentry=0; jentry<nentries;jentry++) {
+   for (Long64_t jentry=0; jentry<nentries;jentry++) {
   // for (Long64_t jentry=0; jentry<10000;jentry++) {
     Long64_t ientry = LoadTree(jentry);
     if (ientry < 0) break;
     nb = fChain->GetEntry(jentry);   nbytes += nb;
     if(jentry%100==0) cout<<jentry<<"/"<<nentries<<endl;
-    int x_bin;
+    if(jentry==0){
+      time1=evttime;
+      runvalue=run;
+    }
 
+
+    int x_bin;
     for(int i=0; i<cross_trks; ++i){
 
       //plane 2
@@ -256,8 +274,9 @@ void Xcalo_r5387::Loop()
   }
  
   float global_median_dqdx_2=TMath::Median(all_dqdx_value_2.size(),&all_dqdx_value_2[0]); 
+  global_med_2=global_median_dqdx_2;//Filling the Tree variable
   ofstream outfile0,outfile1,outfile2;
-  outfile2.open("/dune/app/users/apaudel/calibration_macros/global_median_2.txt",std::ios_base::app);
+  outfile2.open("global_median_2.txt",std::ios_base::app);
   outfile2<<run<<"\t"<<global_median_dqdx_2<<std::endl;
   //////////////////////////////////////////////////////////////////////////////////////
  
@@ -302,7 +321,8 @@ void Xcalo_r5387::Loop()
   }
  
   float global_median_dqdx_1=TMath::Median(all_dqdx_value_1.size(),&all_dqdx_value_1[0]);
-  outfile1.open("/dune/app/users/apaudel/calibration_macros/global_median_1.txt",std::ios_base::app);
+ global_med_1=global_median_dqdx_1;//Filling the Tree variable
+  outfile1.open("global_median_1.txt",std::ios_base::app);
   outfile1<<run<<"\t"<<global_median_dqdx_1<<std::endl; 
  
   //////////////////////////////////////////////////////////////////////////////////////
@@ -346,11 +366,13 @@ void Xcalo_r5387::Loop()
       dqdx_X_hist_0->SetBinContent(i+1,local_median_dqdx_0);
     }
   }
- 
   float global_median_dqdx_0=TMath::Median(all_dqdx_value_0.size(),&all_dqdx_value_0[0]); 
-  outfile0.open("/dune/app/users/apaudel/calibration_macros/global_median_0.txt",std::ios_base::app);
+ global_med_0=global_median_dqdx_0;//Filling the Tree variable
+  outfile0.open("global_median_0.txt",std::ios_base::app);
   outfile0<<run<<"\t"<<global_median_dqdx_0<<std::endl; 
- 
+  run_number=runvalue;
+  event_time1=time1;
+  t1.Fill();//Filling the Tree
   //////////////////////////////////////////////////////////////////////////////////////
  
   std::cout << "**************** Calculating fractional correction for each x cell *********************" << std::endl;
@@ -386,6 +408,10 @@ void Xcalo_r5387::Loop()
 
   file->Close(); 
   dqdx_X_hist_2->Draw();
+  TFile treefile(Form("globalmedians%d.root",run),"RECREATE");
+  t1.Write();
+
+
   std::cout << "*************** X_Correction_make_class.C macro has ended ******************" << std::endl; 
 }
 
