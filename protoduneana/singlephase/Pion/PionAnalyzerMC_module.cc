@@ -356,6 +356,8 @@ private:
 
   //EDIT: reco_daughter_allTrack_XXX
   std::vector< int > reco_daughter_allTrack_ID;
+  std::vector< double > reco_daughter_allTrack_Theta;
+  std::vector< double > reco_daughter_allTrack_Phi;
   std::vector< std::vector< double > > reco_daughter_allTrack_dQdX, reco_daughter_allTrack_dEdX, reco_daughter_allTrack_resRange;
   std::vector< std::vector< double > > reco_daughter_allTrack_dQdX_SCE, reco_daughter_allTrack_dEdX_SCE, reco_daughter_allTrack_resRange_SCE;
   std::vector< std::vector< double > > reco_daughter_allTrack_calibrated_dEdX, reco_daughter_allTrack_calibrated_dEdX_SCE;
@@ -1965,6 +1967,9 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
           reco_daughter_allTrack_Chi2_proton.push_back( this_chi2_ndof.first );
           reco_daughter_allTrack_Chi2_ndof.push_back( this_chi2_ndof.second );
           
+          reco_daughter_allTrack_Theta.push_back(  pandora2Track->Theta() );
+          reco_daughter_allTrack_Phi.push_back(  pandora2Track->Phi() );
+
           reco_daughter_allTrack_len.push_back(    pandora2Track->Length() );
           reco_daughter_allTrack_startX.push_back( pandora2Track->Trajectory().Start().X() );
           reco_daughter_allTrack_startY.push_back( pandora2Track->Trajectory().Start().Y() );
@@ -2069,14 +2074,16 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
 
           reco_daughter_allTrack_Chi2_proton.push_back( -999. );
           reco_daughter_allTrack_Chi2_ndof.push_back( 0 );
-          reco_daughter_allTrack_len.push_back( -1. );
-          reco_daughter_allTrack_startX.push_back( -1. );
-          reco_daughter_allTrack_startY.push_back( -1. );
-          reco_daughter_allTrack_startZ.push_back( -1. );
-          reco_daughter_allTrack_endX.push_back(   -1. );
-          reco_daughter_allTrack_endY.push_back(   -1. );
-          reco_daughter_allTrack_endZ.push_back(   -1. );
-          reco_daughter_allTrack_to_vertex.push_back( -1. );
+          reco_daughter_allTrack_Theta.push_back(-999. );
+          reco_daughter_allTrack_Phi.push_back(-999.);
+          reco_daughter_allTrack_len.push_back( -999. );
+          reco_daughter_allTrack_startX.push_back( -999. );
+          reco_daughter_allTrack_startY.push_back( -999. );
+          reco_daughter_allTrack_startZ.push_back( -999. );
+          reco_daughter_allTrack_endX.push_back(   -999. );
+          reco_daughter_allTrack_endY.push_back(   -999. );
+          reco_daughter_allTrack_endZ.push_back(   -999. );
+          reco_daughter_allTrack_to_vertex.push_back( -999. );
           reco_daughter_allTrack_dR.push_back( -1. );
           reco_daughter_allTrack_momByRange_proton.push_back(-999.);
           reco_daughter_allTrack_momByRange_muon.push_back(-999.);
@@ -2305,6 +2312,9 @@ void pionana::PionAnalyzerMC::beginJob()
 
   fTree->Branch("reco_daughter_allTrack_Chi2_proton", &reco_daughter_allTrack_Chi2_proton);
   fTree->Branch("reco_daughter_allTrack_Chi2_ndof", &reco_daughter_allTrack_Chi2_ndof);
+
+  fTree->Branch("reco_daughter_allTrack_Theta", &reco_daughter_allTrack_Theta);
+  fTree->Branch("reco_daughter_allTrack_Phi", &reco_daughter_allTrack_Phi);
 
   fTree->Branch("reco_daughter_allTrack_len", &reco_daughter_allTrack_len);
   fTree->Branch("reco_daughter_allTrack_startX", &reco_daughter_allTrack_startX);
@@ -2899,6 +2909,8 @@ void pionana::PionAnalyzerMC::reset()
   reco_daughter_allTrack_Chi2_proton.clear();
   reco_daughter_allTrack_Chi2_ndof.clear();
 
+  reco_daughter_allTrack_Theta.clear();
+  reco_daughter_allTrack_Phi.clear();
   reco_daughter_allTrack_len.clear();
   reco_daughter_allTrack_startX.clear();
   reco_daughter_allTrack_startY.clear();
