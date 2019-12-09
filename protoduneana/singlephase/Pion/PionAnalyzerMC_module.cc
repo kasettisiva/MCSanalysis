@@ -2128,6 +2128,20 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
         }
       }
 
+      min_tick -= 100;
+      max_tick += 100;
+
+      std::vector< double > these_wires, these_ticks;
+
+      for( auto it = wire_to_avg_ticks.begin(); it != wire_to_avg_ticks.end(); ++it ){
+        these_wires.push_back( it->first );
+        these_ticks.push_back( it->second );
+
+        std::cout << it->first << " " << it->second << std::endl;
+      }
+      TGraph gr_wire_ticks( these_wires.size(), &these_wires[0], &these_ticks[0] );
+
+
 
 
       std::cout << "Min tick: " << min_tick << " Max tick: " << max_tick << std::endl;
@@ -2149,8 +2163,12 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
             
             if( int(theHit->WireID().Wire) > wire_to_avg_ticks.begin()->first && int(theHit->WireID().Wire) < wire_to_avg_ticks.rbegin()->first &&
                 theHit->PeakTime() > min_tick && theHit->PeakTime() < max_tick ){
+
+              std::cout << "Checking " << theHit->WireID().Wire << " " << theHit->PeakTime() << std::endl;
+              std::cout << "\tBeam: " << gr_wire_ticks.Eval( theHit->WireID().Wire ) << std::endl;
               
-              if( theHit->PeakTime() > wire_to_avg_ticks[ int(theHit->WireID().Wire) ] ){
+              //if( theHit->PeakTime() > wire_to_avg_ticks[ int(theHit->WireID().Wire) ] ){
+              if( theHit->PeakTime() > gr_wire_ticks.Eval( theHit->WireID().Wire ) ){
                 ++nUpperCosmicROI; 
               }
               else{
