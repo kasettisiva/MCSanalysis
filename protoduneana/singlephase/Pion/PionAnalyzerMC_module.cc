@@ -166,9 +166,13 @@ private:
 
 
   //Decay products from pi0s
-  ////EDIT: Rename this?
-  std::vector< int > true_beam_Pi0_decay_PDG, true_beam_Pi0_decay_ID;
+  std::vector< int > true_beam_Pi0_decay_PDG, true_beam_Pi0_decay_ID, true_beam_Pi0_decay_parID;
   std::vector< double > true_beam_Pi0_decay_startP;
+  std::vector< int > true_beam_Pi0_decay_nHits;
+  std::vector< std::vector< int > > true_beam_Pi0_decay_reco_byHits_PFP_ID;
+  //also reco nhits
+  std::vector< double > true_beam_Pi0_decay_len;
+
   std::vector< int > true_beam_grand_daughter_PDG, true_beam_grand_daughter_ID, true_beam_grand_daughter_parID;
   std::vector< int > true_beam_grand_daughter_nHits;
   std::vector< std::string > true_beam_grand_daughter_Process, true_beam_grand_daughter_endProcess;
@@ -320,6 +324,7 @@ private:
   //Alternative Reco values
   //EDIT: track_score --> trkScore, etc.
   std::vector< int > reco_daughter_PFP_ID;
+  std::vector< int > reco_daughter_PFP_nHits;
   std::vector< double > reco_daughter_PFP_trackScore;
   std::vector< double > reco_daughter_PFP_emScore;
   std::vector< double > reco_daughter_PFP_michelScore;
@@ -371,6 +376,12 @@ private:
   std::vector< double > reco_daughter_allTrack_len;
   std::vector< double > reco_daughter_allTrack_to_vertex;
   //
+  
+  std::vector< int >    reco_daughter_allShower_ID;
+  std::vector< double > reco_daughter_allShower_len;
+  std::vector< double > reco_daughter_allShower_startX;
+  std::vector< double > reco_daughter_allShower_startY;
+  std::vector< double > reco_daughter_allShower_startZ;
 
 
   //EDIT: STANDARDIZE
@@ -833,6 +844,14 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
           true_beam_Pi0_decay_PDG.push_back( pi0_decay_part->PdgCode() );
           true_beam_Pi0_decay_ID.push_back( pi0_decay_part->TrackId() );
           true_beam_Pi0_decay_startP.push_back( pi0_decay_part->P() );
+          true_beam_Pi0_decay_parID.push_back( pi0_decay_part->Mother() );
+
+          true_beam_Pi0_decay_len.push_back( pi0_decay_part->Trajectory().TotalLength() );
+          true_beam_Pi0_decay_nHits.push_back( truthUtil.GetMCParticleHits( *pi0_decay_part, evt, fHitTag ).size() );
+          true_beam_Pi0_decay_reco_byHits_PFP_ID.push_back( std::vector<int>() );
+          for( size_t k = 0; k < trueToPFPs[ pi0_decay_part->TrackId() ].size(); ++k ){
+            true_beam_Pi0_decay_reco_byHits_PFP_ID.back().push_back( trueToPFPs[ pi0_decay_part->TrackId() ][k] );
+          }
         }
       }
 
@@ -1825,6 +1844,8 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
       const std::vector< art::Ptr< recob::Hit > > daughterPFP_hits = pfpUtil.GetPFParticleHits_Ptrs( *daughterPFP, evt, fPFParticleTag );
       std::cout << "Got " << daughterPFP_hits.size() << " hits from daughter " << daughterID << std::endl;
 
+      reco_daughter_PFP_nHits.push_back( daughterPFP_hits.size() );
+
       double track_total = 0.;
       double em_total = 0.;
       double michel_total = 0.;   
@@ -2096,15 +2117,31 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
         std::cout << "pandora2Track object not found, moving on" << std::endl;
       }
 
-        /*
+        
       try{
         const recob::Shower* pandora2Shower = pfpUtil.GetPFParticleShower( *daughterPFP, evt, fPFParticleTag, "pandora2Shower" );
         std::cout << "pandora2 shower: " << pandora2Shower << std::endl;
+
+        if( pandora2Shower ){
+          reco_daughter_allShower_ID.push_back(     pandora2Shower->ID() );
+          reco_daughter_allShower_len.push_back(    pandora2Shower->Length() );
+          reco_daughter_allShower_startX.push_back( pandora2Shower->ShowerStart().X() );
+          reco_daughter_allShower_startY.push_back( pandora2Shower->ShowerStart().Y() );
+          reco_daughter_allShower_startZ.push_back( pandora2Shower->ShowerStart().Z() );
+        }
+        else{
+          reco_daughter_allShower_ID.push_back(       -1  );
+          reco_daughter_allShower_len.push_back(    -999. );
+          reco_daughter_allShower_startX.push_back( -999. );
+          reco_daughter_allShower_startY.push_back( -999. );
+          reco_daughter_allShower_startZ.push_back( -999. );
+        }
+
       }
       catch( const cet::exception &e ){
         std::cout << "pandora2Shower object not found, moving on" << std::endl;
       }
-        */
+        
       
     }
 
@@ -2346,6 +2383,11 @@ void pionana::PionAnalyzerMC::beginJob()
   fTree->Branch("reco_daughter_allTrack_to_vertex", &reco_daughter_allTrack_to_vertex);
   //////
 
+  fTree->Branch("reco_daughter_allShower_ID", &reco_daughter_allShower_ID);
+  fTree->Branch("reco_daughter_allShower_len", &reco_daughter_allShower_len);
+  fTree->Branch("reco_daughter_allShower_startX", &reco_daughter_allShower_startX);
+  fTree->Branch("reco_daughter_allShower_startY", &reco_daughter_allShower_startY);
+  fTree->Branch("reco_daughter_allShower_startZ", &reco_daughter_allShower_startZ);
 
 
   fTree->Branch("reco_daughter_shower_true_byE_PDG", &reco_daughter_shower_true_byE_PDG);
@@ -2406,6 +2448,7 @@ void pionana::PionAnalyzerMC::beginJob()
 
 
   fTree->Branch("reco_daughter_PFP_ID", &reco_daughter_PFP_ID);
+  fTree->Branch("reco_daughter_PFP_nHits", &reco_daughter_PFP_nHits);
   fTree->Branch("reco_daughter_PFP_trackScore", &reco_daughter_PFP_trackScore);
   fTree->Branch("reco_daughter_PFP_emScore", &reco_daughter_PFP_emScore);
   fTree->Branch("reco_daughter_PFP_michelScore", &reco_daughter_PFP_michelScore);
@@ -2478,8 +2521,12 @@ void pionana::PionAnalyzerMC::beginJob()
   fTree->Branch("true_beam_daughter_reco_byHits_PFP_ID", &true_beam_daughter_reco_byHits_PFP_ID);
 
   fTree->Branch("true_beam_Pi0_decay_ID", &true_beam_Pi0_decay_ID);
+  fTree->Branch("true_beam_Pi0_decay_parID", &true_beam_Pi0_decay_parID);
   fTree->Branch("true_beam_Pi0_decay_PDG", &true_beam_Pi0_decay_PDG);
   fTree->Branch("true_beam_Pi0_decay_startP", &true_beam_Pi0_decay_startP);
+  fTree->Branch("true_beam_Pi0_decay_len", &true_beam_Pi0_decay_len);
+  fTree->Branch("true_beam_Pi0_decay_nHits", &true_beam_Pi0_decay_nHits);
+  fTree->Branch("true_beam_Pi0_decay_reco_byHits_PFP_ID", &true_beam_Pi0_decay_reco_byHits_PFP_ID);
   fTree->Branch("true_beam_grand_daughter_ID", &true_beam_grand_daughter_ID);
   fTree->Branch("true_beam_grand_daughter_parID", &true_beam_grand_daughter_parID);
   fTree->Branch("true_beam_grand_daughter_PDG", &true_beam_grand_daughter_PDG);
@@ -2799,8 +2846,12 @@ void pionana::PionAnalyzerMC::reset()
   true_beam_daughter_reco_byHits_PFP_ID.clear();
 
   true_beam_Pi0_decay_ID.clear();
+  true_beam_Pi0_decay_parID.clear();
   true_beam_Pi0_decay_startP.clear();
   true_beam_Pi0_decay_PDG.clear();
+  true_beam_Pi0_decay_len.clear();
+  true_beam_Pi0_decay_nHits.clear();
+  true_beam_Pi0_decay_reco_byHits_PFP_ID.clear();
   true_beam_grand_daughter_ID.clear();
   true_beam_grand_daughter_parID.clear();
   true_beam_grand_daughter_PDG.clear();
@@ -2813,6 +2864,7 @@ void pionana::PionAnalyzerMC::reset()
   reco_beam_nShowerDaughters = -1;
 
   reco_daughter_PFP_ID.clear();
+  reco_daughter_PFP_nHits.clear();
   reco_daughter_PFP_trackScore.clear();
   reco_daughter_PFP_emScore.clear();
   reco_daughter_PFP_michelScore.clear();
@@ -2939,6 +2991,13 @@ void pionana::PionAnalyzerMC::reset()
   reco_daughter_allTrack_endZ.clear();
   reco_daughter_allTrack_dR.clear();
   reco_daughter_allTrack_to_vertex.clear();
+
+  reco_daughter_allShower_ID.clear();
+  reco_daughter_allShower_len.clear();
+  reco_daughter_allShower_startX.clear();
+  reco_daughter_allShower_startY.clear();
+  reco_daughter_allShower_startZ.clear();
+
   ///////
   
 
