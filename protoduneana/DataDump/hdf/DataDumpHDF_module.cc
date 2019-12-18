@@ -136,20 +136,38 @@ void pdune::DataDumpHDF::analyze(art::Event const& e) noexcept
     if (!((channel>=2080 && channel < 2560)||
           (channel>=7200 && channel < 7680)||
           (channel>=12320 && channel < 12800))) continue;
-    if (channel%100==0) std::cout<<"Channel = "<<channel<<std::endl;
+    if (channel%1000==0) std::cout<<"Channel = "<<channel<<std::endl;
 
-    int nticks = wire->Signal().size();
-    for (int j = 0; j < nticks; j++){
-      float adc = wire->Signal()[j];
-      wiresigs.insert(adc);
-    }
-    if (nticks <6000){
-      for (int j = nticks; j < 6000; j++)
+    const recob::Wire::RegionsOfInterest_t& signalROI = wire->SignalROI();
+    int lasttick = 0;
+    for(const auto& range : signalROI.get_ranges()){
+      const auto& waveform = range.data();
+      // ROI start time
+      raw::TDCtick_t roiFirstBinTick = range.begin_index();
+      for (int i = lasttick; i<roiFirstBinTick; ++i){
         wiresigs.insert(0.);
+      }
+      for(size_t idx = 0; idx < waveform.size(); idx++){
+        wiresigs.insert(waveform[idx]);
+        ++lasttick;
+      }
+    }
+    for (int i = lasttick; i<6000; ++i){
+      wiresigs.insert(0.);
     }
   }
-  std::cout<<"event_time: "<<evttime<<std::endl;
+//    int nticks = wire->Signal().size();
+//    for (int j = 0; j < nticks; j++){
+//      float adc = wire->Signal()[j];
+//      wiresigs.insert(adc);
+//    }
+//    if (nticks <6000){
+//      for (int j = nticks; j < 6000; j++)
+//        wiresigs.insert(0.);
+//    }
 
+  std::cout<<"event_time: "<<evttime<<std::endl;
+  
 }
 
 void pdune::DataDumpHDF::beginJob()
