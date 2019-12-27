@@ -60,7 +60,7 @@ table_fragment_end
 # Add the dependent product and version
 
 product          version
-dunetpc          v08_38_00
+dunetpc          v08_38_01
 hep_hpc          v0_11_00       -       optional
 cetbuildtools	 v7_14_00	-	only_for_build
 end_product_list
