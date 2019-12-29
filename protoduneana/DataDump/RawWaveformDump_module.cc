@@ -32,6 +32,8 @@
 #include "dune/DuneInterface/AdcTypes.h"
 #include "dune/DuneInterface/SimChannelExtractService.h"
 
+#include <cstdlib>
+
 #include "c2numpy.h"
 
 using std::string;
@@ -131,7 +133,8 @@ pdune::RawWaveformDump::RawWaveformDump(fhicl::ParameterSet const& p)
 void pdune::RawWaveformDump::reconfigure(fhicl::ParameterSet const & p)
 {
   fDumpWaveformsFileName = p.get<std::string>("DumpWaveformsFileName","dumpwaveforms");
-
+  fDumpWaveformsFileName += string(std::getenv("PROCESS"))+"-";
+  std::cout<<"PROCESS = "<<std::getenv("PROCESS")<<" JOBSUBJOBSECTION "<<std::getenv("JOBSUBJOBSECTION")<<std::endl;
   fSimulationProducerLabel = p.get<std::string>("SimulationProducerLabel", "largeant");
   fDigitModuleLabel = p.get<std::string>("DigitModuleLabel", "daq");
 
@@ -226,7 +229,7 @@ void pdune::RawWaveformDump::analyze(art::Event const& evt)
 
   if (!simChannelHandle->size())  return;
   unsigned int simchansize = simChannelHandle->size();
-
+  std::cout<<"simchansize = "<<simchansize<<std::endl;
   // ... Create a map of track IDs to generator labels
   //Get a list of generator names.
   std::vector< art::Handle< std::vector< simb::MCTruth > > > mcHandles;
@@ -245,6 +248,112 @@ void pdune::RawWaveformDump::analyze(art::Event const& evt)
 
   // ... Loop over particles
   int sigchancount=0;
+
+  // ... Loop over simChannels
+  for ( auto const& channel : (*simChannelHandle) ){
+
+    // .. get simChannel channel number
+    const raw::ChannelID_t ch1 = channel.Channel();
+    if(ch1==raw::InvalidChannelID)continue;
+    if(geo::PlaneGeo::ViewName(fgeom->View(ch1))!=fPlaneToDump[0]) continue;
+      
+//    // .. now find RawDigit with this channel number
+//    auto search = rawdigitMap.find( ch1 );
+//    if ( search == rawdigitMap.end() ) continue;
+//    const raw::ChannelID_t ch2 = (*search).first;
+//    //art::Ptr<raw::RawDigit> rawdig = (*search).second;
+//    if(ch1!=ch2){
+//      cout << "!!!!!!!!!!!!!!!!!!!!! ch1 is not equal to ch2" << endl;
+//      exit(1);
+//    }
+
+    // ... Loop over all ticks with ionization energy deposited
+    unsigned int tdcmin=dataSize-1;
+    unsigned int tdcmax=0;
+    int numel=0;
+    double edep=0.;//,edep1=0.;
+    int pdgcode = 0;
+    int trackid = 0;
+    string procid = " ";
+    string genlab = " ";    
+    auto const& timeSlices = channel.TDCIDEMap();
+    for ( auto const& timeSlice : timeSlices ){
+
+      auto const& energyDeposits = timeSlice.second;
+      auto const tpctime = timeSlice.first;
+      unsigned int tdctick = static_cast<unsigned int>(fClks->TPCTDC2Tick(double(tpctime)));
+      if(tdctick!=tpctime)std::cout << "tpctime: " << tpctime << ", tdctick: " << tdctick << std::endl;
+      if(tdctick<0||tdctick>(dataSize-1))continue;
+
+      // ... Loop over all energy depositions in this tick
+      for ( auto const& energyDeposit : energyDeposits ){
+        
+        if (!energyDeposit.trackID) continue;
+        simb::MCParticle particle = PIS->TrackIdToMotherParticle(energyDeposit.trackID);
+
+        pdgcode = particle.PdgCode();
+        trackid = particle.TrackId();
+        procid = particle.Process();
+        
+        int eve_id = PIS->TrackIdToEveTrackId(energyDeposit.trackID);
+        if (!eve_id) continue;
+        std::string genlab = gf->get_gen(eve_id);
+
+        if (fSelectGenLabel!="ANY"){
+          if(genlab!=fSelectGenLabel)continue;
+        }
+        if (fSelectProcID!="ANY"){
+          if(procid!=fSelectProcID)continue;
+        }
+        if (fSelectPDGCode!=0){
+          if(pdgcode!=fSelectPDGCode)continue;
+        }
+        
+        if ( particle.E() < fMinParticleEnergyGeV)continue;
+
+        genlab.resize(6,' ');
+        procid.resize(7,' ');
+
+        edep+=energyDeposit.energy;
+	  
+        // .. check to see if ide came from the primary particle
+        //if ( energyDeposit.trackID != trackid ) continue;
+        if (tdctick<tdcmin)tdcmin=tdctick;
+        if (tdctick>tdcmax)tdcmax=tdctick;
+        //edep1+=energyDeposit.energy;
+        numel+=energyDeposit.numElectrons;
+      }
+    }
+
+    if (!trackid) continue;
+
+    if (fMinNumberOfElectrons>=0 && numel<fMinNumberOfElectrons) continue;
+    if (fMaxNumberOfElectrons>=0 && numel>fMaxNumberOfElectrons) continue;
+    if (edep<fMinEnergyDepositedMeV) continue;
+
+    auto search = rawdigitMap.find(ch1);
+    if ( search == rawdigitMap.end() ) continue;
+    art::Ptr<raw::RawDigit> rawdig = (*search).second;
+    raw::Uncompress(rawdig->ADCs(), rawadc, rawdig->GetPedestal(), rawdig->Compression());
+    c2numpy_uint32(&npywriter, evt.id().event());
+    c2numpy_string(&npywriter, genlab.c_str());
+    c2numpy_int32(&npywriter, trackid);
+    c2numpy_int32(&npywriter, pdgcode);
+    c2numpy_float32(&npywriter, edep);
+    c2numpy_uint32(&npywriter, numel);
+    c2numpy_string(&npywriter, procid.c_str());
+    c2numpy_uint32(&npywriter, ch1);
+    c2numpy_string(&npywriter, geo::PlaneGeo::ViewName(fgeom->View(ch1)).c_str());
+    c2numpy_uint16(&npywriter, tdcmin);
+    c2numpy_uint16(&npywriter, tdcmax);
+    for ( unsigned int itck=0; itck<dataSize; ++itck ){
+      rawadc[itck] -= rawdig->GetPedestal();
+      c2numpy_int16(&npywriter, rawadc[itck]);
+    }
+    sigchancount++;
+  }
+  std::cout<<"Total number of signal channels "<<sigchancount<<std::endl;
+  /*
   for ( auto const& particle : (*particleHandle) ){
 
     int pdgcode = particle.PdgCode();
@@ -377,5 +486,7 @@ void pdune::RawWaveformDump::analyze(art::Event const& evt)
       sigchancount++;
     }
   }
+  std::cout<<"Total number of signal channels "<<sigchancount<<std::endl;
+  */
 }
 DEFINE_ART_MODULE(pdune::RawWaveformDump)

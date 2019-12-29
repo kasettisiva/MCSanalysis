@@ -5,19 +5,19 @@ process_name: RawWaveformDump
 
 standard_rawwaveformdump:
 {
-  module_type: "RawWaveformDump"
-  DumpWaveformsFileName:	"protodune-signal-"
-  SimulationProducerLabel:	"largeant"
-  DigitModuleLabel:	"daq"
-  SelectGenLabel:	"ANY"	
-  SelectProcID:		"ANY"
-  SelectPDGCode:	0
-  PlaneToDump:		"U"
-  MinParticleEnergyGeV:	 0.001	# units in GeV
-  MinEnergyDepositedMeV: 0.0	# units in MeV
-  MinNumberOfElectrons:	 2000
-  MaxNumberOfElectrons:	 -1 # if negative, not imposed
-  LogLevel: 1
+    module_type: "RawWaveformDump"
+    DumpWaveformsFileName:	"protodune-signal-"
+    SimulationProducerLabel:	"largeant"
+    DigitModuleLabel:	"daq"
+    SelectGenLabel:	"ANY"	
+    SelectProcID:		"ANY"
+    SelectPDGCode:	0
+    PlaneToDump:		"U"
+    MinParticleEnergyGeV:	 0.001	# units in GeV
+    MinEnergyDepositedMeV: 0.0	# units in MeV
+    MinNumberOfElectrons:	 2000
+    MaxNumberOfElectrons:	 -1 # if negative, not imposed
+    LogLevel: 1
 }
 
 source:
