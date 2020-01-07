@@ -80,6 +80,7 @@ private:
   double fMinEnergyDepositedMeV;
   int fMinNumberOfElectrons;
   int fMaxNumberOfElectrons;
+  bool fSaveSignal;
   art::ServiceHandle<geo::Geometry> fgeom;
   art::ServiceHandle<cheat::ParticleInventoryService> PIS;
   //art::ServiceHandle<SimChannelExtractService> m_pscx;
@@ -92,31 +93,31 @@ private:
 
 //-----------------------------------------------------------------------
 struct genFinder{
-  private:
-    typedef std::pair<int, std::string> track_id_to_string;
-    std::vector<track_id_to_string> track_id_map;
-    std::set<std::string> generator_names;
-    bool isSorted=false;
+private:
+  typedef std::pair<int, std::string> track_id_to_string;
+  std::vector<track_id_to_string> track_id_map;
+  std::set<std::string> generator_names;
+  bool isSorted=false;
 
-  public:
-    void sort_now(){
-      std::sort(this->track_id_map.begin(), this->track_id_map.end(), [](const auto &a, const auto &b){return (a.first < b.first) ; } );
-      isSorted=true;
+public:
+  void sort_now(){
+    std::sort(this->track_id_map.begin(), this->track_id_map.end(), [](const auto &a, const auto &b){return (a.first < b.first) ; } );
+    isSorted=true;
+  }
+  void add(const int& track_id, const std::string& gname){
+    this->track_id_map.push_back(std::make_pair(track_id, gname));
+    generator_names.emplace(gname);
+    isSorted=false;
+  }
+  bool has_gen(std::string gname){
+    return static_cast<bool>(generator_names.count(gname));
+  };
+  std::string get_gen(int tid){
+    if( !isSorted ){
+      this->sort_now();
     }
-    void add(const int& track_id, const std::string& gname){
-      this->track_id_map.push_back(std::make_pair(track_id, gname));
-      generator_names.emplace(gname);
-      isSorted=false;
-    }
-    bool has_gen(std::string gname){
-      return static_cast<bool>(generator_names.count(gname));
-    };
-    std::string get_gen(int tid){
-      if( !isSorted ){
-	this->sort_now();
-      }
-      return std::lower_bound(track_id_map.begin(), track_id_map.end(), tid,[](const auto &a, const auto &b){return (a.first < b) ; } )->second;
-    };
+    return std::lower_bound(track_id_map.begin(), track_id_map.end(), tid,[](const auto &a, const auto &b){return (a.first < b) ; } )->second;
+  };
 
 };
 genFinder* gf = new genFinder();
@@ -125,16 +126,16 @@ genFinder* gf = new genFinder();
 pdune::RawWaveformDump::RawWaveformDump(fhicl::ParameterSet const& p)
   : EDAnalyzer{p},
   fClks(lar::providerFrom<detinfo::DetectorClocksService>())
-{
-  this->reconfigure(p);
-}
+  {
+    this->reconfigure(p);
+  }
 
 //-----------------------------------------------------------------------
 void pdune::RawWaveformDump::reconfigure(fhicl::ParameterSet const & p)
 {
   fDumpWaveformsFileName = p.get<std::string>("DumpWaveformsFileName","dumpwaveforms");
   fDumpWaveformsFileName += string(std::getenv("PROCESS"))+"-";
-  std::cout<<"PROCESS = "<<std::getenv("PROCESS")<<" JOBSUBJOBSECTION "<<std::getenv("JOBSUBJOBSECTION")<<std::endl;
+  //std::cout<<"PROCESS = "<<std::getenv("PROCESS")<<" JOBSUBJOBSECTION "<<std::getenv("JOBSUBJOBSECTION")<<std::endl;
   fSimulationProducerLabel = p.get<std::string>("SimulationProducerLabel", "largeant");
   fDigitModuleLabel = p.get<std::string>("DigitModuleLabel", "daq");
 
@@ -148,38 +149,40 @@ void pdune::RawWaveformDump::reconfigure(fhicl::ParameterSet const & p)
   fMinNumberOfElectrons = p.get<int>("MinNumberOfElectrons",1000);
   fMaxNumberOfElectrons = p.get<int>("MaxNumberOfElectrons",100000);
 
+  fSaveSignal = p.get<bool>("SaveSignal", true);
+
   return;
 }
 
 //-----------------------------------------------------------------------
 void pdune::RawWaveformDump::beginJob()
 {
-    std::random_device rndm_device;	// this will give us our seed
-    rndm_engine.seed(rndm_device());
+  std::random_device rndm_device;	// this will give us our seed
+  rndm_engine.seed(rndm_device());
 
-    c2numpy_init(&npywriter, fDumpWaveformsFileName, 50000);
-    c2numpy_addcolumn(&npywriter, "evt",   C2NUMPY_UINT32);
-    c2numpy_addcolumn(&npywriter, "gen",   (c2numpy_type)((int)C2NUMPY_STRING + 6));
-    c2numpy_addcolumn(&npywriter, "trkid", C2NUMPY_INT32);
-    c2numpy_addcolumn(&npywriter, "pdg",   C2NUMPY_INT32);
-    c2numpy_addcolumn(&npywriter, "edepo", C2NUMPY_FLOAT32);
-    c2numpy_addcolumn(&npywriter, "nelec", C2NUMPY_UINT32);
-    c2numpy_addcolumn(&npywriter, "procid",(c2numpy_type)((int)C2NUMPY_STRING + 7));
-    c2numpy_addcolumn(&npywriter, "chan",  C2NUMPY_UINT32);
-    c2numpy_addcolumn(&npywriter, "view",  (c2numpy_type)((int)C2NUMPY_STRING + 1) );
-    c2numpy_addcolumn(&npywriter, "stck_i", C2NUMPY_UINT16);
-    c2numpy_addcolumn(&npywriter, "stck_f", C2NUMPY_UINT16);
-    for(unsigned int i=0; i<6000; i++){
-      std::ostringstream name;
-      name << "tck_" << i;
-      c2numpy_addcolumn(&npywriter, name.str().c_str(), C2NUMPY_INT16);
-    } 
+  c2numpy_init(&npywriter, fDumpWaveformsFileName, 50000);
+  c2numpy_addcolumn(&npywriter, "evt",   C2NUMPY_UINT32);
+  c2numpy_addcolumn(&npywriter, "gen",   (c2numpy_type)((int)C2NUMPY_STRING + 6));
+  c2numpy_addcolumn(&npywriter, "trkid", C2NUMPY_INT32);
+  c2numpy_addcolumn(&npywriter, "pdg",   C2NUMPY_INT32);
+  c2numpy_addcolumn(&npywriter, "edepo", C2NUMPY_FLOAT32);
+  c2numpy_addcolumn(&npywriter, "nelec", C2NUMPY_UINT32);
+  c2numpy_addcolumn(&npywriter, "procid",(c2numpy_type)((int)C2NUMPY_STRING + 7));
+  c2numpy_addcolumn(&npywriter, "chan",  C2NUMPY_UINT32);
+  c2numpy_addcolumn(&npywriter, "view",  (c2numpy_type)((int)C2NUMPY_STRING + 1) );
+  c2numpy_addcolumn(&npywriter, "stck_i", C2NUMPY_UINT16);
+  c2numpy_addcolumn(&npywriter, "stck_f", C2NUMPY_UINT16);
+  for(unsigned int i=0; i<6000; i++){
+    std::ostringstream name;
+    name << "tck_" << i;
+    c2numpy_addcolumn(&npywriter, name.str().c_str(), C2NUMPY_INT16);
+  } 
 }
 
 //-----------------------------------------------------------------------
 void pdune::RawWaveformDump::endJob()
 {
-    c2numpy_close(&npywriter);
+  c2numpy_close(&npywriter);
 }
 
 //-----------------------------------------------------------------------
@@ -246,115 +249,151 @@ void pdune::RawWaveformDump::analyze(art::Event const& evt)
     }
   }
 
-  // ... Loop over particles
-  int sigchancount=0;
+  if (fSaveSignal){
+    // ... Loop over particles
+    int sigchancount=0;
 
-  // ... Loop over simChannels
-  for ( auto const& channel : (*simChannelHandle) ){
+    // ... Loop over simChannels
+    for ( auto const& channel : (*simChannelHandle) ){
 
-    // .. get simChannel channel number
-    const raw::ChannelID_t ch1 = channel.Channel();
-    if(ch1==raw::InvalidChannelID)continue;
-    if(geo::PlaneGeo::ViewName(fgeom->View(ch1))!=fPlaneToDump[0]) continue;
+      // .. get simChannel channel number
+      const raw::ChannelID_t ch1 = channel.Channel();
+      if(ch1==raw::InvalidChannelID)continue;
+      if(geo::PlaneGeo::ViewName(fgeom->View(ch1))!=fPlaneToDump[0]) continue;
       
-//    // .. now find RawDigit with this channel number
-//    auto search = rawdigitMap.find( ch1 );
-//    if ( search == rawdigitMap.end() ) continue;
-//    const raw::ChannelID_t ch2 = (*search).first;
-//    //art::Ptr<raw::RawDigit> rawdig = (*search).second;
-//    if(ch1!=ch2){
-//      cout << "!!!!!!!!!!!!!!!!!!!!! ch1 is not equal to ch2" << endl;
-//      exit(1);
-//    }
+      //    // .. now find RawDigit with this channel number
+      //    auto search = rawdigitMap.find( ch1 );
+      //    if ( search == rawdigitMap.end() ) continue;
+      //    const raw::ChannelID_t ch2 = (*search).first;
+      //    //art::Ptr<raw::RawDigit> rawdig = (*search).second;
+      //    if(ch1!=ch2){
+      //      cout << "!!!!!!!!!!!!!!!!!!!!! ch1 is not equal to ch2" << endl;
+      //      exit(1);
+      //    }
 
-    // ... Loop over all ticks with ionization energy deposited
-    unsigned int tdcmin=dataSize-1;
-    unsigned int tdcmax=0;
-    int numel=0;
-    double edep=0.;//,edep1=0.;
-    int pdgcode = 0;
-    int trackid = 0;
-    string procid = " ";
-    string genlab = " ";    
-    auto const& timeSlices = channel.TDCIDEMap();
-    for ( auto const& timeSlice : timeSlices ){
+      // ... Loop over all ticks with ionization energy deposited
+      unsigned int tdcmin=dataSize-1;
+      unsigned int tdcmax=0;
+      int numel=0;
+      double edep=0.;//,edep1=0.;
+      int pdgcode = 0;
+      int trackid = 0;
+      string procid = " ";
+      string genlab = " ";    
+      auto const& timeSlices = channel.TDCIDEMap();
+      for ( auto const& timeSlice : timeSlices ){
 
-      auto const& energyDeposits = timeSlice.second;
-      auto const tpctime = timeSlice.first;
-      unsigned int tdctick = static_cast<unsigned int>(fClks->TPCTDC2Tick(double(tpctime)));
-      if(tdctick!=tpctime)std::cout << "tpctime: " << tpctime << ", tdctick: " << tdctick << std::endl;
-      if(tdctick<0||tdctick>(dataSize-1))continue;
+        auto const& energyDeposits = timeSlice.second;
+        auto const tpctime = timeSlice.first;
+        unsigned int tdctick = static_cast<unsigned int>(fClks->TPCTDC2Tick(double(tpctime)));
+        if(tdctick!=tpctime)std::cout << "tpctime: " << tpctime << ", tdctick: " << tdctick << std::endl;
+        if(tdctick<0||tdctick>(dataSize-1))continue;
 
-      // ... Loop over all energy depositions in this tick
-      for ( auto const& energyDeposit : energyDeposits ){
+        // ... Loop over all energy depositions in this tick
+        for ( auto const& energyDeposit : energyDeposits ){
         
-        if (!energyDeposit.trackID) continue;
-        simb::MCParticle particle = PIS->TrackIdToMotherParticle(energyDeposit.trackID);
+          if (!energyDeposit.trackID) continue;
+          simb::MCParticle particle = PIS->TrackIdToMotherParticle(energyDeposit.trackID);
 
-        pdgcode = particle.PdgCode();
-        trackid = particle.TrackId();
-        procid = particle.Process();
+          pdgcode = particle.PdgCode();
+          trackid = particle.TrackId();
+          procid = particle.Process();
         
-        int eve_id = PIS->TrackIdToEveTrackId(energyDeposit.trackID);
-        if (!eve_id) continue;
-        std::string genlab = gf->get_gen(eve_id);
+          int eve_id = PIS->TrackIdToEveTrackId(energyDeposit.trackID);
+          if (!eve_id) continue;
+          std::string genlab = gf->get_gen(eve_id);
 
-        if (fSelectGenLabel!="ANY"){
-          if(genlab!=fSelectGenLabel)continue;
-        }
-        if (fSelectProcID!="ANY"){
-          if(procid!=fSelectProcID)continue;
-        }
-        if (fSelectPDGCode!=0){
-          if(pdgcode!=fSelectPDGCode)continue;
-        }
+          if (fSelectGenLabel!="ANY"){
+            if(genlab!=fSelectGenLabel)continue;
+          }
+          if (fSelectProcID!="ANY"){
+            if(procid!=fSelectProcID)continue;
+          }
+          if (fSelectPDGCode!=0){
+            if(pdgcode!=fSelectPDGCode)continue;
+          }
         
-        if ( particle.E() < fMinParticleEnergyGeV)continue;
+          if ( particle.E() < fMinParticleEnergyGeV)continue;
 
-        genlab.resize(6,' ');
-        procid.resize(7,' ');
+          genlab.resize(6,' ');
+          procid.resize(7,' ');
 
-        edep+=energyDeposit.energy;
+          edep+=energyDeposit.energy;
 	  
-        // .. check to see if ide came from the primary particle
-        //if ( energyDeposit.trackID != trackid ) continue;
-        if (tdctick<tdcmin)tdcmin=tdctick;
-        if (tdctick>tdcmax)tdcmax=tdctick;
-        //edep1+=energyDeposit.energy;
-        numel+=energyDeposit.numElectrons;
+          // .. check to see if ide came from the primary particle
+          //if ( energyDeposit.trackID != trackid ) continue;
+          if (tdctick<tdcmin)tdcmin=tdctick;
+          if (tdctick>tdcmax)tdcmax=tdctick;
+          //edep1+=energyDeposit.energy;
+          numel+=energyDeposit.numElectrons;
+        }
       }
+
+      if (!trackid) continue;
+
+      if (fMinNumberOfElectrons>=0 && numel<fMinNumberOfElectrons) continue;
+      if (fMaxNumberOfElectrons>=0 && numel>fMaxNumberOfElectrons) continue;
+      if (edep<fMinEnergyDepositedMeV) continue;
+
+      auto search = rawdigitMap.find(ch1);
+      if ( search == rawdigitMap.end() ) continue;
+      art::Ptr<raw::RawDigit> rawdig = (*search).second;
+      raw::Uncompress(rawdig->ADCs(), rawadc, rawdig->GetPedestal(), rawdig->Compression());
+      c2numpy_uint32(&npywriter, evt.id().event());
+      c2numpy_string(&npywriter, genlab.c_str());
+      c2numpy_int32(&npywriter, trackid);
+      c2numpy_int32(&npywriter, pdgcode);
+      c2numpy_float32(&npywriter, edep);
+      c2numpy_uint32(&npywriter, numel);
+      c2numpy_string(&npywriter, procid.c_str());
+      c2numpy_uint32(&npywriter, ch1);
+      c2numpy_string(&npywriter, geo::PlaneGeo::ViewName(fgeom->View(ch1)).c_str());
+      c2numpy_uint16(&npywriter, tdcmin);
+      c2numpy_uint16(&npywriter, tdcmax);
+      for ( unsigned int itck=0; itck<dataSize; ++itck ){
+        rawadc[itck] -= rawdig->GetPedestal();
+        c2numpy_int16(&npywriter, rawadc[itck]);
+      }
+      sigchancount++;
     }
-
-    if (!trackid) continue;
-
-    if (fMinNumberOfElectrons>=0 && numel<fMinNumberOfElectrons) continue;
-    if (fMaxNumberOfElectrons>=0 && numel>fMaxNumberOfElectrons) continue;
-    if (edep<fMinEnergyDepositedMeV) continue;
-
-    auto search = rawdigitMap.find(ch1);
-    if ( search == rawdigitMap.end() ) continue;
-    art::Ptr<raw::RawDigit> rawdig = (*search).second;
-    raw::Uncompress(rawdig->ADCs(), rawadc, rawdig->GetPedestal(), rawdig->Compression());
-    c2numpy_uint32(&npywriter, evt.id().event());
-    c2numpy_string(&npywriter, genlab.c_str());
-    c2numpy_int32(&npywriter, trackid);
-    c2numpy_int32(&npywriter, pdgcode);
-    c2numpy_float32(&npywriter, edep);
-    c2numpy_uint32(&npywriter, numel);
-    c2numpy_string(&npywriter, procid.c_str());
-    c2numpy_uint32(&npywriter, ch1);
-    c2numpy_string(&npywriter, geo::PlaneGeo::ViewName(fgeom->View(ch1)).c_str());
-    c2numpy_uint16(&npywriter, tdcmin);
-    c2numpy_uint16(&npywriter, tdcmax);
-    for ( unsigned int itck=0; itck<dataSize; ++itck ){
-      rawadc[itck] -= rawdig->GetPedestal();
-      c2numpy_int16(&npywriter, rawadc[itck]);
-    }
-    sigchancount++;
+    std::cout<<"Total number of signal channels "<<sigchancount<<std::endl;
   }
-  std::cout<<"Total number of signal channels "<<sigchancount<<std::endl;
+  else{
+    //save noise
+    int noisechancount=0;
+    std::map< raw::ChannelID_t, bool > signalMap;
+    for ( auto const& channel : (*simChannelHandle) ){
+      signalMap[channel.Channel()] = true;
+    }
+    
+    std::vector<short> rawadc(dataSize);  // vector to hold uncompressed adc values later
+
+    for ( size_t rdIter = 0; rdIter < digitVecHandle->size(); ++rdIter ) {
+      art::Ptr<raw::RawDigit> digitVec(digitVecHandle, rdIter);
+      if (signalMap[digitVec->Channel()]) continue;
+      if(geo::PlaneGeo::ViewName(fgeom->View(digitVec->Channel()))!=fPlaneToDump[0]) continue;
+      raw::Uncompress(digitVec->ADCs(), rawadc, digitVec->GetPedestal(), digitVec->Compression());
+      c2numpy_uint32(&npywriter, evt.id().event());
+      c2numpy_string(&npywriter, "      ");
+      c2numpy_int32(&npywriter, 0);
+      c2numpy_int32(&npywriter, 0);
+      c2numpy_float32(&npywriter, 0);
+      c2numpy_uint32(&npywriter, 0);
+      c2numpy_string(&npywriter, "       ");
+      c2numpy_uint32(&npywriter, digitVec->Channel());
+      c2numpy_string(&npywriter, geo::PlaneGeo::ViewName(fgeom->View(digitVec->Channel())).c_str());
+      c2numpy_uint16(&npywriter, 0);
+      c2numpy_uint16(&npywriter, 0);
+      for ( unsigned int itck=0; itck<dataSize; ++itck ){
+        rawadc[itck] -= digitVec->GetPedestal();
+        c2numpy_int16(&npywriter, rawadc[itck]);
+      }
+      ++noisechancount;
+    }
+    std::cout<<"Total number of noise channels "<<noisechancount<<std::endl;
+  }
   /*
-  for ( auto const& particle : (*particleHandle) ){
+    for ( auto const& particle : (*particleHandle) ){
 
     int pdgcode = particle.PdgCode();
     int trackid = particle.TrackId();
@@ -367,13 +406,13 @@ void pdune::RawWaveformDump::analyze(art::Event const& evt)
     // .. make sure particle comes from primary neutrino interaction vertex
     //if ( particle.Process() != "primary"  ||  pdgcode != 11 || particle.Mother() !=0 || particle.E() < 0.001)continue;
     if (fSelectGenLabel!="ANY"){
-      if(genlab!=fSelectGenLabel)continue;
+    if(genlab!=fSelectGenLabel)continue;
     }
     if (fSelectProcID!="ANY"){
-      if(procid!=fSelectProcID)continue;
+    if(procid!=fSelectProcID)continue;
     }
     if (fSelectPDGCode!=0){
-      if(pdgcode!=fSelectPDGCode)continue;
+    if(pdgcode!=fSelectPDGCode)continue;
     }
 
     if ( particle.E() < fMinParticleEnergyGeV)continue;
@@ -393,100 +432,100 @@ void pdune::RawWaveformDump::analyze(art::Event const& evt)
 
     // ... Loop over simChannels
     for ( auto const& channel : (*simChannelHandle) ){
-      bool foundsignal4CH=false;
+    bool foundsignal4CH=false;
 
-      // .. get simChannel channel number
-      const raw::ChannelID_t ch1 = channel.Channel();
-      if(ch1==raw::InvalidChannelID)continue;
-      if(geo::PlaneGeo::ViewName(fgeom->View(ch1))!=fPlaneToDump[0])continue;
+    // .. get simChannel channel number
+    const raw::ChannelID_t ch1 = channel.Channel();
+    if(ch1==raw::InvalidChannelID)continue;
+    if(geo::PlaneGeo::ViewName(fgeom->View(ch1))!=fPlaneToDump[0])continue;
       
-      // .. now find RawDigit with this channel number
-      auto search = rawdigitMap.find( ch1 );
-      if ( search == rawdigitMap.end() ) continue;
-      const raw::ChannelID_t ch2 = (*search).first;
-      //art::Ptr<raw::RawDigit> rawdig = (*search).second;
-      if(ch1!=ch2){
-        cout << "!!!!!!!!!!!!!!!!!!!!! ch1 is not equal to ch2" << endl;
-	exit(1);
-      }
+    // .. now find RawDigit with this channel number
+    auto search = rawdigitMap.find( ch1 );
+    if ( search == rawdigitMap.end() ) continue;
+    const raw::ChannelID_t ch2 = (*search).first;
+    //art::Ptr<raw::RawDigit> rawdig = (*search).second;
+    if(ch1!=ch2){
+    cout << "!!!!!!!!!!!!!!!!!!!!! ch1 is not equal to ch2" << endl;
+    exit(1);
+    }
 
-      // Create vector that holds the floating ADC count for each tick.
-      //std::vector<AdcSignal> fChargeWork;
-      //m_pscx->extract(&channel, fChargeWork);
+    // Create vector that holds the floating ADC count for each tick.
+    //std::vector<AdcSignal> fChargeWork;
+    //m_pscx->extract(&channel, fChargeWork);
 
-      // ... Loop over all ticks with ionization energy deposited
-      unsigned int tdcmin=dataSize-1;
-      unsigned int tdcmax=0;
-      int numel=0;
-      double edep=0.,edep1=0.;
-      auto const& timeSlices = channel.TDCIDEMap();
-      for ( auto const& timeSlice : timeSlices ){
+    // ... Loop over all ticks with ionization energy deposited
+    unsigned int tdcmin=dataSize-1;
+    unsigned int tdcmax=0;
+    int numel=0;
+    double edep=0.,edep1=0.;
+    auto const& timeSlices = channel.TDCIDEMap();
+    for ( auto const& timeSlice : timeSlices ){
 
-        auto const& energyDeposits = timeSlice.second;
-	auto const tpctime = timeSlice.first;
-        unsigned int tdctick = static_cast<unsigned int>(fClks->TPCTDC2Tick(double(tpctime)));
-	if(tdctick!=tpctime)std::cout << "tpctime: " << tpctime << ", tdctick: " << tdctick << std::endl;
-	if(tdctick<0||tdctick>(dataSize-1))continue;
+    auto const& energyDeposits = timeSlice.second;
+    auto const tpctime = timeSlice.first;
+    unsigned int tdctick = static_cast<unsigned int>(fClks->TPCTDC2Tick(double(tpctime)));
+    if(tdctick!=tpctime)std::cout << "tpctime: " << tpctime << ", tdctick: " << tdctick << std::endl;
+    if(tdctick<0||tdctick>(dataSize-1))continue;
 
-	// ... Loop over all energy depositions in this tick
-	for ( auto const& energyDeposit : energyDeposits ){
+    // ... Loop over all energy depositions in this tick
+    for ( auto const& energyDeposit : energyDeposits ){
 
-          edep+=energyDeposit.energy;
+    edep+=energyDeposit.energy;
 	  
-	  // .. check to see if ide came from the primary particle
-          if ( energyDeposit.trackID != trackid ) continue;
-	  if (tdctick<tdcmin)tdcmin=tdctick;
-	  if (tdctick>tdcmax)tdcmax=tdctick;
-	  foundsignal4P=true;
-          foundsignal4CH=true;
-          edep1+=energyDeposit.energy;
-	  numel+=energyDeposit.numElectrons;
-        }
-      }
-      if(foundsignal4CH){
-        if(numel>=fMinNumberOfElectrons && edep1>=fMinEnergyDepositedMeV){
-	  if(fMaxNumberOfElectrons>=0 && numel>=fMaxNumberOfElectrons){
-	    continue;
-          } else {
-	    sigchannels.push_back(ch2);
-	    sigticks.emplace_back(tdcmin,tdcmax);
-	    edepvec.push_back(edep1);
-	    numelvec.push_back(numel);
-	  }
-	}
-      }
+    // .. check to see if ide came from the primary particle
+    if ( energyDeposit.trackID != trackid ) continue;
+    if (tdctick<tdcmin)tdcmin=tdctick;
+    if (tdctick>tdcmax)tdcmax=tdctick;
+    foundsignal4P=true;
+    foundsignal4CH=true;
+    edep1+=energyDeposit.energy;
+    numel+=energyDeposit.numElectrons;
+    }
+    }
+    if(foundsignal4CH){
+    if(numel>=fMinNumberOfElectrons && edep1>=fMinEnergyDepositedMeV){
+    if(fMaxNumberOfElectrons>=0 && numel>=fMaxNumberOfElectrons){
+    continue;
+    } else {
+    sigchannels.push_back(ch2);
+    sigticks.emplace_back(tdcmin,tdcmax);
+    edepvec.push_back(edep1);
+    numelvec.push_back(numel);
+    }
+    }
+    }
     }
     if(foundsignal4P && sigchannels.size()>0){
-      std::uniform_int_distribution<int> rndm_dist(0,sigchannels.size()-1);
-      int i = rndm_dist(rndm_engine); // randomly select one channel with a signal from this particle
-      chnum=sigchannels[i];
-      unsigned int stck1 = sigticks[i].first;
-      unsigned int stck2 = sigticks[i].second;
-      double edepo=edepvec[i];
-      int numelec=numelvec[i];
-      auto search = rawdigitMap.find(chnum);
-      if ( search == rawdigitMap.end() ) continue;
-      art::Ptr<raw::RawDigit> rawdig = (*search).second;
-      raw::Uncompress(rawdig->ADCs(), rawadc, rawdig->GetPedestal(), rawdig->Compression());
-      c2numpy_uint32(&npywriter, evt.id().event());
-      c2numpy_string(&npywriter, genlab.c_str());
-      c2numpy_int32(&npywriter, trackid);
-      c2numpy_int32(&npywriter, pdgcode);
-      c2numpy_float32(&npywriter, edepo);
-      c2numpy_uint32(&npywriter, numelec);
-      c2numpy_string(&npywriter, procid.c_str());
-      c2numpy_uint32(&npywriter, chnum);
-      c2numpy_string(&npywriter, geo::PlaneGeo::ViewName(fgeom->View(chnum)).c_str());
-      c2numpy_uint16(&npywriter, stck1);
-      c2numpy_uint16(&npywriter, stck2);
-      for ( unsigned int itck=0; itck<dataSize; ++itck ){
-        rawadc[itck] -= rawdig->GetPedestal();
-        c2numpy_int16(&npywriter, rawadc[itck]);
-      }
-      sigchancount++;
+    std::uniform_int_distribution<int> rndm_dist(0,sigchannels.size()-1);
+    int i = rndm_dist(rndm_engine); // randomly select one channel with a signal from this particle
+    chnum=sigchannels[i];
+    unsigned int stck1 = sigticks[i].first;
+    unsigned int stck2 = sigticks[i].second;
+    double edepo=edepvec[i];
+    int numelec=numelvec[i];
+    auto search = rawdigitMap.find(chnum);
+    if ( search == rawdigitMap.end() ) continue;
+    art::Ptr<raw::RawDigit> rawdig = (*search).second;
+    raw::Uncompress(rawdig->ADCs(), rawadc, rawdig->GetPedestal(), rawdig->Compression());
+    c2numpy_uint32(&npywriter, evt.id().event());
+    c2numpy_string(&npywriter, genlab.c_str());
+    c2numpy_int32(&npywriter, trackid);
+    c2numpy_int32(&npywriter, pdgcode);
+    c2numpy_float32(&npywriter, edepo);
+    c2numpy_uint32(&npywriter, numelec);
+    c2numpy_string(&npywriter, procid.c_str());
+    c2numpy_uint32(&npywriter, chnum);
+    c2numpy_string(&npywriter, geo::PlaneGeo::ViewName(fgeom->View(chnum)).c_str());
+    c2numpy_uint16(&npywriter, stck1);
+    c2numpy_uint16(&npywriter, stck2);
+    for ( unsigned int itck=0; itck<dataSize; ++itck ){
+    rawadc[itck] -= rawdig->GetPedestal();
+    c2numpy_int16(&npywriter, rawadc[itck]);
     }
-  }
-  std::cout<<"Total number of signal channels "<<sigchancount<<std::endl;
+    sigchancount++;
+    }
+    }
+    std::cout<<"Total number of signal channels "<<sigchancount<<std::endl;
   */
 }
 DEFINE_ART_MODULE(pdune::RawWaveformDump)

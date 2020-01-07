@@ -17,6 +17,7 @@ standard_rawwaveformdump:
     MinEnergyDepositedMeV: 0.0	# units in MeV
     MinNumberOfElectrons:	 2000
     MaxNumberOfElectrons:	 -1 # if negative, not imposed
+    SaveSignal:                  true
     LogLevel: 1
 }
 
