@@ -83,6 +83,17 @@ namespace pionana {
     size_t nHits;
   };
 
+  struct calo_point{
+
+    calo_point();
+    calo_point( size_t w, double p, double dedx ) :
+      wire(w), pitch(p), dEdX(dedx) {};
+
+    size_t wire;
+    double pitch;
+    double dEdX;
+  };
+
   cnnOutput2D GetCNNOutputFromPFParticle( const recob::PFParticle & part, const art::Event & evt, const anab::MVAReader<recob::Hit,4> & CNN_results,  protoana::ProtoDUNEPFParticleUtils & pfpUtil, std::string fPFParticleTag ){
 
     cnnOutput2D output;
@@ -295,6 +306,10 @@ private:
   double reco_beam_true_byHits_purity;                      
   //////////////////////////
 
+  std::vector< double > reco_beam_incidentEnergies;
+  double reco_beam_interactingEnergy;
+  std::vector< double > true_beam_incidentEnergies;
+  double true_beam_interactingEnergy;
 
   /////////////////////////////////////////////////////
   //Info from the BI if using Real Data
@@ -1371,6 +1386,47 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
   
     std::cout << "Proton chi2: " << reco_beam_Chi2_proton << std::endl;
 
+    //Doing thin slice
+    if( reco_beam_calibrated_dEdX.size() && reco_beam_calibrated_dEdX.size() == reco_beam_TrkPitch.size() && reco_beam_calibrated_dEdX.size() == reco_beam_calo_wire.size() ){
+      std::vector< calo_point > reco_beam_calo_points;
+      for( size_t i = 0; i < reco_beam_calibrated_dEdX.size(); ++i ){
+        std::cout << reco_beam_calo_wire[i] << std::endl;
+        reco_beam_calo_points.push_back(
+          calo_point( reco_beam_calo_wire[i], reco_beam_TrkPitch[i], reco_beam_calibrated_dEdX[i] )
+        );
+      }
+
+      //Sort
+      std::sort( reco_beam_calo_points.begin(), reco_beam_calo_points.end(), [](calo_point a, calo_point b) {return ( a.wire < b.wire );} ); 
+
+
+      //Get the initial Energy KE
+      double mass = 0.;
+      double init_KE = 0.;
+      if( evt.isRealData() ){      
+        mass = 139.57;
+
+        init_KE = sqrt( data_BI_P*data_BI_P + mass*mass ) - mass;
+      }
+      else{
+        if( true_beam_PDG == 2212 ) mass = 938.27;
+        else if( abs(true_beam_PDG) == 211 ) mass = 139.57;
+        else if( abs(true_beam_PDG) == -11 ) mass = .511;
+        else if( abs(true_beam_PDG) == 321 ) mass = 321;
+        else if( abs(true_beam_PDG) == 13 )  mass = 105.66;      
+
+        init_KE = sqrt( 1.e6 * true_beam_startP*true_beam_startP + mass*mass ) - mass;
+      }
+
+      reco_beam_incidentEnergies.push_back( init_KE );
+      for( size_t i = 0; i < reco_beam_calo_points.size() - 1; ++i ){ //-1 to not count the last slice
+        double this_energy = reco_beam_incidentEnergies.back() - ( reco_beam_calo_points[i].dEdX * reco_beam_calo_points[i].pitch );
+        reco_beam_incidentEnergies.push_back( this_energy ); 
+      }
+      if( reco_beam_incidentEnergies.size() ) reco_beam_interactingEnergy = reco_beam_incidentEnergies.back();
+
+
+    }
 
     /*
     std::cout << "MVA" << std::endl;
@@ -1546,6 +1602,39 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
       }
       true_beam_IDE_totalDep = new_total_dE;
       std::cout << "New total: " << new_total_dE << std::endl;
+
+
+      //Do the true xsec measurement
+      double mass = 139.57; 
+      if( true_beam_PDG == 2212 ) mass = 938.27;
+      else if( abs(true_beam_PDG) == 211 ) mass = 139.57;
+      else if( abs(true_beam_PDG) == -11 ) mass = .511;
+      else if( abs(true_beam_PDG) == 321 ) mass = 321;
+      else if( abs(true_beam_PDG) == 13 )  mass = 105.66;      
+
+      double init_KE = sqrt( 1.e6 * true_beam_startP*true_beam_startP + mass*mass ) - mass;
+      true_beam_incidentEnergies.push_back( init_KE );
+
+      double slice_end = pitch;
+      double slice_edep = 0.;
+      for( size_t i = 0; i < view2_IDEs.size(); ++i ){
+
+        auto theIDE = view2_IDEs[i];
+
+        if( theIDE->z < 0. ) continue;
+
+        if( theIDE->z > slice_end ){
+          true_beam_incidentEnergies.push_back( true_beam_incidentEnergies.back() - slice_edep ); 
+          slice_edep = 0.;
+          slice_end += pitch;
+        }
+
+        slice_edep += theIDE->energy; 
+      }
+
+      //Remove the last. It's not considered an 'experiment'
+      true_beam_incidentEnergies.pop_back();
+      if( true_beam_incidentEnergies.size() ) true_beam_interactingEnergy = true_beam_incidentEnergies.back();
 
     }
 
@@ -2974,6 +3063,11 @@ void pionana::PionAnalyzerMC::beginJob()
   fTree->Branch("reco_beam_true_byHits_startE", &reco_beam_true_byHits_startE);
   fTree->Branch("reco_beam_true_byHits_startP", &reco_beam_true_byHits_startP);
 
+  fTree->Branch("reco_beam_incidentEnergies", &reco_beam_incidentEnergies);
+  fTree->Branch("reco_beam_interactingEnergy", &reco_beam_interactingEnergy);
+  fTree->Branch("true_beam_incidentEnergies", &true_beam_incidentEnergies);
+  fTree->Branch("true_beam_interactingEnergy", &true_beam_interactingEnergy);
+
   if( fSaveHits ){
     fTree->Branch( "reco_beam_spacePts_X", &reco_beam_spacePts_X );
     fTree->Branch( "reco_beam_spacePts_Y", &reco_beam_spacePts_Y );
@@ -3287,6 +3381,12 @@ void pionana::PionAnalyzerMC::reset()
   reco_daughter_len.clear();
 
   reco_beam_trackID = -1;
+
+  reco_beam_incidentEnergies.clear();
+  reco_beam_interactingEnergy = -999.;
+  true_beam_incidentEnergies.clear();
+  true_beam_interactingEnergy = -999.;
+
   reco_daughter_trackID.clear();
   reco_daughter_true_byE_completeness.clear();
   reco_daughter_true_byE_purity.clear();
