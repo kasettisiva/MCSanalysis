@@ -318,6 +318,7 @@ private:
   std::vector< int > data_BI_PDG_candidates;
   double data_BI_X, data_BI_Y, data_BI_Z;
   int data_BI_nFibersP1, data_BI_nFibersP2, data_BI_nFibersP3;
+  int data_BI_nTracks, data_BI_nMomenta;
   ////////////////////////////////////////////////////
 
 
@@ -648,16 +649,24 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
     std::vector< double > momenta = beamEvent.GetRecoBeamMomenta();
     int nMomenta = momenta.size();
 
+/*
     if( !( nMomenta == 1 && nTracks == 1 ) ){
       std::cout << "Malformed tracks and momenta" << std::endl;
       return;
-    }
+    }*/
     
-    data_BI_P = momenta[0];
+    if( nMomenta > 0 )
+      data_BI_P = momenta[0];
 
-    data_BI_X = beamEvent.GetBeamTracks()[0].Trajectory().End().X();
-    data_BI_Y = beamEvent.GetBeamTracks()[0].Trajectory().End().Y();
-    data_BI_Z = beamEvent.GetBeamTracks()[0].Trajectory().End().Z();
+    if( nTracks > 0 ){
+      data_BI_X = beamEvent.GetBeamTracks()[0].Trajectory().End().X();
+      data_BI_Y = beamEvent.GetBeamTracks()[0].Trajectory().End().Y();
+      data_BI_Z = beamEvent.GetBeamTracks()[0].Trajectory().End().Z();
+    }
+
+    data_BI_nTracks = nTracks;
+    data_BI_nMomenta = nMomenta;
+
     std::vector< int > pdg_cands = fBeamlineUtils.GetPID( beamEvent, 1. );
     data_BI_PDG_candidates.insert( data_BI_PDG_candidates.end(), pdg_cands.begin(), pdg_cands.end() );
 
@@ -2552,17 +2561,26 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
 
         std::cout << "Min tick: " << min_tick << " Max tick: " << max_tick << std::endl;
         std::cout << "Min wire: " << wire_to_avg_ticks.begin()->first << " Max wire: " << wire_to_avg_ticks.rbegin()->first << std::endl;
+        
+        std::cout << "Checking pfp stuff" << std::endl;
+        for( size_t i = 0; i < pfpVec->size(); ++i ){
+          std::cout << &(*pfpVec)[i] << " " << particle << std::endl;
+        }
 
         //1st Get all the reco tracks -- or PFP?
-        for( size_t i = 0; i < recoTracks->size(); ++i ){
+        //for( size_t i = 0; i < recoTracks->size(); ++i ){
+        for( size_t i = 0; i < pfpVec->size(); ++i ){
 
-          if( (*recoTracks)[i].ID() == thisTrack->ID() ) continue;
+          //if( (*recoTracks)[i].ID() == thisTrack->ID() ) continue;
+          if( &(*pfpVec)[i] == particle ) continue; // Check if the same pointer
 
           int nUpperCosmicROI = 0;
           int nLowerCosmicROI = 0;
-          std::cout << "Checking Track " << (*recoTracks)[i].ID() << std::endl;
+          //std::cout << "Checking Track " << (*recoTracks)[i].ID() << std::endl;
+          std::cout << "Checking PFP " << &(*pfpVec)[i] << std::endl;
 
-          auto planeHits = trackUtil.GetRecoTrackHitsFromPlane( (*recoTracks)[i], evt, fTrackerTag, 2 );
+          //auto planeHits = trackUtil.GetRecoTrackHitsFromPlane( (*recoTracks)[i], evt, fTrackerTag, 2 );
+          auto planeHits = pfpUtil.GetPFParticleHitsFromPlane( (*pfpVec)[i], evt, fPFParticleTag, 2 );
           bool found_new = false;
           for( size_t j = 0; j < planeHits.size(); ++j ){
             auto theHit = planeHits[j];
@@ -2583,15 +2601,17 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
 
               }
 
-              std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( *theHit );
-              for( size_t j = 0; j < ides.size(); ++j ){
-                if( true_beam_ID == ides[j]->trackID ){
-                  cosmic_has_beam_IDE.push_back( (*recoTracks)[i].ID() );
-                  found_new = true;
-                  break;
+              if( !found_new && !evt.isRealData() ){
+                std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( *theHit );
+                for( size_t j = 0; j < ides.size(); ++j ){
+                  if( true_beam_ID == ides[j]->trackID ){
+                    //cosmic_has_beam_IDE.push_back( (*recoTracks)[i].ID() );
+                    cosmic_has_beam_IDE.push_back( i );
+                    found_new = true;
+                    break;
+                  }
                 }
               }
-              if( found_new ) break;
             }
           }
 
@@ -2603,22 +2623,25 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
           if( nLowerCosmicROI || nUpperCosmicROI ){
             reco_beam_cosmic_candidate_lower_hits.push_back( nLowerCosmicROI );
             reco_beam_cosmic_candidate_upper_hits.push_back( nUpperCosmicROI );
-            reco_beam_cosmic_candidate_ID.push_back( (*recoTracks)[i].ID() );
+            reco_beam_cosmic_candidate_ID.push_back( i );
           }
 
         }
       }
     }
 
-    auto planeHits = trackUtil.GetRecoTrackHitsFromPlane( *thisTrack, evt, fTrackerTag, 2 );
-    for( size_t i = 0; i < planeHits.size(); ++i ){      
-      auto theHit = planeHits[i];
-      std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( *theHit );
-      for( size_t j = 0; j < ides.size(); ++j ){
-        if( pi_serv->TrackIdToMCTruth_P( ides[j]->trackID )->Origin() == 2 ){
-          beam_has_cosmic_IDE = true;
-          break;
+    if( !evt.isRealData() ){
+      auto planeHits = trackUtil.GetRecoTrackHitsFromPlane( *thisTrack, evt, fTrackerTag, 2 );
+      for( size_t i = 0; i < planeHits.size(); ++i ){      
+        auto theHit = planeHits[i];
+        std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( *theHit );
+        for( size_t j = 0; j < ides.size(); ++j ){
+          if( pi_serv->TrackIdToMCTruth_P( ides[j]->trackID )->Origin() == 2 ){
+            beam_has_cosmic_IDE = true;
+            break;
+          }
         }
+        if( beam_has_cosmic_IDE ) break;
       }
     }
 
@@ -2985,6 +3008,8 @@ void pionana::PionAnalyzerMC::beginJob()
   fTree->Branch("data_BI_nFibersP2", &data_BI_nFibersP2);
   fTree->Branch("data_BI_nFibersP3", &data_BI_nFibersP3);
   fTree->Branch("data_BI_PDG_candidates", &data_BI_PDG_candidates);
+  fTree->Branch("data_BI_nTracks", &data_BI_nTracks);
+  fTree->Branch("data_BI_nMomenta", &data_BI_nMomenta);
 
 
   fTree->Branch("quality_reco_view_0_hits_in_TPC5", &quality_reco_view_0_hits_in_TPC5);
@@ -3219,6 +3244,8 @@ void pionana::PionAnalyzerMC::reset()
   data_BI_nFibersP2 = 0;
   data_BI_nFibersP3 = 0;
   data_BI_PDG_candidates.clear();
+  data_BI_nTracks = -1;
+  data_BI_nMomenta = -1;
 
 
   quality_reco_view_0_hits_in_TPC5 = false;
