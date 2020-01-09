@@ -2582,8 +2582,15 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
           //auto planeHits = trackUtil.GetRecoTrackHitsFromPlane( (*recoTracks)[i], evt, fTrackerTag, 2 );
           auto planeHits = pfpUtil.GetPFParticleHitsFromPlane( (*pfpVec)[i], evt, fPFParticleTag, 2 );
           bool found_new = false;
+
+          protoana::MCParticleSharedHits match = protoana::MCParticleSharedHits();
+          if( !evt.isRealData() )
+            match = truthUtil.GetMCParticleByHits( (*pfpVec)[i], evt, fPFParticleTag, fHitTag );
+
+
           for( size_t j = 0; j < planeHits.size(); ++j ){
             auto theHit = planeHits[j];
+            std::cout << j << " " << theHit->WireID().TPC << std::endl;
             if( theHit->WireID().TPC == 1 ){                    
               
               if( int(theHit->WireID().Wire) > wire_to_avg_ticks.begin()->first && int(theHit->WireID().Wire) < wire_to_avg_ticks.rbegin()->first &&
@@ -2600,15 +2607,21 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
                 }
 
               }
-
+              
               if( !found_new && !evt.isRealData() ){
-                std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( *theHit );
-                for( size_t j = 0; j < ides.size(); ++j ){
-                  if( true_beam_ID == ides[j]->trackID ){
-                    //cosmic_has_beam_IDE.push_back( (*recoTracks)[i].ID() );
-                    cosmic_has_beam_IDE.push_back( i );
-                    found_new = true;
-                    break;
+                std::cout << "particle? " << match.particle << std::endl;
+                if( match.particle ){
+                  std::cout << "origin? " << pi_serv->TrackIdToMCTruth_P(match.particle->TrackId())->Origin() << std::endl;
+                  if( pi_serv->TrackIdToMCTruth_P(match.particle->TrackId())->Origin() == 2 ){
+                    std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( *theHit );
+                    for( size_t j = 0; j < ides.size(); ++j ){
+                      if( true_beam_ID == ides[j]->trackID ){
+                        //cosmic_has_beam_IDE.push_back( (*recoTracks)[i].ID() );
+                        cosmic_has_beam_IDE.push_back( i );
+                        found_new = true;
+                        break;
+                      }
+                    }
                   }
                 }
               }
@@ -2631,14 +2644,18 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
     }
 
     if( !evt.isRealData() ){
+      std::cout << "Checking beam for cosmic" << std::endl;
       auto planeHits = trackUtil.GetRecoTrackHitsFromPlane( *thisTrack, evt, fTrackerTag, 2 );
       for( size_t i = 0; i < planeHits.size(); ++i ){      
         auto theHit = planeHits[i];
-        std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( *theHit );
-        for( size_t j = 0; j < ides.size(); ++j ){
-          if( pi_serv->TrackIdToMCTruth_P( ides[j]->trackID )->Origin() == 2 ){
-            beam_has_cosmic_IDE = true;
-            break;
+        //std::cout << theHit->WireID().TPC << std::endl;
+        if( theHit->WireID().TPC == 1 ){
+          std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( *theHit );
+          for( size_t j = 0; j < ides.size(); ++j ){
+            if( pi_serv->TrackIdToMCTruth_P( ides[j]->trackID )->Origin() == 2 ){
+              beam_has_cosmic_IDE = true;
+              break;
+            }
           }
         }
         if( beam_has_cosmic_IDE ) break;
