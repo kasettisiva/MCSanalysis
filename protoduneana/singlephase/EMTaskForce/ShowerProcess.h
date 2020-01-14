@@ -16,6 +16,9 @@
 #include "dune/Protodune/singlephase/DataUtils/ProtoDUNEShowerUtils.h"
 #include "Cone.h"
 
+#include "TFile.h"
+#include "TH3F.h"
+
 namespace pizero {
 
 // Class to store all relevant objects and variables of a shower process.
@@ -41,8 +44,9 @@ class ShowerProcess {
   void find_tracks();
   void fill_cone();
 
-  // Truth utilities for convenience.
+  // Utilities for convenience.
   protoana::ProtoDUNETruthUtils truthUtils;
+  protoana::ProtoDUNEShowerUtils shUtils;
 
  public:
   // Constructors from MCParticle, shower and both.
@@ -105,7 +109,10 @@ class ShowerProcess {
   std::vector<const simb::MCParticle*> mcparticles() const { return m_mcparts; }
   std::vector<const recob::Shower*> showers() const { return m_showers; }
   std::vector<const recob::Track*> tracks() const { return m_tracks; }
+  // Calorimetry.
+  double energy(const std::string& caloLabel, const std::string& scefile, const std::string& yzfile, const std::string& xfile) const;
 }; // class ShowerProcess
+
 
 // Find MCParticle based on the biggest shower via truth utilities.
 void ShowerProcess::find_mcparticles() {
@@ -231,6 +238,81 @@ void ShowerProcess::fill_cone() {
   //   cdir = TVector3(tdir.X(), tdir.Y(), tdir.Z());
   // }
 
+}
+
+double ShowerProcess::energy(const std::string& caloLabel, const std::string& scefile, const std::string& yzfile, const std::string& xfile) const {
+  double totE = 0;
+
+  // Check whether there is a shower associated with this object.
+  if(shower() == 0x0) return totE;
+
+  // Constants from DUNE docDB 15974 by A Paudel.
+  const double rho = 1.383; // g/cm^3 (LAr density at 18 psi)
+  const double betap = 0.212; // kV/cm * g/cm / MeV
+  const double E0 = 0.4867; // kV/cm (nominal electric field)
+  const double alpha = 0.93; // ArgoNeuT-determined parameter at E0 kV/cm
+  const double Wion = 23.6e-6; // ArgoNeuT-determined parameter at E0 kV/cm
+
+  // Get the variable Efield using data driven maps.
+  TFile* ef = new TFile(scefile.c_str());
+  TH3F* xneg = (TH3F*)ef->Get("Reco_ElecField_X_Neg");
+  TH3F* yneg = (TH3F*)ef->Get("Reco_ElecField_Y_Neg");
+  TH3F* zneg = (TH3F*)ef->Get("Reco_ElecField_Z_Neg");
+  TH3F* xpos = (TH3F*)ef->Get("Reco_ElecField_X_Pos");
+  TH3F* ypos = (TH3F*)ef->Get("Reco_ElecField_Y_Pos");
+  TH3F* zpos = (TH3F*)ef->Get("Reco_ElecField_Z_Pos");
+
+  // Get dQ/dx YZ and X correction factors.
+  TFile* yzf = new TFile(yzfile.c_str());
+  TH2F* yzcorrposhist =(TH2F*)yzf->Get("correction_dqdx_ZvsY_positiveX_hist_2");
+  TH2F* yzcorrneghist =(TH2F*)yzf->Get("correction_dqdx_ZvsY_negativeX_hist_2");
+  TFile* xf = new TFile(xfile.c_str());
+  TH1F* xcorrhist = (TH1F*)xf->Get("dqdx_X_correction_hist_2");
+
+  // Get the calorimetry objects from the event using the shower utilities.
+  std::vector<anab::Calorimetry> calovec =
+    shUtils.GetRecoShowerCalorimetry(*shower(), *m_evt, m_showerLabel, caloLabel);
+
+  // Loop over all plane calorimetry objects, but only use the collection plane.
+  for(const anab::Calorimetry& calo : calovec) {
+    if(calo.PlaneID().Plane != 2) continue;
+
+    // Loop over all hits in the collection plane calorimetry object.
+    for(unsigned i = 0; i < calo.dQdx().size(); ++i) {
+      double dQdx = calo.dQdx()[i];
+      const double pitch = calo.TrkPitchVec()[i];
+      const geo::Point_t& pos = calo.XYZ()[i];
+      // Effective E-field calculation.
+      const double x = pos.X();
+      const double y = pos.Y();
+      const double z = pos.Z();
+      double Ef, yzcorr;
+      if(x >= 0) {
+        const double Ex = E0+E0*xpos->GetBinContent(xpos->FindBin(x,y,z));
+        const double Ey = E0*ypos->GetBinContent(ypos->FindBin(x,y,z));
+        const double Ez = E0*zpos->GetBinContent(zpos->FindBin(x,y,z));
+        Ef = sqrt(Ex*Ex+Ey*Ey+Ez*Ez);
+        yzcorr = yzcorrposhist->GetBinContent(yzcorrposhist->FindBin(z,y));
+      } else {
+        const double Ex = E0+E0*xneg->GetBinContent(xneg->FindBin(x,y,z));
+        const double Ey = E0*yneg->GetBinContent(yneg->FindBin(x,y,z));
+        const double Ez = E0*zneg->GetBinContent(zneg->FindBin(x,y,z));
+        Ef = sqrt(Ex*Ex+Ey*Ey+Ez*Ez);
+        yzcorr = yzcorrneghist->GetBinContent(yzcorrneghist->FindBin(z,y));
+      }
+      // Correct dQ/dx.
+      const double xcorr = xcorrhist->GetBinContent(xcorrhist->FindBin(x));
+      const double calib = 5.23e-3; // Calibration constant to convert from ADC/cm to MeV/cm.
+      const double norm = 0.9946; // Normalisation factor to get dQ/dx at anode.
+      dQdx *= norm*xcorr*yzcorr/calib;
+      // dE/dx and E calculation from dQ/dx.
+      const double dEdx = (exp(dQdx*(betap/(rho*Ef)*Wion)) - alpha) / (betap/(rho*Ef));
+      const double E = dEdx * pitch * 1e-3; // Convert from MeV to GeV.
+      totE += E;
+    } // for hits in calo
+  } // for calo objects
+
+  return totE;
 }
 
 } // namespace pizero

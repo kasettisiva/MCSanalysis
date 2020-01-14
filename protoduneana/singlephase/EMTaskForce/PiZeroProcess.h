@@ -285,6 +285,35 @@ void PiZeroProcess::setPi0(const simb::MCParticle& newPi0) {
   }
 }
 
+std::vector<PiZeroProcess> findPiZeros(const art::Event& evt,
+  std::string showerLabel = "pandoraShower", std::string trackLabel = "pandoraTrack") {
+  std::vector<PiZeroProcess> result;
+
+  // Get the event's showers.
+  art::Handle<std::vector<recob::Shower>> showerHandle;
+  if (!evt.getByLabel(showerLabel, showerHandle) || showerHandle->size() < 2) return result;
+
+  // Find showers close to each other.
+  double showerDistThreshold = 50; // 50 cm is too far.
+  std::vector<std::pair<const recob::Shower*, const recob::Shower*>> showerPairs;
+  for(unsigned si = 0; si < showerHandle->size()-1; ++si) {
+    for(unsigned ssi = si+1; ssi < showerHandle->size(); ++ssi) {
+      const recob::Shower* shower1 = &showerHandle->at(si);
+      const recob::Shower* shower2 = &showerHandle->at(ssi);
+      if((shower1->ShowerStart() - shower2->ShowerStart()).Mag() < showerDistThreshold) {
+        showerPairs.push_back(std::make_pair(shower1, shower2));
+      }
+    }
+  }
+  std::cout << showerPairs.size() << " shower pairs.\n";
+
+  // Of shower pairs in vicinity of each other, find those that point to a single vertex.
+
+  // TODO: Finish this function. Place outside of class to make vector of all pizero candidates?
+
+  return result;
+}
+
 } // namespace pizero
 
 #endif

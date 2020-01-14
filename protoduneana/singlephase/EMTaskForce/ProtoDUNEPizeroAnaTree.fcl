@@ -17,9 +17,12 @@ proto_AnaTree:
    ShowerCalorimetryTag:    "pandoraShowercaloSCE"
    PFParticleTag:           "pandora"
    GeneratorTag:            "generator"
-   HitTag:                  "gaushit"
+   HitTag:                  "hitpdune"
+   SCEFileName:             "./SCE_DataDriven_180kV_v3.root"
+   YZCorrFileName:          "./YZcalo_r5387.root"
+   XCorrFileName:           "./Xcalo_r5387.root"
    UseMCforReco:            true
-   PlotCoords:              true
+   PlotCoords:              false
    Verbose:                 0
    DataUtils:               @local::standard_protodunedatautils
    BeamLineUtils:           @local::standard_protodunebeamlineutils
