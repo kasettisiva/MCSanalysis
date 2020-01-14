@@ -1,0 +1,49 @@
+# Path to MC files. Each entry corresponds to a different channel and has to much exactly with the DataFileNames.
+MCFileNames:             ["pionana_mc_1GeV_1_7_20.root"]
+
+# Path to data file. Each entry corresponds to a different channel and has to much exactly with the MCFileNames.
+DataFileNames:           ["pionana_mc_1GeV_1_7_20.root"]
+
+# Path to MC control samples.
+MCControlSampleFiles:    []
+
+# Path to Data control samples.
+DataControlSampleFiles:  []
+
+# Number of toys to generate for MC studies. Any number above 0 will enable toy mc and won't fit the data.
+NToys:                   0	
+
+# Name of the tree with reconstructed.
+RecoTreeName:            "pionana/beamana"
+
+# Signal topologies. Change as appropriate.
+SignalTopology:          [1]
+
+# Background topologies. Change as appropriate.
+BackgroundTopology:      [2,3,4,5,6]
+BackgroundTopologyName:  ["Cosmics","Sec. protons","Muons","Other pion bkg","Other bkg"]
+
+# Name of the tree with the truth signal.
+TruthTreeName:           "truth"
+
+# Define binning in truth/reco. It doesn't have to be symmetric.
+TruthBinning:            [0.0,200.0,400.0,600.0,800.0,1000.0]
+RecoBinning:             [0.0,200.0,400.0,600.0,800.0,2000.0]
+
+# Fit set up.
+DoAsimovFit:             false       # Will do asimov fit only
+Minimizer:               "Minuit2"   # Choose the minimizer - by default Minuit2
+FitStrategy:             1           # Minuit fit strategy
+EnableMinosError:        false       # Minos error analysis for asymmetric errors
+
+# Enable statistical error - one nuisance parameter per bin
+EnableStatisticalError:  true
+IgnoreStatisticalErrorBelow: 0.01 # MC stats error will be ignored if below this value
+
+# Enable systematic error - need files with the fractional error for each systematic and a list of systematics to consider. Two histograms are required for each histogram, one with +1 sigma variation and one with the -1 sigma variation. 
+EnableSystematicError:   false
+NormalisedSystematic:    false       # Systematics are added as 'normalised', only the effect of shape is considered.
+SystFileNames:           ["/path/to/file.root"]
+SystToConsider:          ["Systematic1","Systematic2"]
+SystType:                ["NormShape"  ,"NormShape"]   # For each systematic the type should be defined, options are: NormOnly, ShapeOnly, NormShape
+IgnoreSystematicErrorBelow: 0.01                     # Sytematic error will be ignored if below this value
