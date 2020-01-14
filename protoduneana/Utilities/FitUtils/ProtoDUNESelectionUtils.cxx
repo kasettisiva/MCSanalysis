@@ -52,7 +52,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(std::str
   TH1D* mchisto = new TH1D(Form("MC_Channel%i_BkgTopo%i_Histo",channel,topo), Form("MC Background channel %i and topology %i", channel,topo), nrecobins-1, 0, nrecobins-1);
   mchisto->SetDirectory(0);
 
-  mf::LogInfo("FillMCBackgroundHistogram") << "Filling MC background histogram from file " << filename.c_str() << " for channel " << channel << " with topology " << topo;
+  mf::LogInfo("FillMCBackgroundHistogram_Pions") << "Filling MC background histogram from file " << filename.c_str() << " for channel " << channel << " with topology " << topo;
 
   for(Int_t k=0; k < defaultTree->GetEntries(); k++){
     defaultTree->GetEntry(k);
@@ -169,7 +169,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(std::string 
   TH1D* mchisto = new TH1D(Form("MC_Channel%i_SigTopo%i_%.2f-%.2f_Histo",channel,topo,minval,maxval), Form("MC Signal for channel %i and topology %i and true region %.1f-%.1f", channel,topo,minval,maxval), nrecobins-1, 0, nrecobins-1);
   mchisto->SetDirectory(0);
 
-  mf::LogInfo("FillMCSignalHistogram") << "Filling MC signal histogram from file " << filename.c_str() << " for channel " << channel << " with topology " << topo << " in the true region " << minval << "-" << maxval;
+  mf::LogInfo("FillMCSignalHistogram_Pions") << "Filling MC signal histogram from file " << filename.c_str() << " for channel " << channel << " with topology " << topo << " in the true region " << minval << "-" << maxval;
 
   for(Int_t k=0; k < defaultTree->GetEntries(); k++){
     defaultTree->GetEntry(k);
@@ -272,7 +272,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(std::string file
   TH1D* datahisto = new TH1D(Form("Data_Channel%i_Histo",channel), Form("Data histogram for channel %i",channel), nrecobins-1, 0, nrecobins-1);
   datahisto->SetDirectory(0);
 
-  mf::LogInfo("FillDataHistogram") << "Filling data histogram from file " << filename.c_str() << " for channel " << channel;
+  mf::LogInfo("FillDataHistogram_Pions") << "Filling data histogram from file " << filename.c_str() << " for channel " << channel;
 
   for(Int_t k=0; k < defaultTree->GetEntries(); k++){
     defaultTree->GetEntry(k);
@@ -318,4 +318,48 @@ TH1* protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(std::string file
 
   return datahisto;
 
+}
+
+//********************************************************************
+TH1* protoana::ProtoDUNESelectionUtils::FillMCTruthSignalHistogram_Pions(std::string filename, std::string treename, std::vector<double> truthBins, int channel){
+  //********************************************************************
+
+  TFile *file = new TFile(filename.c_str(), "READ");
+  TTree *truthTree  = (TTree*)file->Get(treename.c_str());
+
+  Int_t true_beam_PDG;
+  Double_t true_beam_interactingEnergy;
+  std::string *true_beam_endProcess = 0;
+
+  truthTree->SetBranchAddress("true_beam_interactingEnergy",      &true_beam_interactingEnergy);
+  truthTree->SetBranchAddress("true_beam_PDG",                    &true_beam_PDG);
+  truthTree->SetBranchAddress("true_beam_endProcess",             &true_beam_endProcess);
+
+  const int ntruthbins = truthBins.size();
+  TH1D* mchisto = new TH1D(Form("MC_Channel%i_TruthSig_Histo",channel), Form("MC Truth Signal for channel %i",channel), ntruthbins-1, 0, ntruthbins-1);
+  mchisto->SetDirectory(0);
+
+  mf::LogInfo("FillMCTruthSignalHistogram_Pions") << "Filling MC truth signal histogram from file " << filename.c_str() << " for channel " << channel;
+
+  for(Int_t k=0; k < truthTree->GetEntries(); k++){
+    truthTree->GetEntry(k);
+
+    // Pion beam
+    if(true_beam_PDG != 211) continue;
+    
+    // True energy bin
+    //if(true_beam_interactingEnergy < minval) continue;
+    //if(true_beam_interactingEnergy >= maxval) continue;
+
+    for(Int_t l = 1; l <= ntruthbins; l++){
+      if(true_beam_interactingEnergy > truthBins[l-1] && true_beam_interactingEnergy <= truthBins[l]){
+	mchisto->SetBinContent(l, mchisto->GetBinContent(l) + 1);
+	break;
+      }
+    }
+  }
+
+  file->Close();
+
+  return mchisto;
 }
