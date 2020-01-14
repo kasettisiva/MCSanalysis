@@ -9,6 +9,7 @@
 // ROOT includes
 #include <TLegend.h>
 #include <TLegendEntry.h>
+#include <TAxis.h>
 #include <TDirectory.h>
 #include <RooFitResult.h>
 #include "RooWorkspace.h"
@@ -167,16 +168,30 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
     for(unsigned int k = 0; k < _datahistos.size(); k++){
       _datahistos[k]->Write();
     }
+    for(unsigned int k = 0; k < _truthsighistos.size(); k++){
+      _truthsighistos[k]->Write();
+    }
     
     // Decorate and save efficiency graphs
     for(unsigned int i=0; i < _efficiencyGraphs.size(); i++){
       TGraphAsymmErrors* effgraph = (TGraphAsymmErrors*)_efficiencyGraphs.at(i);
+
       TCanvas* ceffgraph = new TCanvas(Form("ceffgraph%i",i),Form("Efficiency for channel %i",i));
+
+      TAxis *ax = effgraph->GetHistogram()->GetXaxis();
+      Double_t x1 = ax->GetBinLowEdge(1); 
+      //Double_t x2 = ax->GetBinUpEdge(ax->GetNbins());
+      effgraph->GetHistogram()->GetXaxis()->Set(_TruthBinning.size(),x1,_TruthBinning.size());
+      for(unsigned int i = 1; i < _TruthBinning.size(); i++){
+	TString ibinstr = Form("%.1f-%.1f",_TruthBinning[i-1],_TruthBinning[i]);
+	effgraph->GetHistogram()->GetXaxis()->SetBinLabel(i, ibinstr.Data());
+      }
+
       effgraph->Draw("*a");
       effgraph->SetMarkerStyle(20);
       effgraph->SetMarkerColor(1);
       effgraph->SetTitle("Efficiency");
-      effgraph->GetXaxis()->SetTitle("True bin");
+      effgraph->GetXaxis()->SetTitle("E_{true} at vertex [MeV]");
       effgraph->GetYaxis()->SetTitle("Efficiency");
       effgraph->GetYaxis()->SetTitleOffset(1.25);
       
@@ -278,20 +293,34 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
   for(unsigned int k = 0; k < _datahistos.size(); k++){
     _datahistos[k]->Write();
   }
+  for(unsigned int k = 0; k < _truthsighistos.size(); k++){
+    _truthsighistos[k]->Write();
+  }
 
   // Decorate and save efficiency graphs
   for(unsigned int i=0; i < _efficiencyGraphs.size(); i++){
     TGraphAsymmErrors* effgraph = (TGraphAsymmErrors*)_efficiencyGraphs.at(i);
+    
     TCanvas* ceffgraph = new TCanvas(Form("ceffgraph%i",i),Form("Efficiency for channel %i",i));
-     effgraph->Draw("*a");
-     effgraph->SetMarkerStyle(20);
-     effgraph->SetMarkerColor(1);
-     effgraph->SetTitle("Efficiency");
-     effgraph->GetXaxis()->SetTitle("True bin");
-     effgraph->GetYaxis()->SetTitle("Efficiency");
-     effgraph->GetYaxis()->SetTitleOffset(1.25);
+    
+    TAxis *ax = effgraph->GetHistogram()->GetXaxis();
+    Double_t x1 = ax->GetBinLowEdge(1); 
+    //Double_t x2 = ax->GetBinUpEdge(ax->GetNbins());
+    effgraph->GetHistogram()->GetXaxis()->Set(_TruthBinning.size(),x1,_TruthBinning.size());
+    for(unsigned int i = 1; i < _TruthBinning.size(); i++){
+      TString ibinstr = Form("%.1f-%.1f",_TruthBinning[i-1],_TruthBinning[i]);
+      effgraph->GetHistogram()->GetXaxis()->SetBinLabel(i, ibinstr.Data());
+    }
+    
+    effgraph->Draw("*a");
+    effgraph->SetMarkerStyle(20);
+    effgraph->SetMarkerColor(1);
+    effgraph->SetTitle("Efficiency");
+    effgraph->GetXaxis()->SetTitle("E_{true} at vertex [MeV]");
+    effgraph->GetYaxis()->SetTitle("Efficiency");
+    effgraph->GetYaxis()->SetTitleOffset(1.25);
 
-     ceffgraph->Write();
+    ceffgraph->Write();
   }
 
   HistoDir->cd("..");
@@ -513,22 +542,38 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
   const int nmcchannels   = _MCFileNames.size();
   const int ndatachannels = _DataFileNames.size();
 
+  const int nbkgtopo      = _BackgroundTopology.size();
+  const int nsigtopo      = _SignalTopology.size();
+
   if(nmcchannels != ndatachannels){
     mf::LogError("FillHistogramVectors_Pions") << "The number of data and MC channels is not the same. Check MCFileNames and DataFileNames in the fcl file. Time to die!";
     return false;
   }
 
   for(int i=0; i < nmcchannels; i++){
-    for(int j=2; j < 7; j++){
-      _bkghistos.push_back( protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(_MCFileNames[0], _RecoTreeName, _RecoBinning, i, j) );
+    for(int j=0; j < nbkgtopo; j++){
+      int topo = _BackgroundTopology[j];
+      _bkghistos.push_back( protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(_MCFileNames[0], _RecoTreeName, _RecoBinning, i, topo) );
     }
 
-    for(int j=0; j < 1; j++){
-      for(unsigned int k=1; k < _TruthBinning.size(); k++){
-	_sighistos.push_back( protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(_MCFileNames[0], _RecoTreeName, _RecoBinning, i, 1, _TruthBinning[k-1], _TruthBinning[k]) );
+    TH1D* sigevenshisto = new TH1D(Form("sigevenshisto_channel%i",i),Form("sigevenshisto_channel%i",i),_TruthBinning.size()-1,0,_TruthBinning.size()-1);
+    TH1D* truevenshisto = new TH1D(Form("truevenshisto_channel%i",i),Form("truevenshisto_channel%i",i),_TruthBinning.size()-1,0,_TruthBinning.size()-1);
 
+    for(int j=0; j < nsigtopo; j++){
+      int topo = _SignalTopology[j];
+      for(unsigned int k=1; k < _TruthBinning.size(); k++){
+	_sighistos.push_back( protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(_MCFileNames[0], _RecoTreeName, _RecoBinning, i, topo, _TruthBinning[k-1], _TruthBinning[k]) );
+	sigevenshisto->SetBinContent(k, (_sighistos.back())->Integral() + sigevenshisto->GetBinContent(k));
       }
     }
+
+    _truthsighistos.push_back( protoana::ProtoDUNESelectionUtils::FillMCTruthSignalHistogram_Pions( _MCFileNames[0], _TruthTreeName, _TruthBinning, i) );
+    truevenshisto->Add(_truthsighistos.back());
+
+   TGraphAsymmErrors* effgraph = new TGraphAsymmErrors(sigevenshisto,truevenshisto);
+   effgraph->SetNameTitle(Form("Efficiency_channel%i",i), Form("Efficiency for channel %i",i));
+   _efficiencyGraphs.push_back(effgraph); 
+			       
   }
 
   for(int i=0; i < ndatachannels; i++){

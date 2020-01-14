@@ -13,7 +13,7 @@ DataControlSampleFiles:  []
 # Number of toys to generate for MC studies. Any number above 0 will enable toy mc and won't fit the data.
 NToys:                   0	
 
-# Name of the tree with reconstructed.
+# Name of the tree with reconstructed events.
 RecoTreeName:            "pionana/beamana"
 
 # Signal topologies. Change as appropriate.
@@ -23,8 +23,8 @@ SignalTopology:          [1]
 BackgroundTopology:      [2,3,4,5,6]
 BackgroundTopologyName:  ["Cosmics","Sec. protons","Muons","Other pion bkg","Other bkg"]
 
-# Name of the tree with the truth signal.
-TruthTreeName:           "truth"
+# Name of the tree with the truth signal events.
+TruthTreeName:           "pionana/beamana"
 
 # Define binning in truth/reco. It doesn't have to be symmetric.
 TruthBinning:            [0.0,200.0,400.0,600.0,800.0,1000.0]
