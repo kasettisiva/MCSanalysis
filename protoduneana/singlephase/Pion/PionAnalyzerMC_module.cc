@@ -1415,7 +1415,7 @@ void pionana::PionAnalyzerMC::analyze(art::Event const& evt)
       if( evt.isRealData() ){      
         mass = 139.57;
 
-        init_KE = sqrt( data_BI_P*data_BI_P + mass*mass ) - mass;
+        init_KE =  sqrt( 1.e6*data_BI_P*data_BI_P + mass*mass ) - mass;
       }
       else{
         if( true_beam_PDG == 2212 ) mass = 938.27;
