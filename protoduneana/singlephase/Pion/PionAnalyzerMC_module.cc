@@ -36,7 +36,7 @@
 #include "dune/Protodune/singlephase/DataUtils/ProtoDUNETruthUtils.h"
 #include "dune/Protodune/singlephase/DataUtils/ProtoDUNEPFParticleUtils.h"
 #include "dune/Protodune/singlephase/DataUtils/ProtoDUNEBeamlineUtils.h"
-#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEBeamCuts.h"
+#include "protoduneana/Utilities/ProtoDUNEBeamCuts.h"
 #include "dune/Protodune/singlephase/DataUtils/ProtoDUNEDataUtils.h"
 
 //#include "dune/Protodune/singlephase/DataUtils/ProtoDUNECalibration.h"
