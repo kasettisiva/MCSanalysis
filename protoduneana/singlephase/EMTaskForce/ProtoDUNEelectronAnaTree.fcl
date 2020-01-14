@@ -1,6 +1,5 @@
 #include "ProtoDUNEDataUtils.fcl"
 #include "ProtoDUNEBeamlineUtils.fcl"
-
 BEGIN_PROLOG
 
 proto_AnaTree:
@@ -12,10 +11,11 @@ proto_AnaTree:
    TrackerTag:              "pandoraTrack"
    ShowerTag:               "pandoraShower"
    HitTag:	            "hitpdune"
+   doExtrahits:             false
    ShowerCalorimetryTag:    "pandoraShowercalo"
    PFParticleTag:           "pandora"
    GeneratorTag:            "generator"
-   Verbose:                 1
+   Verbose:                 2
    DataUtils:               @local::standard_protodunedatautils
    BeamLineUtils:           @local::standard_protodunebeamlineutils
 }

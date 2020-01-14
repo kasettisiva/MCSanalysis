@@ -157,6 +157,15 @@ namespace protoana{
     std::vector< std::vector<float> > trkhitz_wire2;
     std::vector< std::vector<float> > trkdq_amp2;
     std::vector< std::vector<float> >trkdq_int2;
+    std::vector< std::vector<float> > trkhittruex0;
+    std::vector< std::vector<float> > trkhittruey0;
+    std::vector< std::vector<float> > trkhittruez0;
+    std::vector< std::vector<float> > trkhittruex1;
+    std::vector< std::vector<float> > trkhittruey1;
+    std::vector< std::vector<float> > trkhittruez1;
+    std::vector< std::vector<float> > trkhittruex2;
+    std::vector< std::vector<float> > trkhittruey2;
+    std::vector< std::vector<float> > trkhittruez2;
     std::string fHitsModuleLabel;
     std::string fTrackModuleLabel;
     std::string fCalorimetryModuleLabel;
@@ -236,7 +245,15 @@ namespace protoana{
     fEventTree->Branch("trkdq_amp2",&trkdq_amp2);
     fEventTree->Branch("trkstartcosxyz",&trkstartcosxyz);
     fEventTree->Branch("trkendcosxyz",&trkendcosxyz);
-
+    fEventTree->Branch("trkhittruex0",&trkhittruex0);
+    fEventTree->Branch("trkhittruey0",&trkhittruey0);
+    fEventTree->Branch("trkhittruez0",&trkhittruez0);
+    fEventTree->Branch("trkhittruex1",&trkhittruex1);
+    fEventTree->Branch("trkhittruey1",&trkhittruey1);
+    fEventTree->Branch("trkhittruez1",&trkhittruez1);
+    fEventTree->Branch("trkhittruex2",&trkhittruex2);
+    fEventTree->Branch("trkhittruey2",&trkhittruey2);
+    fEventTree->Branch("trkhittruez2",&trkhittruez2);
 
   }
 
@@ -260,7 +277,7 @@ namespace protoana{
 
     // art::ServiceHandle<cheat::ParticleInventoryService> pi_serv;
     fGeometry = &*(art::ServiceHandle<geo::Geometry>());
-
+    art::ServiceHandle<cheat::BackTrackerService> bt_serv;
    
     art::Handle< std::vector<recob::Track> > trackListHandle;
     std::vector<art::Ptr<recob::Track> > tracklist;
@@ -316,6 +333,9 @@ namespace protoana{
     std::vector<float> hitx_0; std::vector<float> hitx_1; std::vector<float> hitx_2;
     std::vector<float> hity_0; std::vector<float> hity_1; std::vector<float> hity_2;
     std::vector<float> hitz_0; std::vector<float> hitz_1; std::vector<float> hitz_2;
+    std::vector<float> hittruex_0; std::vector<float> hittruex_1; std::vector<float> hittruex_2;
+    std::vector<float> hittruey_0; std::vector<float> hittruey_1; std::vector<float> hittruey_2;
+    std::vector<float> hittruez_0; std::vector<float> hittruez_1; std::vector<float> hittruez_2;
     std::vector<float> hitz_wire2; std::vector<float> startcosxyz; std::vector<float> endcosxyz;
    
     float max_value;
@@ -334,6 +354,9 @@ namespace protoana{
       hitx_0.clear();  hitx_1.clear();  hitx_2.clear();
       hity_0.clear();  hity_1.clear();  hity_2.clear();
       hitz_0.clear();  hitz_1.clear();  hitz_2.clear();
+      hittruex_0.clear(); hittruey_0.clear(); hittruez_0.clear(); 
+      hittruex_1.clear(); hittruey_1.clear(); hittruez_1.clear(); 
+      hittruex_2.clear(); hittruey_2.clear(); hittruez_2.clear(); 
       hitz_wire2.clear(); startcosxyz.clear();endcosxyz.clear();
 
 
@@ -406,6 +429,45 @@ namespace protoana{
 	  //	cout<<"BadHit"<<fBadhit<<endl;
 	  if (fBadhit) continue; //HY::If BAD hit, skip this hit and go next
 	  if (zpos<-100) continue; //hit not on track
+
+          float truexpos = -9999;
+          float trueypos = -9999;
+          float truezpos = -9999;
+          
+          if (!evt.isRealData()){
+            auto simides = bt_serv->HitToSimIDEs_Ps(vhit[ii]);
+            std::map<int, float> idemap;
+            for (auto const & ide: simides){
+              idemap[ide->trackID]+=ide->energy;
+            }
+            int trackid = 0;
+            float maxe = -1;
+            for (auto ii = idemap.begin(); ii!=idemap.end(); ++ii){
+              if ((ii->second)>maxe){
+                maxe = ii->second;
+                trackid = ii->first;
+              }
+            }
+            if (trackid){
+              float xavg = 0;
+              float yavg = 0;
+              float zavg = 0;
+              float tote = 0;
+              for (auto const & ide: simides){
+                if (ide->trackID != trackid) continue;
+                tote += ide->energy;
+                xavg += ide->x*ide->energy;
+                yavg += ide->y*ide->energy;
+                zavg += ide->z*ide->energy;
+              }
+              if (tote){
+                truexpos = xavg/tote;
+                trueypos = yavg/tote;
+                truezpos = zavg/tote;
+              }
+            }
+          }
+
 	  planenum=vhit[ii]->WireID().Plane;
 	  if(planenum==0){	 
 	    peakT_0.push_back(vhit[ii]->PeakTime());
@@ -417,6 +479,9 @@ namespace protoana{
 	    hitx_0.push_back(xpos);
 	    hity_0.push_back(ypos);
 	    hitz_0.push_back(zpos);		
+            hittruex_0.push_back(truexpos);
+            hittruey_0.push_back(trueypos);
+            hittruez_0.push_back(truezpos);
 	  }//planenum 0
 	  if(planenum==1){	 
 	    peakT_1.push_back(vhit[ii]->PeakTime());
@@ -428,6 +493,9 @@ namespace protoana{
 	    hitx_1.push_back(xpos);
 	    hity_1.push_back(ypos);
 	    hitz_1.push_back(zpos);	
+            hittruex_1.push_back(truexpos);
+            hittruey_1.push_back(trueypos);
+            hittruez_1.push_back(truezpos);
 	  }//planenum 1
 	  if(planenum==2){
 	    peakT_2.push_back(vhit[ii]->PeakTime());
@@ -439,11 +507,15 @@ namespace protoana{
 	    hitx_2.push_back(xpos);
 	    hity_2.push_back(ypos);
 	    hitz_2.push_back(zpos);
+            hittruex_2.push_back(truexpos);
+            hittruey_2.push_back(trueypos);
+            hittruez_2.push_back(truezpos);
 	    double xyzStart[3];
 	    double xyzEnd[3];
 	    unsigned int wireno=vhit[ii]->WireID().Wire;
 	    fGeometry->WireEndPoints(0,vhit[ii]->WireID().TPC,2,wireno, xyzStart, xyzEnd);
 	    hitz_wire2.push_back(xyzStart[2]);
+            //std::cout<<xpos<<" "<<ypos<<" "<<zpos<<" "<<truexpos<<" "<<trueypos<<" "<<truezpos<<std::endl;
 	  }//planenum 2
 	}//loop over vhit
       }//fmthm valid
@@ -461,6 +533,9 @@ namespace protoana{
       trkhitx0.push_back(hitx_0);
       trkhity0.push_back(hity_0);
       trkhitz0.push_back(hitz_0);
+      trkhittruex0.push_back(hittruex_0);
+      trkhittruey0.push_back(hittruey_0);
+      trkhittruez0.push_back(hittruez_0);
       trkdq_amp0.push_back(amp_0);
       trkdq_int0.push_back(int_0);
 
@@ -471,6 +546,9 @@ namespace protoana{
       trkhitx1.push_back(hitx_1);
       trkhity1.push_back(hity_1);
       trkhitz1.push_back(hitz_1);
+      trkhittruex1.push_back(hittruex_1);
+      trkhittruey1.push_back(hittruey_1);
+      trkhittruez1.push_back(hittruez_1);
       trkdq_amp1.push_back(amp_1);
       trkdq_int1.push_back(int_1);
 
@@ -481,13 +559,12 @@ namespace protoana{
       trkhitx2.push_back(hitx_2);
       trkhity2.push_back(hity_2);
       trkhitz2.push_back(hitz_2);
+      trkhittruex2.push_back(hittruex_2);
+      trkhittruey2.push_back(hittruey_2);
+      trkhittruez2.push_back(hittruez_2);
       trkhitz_wire2.push_back(hitz_wire2);
       trkdq_amp2.push_back(amp_2);
       trkdq_int2.push_back(int_2);
-
-
-
-     
 
       xprojectedlen.push_back(TMath::Abs(end.X()-pos.X()));
       trackthetaxz.push_back(theta_xz);
@@ -567,8 +644,15 @@ namespace protoana{
     trkdq_int2.clear();
     trkdq_amp2.clear();
     hit_channel2.clear();
-
-
+    trkhittruex0.clear();
+    trkhittruey0.clear();
+    trkhittruez0.clear();
+    trkhittruex1.clear();
+    trkhittruey1.clear();
+    trkhittruez1.clear();
+    trkhittruex2.clear();
+    trkhittruey2.clear();
+    trkhittruez2.clear();
 
   }
   //////////////////////// End of definition ///////////////	
