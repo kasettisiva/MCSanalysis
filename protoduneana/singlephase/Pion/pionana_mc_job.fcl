@@ -1,4 +1,4 @@
-#include "PionAnalyzerMC.fcl"
+#include "PionAnalyzer.fcl"
 #include "services_dune.fcl"
 
 

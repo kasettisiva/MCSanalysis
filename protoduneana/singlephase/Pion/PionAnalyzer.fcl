@@ -1,13 +1,7 @@
-#include "hitfindermodules_dune.fcl"
 #include "filters.fcl"
-#include "signalservices_dune.fcl"
-#include "caldata_dune.fcl"
-#include "trackfindermodules_dune.fcl"
-#include "ecalibration.fcl"
 #include "triggeralgo_service.fcl"
-#include "photpropservices_dune.fcl"
-#include "ProtoDUNEDataUtils.fcl"
-#include "ProtoDUNEBeamlineFilter.fcl"
+#include "ProtoDUNEBeamCuts.fcl"
+#include "ProtoDUNECalibration.fcl"
 #include "ProtoDUNEBeamlineUtils.fcl"
 
 BEGIN_PROLOG
@@ -16,68 +10,32 @@ pionanalysis:
 {
   module_type: "PionAnalyzer"
   SpacePointModuleLabel:  "reco3d"
-  BeamModuleLabel:        "beamevent"
   TrackModuleLabel:       "pandoraTrack"
   TimeDecoderModuleLabel: "timingrawdecoder:daq"
 
   CalorimetryTag:         "pandoracalo"
   TrackerTag:             "pandoraTrack"
+  HitTag:                 "gaushit"
   ShowerTag:              "pandoraShower"
   PFParticleTag:          "pandora"
   GeneratorTag:           "generator"
-  Verbose:                true
-  DataUtils: @local::standard_protodunedatautils
+  dEdX_template_name:     "/dune/data/users/calcuttj/dEdxrestemplates.root"
+  BeamModuleLabel:        "beamevent"
   BeamlineUtils: @local::standard_protodunebeamlineutils
+  Verbose:                true
+  NSliceCheck:            1
 
   SelectEvents: []
 
-  dEdX_template_name:     "/dune/data/users/calcuttj/dEdxrestemplates.root"
-  
-  #####Track stitching
-  BrokenTrackZ_low:   220
-  BrokenTrackZ_high:  230
-  StitchTrackZ_low:   232
-  StitchTrackZ_high:  240
-  StitchXTol:         10
-  StitchYTol:         10
+  BeamPars: @local::BeamCuts_MCC11
+  BeamCuts: @local::Prod2BeamCuts 
 
-  ####Checking beam particle location
-  good_startZ:     30.
-  good_startY:     430.
-  good_startX:     -20.
-  delta_startZ:    5. 
-  delta_startY:    5. 
-  delta_startX:    5. 
-
-  CalorimetryParameters: {
-    PlaneID:      2
-    betap:        0.212
-    Rho:          1.383
-    Efield:       0.50
-    Wion:         23.6e-6
-    alpha:        0.93
-    norm_factor:  0.983
-    calib_factor: 6.155e-3
-    X_correction: "/dune/app/users/apaudel/v071100/run5387_new/run_5387_Xcalibration.root"
-    #UseNewVersion: false
-  }
-
-  BrokenTrackParameters: {
-    BrokenTrackZ_low:  220
-    BrokenTrackZ_high: 230
-                       
-    StitchTrackZ_low:  232 
-    StitchTrackZ_high: 240
-                       
-    StitchXTol:        10
-    StitchYTol:        10
-  }
-
+  CalibrationPars: @local::CalorimetryParameters_SPProd2_MC_SCE
+  SaveHits: false
 
 }
 
 END_PROLOG
-
 
 
 
