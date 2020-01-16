@@ -24,6 +24,7 @@ art_make( MODULE_LIBRARIES
 			${ROOT_BASIC_LIB_LIST}
                         ${ROOT_GENVECTOR}
                         ${ROOT_GEOM}
+                        ProtoDUNEUtilities
 )
 
 install_headers()

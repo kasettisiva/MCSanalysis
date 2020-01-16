@@ -1,0 +1,17 @@
+#include "ProtoDUNEDataUtils.fcl"
+
+BEGIN_PROLOG
+
+proto_beam_example:
+{
+   module_type:             "BeamExample"
+   CalorimetryTag:          "pandoracalo"
+   TrackerTag:              "pandoraTrack"
+   ShowerTag:               "pandoraShower"
+   PFParticleTag:           "pandora"
+   GeneratorTag:            "generator"
+   Verbose:                 false
+   DataUtils: @local::standard_protodunedatautils
+}
+
+END_PROLOG

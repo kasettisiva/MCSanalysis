@@ -1,0 +1,10 @@
+BEGIN_PROLOG
+
+beam_filter:
+ {
+   module_type:          "ProtoDUNETruthBeamFilter"
+   PDG:                  [13]
+   IsVerbose:                 false
+ }
+
+END_PROLOG

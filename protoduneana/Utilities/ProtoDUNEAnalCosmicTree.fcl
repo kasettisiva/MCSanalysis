@@ -1,0 +1,19 @@
+#include "ProtoDUNEDataUtils.fcl"
+
+BEGIN_PROLOG
+
+proto_AnalCosmicTree:
+{
+   module_type:             "ProtoDUNEAnalCosmicTree"
+   BeamModuleLabel:         "beamevent"
+   CalorimetryTag:          "pandoracalo"
+   ParticleIDTag:	    "pandorapid"
+   TrackerTag:              "pandoraTrack"
+   ShowerTag:               "pandoraShower"
+   PFParticleTag:           "pandora"
+   GeneratorTag:            "generator"
+   MinimumTrackLength:      5.0
+   DataUtils:               @local::standard_protodunedatautils
+}
+
+END_PROLOG

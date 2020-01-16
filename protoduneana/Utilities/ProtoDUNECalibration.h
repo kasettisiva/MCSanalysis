@@ -4,7 +4,7 @@
 #include "fhiclcpp/ParameterSet.h"
 #include "lardataobj/RecoBase/Track.h"
 #include "art/Framework/Principal/Event.h"
-#include "dune/Protodune/singlephase/DataUtils/ProtoDUNETrackUtils.h"
+#include "protoduneana/Utilities/ProtoDUNETrackUtils.h"
 
 #include "TFile.h"
 #include "TH1F.h"

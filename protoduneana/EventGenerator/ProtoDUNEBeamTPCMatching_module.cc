@@ -43,8 +43,8 @@
 
 
 #include "dune/EventGenerator/ProtoDUNEbeamDataProducts/ProtoDUNEbeamsim.h"
-#include "dune/Protodune/singlephase/DataUtils/ProtoDUNETruthUtils.h"
-#include "dune/Protodune/singlephase/DataUtils/ProtoDUNETrackUtils.h"
+#include "protoduneana/Utilities/ProtoDUNETruthUtils.h"
+#include "protoduneana/Utilities/ProtoDUNETrackUtils.h"
 
 
 namespace sim {
