@@ -2353,7 +2353,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
             reco_daughter_allTrack_calibrated_dEdX_SCE.back().push_back( cali_dEdX_SCE[j] );
           } 
 
-          std::pair< double, int > this_chi2_ndof = trackUtil.Chi2PID( reco_daughter_allTrack_dEdX.back(), reco_daughter_allTrack_resRange.back(), templates[ 2212 ] );
+          std::pair< double, int > this_chi2_ndof = trackUtil.Chi2PID( reco_daughter_allTrack_calibrated_dEdX_SCE.back(), reco_daughter_allTrack_resRange.back(), templates[ 2212 ] );
           reco_daughter_allTrack_Chi2_proton.push_back( this_chi2_ndof.first );
           reco_daughter_allTrack_Chi2_ndof.push_back( this_chi2_ndof.second );
           
