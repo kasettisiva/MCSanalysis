@@ -13,7 +13,7 @@ art_make( LIBRARY_NAME ProtoDUNEUtilities
                         lardata_Utilities
                         larsim_Simulation 
                         lardataobj_Simulation
-                        ProtoDUNEDataUtils
+                        #ProtoDUNEDataUtils
                         dune_DuneObj
                         dune-raw-data_Services_ChannelMap_PdspChannelMapService_service
                         larsim_MCCheater_PhotonBackTrackerService_service
@@ -33,6 +33,8 @@ art_make( LIBRARY_NAME ProtoDUNEUtilities
                         ${FHICLCPP}
                         cetlib cetlib_except
                         ${ROOT_BASIC_LIB_LIST}
+	  MODULE_LIBRARIES
+          ProtoDUNEUtilities
 )
 
 install_headers()
