@@ -25,6 +25,7 @@ art_make(BASENAME_ONLY
   larreco_RecoAlg
   ${ROOT_BASIC_LIB_LIST}
   ProtoDUNEDataUtils
+  ProtoDUNEUtilities
   ${ART_ROOT_IO_TFILE_SUPPORT} ${ROOT_CORE}
   ${ART_ROOT_IO_TFILESERVICE_SERVICE}
   )
