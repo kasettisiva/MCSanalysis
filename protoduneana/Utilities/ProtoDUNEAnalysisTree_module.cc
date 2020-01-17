@@ -45,7 +45,7 @@
 #include "protoduneana/Utilities/ProtoDUNEShowerUtils.h"
 #include "protoduneana/Utilities/ProtoDUNETruthUtils.h"
 #include "protoduneana/Utilities/ProtoDUNEPFParticleUtils.h"
-#include "protoduneana/Utilities/ProtoDUNEDataUtils.h"
+#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEDataUtils.h"
 #include "protoduneana/Utilities/ProtoDUNEBeamlineUtils.h"
 
 // ROOT includes

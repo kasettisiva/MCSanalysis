@@ -23,9 +23,9 @@
 #include "larsim/MCCheater/BackTrackerService.h"
 #include "larsim/MCCheater/ParticleInventoryService.h"
 
-#include "dune/Protodune/singlephase/DataUtils/ProtoDUNETruthUtils.h"
-#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEPFParticleUtils.h"
-#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEBeamlineUtils.h"
+#include "protoduneana/Utilities/ProtoDUNETruthUtils.h"
+#include "protoduneana/Utilities/ProtoDUNEPFParticleUtils.h"
+#include "protoduneana/Utilities/ProtoDUNEBeamlineUtils.h"
 #include "protoduneana/Utilities/ProtoDUNEBeamCuts.h"
 
 #include "TTree.h"

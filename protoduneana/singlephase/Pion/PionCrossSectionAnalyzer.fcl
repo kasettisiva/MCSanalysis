@@ -6,7 +6,6 @@
 #include "ecalibration.fcl"
 #include "triggeralgo_service.fcl"
 #include "photpropservices_dune.fcl"
-#include "ProtoDUNEDataUtils.fcl"
 #include "ProtoDUNEBeamlineFilter.fcl"
 #include "ProtoDUNEBeamlineUtils.fcl"
 
@@ -26,7 +25,7 @@ pionanalysis:
   PFParticleTag:          "pandora"
   GeneratorTag:           "generator"
   Verbose:                true
-  DataUtils: @local::standard_protodunedatautils
+  #DataUtils: @local::standard_protodunedatautils
   BeamlineUtils: @local::standard_protodunebeamlineutils
 
 

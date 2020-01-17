@@ -18,7 +18,7 @@
 #include "messagefacility/MessageLogger/MessageLogger.h"
 #include "fhiclcpp/ParameterSet.h"
 #include "lardata/Utilities/AssociationUtil.h"
-#include "protoduneana/Utilities/ProtoDUNEDataUtils.h"
+#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEDataUtils.h"
 #include "lardataobj/RawData/RDTimeStamp.h"
 
 #include "larcore/Geometry/Geometry.h"

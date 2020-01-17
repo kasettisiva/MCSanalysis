@@ -37,7 +37,7 @@
 #include "protoduneana/Utilities/ProtoDUNEShowerUtils.h"
 #include "protoduneana/Utilities/ProtoDUNETruthUtils.h"
 #include "protoduneana/Utilities/ProtoDUNEPFParticleUtils.h"
-#include "protoduneana/Utilities/ProtoDUNEDataUtils.h"
+#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEDataUtils.h"
 
 // ROOT includes
 #include "TTree.h"

@@ -32,7 +32,6 @@
 //#include "protoduneana/Utilities/ProtoDUNETrackUtils.h"
 //#include "protoduneana/Utilities/ProtoDUNEShowerUtils.h"
 //#include "protoduneana/Utilities/ProtoDUNEPFParticleUtils.h"
-//#include "protoduneana/Utilities/ProtoDUNEDataUtils.h"
 //#include "protoduneana/Utilities/ProtoDUNEBeamlineUtils.h"
 
 #include "lardataobj/RecoBase/SpacePoint.h"
