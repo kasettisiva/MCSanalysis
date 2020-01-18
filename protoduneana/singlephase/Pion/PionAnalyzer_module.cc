@@ -51,6 +51,8 @@
 
 #include "lardata/ArtDataHelper/MVAReader.h"
 
+#include "geant4reweight/src/ReweightBase/G4ReweightTraj.hh"
+
 #include "art_root_io/TFileService.h"
 #include "TProfile.h"
 #include "TFile.h"
