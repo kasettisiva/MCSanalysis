@@ -1,4 +1,5 @@
 find_ups_product( dunetpc )
+find_ups_product( geant4reweight )
 
 art_make(BASENAME_ONLY
   MODULE_LIBRARIES
@@ -16,7 +17,9 @@ art_make(BASENAME_ONLY
   larreco_RecoAlg
   ${ROOT_BASIC_LIB_LIST}
   ProtoDUNEUtilities
-  ProtoDUNEDataUtils
+  ReweightBaseLib
+  PropBaseLib
+  #ProtoDUNEDataUtils
   ${ART_FRAMEWORK_CORE}
   ${ART_FRAMEWORK_PRINCIPAL}
   ${ART_FRAMEWORK_SERVICES_REGISTRY}

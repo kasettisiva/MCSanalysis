@@ -1,5 +1,5 @@
 #include "ProtoDUNEBeamCuts.h"
-#include "dune/Protodune/singlephase/DataUtils/ProtoDUNETruthUtils.h"
+#include "protoduneana/Utilities/ProtoDUNETruthUtils.h"
 #include "dune/DuneObj/ProtoDUNEBeamEvent.h"
 
 protoana::ProtoDUNEBeamCuts::ProtoDUNEBeamCuts( const fhicl::ParameterSet & pset ){

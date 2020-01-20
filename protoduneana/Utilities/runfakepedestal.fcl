@@ -1,0 +1,30 @@
+#include "services_dune.fcl"
+
+process_name: FakePed
+
+services:
+{
+    TimeTracker:       {}
+    MemoryTracker:     {}
+    @table::protodune_simulation_services
+}
+
+source:
+{
+    module_type: EmptyEvent
+    maxEvents:   1
+}
+
+physics: 
+{
+  analyzers:
+  {
+    fakeped: {module_type: "FakePedestal"}
+  }
+
+  ana: [fakeped]
+  end_paths: [ana]
+}
+
+# Use fixed values instead of DB for pedestals.
+services.DetPedestalService: @local::dune_fixedpeds

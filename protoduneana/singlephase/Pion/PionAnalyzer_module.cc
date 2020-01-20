@@ -31,13 +31,13 @@
 #include "larcore/Geometry/Geometry.h"
 #include "larreco/RecoAlg/TrackMomentumCalculator.h"
 
-#include "dune/Protodune/singlephase/DataUtils/ProtoDUNETrackUtils.h"
-#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEShowerUtils.h"
-#include "dune/Protodune/singlephase/DataUtils/ProtoDUNETruthUtils.h"
-#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEPFParticleUtils.h"
-#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEBeamlineUtils.h"
+#include "protoduneana/Utilities/ProtoDUNETrackUtils.h"
+#include "protoduneana/Utilities/ProtoDUNEShowerUtils.h"
+#include "protoduneana/Utilities/ProtoDUNETruthUtils.h"
+#include "protoduneana/Utilities/ProtoDUNEPFParticleUtils.h"
+#include "protoduneana/Utilities/ProtoDUNEBeamlineUtils.h"
 #include "protoduneana/Utilities/ProtoDUNEBeamCuts.h"
-#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEDataUtils.h"
+//#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEDataUtils.h"
 
 //#include "dune/Protodune/singlephase/DataUtils/ProtoDUNECalibration.h"
 #include "protoduneana/Utilities/ProtoDUNECalibration.h"
@@ -50,6 +50,8 @@
 #include "dune/DuneObj/ProtoDUNEBeamEvent.h"
 
 #include "lardata/ArtDataHelper/MVAReader.h"
+
+#include "geant4reweight/src/ReweightBase/G4ReweightTraj.hh"
 
 #include "art_root_io/TFileService.h"
 #include "TProfile.h"
@@ -2353,7 +2355,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
             reco_daughter_allTrack_calibrated_dEdX_SCE.back().push_back( cali_dEdX_SCE[j] );
           } 
 
-          std::pair< double, int > this_chi2_ndof = trackUtil.Chi2PID( reco_daughter_allTrack_dEdX.back(), reco_daughter_allTrack_resRange.back(), templates[ 2212 ] );
+          std::pair< double, int > this_chi2_ndof = trackUtil.Chi2PID( reco_daughter_allTrack_calibrated_dEdX_SCE.back(), reco_daughter_allTrack_resRange.back(), templates[ 2212 ] );
           reco_daughter_allTrack_Chi2_proton.push_back( this_chi2_ndof.first );
           reco_daughter_allTrack_Chi2_ndof.push_back( this_chi2_ndof.second );
           

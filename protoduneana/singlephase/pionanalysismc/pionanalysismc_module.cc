@@ -40,10 +40,10 @@
 //#include "dune/EventGenerator/ProtoDUNEbeamDataProducts/ProtoDUNEbeamsim.h"
 //#include "dune/EventGenerator/ProtoDUNEbeamDataProducts/ProtoDUNEBeamInstrument.h"
 
-#include "dune/Protodune/singlephase/DataUtils/ProtoDUNETrackUtils.h"
-#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEShowerUtils.h"
-#include "dune/Protodune/singlephase/DataUtils/ProtoDUNETruthUtils.h"
-#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEPFParticleUtils.h"
+#include "protoduneana/Utilities/ProtoDUNETrackUtils.h"
+#include "protoduneana/Utilities/ProtoDUNEShowerUtils.h"
+#include "protoduneana/Utilities/ProtoDUNETruthUtils.h"
+#include "protoduneana/Utilities/ProtoDUNEPFParticleUtils.h"
 #include "dune/Protodune/singlephase/DataUtils/ProtoDUNEDataUtils.h"
 
 #include "larsim/MCCheater/ParticleInventoryService.h"

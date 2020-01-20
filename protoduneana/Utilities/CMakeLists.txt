@@ -33,6 +33,8 @@ art_make( LIBRARY_NAME ProtoDUNEUtilities
                         ${FHICLCPP}
                         cetlib cetlib_except
                         ${ROOT_BASIC_LIB_LIST}
+	  MODULE_LIBRARIES
+          ProtoDUNEUtilities
 )
 
 install_headers()

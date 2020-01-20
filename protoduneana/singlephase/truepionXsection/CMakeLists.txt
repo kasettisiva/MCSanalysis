@@ -12,6 +12,7 @@ art_make(BASENAME_ONLY
   larreco_RecoAlg
   ${ROOT_BASIC_LIB_LIST}
   ProtoDUNEDataUtils
+  ProtoDUNEUtilities
   larsim_Simulation
   lardataobj_Simulation
   lardataobj_RawData

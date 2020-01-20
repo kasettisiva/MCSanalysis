@@ -26,6 +26,7 @@ art_make(BASENAME_ONLY
   larreco_RecoAlg
   ${ROOT_BASIC_LIB_LIST}
   ProtoDUNEDataUtils
+  ProtoDUNEUtilities
   )
 install_headers()
 install_fhicl()

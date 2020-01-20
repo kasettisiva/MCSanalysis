@@ -28,6 +28,7 @@ art_make( BASENAME_ONLY
                         ${ROOT_EG}
                         ${IFDH}
 			ProtoDUNEDataUtils
+                        ProtoDUNEUtilities
                         ${ART_ROOT_IO_TFILE_SUPPORT} ${ROOT_CORE}
                         ${ART_ROOT_IO_TFILESERVICE_SERVICE}
  )

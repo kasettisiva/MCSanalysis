@@ -1,0 +1,22 @@
+#include "ProtoDUNEDataUtils.fcl"
+#include "ProtoDUNEBeamlineUtils.fcl"
+
+BEGIN_PROLOG
+
+proto_AnalysisTree:
+{
+   module_type:             "ProtoDUNEAnalysisTree"
+   BeamModuleLabel:         "beamevent"
+   CalorimetryTag:          "pandoracalo"
+   ParticleIDTag:	    "pandorapid"
+   TrackerTag:              "pandoraTrack"
+   ShowerTag:               "pandoraShower"
+   PFParticleTag:           "pandora"
+   GeneratorTag:            "generator"
+   SimulationTag:	    "largeant"
+   Verbose:                 0
+   DataUtils:               @local::standard_protodunedatautils
+   BeamLineUtils:           @local::standard_protodunebeamlineutils
+}
+
+END_PROLOG
