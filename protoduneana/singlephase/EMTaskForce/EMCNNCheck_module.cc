@@ -56,7 +56,7 @@ public:
 
 private:
 
-  int fselectpdg;
+  //int fselectpdg;
   std::string fGeneratorTag;
   //fhicl::ParameterSet BeamCuts;
   protoana::ProtoDUNEBeamCuts beam_cuts;
@@ -66,6 +66,7 @@ private:
   int run;
   int subrun;
   int event;
+  int beampdg;
   std::vector<short> channel;
   std::vector<short> tpc;
   std::vector<short> plane;
@@ -81,7 +82,7 @@ private:
 
 pdsp::EMCNNCheck::EMCNNCheck(fhicl::ParameterSet const& p)
   : EDAnalyzer{p},
-  fselectpdg(p.get<int>("selectpdg")),
+//fselectpdg(p.get<int>("selectpdg")),
   fGeneratorTag(p.get<std::string>("GeneratorTag")),
   beam_cuts(p.get<fhicl::ParameterSet>("BeamCuts")),
   fBeamlineUtils(p.get<fhicl::ParameterSet>("BeamlineUtils"))
@@ -96,6 +97,7 @@ void pdsp::EMCNNCheck::analyze(art::Event const& e)
   run = e.run();
   subrun = e.subRun();
   event = e.id().event();
+  beampdg = 0;
   channel.clear();
   tpc.clear();
   plane.clear();
@@ -152,15 +154,16 @@ void pdsp::EMCNNCheck::analyze(art::Event const& e)
     const simb::MCParticle* geantGoodParticle = truthUtil.GetGeantGoodParticle((*mcTruths)[0],e);
     if(geantGoodParticle != 0x0){
       //std::cout << "Found GEANT particle corresponding to the good particle with pdg = " << geantGoodParticle->PdgCode() << std::endl;
-      if (fselectpdg==211){
-        if (geantGoodParticle->PdgCode()!=211 &&
-            geantGoodParticle->PdgCode()!=13){
-          return;
-        }
-      }
-      else{
-        if (geantGoodParticle->PdgCode()!=fselectpdg) return;
-      }
+//      if (fselectpdg==211){
+//        if (geantGoodParticle->PdgCode()!=211 &&
+//            geantGoodParticle->PdgCode()!=13){
+//          return;
+//        }
+//      }
+//      else{
+//        if (geantGoodParticle->PdgCode()!=fselectpdg) return;
+//      }
+      beampdg = geantGoodParticle->PdgCode();
     }
   }
   else{
@@ -188,16 +191,19 @@ void pdsp::EMCNNCheck::analyze(art::Event const& e)
     }
     //Access PID
     std::vector< int > pids = fBeamlineUtils.GetPID( beamEvent, 1. );
-    bool foundparticle = false;
-    for( size_t i = 0; i < pids.size(); ++i ){
-      //std::cout << pids[i] << std::endl;
-      if (pids[i] == fselectpdg) foundparticle = true;
-    }
-    if (!foundparticle) return;
+//    bool foundparticle = false;
+//    for( size_t i = 0; i < pids.size(); ++i ){
+//      //std::cout << pids[i] << std::endl;
+//      if (pids[i] == fselectpdg) foundparticle = true;
+//    }
+//    if (!foundparticle) return;
+    if (pids.empty()) return;
+    beampdg = pids[0];
   }
 
+  if (!beampdg) return;
 
-  std::cout<<"Found pion"<<std::endl;
+  //std::cout<<"Found pion"<<std::endl;
 
   // Get the PFParticle utility
   protoana::ProtoDUNEPFParticleUtils pfpUtil;
@@ -287,6 +293,7 @@ void pdsp::EMCNNCheck::beginJob(){
   ftree = fileServiceHandle->make<TTree>("ftree", "hit info");
   ftree->Branch("run", &run, "run/I");
   ftree->Branch("event", &event, "event/I");
+  ftree->Branch("beampdg", &beampdg, "beampdg/I");
   ftree->Branch("channel", &channel);
   ftree->Branch("tpc", &tpc);
   ftree->Branch("plane", &plane);
