@@ -44,7 +44,9 @@ namespace protoana{
     bool FillHistogramVectors_Pions();
 
     // Build samples and channels
-    void BuildMeasurement(RooStats::HistFactory::Measurement& meas);
+    void AddSamplesAndChannelsToMeasurement(RooStats::HistFactory::Measurement& meas);
+    void AddIncidentSamplesAndChannelsToMeasurement(RooStats::HistFactory::Measurement& meas);
+    void AddSidebandSamplesAndChannelsToMeasurement(RooStats::HistFactory::Measurement& meas);
 
     std::string _RecoTreeName, _Minimizer, _TruthTreeName;
 
@@ -59,6 +61,7 @@ namespace protoana{
     bool _EnableMinosError, _DoAsimovFit, _EnableStatisticalError, _EnableSystematicError, _NormalisedSystematic;
 
     std::vector<TH1*> _bkghistos, _sighistos, _truthsighistos, _datahistos;
+    std::vector<TH1*> _incbkghistos, _incsighistos, _incdatahistos;
     std::vector<TH1*> _sidhistos, _siddatahistos;
 
     std::vector<TGraphAsymmErrors*> _efficiencyGraphs;
