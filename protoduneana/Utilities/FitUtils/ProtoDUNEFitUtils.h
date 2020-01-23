@@ -84,6 +84,14 @@ namespace protoana{
 
     // Reset error for all parameters
     void ResetError(RooWorkspace* ws, const RooArgList& parList);
+
+    // Reset all values and errors
+    void ResetAllValuesAndErrors(RooWorkspace* ws);
+
+    // Get argon number density
+    double GetArgonNumberDensity(double argon_density=1.3973, double argon_molecularmass=39.948);
+    //                                                @87K
+
   }
 }
 

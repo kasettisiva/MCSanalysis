@@ -25,6 +25,16 @@
 #include <RooStats/ModelConfig.h>
 
 //********************************************************************
+double GetArgonNumberDensity(double argon_density, double argon_molecularmass){
+  //********************************************************************
+
+  // argon_density: g/cm3, argon_molecularmass: g/mol
+  double avogadro_number = 6.0221*10e23;
+  return (avogadro_number*argon_density/argon_molecularmass);
+
+}
+
+//********************************************************************
 std::vector<TH1*> protoana::ProtoDUNEFitUtils::GetSystHistograms(std::string name){
   //********************************************************************
 
@@ -346,7 +356,7 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorksp
     RooRealVar* var =(RooRealVar*) ((RooArgSet*) subpdf->getObservables(*subdataset))->find(Form("obs_x_%s", catname.Data()));
  
     // Define canvas first
-    TString canName = Form("canvas_%s_%s", catname.Data(), name.Data());
+    TString canName = Form("canvas_%s_%s_%s", catname.Data(), name.Data(), plottodraw.Data());
     TCanvas* c = new TCanvas(canName, canName);
 
     // Legend
@@ -367,7 +377,7 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorksp
     entry->SetFillStyle(3444);
 
     RooPlot* frame = var->frame();
-    frame->SetName(Form("frame_%s_%s", catname.Data(), name.Data()));
+    frame->SetName(Form("frame_%s_%s_%s", catname.Data(), name.Data(), plottodraw.Data()));
 
     // Draw data and pdf on top of error band - change to RooAbsData::SumW2 if data is weighted
     if(error.Contains("SumW2") || error.Contains("sumw2") || error.Contains("sumW2"))
@@ -428,15 +438,16 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorksp
       compStackFracVec.push_back(stackComponentFrac);
     }
 
-    for(int iVec = (compFracVec.size()-1); iVec>-1; iVec--){
-    //for(unsigned int iVec = 0; iVec < compFracVec.size(); iVec++){
-      Int_t compPlotColor = iVec;
+    for(int i = (compFracVec.size()-1); i > -1; i--){
+    //for(unsigned int i = 0; i < compFracVec.size(); i++){
+      Int_t compPlotColor = i;
       if(compPlotColor == 0) compPlotColor = kMagenta;
       if(compPlotColor == 1) compPlotColor = kGray;
       if(compPlotColor == 6) compPlotColor = 47;
-      if(compPlotColor == 10) compPlotColor = 20;
+      if(compPlotColor == 14) compPlotColor = 28;
+      if(compNameVec[i].Contains("ChannelIncident") && compNameVec[i].Contains("SigTopo")) compPlotColor = 28;
       
-      subpdf->plotOn(frame,RooFit::Components(compStackNameVec[iVec].Data()),RooFit::FillColor(compPlotColor),RooFit::FillStyle(3001),RooFit::DrawOption("F"),RooFit::Normalization(compStackFracVec[iVec]*normCount,RooAbsReal::NumEvent),RooFit::Precision(1e-5));
+      subpdf->plotOn(frame,RooFit::Components(compStackNameVec[i].Data()),RooFit::FillColor(compPlotColor),RooFit::FillStyle(3001),RooFit::DrawOption("F"),RooFit::Normalization(compStackFracVec[i]*normCount,RooAbsReal::NumEvent),RooFit::Precision(1e-5));
     }
 
     if(result)
@@ -452,16 +463,19 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorksp
     // Remove empty data bins
     RemoveEmptyBins(frame);
     
-    //for(int iComp = (compNameVec.size()-1) ; iComp>-1; iComp--){
-    for(unsigned int iComp = 0; iComp < compFracVec.size(); iComp++){
-      Int_t compPlotColor = iComp;
+    //for(int i = (compNameVec.size()-1) ; i > -1; i--){
+    for(unsigned int i = 0; i < compFracVec.size(); i++){
+      Int_t compPlotColor = i;
       if(compPlotColor == 0) compPlotColor = kMagenta;
       if(compPlotColor == 1) compPlotColor = kGray;
       if(compPlotColor == 6) compPlotColor = 47;
-      if(compPlotColor == 10) compPlotColor = 20;
-      if(iComp < binnames.size()){ // (int)
-	TString  compShortName  = binnames[iComp];
+      if(compPlotColor == 14) compPlotColor = 28;
+      if(compNameVec[i].Contains("ChannelIncident") && compNameVec[i].Contains("SigTopo")) compPlotColor = 28;
+
+      if(i < binnames.size()){ // (int)
+	TString  compShortName  = binnames[i];
 	TString legName = compShortName;
+	if(compNameVec[i].Contains("ChannelIncident") && compNameVec[i].Contains("SigTopo")) legName = "Incident Signal";
 	entry=legend->AddEntry("",legName.Data(),"f");
 	entry->SetLineColor(compPlotColor);
 	entry->SetFillColor(compPlotColor);
@@ -488,21 +502,42 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorksp
     
     pad1->cd();
     frame->SetTitle(measurement.Data()); 
-    frame->Draw();//Draw("same");
+    frame->Draw(); //Draw("same");
     frame->GetXaxis()->SetTitle("Reco Bin");
     frame->GetYaxis()->SetTitle("Events");
     legend->Draw();
 
     pad2->cd();
-    RooPlot* frame_dummy =  var->frame(); 
+    RooPlot* frame_dummy = var->frame();
+ 
     subdataset->plotOn(frame_dummy,RooFit::Cut(subdataset_str),RooFit::DataError(RooAbsData::Poisson));
-    // normalize pdf to number of expected events, not to number of events in dataset
+
+    // Get RooHist of the data - will be used later in the ratio plot
+    const char* curvename = 0;
+    RooHist* nominal_hist = (RooHist*) frame_dummy->findObject(curvename, RooHist::Class());
+    if(!nominal_hist){
+      std::cerr << "ERROR::Drawing the data/MC histogram. Can't find nominal histogram." << std::endl;
+      return rooplots;
+    }
+
+    // Normalize pdf to number of expected events, not to number of events in dataset
     subpdf->plotOn(frame_dummy,RooFit::Normalization(1,RooAbsReal::RelativeExpected),RooFit::Precision(1e-5));
+
+    // Get RooCurve of the pdf - will be used later in the ratio plot
+    RooCurve* nominal_curve = (RooCurve*) frame_dummy->findObject(curvename, RooCurve::Class());
+    if(!nominal_curve){
+      std::cerr << "ERROR::Drawing the data/MC histogram. Can't find nominal curve." << std::endl;
+      return rooplots;
+    }
+
+    // frame_dummy->Print("v");
 
     std::cout << "INFO::Chi2 computation for " << subpdf->GetName() << ". Chi2 = " << frame_dummy->chiSquare() << std::endl;
     totalchi2 += frame_dummy->chiSquare();
 
     RooHist* hratio = NULL;
+    RooCurve* ratio_curve = new RooCurve;
+
     if(plottodraw == "pull"){
       hratio = (RooHist*) frame_dummy->pullHist();
       hratio->SetTitle("Pull Distribution");
@@ -511,12 +546,107 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorksp
       hratio = (RooHist*) frame_dummy->residHist();
       hratio->SetTitle("Residual Distribution");
     }
+    else if(plottodraw == "ratio"){
+      if(result)
+	subpdf->plotOn(frame_dummy, RooFit::Normalization(1,RooAbsReal::RelativeExpected), RooFit::Precision(1e-5), RooFit::VisualizeError(*result, 1), RooFit::FillColor(kBlue-5), RooFit::FillStyle(3004));
+
+      // Get error plot
+      RooCurve* error_curve = (RooCurve*)frame_dummy->findObject(curvename, RooCurve::Class());
+      if(!error_curve){
+	std::cerr << "ERROR::Drawing the data/MC histogram. Can't find error curve." << std::endl;
+	return rooplots;
+      }
+
+      ratio_curve->SetName(Form("%s_ratiocurve",nominal_curve->GetName()));
+      ratio_curve->SetLineColor(kBlue-5);
+      ratio_curve->SetFillColor(kBlue-5);
+      ratio_curve->SetFillStyle(3004);
+      ratio_curve->SetLineWidth(1);
+      
+      // Fill error curve
+      Int_t j = 0;
+      bool bottomCurve = false;
+      for(Int_t i=1; i < error_curve->GetN()-1; i++){
+        Double_t x = 0.;
+        Double_t y = 0.;
+        error_curve->GetPoint(i,x,y) ;
+
+	if( i >= (nominal_curve->GetN()-1) ) bottomCurve = true;
+
+        Double_t xNom = x;
+        Double_t yNom = y;
+
+        if( i == (nominal_curve->GetN() - 1) ||  i == nominal_curve->GetN() ){
+	  ratio_curve->addPoint(x, 0.);   
+	  continue;
+        }
+
+        if(bottomCurve){
+	  nominal_curve->GetPoint(j,xNom,yNom);
+	  j--;
+        } 
+	else{
+	  j++;
+	  nominal_curve->GetPoint(j,xNom,yNom);
+        }
+
+        if(fabs(yNom) > 0.00001){ 
+	  ratio_curve->addPoint(x, (y / yNom));
+        } 
+	else{ 
+	  ratio_curve->addPoint(x, 0.); 
+        }
+      }
+
+      // Define ratio plot
+      hratio = new RooHist(nominal_hist->getNominalBinWidth());
+      
+      // Determine range of curve
+      Double_t xstart, xstop, y;
+      nominal_curve->GetPoint(2,xstart,y);
+      nominal_curve->GetPoint(nominal_curve->GetN()-1,xstop,y);
+     
+      for(Int_t i=0; i < nominal_hist->GetN(); i++){    
+	Double_t x,ypoint;
+	nominal_hist->GetPoint(i,x,ypoint);
+	
+	if(x < xstart || x > xstop) continue;
+	if(fabs(ypoint) < 0.000001 ) continue;
+
+	Double_t yy;
+	Double_t yerrorl = nominal_hist->GetErrorYlow(i);
+	Double_t yerrorh = nominal_hist->GetErrorYhigh(i);
+
+	//Double_t xerrorl = nominal_curve->GetErrorXlow(i);
+	//Double_t xerrorh = nominal_curve->GetErrorXhigh(i);
+	//if(xerrorl<=0 ) xerrorl = nominal_curve->GetErrorX(i);
+	//if(xerrorh<=0 ) xerrorh = nominal_curve->GetErrorX(i);
+	//if(xerrorl<=0 ) xerrorl = 0.5*nominal_hist->getNominalBinWidth();
+	//if(yerrorh<=0 ) yerrorh = 0.5*nominal_hist->getNominalBinWidth();
+
+	//yy = ypoint / nominal_curve->average(x-exl,x+exh);
+	//yerrorl /= nominal_curve->average(x-xerrorl,x+xerrorh);
+	//yerrorh /= nominal_curve->average(x-xerrorl,x+xerrorh);
+	
+	yy = ypoint / nominal_curve->interpolate(x);
+	yerrorl /= nominal_curve->interpolate(x);
+	yerrorh /= nominal_curve->interpolate(x);
+
+	hratio->addBinWithError(x,yy,yerrorl,yerrorh);
+      }
+    }
+
+    if(!hratio){
+      std::cerr << "ERROR::Drawing data and MC histogram failed. RooHist is not found." << std::endl;
+      return rooplots;
+    } 
 
     hratio->SetMarkerColor(kRed);
     hratio->SetLineColor(kRed);
 
-    // Create a new frame to draw the residual distribution and add the distribution to the frame
+    // Create a new frame to draw the residual/pull/ratio distribution and add the distribution to the frame
     RooPlot* frame2 = var->frame();
+    if(plottodraw == "ratio" && result) frame2->addPlotable(ratio_curve,"F");
     frame2->addPlotable(hratio,"P");
     
     for(unsigned int i = 1; i < recobins.size(); i++){
@@ -576,6 +706,29 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorksp
       l->SetLineStyle(2);
       frame2->addObject(l);
       frame2->GetYaxis()->SetTitle("Residual");
+    }
+    else if(plottodraw == "ratio"){
+      TLine* lp1 = new TLine(xmin,1.,xmax,1.);
+      TLine* lp2 = new TLine(xmin,0.5,xmax,0.5);
+      TLine* lp3 = new TLine(xmin,1.5,xmax,1.5);
+      TLine* lp4 = new TLine(xmin,2.,xmax,2.);
+      TLine* lp5 = new TLine(xmin,2.5,xmax,2.5);
+      lp1->SetLineWidth(1);
+      lp1->SetLineStyle(3);
+      lp2->SetLineStyle(3);
+      lp3->SetLineStyle(3);
+      lp4->SetLineStyle(3);
+      lp5->SetLineStyle(3);
+      frame2->addObject(lp1);
+      frame2->addObject(lp2);
+      frame2->addObject(lp3);
+      frame2->addObject(lp4);
+      frame2->addObject(lp5);
+
+      frame2->SetMinimum(.0);
+      frame2->SetMaximum(3.0);
+
+      frame2->GetYaxis()->SetTitle("Data / MC");
     }
  
     frame2->GetYaxis()->SetLabelSize(0.10);
@@ -995,8 +1148,8 @@ TCanvas* protoana::ProtoDUNEFitUtils::PlotParametersPull(TTree* tree, RooWorkspa
     TH1F* pullhisto = new TH1F(Form("pullhisto%i",i),Form("pullhisto%i",i),100,-5,5);
     for(Int_t j=0; j < tree->GetEntries(); j++){
       tree->GetEntry(j);
-      if(status != 0) continue;
-      pullhisto->Fill(varValsPull[i]);
+      if(status%1000 == 0)
+	pullhisto->Fill(varValsPull[i]);
     }
 
     if(pullhisto->GetEntries() == 0){
@@ -1119,8 +1272,8 @@ TCanvas* protoana::ProtoDUNEFitUtils::PlotNuisanceParametersPull(TTree* tree, Ro
     TH1F* nuispullhisto = new TH1F(Form("nuispullhisto%i",i),Form("nuispullhisto%i",i),100,-5,5);
     for(Int_t j=0; j < tree->GetEntries(); j++){
       tree->GetEntry(j);
-      if(status != 0) continue;
-      nuispullhisto->Fill(varValsPull[i]);
+      if(status%1000 == 0)
+	nuispullhisto->Fill(varValsPull[i]);
     }
 
     if(nuispullhisto->GetEntries() == 0){
@@ -1235,8 +1388,8 @@ TCanvas* protoana::ProtoDUNEFitUtils::PlotNuisanceParameters(TTree* tree, RooWor
 
     for(Int_t j=0; j < tree->GetEntries(); j++){
       tree->GetEntry(j);
-      if(status != 0) continue;
-      temphisto->Fill(varValsNuisance[i]);
+      if(status%1000 == 0)
+	temphisto->Fill(varValsNuisance[i]);
       //nuisancehisto->SetBinContent(i+1, varValsNuisance[i]);
     }
     nuisancehisto->SetBinContent(i+1, temphisto->GetMean());
@@ -1264,8 +1417,8 @@ TCanvas* protoana::ProtoDUNEFitUtils::PlotNuisanceParameters(TTree* tree, RooWor
 
     for(Int_t j=0; j < tree->GetEntries(); j++){
       tree->GetEntry(j);
-      if(status != 0) continue;
-      temphisto->Fill(varValsNuisance[i]);
+      if(status%1000 == 0)
+	temphisto->Fill(varValsNuisance[i]);
       //nuisancehisto->SetBinError(i+1, varValsNuisance[i]);
     }
 
@@ -1338,12 +1491,12 @@ TCanvas* protoana::ProtoDUNEFitUtils::PlotAverageResultsFromToys(TTree* tree, Ro
   Int_t NGoodToys = 0;
   for(Int_t j=0; j < tree->GetEntries(); j++){
     tree->GetEntry(j);
-    if(status != 0) continue;
-    NGoodToys++;
+    if(status%1000 == 0)
+      NGoodToys++;
   }
 
   if(NGoodToys == 0){
-    std::cout << "ERROR::Number of good fit quality is " << NGoodToys << ". Plot failed!" << std::endl;
+    std::cerr << "ERROR::Number of good fit quality is " << NGoodToys << ". Plot failed!" << std::endl;
     return NULL;
   }
 
@@ -1383,10 +1536,10 @@ TCanvas* protoana::ProtoDUNEFitUtils::PlotAverageResultsFromToys(TTree* tree, Ro
     Float_t averr = 0.0;
     for(Int_t j=0; j < tree->GetEntries(); j++){
       tree->GetEntry(j);
-      if(status != 0) continue;
-
-      av += varVals[i]/NGoodToys;
-      averr += varErrVals[i]/NGoodToys;
+      if(status%1000 == 0){
+	av += varVals[i]/NGoodToys;
+	averr += varErrVals[i]/NGoodToys;
+      }
     }
 
     histo->SetBinContent(counter, av);
@@ -1679,4 +1832,56 @@ void protoana::ProtoDUNEFitUtils::ResetError(RooWorkspace* ws, const RooArgList&
 
   delete iter;
 
+}
+
+//********************************************************************
+void protoana::ProtoDUNEFitUtils::ResetAllValuesAndErrors(RooWorkspace* ws){
+  //********************************************************************
+
+  RooStats::ModelConfig *combined_config = (RooStats::ModelConfig*)ws->obj("ModelConfig");
+  if(!combined_config){
+    std::cerr << "ERROR::No model config " << " ModelConfig " << " in workspace. Will not reset values and errors." << std::endl;
+    return;
+  }
+
+  RooAbsPdf* pdf = combined_config->GetPdf();
+  if(!pdf){
+    std::cerr << "ERROR::No pdf found in ModelConfig. Will not reset values and errors." << std::endl;
+    return;
+  }
+
+  const RooArgSet* obs = combined_config->GetObservables();
+  if(!obs){
+    std::cerr << "ERROR::No observables found in ModelConfig. Will not reset values and errors." << std::endl;
+    return;
+  }
+
+  const RooArgSet* pdfpars = pdf->getParameters(obs);
+  if(!pdfpars){
+    std::cerr << "ERROR::No pdf parameters found. Will not reset values and errors." << std::endl;
+    return;
+  }
+
+  const RooArgSet* globalobs = combined_config->GetGlobalObservables();
+  if(!globalobs){
+    std::cerr << "ERROR::No global observables found in ModelConfig. Will not reset values and errors." << std::endl;
+    return;
+  }
+
+  RooArgList floatParamsList;
+
+  TIterator* iter = pdfpars->createIterator() ;
+  RooAbsArg* absarg;
+  while( (absarg=(RooAbsArg*)iter->Next()) ) {
+    if(absarg->InheritsFrom("RooRealVar") && !absarg->isConstant()){
+      floatParamsList.add(*absarg);
+    }
+  }
+  delete iter;
+
+  // Now reset all values and error
+  protoana::ProtoDUNEFitUtils::ResetValues(ws, floatParamsList);
+  protoana::ProtoDUNEFitUtils::ResetError(ws, floatParamsList);
+  protoana::ProtoDUNEFitUtils::ResetValuesToNominal(ws, *globalobs);
+  
 }
