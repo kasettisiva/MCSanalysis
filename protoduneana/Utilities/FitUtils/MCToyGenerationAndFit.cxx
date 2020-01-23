@@ -7,6 +7,7 @@
 #include "TRandom3.h"
 #include "TString.h"
 #include "TTree.h"
+#include <Math/MinimizerOptions.h>
 
 #include "RooAbsPdf.h"
 #include "RooDataSet.h"
@@ -35,6 +36,7 @@ protoana::MCToyGenerationAndFit::MCToyGenerationAndFit(){
   //********************************************************************
 
   _minimizer = "Minuit2";
+  _algorithm = TString(ROOT::Math::MinimizerOptions::DefaultMinimizerAlgo().c_str());
   _fitstrategy = 1;
   _minoserror = false;
   _conflevel = 0.95;
@@ -46,6 +48,7 @@ protoana::MCToyGenerationAndFit::MCToyGenerationAndFit(std::string minimizer, in
   //********************************************************************
 
   _minimizer = TString(minimizer.c_str());
+  _algorithm = TString(ROOT::Math::MinimizerOptions::DefaultMinimizerAlgo().c_str());
   _fitstrategy = fitstrategy;
   _minoserror = minoserror;
   _conflevel = cl;
@@ -167,7 +170,7 @@ TTree* protoana::MCToyGenerationAndFit::GenerateAndFit(RooWorkspace* ws, int nex
     RooAbsData* toyMC = sampler.GenerateToyData( *nullParams );
     toyMC->Print();
 
-    RooFitResult* fresult = combined_config->GetPdf()->fitTo(*toyMC, RooFit::Minimizer(_minimizer.Data()), RooFit::Save(), RooFit::Strategy(_fitstrategy), RooFit::Minos(_minoserror), RooFit::PrintLevel(-1), RooFit::Constrain(*combined_config->GetPdf()->getParameters(*toyMC)), RooFit::Extended(), RooFit::Offset(true));
+    RooFitResult* fresult = combined_config->GetPdf()->fitTo(*toyMC, RooFit::Minimizer(_minimizer.Data(), _algorithm.Data()), RooFit::Save(), RooFit::Strategy(_fitstrategy), RooFit::Minos(_minoserror), RooFit::PrintLevel(-1), RooFit::Constrain(*combined_config->GetPdf()->getParameters(*toyMC)), RooFit::Extended(), RooFit::Offset(true));
 
     mcstudy->addFitResult(*fresult);
     
@@ -209,9 +212,9 @@ RooFitResult* protoana::MCToyGenerationAndFit::FitData(RooWorkspace* ws, bool is
   
   RooFitResult* fresult = NULL;
   if(!isWeighted)
-    fresult = combined_config->GetPdf()->fitTo(*obsdata, RooFit::Minimizer(_minimizer.Data()), RooFit::Save(), RooFit::Strategy(_fitstrategy), RooFit::Minos(_minoserror), RooFit::PrintLevel(1), RooFit::Constrain(*combined_config->GetPdf()->getParameters(*obsdata)), RooFit::Extended(), RooFit::Offset(true) );
+    fresult = combined_config->GetPdf()->fitTo(*obsdata, RooFit::Minimizer(_minimizer.Data(), _algorithm.Data()), RooFit::Save(), RooFit::Strategy(_fitstrategy), RooFit::Minos(_minoserror), RooFit::PrintLevel(1), RooFit::Constrain(*combined_config->GetPdf()->getParameters(*obsdata)), RooFit::Extended(), RooFit::Offset(true) );
   else
-    fresult = combined_config->GetPdf()->fitTo(*obsdata, RooFit::Minimizer(_minimizer.Data()), RooFit::Save(), RooFit::Strategy(_fitstrategy), RooFit::Minos(_minoserror), RooFit::Constrain(*combined_config->GetPdf()->getParameters(*obsdata)), RooFit::Extended(), RooFit::Offset(true), RooFit::SumW2Error(true) );
+    fresult = combined_config->GetPdf()->fitTo(*obsdata, RooFit::Minimizer(_minimizer.Data(), _algorithm.Data()), RooFit::Save(), RooFit::Strategy(_fitstrategy), RooFit::Minos(_minoserror), RooFit::Constrain(*combined_config->GetPdf()->getParameters(*obsdata)), RooFit::Extended(), RooFit::Offset(true), RooFit::SumW2Error(true) );
 
   // Reset the verbosity
   RooMsgService::instance().reset();
@@ -239,7 +242,7 @@ RooFitResult* protoana::MCToyGenerationAndFit::FitAsimovData(RooWorkspace* ws){
   // Dataset
   RooAbsData *obsdata = ws->data("asimovData");
 
-  RooFitResult* fresult = combined_config->GetPdf()->fitTo(*obsdata, RooFit::Minimizer(_minimizer.Data()), RooFit::Save(), RooFit::Strategy(_fitstrategy), RooFit::Minos(_minoserror), RooFit::Constrain(*combined_config->GetPdf()->getParameters(*obsdata)), RooFit::Extended(), RooFit::Offset(true));
+  RooFitResult* fresult = combined_config->GetPdf()->fitTo(*obsdata, RooFit::Minimizer(_minimizer.Data(), _algorithm.Data()), RooFit::Save(), RooFit::Strategy(_fitstrategy), RooFit::Minos(_minoserror), RooFit::Constrain(*combined_config->GetPdf()->getParameters(*obsdata)), RooFit::Extended(), RooFit::Offset(true));
   
   return fresult;
 
@@ -261,7 +264,7 @@ RooFitResult* protoana::MCToyGenerationAndFit::FitToyData(RooWorkspace* ws, RooA
     return NULL;
   }
 
-  RooFitResult* fresult = combined_config->GetPdf()->fitTo(*obsdata, RooFit::Minimizer(_minimizer.Data()), RooFit::Save(), RooFit::Strategy(_fitstrategy), RooFit::Minos(_minoserror), RooFit::PrintLevel(1), RooFit::Constrain(*combined_config->GetPdf()->getParameters(*obsdata)), RooFit::Extended(), RooFit::Offset(true) );
+  RooFitResult* fresult = combined_config->GetPdf()->fitTo(*obsdata, RooFit::Minimizer(_minimizer.Data(), _algorithm.Data()), RooFit::Save(), RooFit::Strategy(_fitstrategy), RooFit::Minos(_minoserror), RooFit::PrintLevel(1), RooFit::Constrain(*combined_config->GetPdf()->getParameters(*obsdata)), RooFit::Extended(), RooFit::Offset(true) );
   
   return fresult;
 
@@ -337,13 +340,37 @@ TTree* protoana::MCToyGenerationAndFit::RooMCStudyToTTree(RooMCStudy* mc){
 
   const RooDataSet& toydata = mc->fitParDataSet();
 
-  // Fit status for Minuit2
+  // fitStatus = migradResult + 10*minosResult + 100*hesseResult + 1000*improveResult
+  // Minuit will return 0 if fit is good and 4 if fit failed (for example migrad did not converge)
+
+  // Fit status for Migrad / improveResult (Migrad mininimization followed by an improved search for global minima)
   //status = 0 : OK
   //status = 1 : Covariance was made pos defined
   //status = 2 : Hesse is invalid
   //status = 3 : Edm is above max
   //status = 4 : Reached call limit
   //status = 5 : Any other failure
+
+  // Fit status for Hesse
+  // status = 0 : OK
+  // status = 1 : hesse failed 
+  // status = 2 : matrix inversion failed 
+  // status = 3 : matrix is not pos defined
+
+  // Fit status for Minos
+  // status = 0 : OK
+  // status = 1 : maximum number of function calls exceeded when running for lower error 
+  // status = 2 : maximum number of function calls exceeded when running for upper error 
+  // status = 3 : new minimum found when running for lower error 
+  // status = 4 : new minimum found when running for upper error 
+  // status = 5 : any other failure
+
+  // Covariance matrix status (covQual)
+  // -1 :  not available (inversion failed or Hesse failed)
+  // 0  : available but not positive defined
+  // 1  : covariance only approximate
+  // 2  : full matrix but forced pos def
+  // 3  : full accurate matrix
 
   Int_t covQual=0, status=0, numInvalidNLL=0;
   Float_t minNll=0, edm=0;
