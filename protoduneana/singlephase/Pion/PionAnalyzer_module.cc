@@ -51,7 +51,12 @@
 
 #include "lardata/ArtDataHelper/MVAReader.h"
 
+#include "geant4reweight/src/ReweightBase/G4ReweighterFactory.hh"
+#include "geant4reweight/src/ReweightBase/G4Reweighter.hh"
 #include "geant4reweight/src/ReweightBase/G4ReweightTraj.hh"
+#include "geant4reweight/src/ReweightBase/G4ReweightStep.hh"
+#include "geant4reweight/src/PropBase/G4ReweightParameterMaker.hh"
+
 
 #include "art_root_io/TFileService.h"
 #include "TProfile.h"
@@ -528,6 +533,10 @@ private:
   std::vector< std::vector< double > > reco_daughter_shower_spacePts_X, reco_daughter_shower_spacePts_Y, reco_daughter_shower_spacePts_Z;
 
 
+  //Geant4Reweight stuff
+  //G4ReweighterFactory RWFactory;
+  //G4Reweighter * theRW;
+  //G4ReweightParameterMaker ParMaker;
 
 
   ////New section -- mechanical class members
@@ -632,6 +641,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
   }
   ////////////////////////////
   
+
   // Getting the BI from the data events
   if( evt.isRealData() ){
     auto beamHandle = evt.getValidHandle<std::vector<beam::ProtoDUNEBeamEvent>>(fBeamModuleLabel);
@@ -680,6 +690,56 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
     data_BI_nFibersP1 = beamEvent.GetActiveFibers( "XBPF022697" ).size();
     data_BI_nFibersP2 = beamEvent.GetActiveFibers( "XBPF022701" ).size();
     data_BI_nFibersP3 = beamEvent.GetActiveFibers( "XBPF022702" ).size();
+  }
+  else{
+    try{
+      auto beamHandle = evt.getValidHandle<std::vector<beam::ProtoDUNEBeamEvent>>("generator");
+      
+      std::vector<art::Ptr<beam::ProtoDUNEBeamEvent>> beamVec;
+      if( beamHandle.isValid()){
+        art::fill_ptr_vector(beamVec, beamHandle);
+      }
+
+      const beam::ProtoDUNEBeamEvent & beamEvent = *(beamVec.at(0)); //Should just have one
+
+      std::cout << "Got beam event" << std::endl;
+
+      int nTracks = beamEvent.GetBeamTracks().size();
+      std::cout << "Got " << nTracks << " Tracks" << std::endl;
+      std::vector< double > momenta = beamEvent.GetRecoBeamMomenta();
+      int nMomenta = momenta.size();
+      std::cout << "Got " << nMomenta << " Momenta" << std::endl;
+
+      if( nMomenta > 0 ){
+        data_BI_P = momenta[0];
+        std::cout << "reco P " << data_BI_P << std::endl;
+      }
+
+      if( nTracks > 0 ){
+        data_BI_X = beamEvent.GetBeamTracks()[0].Trajectory().End().X();
+        data_BI_Y = beamEvent.GetBeamTracks()[0].Trajectory().End().Y();
+        data_BI_Z = beamEvent.GetBeamTracks()[0].Trajectory().End().Z();
+
+        data_BI_dirX = beamEvent.GetBeamTracks()[0].Trajectory().EndDirection().X(); 
+        data_BI_dirY = beamEvent.GetBeamTracks()[0].Trajectory().EndDirection().Y(); 
+        data_BI_dirZ = beamEvent.GetBeamTracks()[0].Trajectory().EndDirection().Z(); 
+      }
+
+      data_BI_nTracks = nTracks;
+      data_BI_nMomenta = nMomenta;
+
+      /*
+      std::vector< int > pdg_cands = fBeamlineUtils.GetPID( beamEvent, 1. );
+      data_BI_PDG_candidates.insert( data_BI_PDG_candidates.end(), pdg_cands.begin(), pdg_cands.end() );
+      */
+
+      data_BI_nFibersP1 = beamEvent.GetActiveFibers( "XBPF022697" ).size();
+      data_BI_nFibersP2 = beamEvent.GetActiveFibers( "XBPF022701" ).size();
+      data_BI_nFibersP3 = beamEvent.GetActiveFibers( "XBPF022702" ).size();
+    }
+    catch( const cet::exception &e ){
+      std::cout << "BeamEvent generator object not found, moving on" << std::endl;
+    }
   }
   ////////////////////////////
   

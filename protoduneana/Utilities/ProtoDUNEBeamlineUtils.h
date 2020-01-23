@@ -82,20 +82,37 @@ namespace protoana {
 
     void reconfigure(fhicl::ParameterSet const &pset);
 
-    const beam::ProtoDUNEBeamEvent GetBeamEvent(art::Event const & evt);
 
+    //GetBeamEvent(art::Event const & evt, std::string beamEventTag) 
+    const beam::ProtoDUNEBeamEvent GetBeamEvent(art::Event const & evt) const;
+
+    //GetFibers(art::Event const & evt, std::string beamEventTag, std::string monitorName)
+    //Replace with return double
     void GetFibers( art::Event const & evt); 
+    //GetCurrent(art::Event const & evt, std::string beamEventTag)
+    //Replace with return double
     void GetCurrent( art::Event const & evt);
 
+    //GetTracks()
+    //GetMomenta()
+
+    //Remove
     std::vector< recob::Track> MakeTracks( art::Event const & evt);
 
+    //Remove
     double   GetPosition( short );
+    //Remove
     TVector3 ConvertMonitorCoordinates( double, double, double, double );
+    //Remove
     void     BeamMonitorBasisVectors();
+    //Remove
     void     RotateMonitorVector(TVector3&);
+    //Remove
     TVector3 ProjectToTPC(TVector3, TVector3);
 
+    //Remove
     std::vector< double > MomentumSpec( art::Event const & evt);
+    //Remove
     double MomentumCosTheta( double, double, double );
 
     /**
@@ -132,6 +149,14 @@ namespace protoana {
      * that matches the ProtoDUNE trigger.
      */
     bool IsGoodBeamlineTrigger(art::Event const & evt) const;
+    bool IsGoodBeamlineTrigger(beam::ProtoDUNEBeamEvent const & beamEvent) const;
+
+    /**
+     * Returns true if only 1 fiber is activated in each of the 
+     * momentum spectrometer monitors
+     */
+    bool HasPerfectBeamMomentum(art::Event const & evt) const;
+    bool HasPerfectBeamMomentum(beam::ProtoDUNEBeamEvent const & beamEvent) const;
 
     /**
      * Uses the beamline momentum and time of flight measurements
@@ -198,8 +223,10 @@ namespace protoana {
 
     bool fUseCERNCalibSelection;
 
+    //Remove
     std::map< std::string, std::vector< short > > ActiveFibers;
 
+    //Remove
     double Current;
     
     //std::vector< recob::Track > Tracks;

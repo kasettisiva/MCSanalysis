@@ -41,3 +41,4 @@ physics:
 
 outputs: {}
 
+physics.analyzers.beamreco.ReferenceMomentum: 1

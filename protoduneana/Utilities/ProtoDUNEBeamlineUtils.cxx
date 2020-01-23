@@ -15,7 +15,7 @@ protoana::ProtoDUNEBeamlineUtils::~ProtoDUNEBeamlineUtils(){
 
 }
 
-const beam::ProtoDUNEBeamEvent protoana::ProtoDUNEBeamlineUtils::GetBeamEvent(art::Event const & evt){
+const beam::ProtoDUNEBeamEvent protoana::ProtoDUNEBeamlineUtils::GetBeamEvent(art::Event const & evt) const{
   std::vector< art::Ptr< beam::ProtoDUNEBeamEvent > > beamVec;
   auto beamHandle = evt.getValidHandle< std::vector< beam::ProtoDUNEBeamEvent> >(fBeamEventTag);
   if( beamHandle.isValid() ){
@@ -483,17 +483,21 @@ protoana::PossibleParticleCands protoana::ProtoDUNEBeamlineUtils::GetPIDCandidat
   }
 
   //Get the high/low pressure Cerenkov info
-  int high_pressure_status, low_pressure_status; 
+  //int high_pressure_status, low_pressure_status; 
+  int high_pressure_status = beamevt.GetCKov0Status();
+  int low_pressure_status = beamevt.GetCKov1Status();
   
   //std::cout << "Pressures: " << beamevt.GetCKov0Pressure() << " " << beamevt.GetCKov1Pressure() << std::endl;
-  if( beamevt.GetCKov0Pressure() < beamevt.GetCKov1Pressure() ){
-    high_pressure_status = beamevt.GetCKov1Status();
-    low_pressure_status = beamevt.GetCKov0Status();
-  }
-  else{
-    high_pressure_status = beamevt.GetCKov0Status();
-    low_pressure_status = beamevt.GetCKov1Status();
-  }
+  //if( beamevt.GetCKov0Pressure() < beamevt.GetCKov1Pressure() ){
+  //  high_pressure_status = beamevt.GetCKov1Status();
+  //  low_pressure_status = beamevt.GetCKov0Status();
+  //}
+  //else{
+  //  high_pressure_status = beamevt.GetCKov0Status();
+  //  low_pressure_status = beamevt.GetCKov1Status();
+  //}
+  
+
   
 
   if( nominal_momentum == 1. ){
@@ -501,7 +505,7 @@ protoana::PossibleParticleCands protoana::ProtoDUNEBeamlineUtils::GetPIDCandidat
       std::cout << "TOF invalid" << std::endl;
       return candidates;
     }
-    if( high_pressure_status == -1 ){
+    if( low_pressure_status == -1 ){
       std::cout << "High pressure status invalid" << std::endl;
       return candidates;
     }
@@ -510,21 +514,21 @@ protoana::PossibleParticleCands protoana::ProtoDUNEBeamlineUtils::GetPIDCandidat
     if ( 
         ((fUseCERNCalibSelection && tof < 105.) 
             || (!fUseCERNCalibSelection && tof < 170.))
-        && high_pressure_status == 1 
+        && low_pressure_status == 1 
        ) {
       candidates.electron = true;
     }
     else if ( 
         ((fUseCERNCalibSelection && tof < 110.) 
             || (!fUseCERNCalibSelection && tof < 170.))
-        && high_pressure_status == 0 ){
+        && low_pressure_status == 0 ){
       candidates.muon = true;
       candidates.pion = true;
     }
     else if ( 
         ((fUseCERNCalibSelection && tof > 110. && tof < 160.) 
             || (!fUseCERNCalibSelection && tof > 170.))
-        && high_pressure_status == 0 ) {
+        && low_pressure_status == 0 ) {
       candidates.proton = true;
     }
   }
@@ -533,7 +537,7 @@ protoana::PossibleParticleCands protoana::ProtoDUNEBeamlineUtils::GetPIDCandidat
       std::cout << "TOF invalid" << std::endl;
       return candidates;
     }
-    if( high_pressure_status == -1 ){
+    if( low_pressure_status == -1 ){
       std::cout << "High pressure Cerenkov status invalid" << std::endl;
       return candidates;
     }
@@ -542,21 +546,21 @@ protoana::PossibleParticleCands protoana::ProtoDUNEBeamlineUtils::GetPIDCandidat
     if ( 
         ((fUseCERNCalibSelection && tof < 105.) 
             || (!fUseCERNCalibSelection && tof < 160.))
-        && high_pressure_status == 1 
+        && low_pressure_status == 1 
        ) {
       candidates.electron = true;
     }
     else if ( 
         ((fUseCERNCalibSelection && tof < 103.) 
             || (!fUseCERNCalibSelection && tof < 160.))
-        && high_pressure_status == 0 ){
+        && low_pressure_status == 0 ){
       candidates.muon = true;
       candidates.pion = true;
     }
     else if ( 
         ((fUseCERNCalibSelection && tof > 103. && tof < 160.) 
             || (!fUseCERNCalibSelection && tof > 160.))
-        && high_pressure_status == 0 ) {
+        && low_pressure_status == 0 ) {
       candidates.proton = true;
     }
   }
@@ -643,20 +647,50 @@ double protoana::ProtoDUNEBeamlineUtils::ComputeMomentum( int pdg, double tof ){
 
 // ----------------------------------------------------------------------------
 bool protoana::ProtoDUNEBeamlineUtils::IsGoodBeamlineTrigger(art::Event const & evt) const{
-  std::vector<art::Ptr<beam::ProtoDUNEBeamEvent>> beamVec;
-  auto beamHand = evt.getValidHandle<std::vector<beam::ProtoDUNEBeamEvent>>(fBeamEventTag);
-  if(beamHand.isValid())
-  {
-    art::fill_ptr_vector(beamVec, beamHand);
+  return IsGoodBeamlineTrigger( GetBeamEvent(evt) );
+}
+
+bool protoana::ProtoDUNEBeamlineUtils::IsGoodBeamlineTrigger(beam::ProtoDUNEBeamEvent const & beamEvent) const{
+  return (beamEvent.GetTimingTrigger() == 12 && beamEvent.CheckIsMatched());
+}
+
+
+bool protoana::ProtoDUNEBeamlineUtils::HasPerfectBeamMomentum(art::Event const & evt) const{
+  return HasPerfectBeamMomentum( GetBeamEvent(evt) );
+}
+
+bool protoana::ProtoDUNEBeamlineUtils::HasPerfectBeamMomentum(beam::ProtoDUNEBeamEvent const & beamEvent) const{
+
+  //Get Active fibers
+  std::vector< short > fibers_p1 = beamEvent.GetActiveFibers( "XBPF022697" );
+  std::vector< short > fibers_p2 = beamEvent.GetActiveFibers( "XBPF022701" );
+  std::vector< short > fibers_p3 = beamEvent.GetActiveFibers( "XBPF022702" );
+
+  //Get any glitches and remove from the active
+  std::array< short, 192 > glitch_mask = beamEvent.GetFBM( "XBPF022697" ).glitch_mask;
+  int nP1 = 0;
+  for( size_t i = 0; i < fibers_p1.size(); ++i ){
+    if( !glitch_mask[ fibers_p1[i] ] )
+      ++nP1;   
   }
 
-  for(size_t iBeamEvent=0; iBeamEvent < beamVec.size(); iBeamEvent++)
-  {
-    const beam::ProtoDUNEBeamEvent& beamEvent = *(beamVec.at(iBeamEvent));
-    if(beamEvent.GetTimingTrigger() == 12 && beamEvent.CheckIsMatched()) return true;
+  glitch_mask = beamEvent.GetFBM( "XBPF022701" ).glitch_mask;
+  int nP2 = 0;
+  for( size_t i = 0; i < fibers_p2.size(); ++i ){
+    if( !glitch_mask[ fibers_p2[i] ] )
+      ++nP2;   
   }
-  return false;
+
+  glitch_mask = beamEvent.GetFBM( "XBPF022702" ).glitch_mask;
+  int nP3 = 0;
+  for( size_t i = 0; i < fibers_p3.size(); ++i ){
+    if( !glitch_mask[ fibers_p3[i] ] )
+      ++nP3;   
+  }
+
+  return ( nP1 == 1 && nP2 == 1 && nP3 == 1 );
 }
+
 
 std::vector<double> protoana::ProtoDUNEBeamlineUtils::GetBeamlineMass(art::Event const & evt) const{
   std::vector<double> result;

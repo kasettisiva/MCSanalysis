@@ -43,6 +43,7 @@ private:
   
   protoana::ProtoDUNEBeamlineUtils fBeamlineUtils;
   bool fDoGlitches;
+  int  fReferenceMomentum;
 
   TTree * fOutTree;
 
@@ -64,13 +65,15 @@ private:
                      fibers_p3;
 
   unsigned long long GenTrigTS;
+  bool perfectP;
 };
   
 //-----------------------------------------------------------------------
 protoana::ProtoDUNEBeamlineReco::ProtoDUNEBeamlineReco(fhicl::ParameterSet const& pset):
   EDAnalyzer(pset),
   fBeamlineUtils(pset.get<fhicl::ParameterSet>("BeamlineUtils")),
-  fDoGlitches( pset.get< bool >( "DoGlitches" ) )
+  fDoGlitches( pset.get< bool >( "DoGlitches" ) ),
+  fReferenceMomentum( pset.get< int >( "ReferenceMomentum" ) )
 {
   this->reconfigure(pset);
 }
@@ -90,6 +93,7 @@ void protoana::ProtoDUNEBeamlineReco::beginJob() {
   fOutTree->Branch("glitches_p2", &glitches_p2);
   fOutTree->Branch("glitches_p3", &glitches_p3);
   fOutTree->Branch("TOF", &tof);
+  fOutTree->Branch("perfectP", &perfectP);
   fOutTree->Branch("Chan", &chan);
   fOutTree->Branch("Momentum", &momentum);
   fOutTree->Branch("C0",&c0);
@@ -141,6 +145,7 @@ void protoana::ProtoDUNEBeamlineReco::analyze(art::Event const & evt){
   run   = evt.run();
 
   //Access the Beam Event
+  /*
   auto beamHandle = evt.getValidHandle<std::vector<beam::ProtoDUNEBeamEvent>>("beamevent");
   
   std::vector<art::Ptr<beam::ProtoDUNEBeamEvent>> beamVec;
@@ -149,6 +154,8 @@ void protoana::ProtoDUNEBeamlineReco::analyze(art::Event const & evt){
   }
 
   const beam::ProtoDUNEBeamEvent & beamEvent = *(beamVec.at(0)); //Should just have one
+  */
+  const beam::ProtoDUNEBeamEvent & beamEvent = fBeamlineUtils.GetBeamEvent(evt);
   /////////////////////////////////////////////////////////////
   
   
@@ -219,7 +226,7 @@ void protoana::ProtoDUNEBeamlineReco::analyze(art::Event const & evt){
 
 
   //Access PID
-  std::vector< int > pids = fBeamlineUtils.GetPID( beamEvent, 1. );
+  std::vector< int > pids = fBeamlineUtils.GetPID( beamEvent, fReferenceMomentum );
 
   std::cout << "Possible particles" << std::endl;
 
@@ -228,19 +235,24 @@ void protoana::ProtoDUNEBeamlineReco::analyze(art::Event const & evt){
   }
   std::cout << std::endl;
 
-  PossibleParticleCands candidates = fBeamlineUtils.GetPIDCandidates( beamEvent, 1. );
+  PossibleParticleCands candidates = fBeamlineUtils.GetPIDCandidates( beamEvent, fReferenceMomentum );
   std::cout << std::left << std::setw(10) << "electron " << candidates.electron << std::endl;
   std::cout << std::left << std::setw(10) << "muon "     << candidates.muon     << std::endl;
   std::cout << std::left << std::setw(10) << "pion "     << candidates.pion     << std::endl;
   std::cout << std::left << std::setw(10) << "kaon "     << candidates.kaon     << std::endl;
   std::cout << std::left << std::setw(10) << "proton "   << candidates.proton   << std::endl << std::endl;
 
-  std::string candidates_string = fBeamlineUtils.GetPIDCandidates( beamEvent, 1. );
+  std::string candidates_string = fBeamlineUtils.GetPIDCandidates( beamEvent, fReferenceMomentum );
   std::cout << candidates_string << std::endl;
   ///////////////////////////////////////////////////////////// 
   
   //Tracking info
   nTracks = beamEvent.GetBeamTracks().size();
+  if( nTracks == 1 ){
+    std::cout << "X " << beamEvent.GetBeamTracks()[0].Trajectory().End().X() << std::endl;
+    std::cout << "Y " << beamEvent.GetBeamTracks()[0].Trajectory().End().Y() << std::endl;
+    std::cout << "Z " << beamEvent.GetBeamTracks()[0].Trajectory().End().Z() << std::endl;
+  }
   /////////////////////////////////////////////////////////////
 
   //Fibers
@@ -305,6 +317,9 @@ void protoana::ProtoDUNEBeamlineReco::analyze(art::Event const & evt){
   }
   /////////////////////////////////////////////////////////////   
   
+  std::cout << "Perfect Momentum?" << fBeamlineUtils.HasPerfectBeamMomentum( evt ) << std::endl;
+  perfectP = fBeamlineUtils.HasPerfectBeamMomentum( evt );
+  
 
   fOutTree->Fill();
 }
@@ -330,6 +345,8 @@ void protoana::ProtoDUNEBeamlineReco::reset(){
   glitches_v_upstream.clear();
   glitches_h_downstream.clear();
   glitches_v_downstream.clear();
+
+  perfectP = false;
 }
  
 DEFINE_ART_MODULE(protoana::ProtoDUNEBeamlineReco)
