@@ -353,6 +353,10 @@ private:
   double reco_beam_allTrack_endX, reco_beam_allTrack_endY, reco_beam_allTrack_endZ;
   double reco_beam_allTrack_trackDirX, reco_beam_allTrack_trackDirY, reco_beam_allTrack_trackDirZ;
   double reco_beam_allTrack_trackEndDirX, reco_beam_allTrack_trackEndDirY, reco_beam_allTrack_trackEndDirZ;
+  std::vector< double > reco_beam_allTrack_resRange;
+  std::vector< double > reco_beam_allTrack_calibrated_dEdX;
+  double reco_beam_allTrack_Chi2_proton;
+  int    reco_beam_allTrack_Chi2_ndof;
 
   /////////////////////////////////////////////////////
   //Info from the BI if using Real Data
@@ -2821,6 +2825,22 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
         ////////////////////////////////////////////
       */
 
+      std::vector< anab::Calorimetry> calo = trackUtil.GetRecoTrackCalorimetry(*pandora2Track, evt, fTrackerTag, fCalorimetryTag);
+      auto calo_range = calo[0].ResidualRange();
+      for( size_t i = 0; i < calo_range.size(); ++i ){
+        reco_beam_allTrack_resRange.push_back( calo_range[i] );
+      }
+
+      //New Calibration
+      std::vector< float > new_dEdX = calibration.GetCalibratedCalorimetry(  *pandora2Track, evt, fTrackerTag, fCalorimetryTag );
+      for( size_t i = 0; i < new_dEdX.size(); ++i ){ reco_beam_allTrack_calibrated_dEdX.push_back( new_dEdX[i] ); }
+      ////////////////////////////////////////////
+
+      std::pair< double, int > pid_chi2_ndof = trackUtil.Chi2PID( reco_beam_allTrack_calibrated_dEdX, reco_beam_allTrack_resRange, templates[ 2212 ] );
+      reco_beam_allTrack_Chi2_proton = pid_chi2_ndof.first; 
+      reco_beam_allTrack_Chi2_ndof = pid_chi2_ndof.second;
+  
+
     }
   }
   catch( const cet::exception &e ){
@@ -2898,6 +2918,10 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("reco_beam_allTrack_trackEndDirX",    &reco_beam_allTrack_trackEndDirX);
   fTree->Branch("reco_beam_allTrack_trackEndDirY",    &reco_beam_allTrack_trackEndDirY);
   fTree->Branch("reco_beam_allTrack_trackEndDirZ",    &reco_beam_allTrack_trackEndDirZ);
+  fTree->Branch("reco_beam_allTrack_resRange",        &reco_beam_allTrack_resRange);
+  fTree->Branch("reco_beam_allTrack_calibrated_dEdX", &reco_beam_allTrack_calibrated_dEdX);
+  fTree->Branch("reco_beam_allTrack_Chi2_proton",     &reco_beam_allTrack_Chi2_proton);
+  fTree->Branch("reco_beam_allTrack_Chi2_ndof",       &reco_beam_allTrack_Chi2_ndof);
 
 
   //Reconstructed info -- daughters
@@ -3615,6 +3639,11 @@ void pionana::PionAnalyzer::reset()
   reco_beam_allTrack_trackEndDirX = -999;
   reco_beam_allTrack_trackEndDirY = -999;
   reco_beam_allTrack_trackEndDirZ = -999;
+  reco_beam_allTrack_resRange.clear();
+  reco_beam_allTrack_calibrated_dEdX.clear();
+  reco_beam_allTrack_Chi2_proton = -999;
+  reco_beam_allTrack_Chi2_ndof = -999;
+
 
 
 
