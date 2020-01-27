@@ -118,6 +118,25 @@ namespace pionana {
 
     return output;
   }
+
+
+  cnnOutput2D GetCNNOutputFromPFParticleFromPlane( const recob::PFParticle & part, const art::Event & evt, const anab::MVAReader<recob::Hit,4> & CNN_results,  protoana::ProtoDUNEPFParticleUtils & pfpUtil, std::string fPFParticleTag, size_t planeID ){
+
+    cnnOutput2D output;
+    const std::vector< art::Ptr< recob::Hit > > daughterPFP_hits = pfpUtil.GetPFParticleHitsFromPlane_Ptrs( part, evt, fPFParticleTag, planeID );    
+
+    for( size_t h = 0; h < daughterPFP_hits.size(); ++h ){
+      std::array<float,4> cnn_out = CNN_results.getOutput( daughterPFP_hits[h] );
+      output.track  += cnn_out[ CNN_results.getIndex("track") ];
+      output.em     += cnn_out[ CNN_results.getIndex("em") ];
+      output.michel += cnn_out[ CNN_results.getIndex("michel") ];
+      output.none   += cnn_out[ CNN_results.getIndex("none") ];
+    }
+
+    output.nHits = daughterPFP_hits.size();
+
+    return output;
+  }
 }
 
 pionana::cnnOutput2D::cnnOutput2D() : track(0), em(0), michel(0), none(0), nHits(0) { }
@@ -318,6 +337,23 @@ private:
   std::vector< double > true_beam_incidentEnergies;
   double true_beam_interactingEnergy;
 
+  int    reco_beam_PFP_ID;
+  int    reco_beam_PFP_nHits;
+  double reco_beam_PFP_trackScore;
+  double reco_beam_PFP_emScore;
+  double reco_beam_PFP_michelScore;
+  double reco_beam_PFP_trackScore_collection;
+  double reco_beam_PFP_emScore_collection;
+  double reco_beam_PFP_michelScore_collection;
+
+  int    reco_beam_allTrack_ID;
+  bool   reco_beam_allTrack_beam_cuts, reco_beam_allTrack_flipped;
+  double reco_beam_allTrack_len;
+  double reco_beam_allTrack_startX, reco_beam_allTrack_startY, reco_beam_allTrack_startZ;
+  double reco_beam_allTrack_endX, reco_beam_allTrack_endY, reco_beam_allTrack_endZ;
+  double reco_beam_allTrack_trackDirX, reco_beam_allTrack_trackDirY, reco_beam_allTrack_trackDirZ;
+  double reco_beam_allTrack_trackEndDirX, reco_beam_allTrack_trackEndDirY, reco_beam_allTrack_trackEndDirZ;
+
   /////////////////////////////////////////////////////
   //Info from the BI if using Real Data
   /////////////////////////////////////////////////////
@@ -356,6 +392,7 @@ private:
   //EDIT: daughter_xxx --> daughter_trk_xxx
   //
   //quality_reco_daughter_trk_byY_completeness...
+  /*
   std::vector< double > reco_daughter_true_byE_completeness;
 
   //EDIT: truth --> true_byY_xxx
@@ -391,6 +428,7 @@ private:
 
   //EDIT: reco_daughter_true_byXXX_isPrimary 
   bool reco_daughter_true_byE_isPrimary;
+  */
   /// Add by hits?
 
 
@@ -401,6 +439,9 @@ private:
   std::vector< double > reco_daughter_PFP_trackScore;
   std::vector< double > reco_daughter_PFP_emScore;
   std::vector< double > reco_daughter_PFP_michelScore;
+  std::vector< double > reco_daughter_PFP_trackScore_collection;
+  std::vector< double > reco_daughter_PFP_emScore_collection;
+  std::vector< double > reco_daughter_PFP_michelScore_collection;
   
 
 
@@ -460,6 +501,7 @@ private:
   //EDIT: STANDARDIZE
   //
   //EDIT: reco_daughter_show_true_byHits_PDG
+  /*
   std::vector< int > reco_daughter_shower_true_byHits_PDG;
   std::vector< int > reco_daughter_shower_true_byHits_ID;
   std::vector< int > reco_daughter_shower_true_byHits_origin;
@@ -485,10 +527,12 @@ private:
   std::vector< double > reco_daughter_shower_true_byE_startP;
   std::vector< std::string>  reco_daughter_shower_true_byE_endProcess;
   std::vector< std::vector< double > > reco_daughter_dEdX, reco_daughter_dQdX, reco_daughter_resRange;
+  */
 
   
   ///Reconstructed Daughter Info
   //  --- Tracks
+  /*
   std::vector< int > reco_daughter_trackID;
   std::vector< double > reco_daughter_startX, reco_daughter_endX;
   std::vector< double > reco_daughter_startY, reco_daughter_endY;
@@ -506,6 +550,7 @@ private:
 
   std::vector< double > reco_daughter_momByRange_proton;
   std::vector< double > reco_daughter_momByRange_muon;
+  */
   std::vector< double > reco_daughter_allTrack_momByRange_proton;
   std::vector< double > reco_daughter_allTrack_momByRange_muon;
 
@@ -513,6 +558,7 @@ private:
 
   ///Reconstructed Daughter Info
   //  --- Showers
+  /*
   std::vector< double > reco_daughter_shower_startX;
   std::vector< double > reco_daughter_shower_startY;
   std::vector< double > reco_daughter_shower_startZ;
@@ -524,7 +570,7 @@ private:
   std::vector< double > reco_daughter_shower_michelScore;
   std::vector< double > reco_daughter_shower_Chi2_proton;
   std::vector< int >    reco_daughter_shower_Chi2_ndof;
-
+  */
 
   //New hits info
   std::vector< double > reco_beam_spacePts_X, reco_beam_spacePts_Y, reco_beam_spacePts_Z;
@@ -561,6 +607,7 @@ private:
   fhicl::ParameterSet CalibrationPars;
   protoana::ProtoDUNECalibration calibration;
   bool fSaveHits;
+  bool fCheckCosmics;
 };
 
 
@@ -583,7 +630,8 @@ pionana::PionAnalyzer::PionAnalyzer(fhicl::ParameterSet const& p)
   BeamPars(p.get<fhicl::ParameterSet>("BeamPars")),
   BeamCuts(p.get<fhicl::ParameterSet>("BeamCuts")),
   CalibrationPars(p.get<fhicl::ParameterSet>("CalibrationPars")),
-  fSaveHits( p.get<bool>( "SaveHits" ) )
+  fSaveHits( p.get<bool>( "SaveHits" ) ),
+  fCheckCosmics( p.get<bool>( "CheckCosmics" ) )
 {
 
   templates[ 211 ]  = (TProfile*)dEdX_template_file.Get( "dedx_range_pi"  );
@@ -774,85 +822,63 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
 
   // Get the reconstructed PFParticle tagged as beam by Pandora
   const recob::PFParticle* particle = beamParticles.at(0);
-
-  // Determine if the beam particle is track-like or shower-like
-  const recob::Track* thisTrack = pfpUtil.GetPFParticleTrack(*particle,evt,fPFParticleTag,fTrackerTag);
-  const recob::Shower* thisShower = pfpUtil.GetPFParticleShower(*particle,evt,fPFParticleTag,fShowerTag);
   const simb::MCParticle* trueParticle = 0x0;
 
   if( !evt.isRealData() ){
-    if(thisShower != 0x0){
-      //This gets the MCParticle contributing the most to the shower
-      trueParticle = truthUtil.GetMCParticleFromRecoShower(*thisShower, evt, fShowerTag);
-    }
-    if(thisTrack != 0x0){
+    protoana::MCParticleSharedHits beam_match  = truthUtil.GetMCParticleByHits( *particle, evt, fPFParticleTag, fHitTag ); 
+    if( beam_match.particle ){
+      //Check that this is the correct true particle
+      //if( beam_match.particle->TrackId() == true_beam_particle->TrackId() )
+      //  reco_beam_true_byHits_matched = true;
+      reco_beam_true_byHits_matched = ( beam_match.particle->TrackId() == true_beam_particle->TrackId() );
+      reco_beam_true_byHits_PDG = beam_match.particle->PdgCode();
+      reco_beam_true_byHits_ID = beam_match.particle->TrackId();
+      std::cout << "Truth ID: " << reco_beam_true_byHits_ID << std::endl;
 
-      //This gets the MCParticle contributing the most to the track
-      trueParticle = truthUtil.GetMCParticleFromRecoTrack(*thisTrack, evt, fTrackerTag);
+      reco_beam_true_byHits_process = beam_match.particle->Process();
+      reco_beam_true_byHits_endProcess = beam_match.particle->EndProcess();
+      reco_beam_true_byHits_origin = pi_serv->TrackIdToMCTruth_P(beam_match.particle->TrackId())->Origin();
 
-      auto list = truthUtil.GetMCParticleListByHits( *thisTrack, evt, fTrackerTag, fHitTag );
+      reco_beam_true_byHits_startPx = beam_match.particle->Px();
+      reco_beam_true_byHits_startPy = beam_match.particle->Py();
+      reco_beam_true_byHits_startPz = beam_match.particle->Pz();
+      reco_beam_true_byHits_startP  = sqrt( reco_beam_true_byHits_startPx*reco_beam_true_byHits_startPx 
+                                     + reco_beam_true_byHits_startPy*reco_beam_true_byHits_startPy 
+                                     + reco_beam_true_byHits_startPz*reco_beam_true_byHits_startPz );
+      reco_beam_true_byHits_startE = beam_match.particle->E();
+
+      size_t np = beam_match.particle->NumberTrajectoryPoints();
+      if( np > 1 ){
+        reco_beam_true_byHits_endPx = beam_match.particle->Px( np - 2 );
+        reco_beam_true_byHits_endPy = beam_match.particle->Py( np - 2 );
+        reco_beam_true_byHits_endPz = beam_match.particle->Pz( np - 2 );
+        reco_beam_true_byHits_endP  = sqrt( reco_beam_true_byHits_endPx*reco_beam_true_byHits_endPx 
+                                     + reco_beam_true_byHits_endPy*reco_beam_true_byHits_endPy 
+                                     + reco_beam_true_byHits_endPz*reco_beam_true_byHits_endPz );
+        reco_beam_true_byHits_endE  = beam_match.particle->E( np - 2 );
+      }
+
+      auto list = truthUtil.GetMCParticleListByHits( *particle, evt, fPFParticleTag, fHitTag );
+      double total = 0.;
+      double matched_hits = 0.;
       for( size_t j = 0; j < list.size(); ++j ){
-        //std::cout << "Contrib " << j << " " << list[j].first->TrackId() << " " << list[j].second << std::endl;
-        std::cout << "Contrib " << j << " " << list[j].particle->TrackId() << " " << list[j].nSharedHits << " " << list[j].nSharedDeltaRayHits << std::endl;
+      //  std::cout << "Contrib " << j << " " << list[j].first->TrackId() << " " << list[j].second << std::endl;
+        //std::cout << "Contrib " << j << " " << list[j].particle->TrackId() << " " << list[j].particle->PdgCode() 
+        //           << " " << pi_serv->TrackIdToMCTruth_P(list[j].particle->TrackId())->Origin() 
+        //           << " " << list[j].nSharedHits << " " << list[j].nSharedDeltaRayHits << std::endl;
+
+        if( list[j].particle == beam_match.particle ){
+           matched_hits = list[j].nSharedHits + list[j].nSharedDeltaRayHits;
+        }
+
+        total += list[j].nSharedHits + list[j].nSharedDeltaRayHits;
       }
 
-      protoana::MCParticleSharedHits beam_match = truthUtil.GetMCParticleByHits( *thisTrack, evt, fTrackerTag, fHitTag );
-      if( beam_match.particle ){
-        //Check that this is the correct true particle
-        if( beam_match.particle->TrackId() == true_beam_particle->TrackId() ){
-          reco_beam_true_byHits_matched = true;
-        }
+      reco_beam_true_byHits_purity = ( matched_hits / total );
 
-        reco_beam_true_byHits_PDG = beam_match.particle->PdgCode();
-        reco_beam_true_byHits_ID = beam_match.particle->TrackId();
-        std::cout << "Truth ID: " << reco_beam_true_byHits_ID << std::endl;
-
-        reco_beam_true_byHits_process = beam_match.particle->Process();
-        reco_beam_true_byHits_endProcess = beam_match.particle->EndProcess();
-        reco_beam_true_byHits_origin = pi_serv->TrackIdToMCTruth_P(beam_match.particle->TrackId())->Origin();
-
-        reco_beam_true_byHits_startPx = beam_match.particle->Px();
-        reco_beam_true_byHits_startPy = beam_match.particle->Py();
-        reco_beam_true_byHits_startPz = beam_match.particle->Pz();
-        reco_beam_true_byHits_startP  = sqrt( reco_beam_true_byHits_startPx*reco_beam_true_byHits_startPx 
-                                       + reco_beam_true_byHits_startPy*reco_beam_true_byHits_startPy 
-                                       + reco_beam_true_byHits_startPz*reco_beam_true_byHits_startPz );
-        reco_beam_true_byHits_startE = beam_match.particle->E();
-
-        size_t np = beam_match.particle->NumberTrajectoryPoints();
-        if( np > 1 ){
-          reco_beam_true_byHits_endPx = beam_match.particle->Px( np - 2 );
-          reco_beam_true_byHits_endPy = beam_match.particle->Py( np - 2 );
-          reco_beam_true_byHits_endPz = beam_match.particle->Pz( np - 2 );
-          reco_beam_true_byHits_endP  = sqrt( reco_beam_true_byHits_endPx*reco_beam_true_byHits_endPx 
-                                       + reco_beam_true_byHits_endPy*reco_beam_true_byHits_endPy 
-                                       + reco_beam_true_byHits_endPz*reco_beam_true_byHits_endPz );
-          reco_beam_true_byHits_endE  = beam_match.particle->E( np - 2 );
-        }
-
-        auto list = truthUtil.GetMCParticleListByHits( *thisTrack, evt, fTrackerTag, fHitTag );
-        double total = 0.;
-        double matched_hits = 0.;
-        for( size_t j = 0; j < list.size(); ++j ){
-        //  std::cout << "Contrib " << j << " " << list[j].first->TrackId() << " " << list[j].second << std::endl;
-          std::cout << "Contrib " << j << " " << list[j].particle->TrackId() << " " << list[j].particle->PdgCode() 
-                     << " " << pi_serv->TrackIdToMCTruth_P(list[j].particle->TrackId())->Origin() 
-                     << " " << list[j].nSharedHits << " " << list[j].nSharedDeltaRayHits << std::endl;
-
-          if( list[j].particle == beam_match.particle ){
-             matched_hits = list[j].nSharedHits + list[j].nSharedDeltaRayHits;
-          }
-
-          total += list[j].nSharedHits + list[j].nSharedDeltaRayHits;
-        }
-
-        reco_beam_true_byHits_purity = ( matched_hits / total );
-
-      }
-      
     }
-    //////////////////////////////////////////////////
-
+      
+    trueParticle = truthUtil.GetMCParticleFromPFParticle(*particle, evt, fPFParticleTag);
     if( trueParticle ){
 
       //Check that this is the correct true particle
@@ -867,20 +893,6 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       reco_beam_true_byE_process = trueParticle->Process();
       reco_beam_true_byE_endProcess = trueParticle->EndProcess();
       reco_beam_true_byE_origin = pi_serv->TrackIdToMCTruth_P(trueParticle->TrackId())->Origin();
-      //What created the MCPraticle that created the track?
-      /*
-      std::cout << "Track-to-True origin: ";
-      switch( reco_beam_true_byE_origin ){
-        case simb::kCosmicRay: 
-          std::cout << "Cosmic" << std::endl;
-          break;
-        case simb::kSingleParticle:
-          std::cout << "Beam" << std::endl;
-          break;
-        default:
-          std::cout << "Other" << std::endl;
-      }
-      */
 
       reco_beam_true_byE_startPx = trueParticle->Px();
       reco_beam_true_byE_startPy = trueParticle->Py();
@@ -955,9 +967,6 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       }
     }
 
-
-    //Look at true daughters coming out of the true beam particle
-    //std::cout << "Has " << true_beam_particle->NumberDaughters() << " daughters" << std::endl;
 
     for( int i = 0; i < true_beam_particle->NumberDaughters(); ++i ){
       int daughterID = true_beam_particle->Daughter(i);
@@ -1180,8 +1189,41 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
 
     }
   } 
+
+  reco_beam_PFP_ID = particle->Self();
+  const std::vector< art::Ptr< recob::Hit > > beamPFP_hits = pfpUtil.GetPFParticleHits_Ptrs( *particle, evt, fPFParticleTag );
+  reco_beam_PFP_nHits = beamPFP_hits.size();
+
+  cnnOutput2D cnn = GetCNNOutputFromPFParticle( *particle, evt, hitResults, pfpUtil, fPFParticleTag );
+  if( cnn.nHits > 0 ){
+    reco_beam_PFP_trackScore = (cnn.track / cnn.nHits);
+    reco_beam_PFP_emScore = (cnn.em / cnn.nHits);
+    reco_beam_PFP_michelScore = (cnn.michel / cnn.nHits);
+  }
+  else{
+    reco_beam_PFP_trackScore =  -999.;
+    reco_beam_PFP_emScore = -999.;
+    reco_beam_PFP_michelScore = -999.;
+  }
+
+  cnnOutput2D cnn_collection = GetCNNOutputFromPFParticleFromPlane( *particle, evt, hitResults, pfpUtil, fPFParticleTag, 2 );
+  if( cnn_collection.nHits > 0 ){
+    reco_beam_PFP_trackScore_collection = (cnn_collection.track / cnn_collection.nHits);
+    reco_beam_PFP_emScore_collection = (cnn_collection.em / cnn_collection.nHits);
+    reco_beam_PFP_michelScore_collection = (cnn_collection.michel / cnn_collection.nHits);
+  }
+  else{
+    reco_beam_PFP_trackScore_collection =  -999.;
+    reco_beam_PFP_emScore_collection = -999.;
+    reco_beam_PFP_michelScore_collection = -999.;
+  }
+
+
   
 
+  // Determine if the beam particle is track-like or shower-like
+  const recob::Track* thisTrack = pfpUtil.GetPFParticleTrack(*particle,evt,fPFParticleTag,fTrackerTag);
+  const recob::Shower* thisShower = pfpUtil.GetPFParticleShower(*particle,evt,fPFParticleTag,fShowerTag);
   if( thisTrack ){
     // Now we can look for the interaction point of the particle if one exists, i.e where the particle
     // scatters off an argon nucleus. Shower-like objects won't have an interaction point, so we can
@@ -1317,11 +1359,6 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       slicesToHits[ slice ].push_back( theHit );
       std::cout << i << " Position: " <<  x << " " << y << " " << z << " Hit Wire: " << theHit->WireID().Wire << " " 
                 << theHit->PeakTime()  << " " << theHit->StartTick() << " " << theHit->EndTick() << std::endl;
-      /*std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( *theHit );
-      for( size_t j = 0; j < ides.size(); ++j ){
-        std::cout << "\tIDE: " << ides[j]->trackID << " " << ides[j]->x << " " << ides[j]->y << " " << ides[j]->z << std::endl;
-      }
-      */
 
 
       if( thisTrack->Trajectory().LocationAtPoint(i).Z() > max_Z ){
@@ -1456,7 +1493,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
     for( size_t i = 0; i < new_dEdX.size(); ++i ){ reco_beam_calibrated_dEdX.push_back( new_dEdX[i] ); }
     ////////////////////////////////////////////
 
-    std::pair< double, int > pid_chi2_ndof = trackUtil.Chi2PID( reco_beam_dEdX, reco_beam_resRange, templates[ 2212 ] );
+    std::pair< double, int > pid_chi2_ndof = trackUtil.Chi2PID( reco_beam_calibrated_dEdX, reco_beam_resRange, templates[ 2212 ] );
     reco_beam_Chi2_proton = pid_chi2_ndof.first; 
     reco_beam_Chi2_ndof = pid_chi2_ndof.second;
   
@@ -1486,7 +1523,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       else{
         if( true_beam_PDG == 2212 ) mass = 938.27;
         else if( abs(true_beam_PDG) == 211 ) mass = 139.57;
-        else if( abs(true_beam_PDG) == -11 ) mass = .511;
+        else if( abs(true_beam_PDG) == 11 ) mass = .511;
         else if( abs(true_beam_PDG) == 321 ) mass = 321;
         else if( abs(true_beam_PDG) == 13 )  mass = 105.66;      
 
@@ -1503,26 +1540,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
 
     }
 
-    /*
-    std::cout << "MVA" << std::endl;
-
-    double track_total = 0.;
-    double em_total = 0.;
-    double michel_total = 0.;   
-    std::vector< art::Ptr< recob::Hit > > track_hits = findHits.at( thisTrack->ID() );
-    for( size_t h = 0; h < track_hits.size(); ++h ){
-      std::array<float,4> cnn_out = hitResults.getOutput( track_hits[h ] );
-      track_total  += cnn_out[ hitResults.getIndex("track") ];
-      em_total     += cnn_out[ hitResults.getIndex("em") ];
-      michel_total += cnn_out[ hitResults.getIndex("michel") ];
-    }
-    std::cout << "track Total "  << track_total  << " " << track_hits.size() << std::endl;
-    std::cout << "em Total "     << em_total     << " " << track_hits.size() << std::endl;
-    std::cout << "michel Total " << michel_total << " " << track_hits.size() << std::endl;
-    */
-
-
-    
+   
 
     if( !evt.isRealData() ){
 
@@ -1715,6 +1733,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
 
 
     //Looking at reco daughters from the reco beam track
+    /*
     const std::vector<const recob::Track*> trackDaughters = pfpUtil.GetPFParticleDaughterTracks(*particle,evt,fPFParticleTag,fTrackerTag);  
     const std::vector<const recob::Shower*> showerDaughters = pfpUtil.GetPFParticleDaughterShowers(*particle,evt,fPFParticleTag,fShowerTag);  
     std::cout << "Beam particle has " << trackDaughters.size() << " track-like daughters and " << showerDaughters.size() << " shower-like daughters." << std::endl;
@@ -1907,7 +1926,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
 
       if( !evt.isRealData() ){
         reco_daughter_true_byE_completeness.push_back( truthUtil.GetCompleteness( *daughterTrack, evt, fTrackerTag, fHitTag ) );
-        reco_daughter_true_byE_purity.push_back( truthUtil.GetPurity( *daughterTrack, evt, fTrackerTag/*, fHitTag*/) );
+        reco_daughter_true_byE_purity.push_back( truthUtil.GetPurity( *daughterTrack, evt, fTrackerTag#, fHitTag#) );
 
         //const simb::MCParticle * match = truthUtil.GetMCParticleByHits( *daughterTrack, evt, fTrackerTag, fHitTag );
         protoana::MCParticleSharedHits match = truthUtil.GetMCParticleByHits( *daughterTrack, evt, fTrackerTag, fHitTag );
@@ -2223,6 +2242,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
         reco_daughter_shower_true_byHits_purity.push_back( matched_hits / total );
       }
     }
+    */
     ////End Of Daughters
 
 
@@ -2277,6 +2297,19 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
         reco_daughter_PFP_emScore.push_back( -999. );
         reco_daughter_PFP_michelScore.push_back( -999. );
       }
+
+      cnnOutput2D cnn_collection = GetCNNOutputFromPFParticleFromPlane( *daughterPFP, evt, hitResults, pfpUtil, fPFParticleTag, 2 );
+      if( cnn_collection.nHits > 0 ){
+        reco_daughter_PFP_trackScore_collection.push_back( cnn_collection.track / cnn_collection.nHits );
+        reco_daughter_PFP_emScore_collection.push_back( cnn_collection.em / cnn_collection.nHits );
+        reco_daughter_PFP_michelScore_collection.push_back( cnn_collection.michel / cnn_collection.nHits );
+      }
+      else{
+        reco_daughter_PFP_trackScore_collection.push_back( -999. );
+        reco_daughter_PFP_emScore_collection.push_back( -999. );
+        reco_daughter_PFP_michelScore_collection.push_back( -999. );
+      }
+      
 
 
       if( !evt.isRealData() ){
@@ -2577,146 +2610,145 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
 
 
 
+    if( fCheckCosmics ){
+      if( quality_reco_view_2_wire.size() ){
 
-    //New: Trying to identify cosmics
-    
-    if( quality_reco_view_2_wire.size() ){
+        std::map< int, std::pair< double, double > > UpperCosmicROILimits, LowerCosmicROILimits;
+        std::map< int, int > wire_to_n_ticks;
+        std::map< int, double > wire_to_avg_ticks;
+        bool inTPC1 = false;
+        for( size_t i = 0; i < quality_reco_view_2_wire.size(); ++i ){
+          if( view_2_TPC[i] != 1 ) continue;
+          else inTPC1 = true;
+          wire_to_n_ticks[ int(quality_reco_view_2_wire[i]) ]++;
+          wire_to_avg_ticks[ int(quality_reco_view_2_wire[i]) ] += quality_reco_view_2_tick[i];
 
-      std::map< int, std::pair< double, double > > UpperCosmicROILimits, LowerCosmicROILimits;
-      std::map< int, int > wire_to_n_ticks;
-      std::map< int, double > wire_to_avg_ticks;
-      bool inTPC1 = false;
-      for( size_t i = 0; i < quality_reco_view_2_wire.size(); ++i ){
-        if( view_2_TPC[i] != 1 ) continue;
-        else inTPC1 = true;
-        wire_to_n_ticks[ int(quality_reco_view_2_wire[i]) ]++;
-        wire_to_avg_ticks[ int(quality_reco_view_2_wire[i]) ] += quality_reco_view_2_tick[i];
-
-      }
-
-      if( inTPC1 ){
-
-        double max_tick = 0.;
-        double min_tick = 99999.;
-        for( auto it = wire_to_n_ticks.begin(); it != wire_to_n_ticks.end(); ++it ){
-          wire_to_avg_ticks[ it->first ] /= it->second;
-
-          if( wire_to_avg_ticks[ it->first ] > max_tick ){
-            max_tick = wire_to_avg_ticks[ it->first ];
-          }
-          if( wire_to_avg_ticks[ it->first ] < min_tick ){
-            min_tick = wire_to_avg_ticks[ it->first ];
-          }
         }
 
-        min_tick -= 100;
-        max_tick += 100;
+        if( inTPC1 ){
 
-        std::vector< double > these_wires, these_ticks;
+          double max_tick = 0.;
+          double min_tick = 99999.;
+          for( auto it = wire_to_n_ticks.begin(); it != wire_to_n_ticks.end(); ++it ){
+            wire_to_avg_ticks[ it->first ] /= it->second;
 
-        for( auto it = wire_to_avg_ticks.begin(); it != wire_to_avg_ticks.end(); ++it ){
-          these_wires.push_back( it->first );
-          these_ticks.push_back( it->second );
+            if( wire_to_avg_ticks[ it->first ] > max_tick ){
+              max_tick = wire_to_avg_ticks[ it->first ];
+            }
+            if( wire_to_avg_ticks[ it->first ] < min_tick ){
+              min_tick = wire_to_avg_ticks[ it->first ];
+            }
+          }
 
-          std::cout << it->first << " " << it->second << std::endl;
-        }
-        TGraph gr_wire_ticks( these_wires.size(), &these_wires[0], &these_ticks[0] );
+          min_tick -= 100;
+          max_tick += 100;
 
+          std::vector< double > these_wires, these_ticks;
 
+          for( auto it = wire_to_avg_ticks.begin(); it != wire_to_avg_ticks.end(); ++it ){
+            these_wires.push_back( it->first );
+            these_ticks.push_back( it->second );
 
-
-        std::cout << "Min tick: " << min_tick << " Max tick: " << max_tick << std::endl;
-        std::cout << "Min wire: " << wire_to_avg_ticks.begin()->first << " Max wire: " << wire_to_avg_ticks.rbegin()->first << std::endl;
-        
-
-        //1st Get all the reco tracks -- or PFP?
-        //for( size_t i = 0; i < recoTracks->size(); ++i ){
-        for( size_t i = 0; i < pfpVec->size(); ++i ){
-
-          //if( (*recoTracks)[i].ID() == thisTrack->ID() ) continue;
-          if( &(*pfpVec)[i] == particle ) continue; // Check if the same pointer
-
-          int nUpperCosmicROI = 0;
-          int nLowerCosmicROI = 0;
-          //std::cout << "Checking Track " << (*recoTracks)[i].ID() << std::endl;
-
-          //auto planeHits = trackUtil.GetRecoTrackHitsFromPlane( (*recoTracks)[i], evt, fTrackerTag, 2 );
-          auto planeHits = pfpUtil.GetPFParticleHitsFromPlane( (*pfpVec)[i], evt, fPFParticleTag, 2 );
-          bool found_new = false;
-
-          protoana::MCParticleSharedHits match = protoana::MCParticleSharedHits();
-          if( !evt.isRealData() )
-            match = truthUtil.GetMCParticleByHits( (*pfpVec)[i], evt, fPFParticleTag, fHitTag );
+            std::cout << it->first << " " << it->second << std::endl;
+          }
+          TGraph gr_wire_ticks( these_wires.size(), &these_wires[0], &these_ticks[0] );
 
 
-          for( size_t j = 0; j < planeHits.size(); ++j ){
-            auto theHit = planeHits[j];
-            if( theHit->WireID().TPC == 1 ){                    
-              
-              if( int(theHit->WireID().Wire) > wire_to_avg_ticks.begin()->first && int(theHit->WireID().Wire) < wire_to_avg_ticks.rbegin()->first &&
-                  theHit->PeakTime() > min_tick && theHit->PeakTime() < max_tick ){
 
-                std::cout << "Checking " << theHit->WireID().Wire << " " << theHit->PeakTime() << std::endl;
-                std::cout << "\tBeam: " << gr_wire_ticks.Eval( theHit->WireID().Wire ) << std::endl;
+
+          std::cout << "Min tick: " << min_tick << " Max tick: " << max_tick << std::endl;
+          std::cout << "Min wire: " << wire_to_avg_ticks.begin()->first << " Max wire: " << wire_to_avg_ticks.rbegin()->first << std::endl;
+          
+
+          //1st Get all the reco tracks -- or PFP?
+          //for( size_t i = 0; i < recoTracks->size(); ++i ){
+          for( size_t i = 0; i < pfpVec->size(); ++i ){
+
+            //if( (*recoTracks)[i].ID() == thisTrack->ID() ) continue;
+            if( &(*pfpVec)[i] == particle ) continue; // Check if the same pointer
+
+            int nUpperCosmicROI = 0;
+            int nLowerCosmicROI = 0;
+            //std::cout << "Checking Track " << (*recoTracks)[i].ID() << std::endl;
+
+            //auto planeHits = trackUtil.GetRecoTrackHitsFromPlane( (*recoTracks)[i], evt, fTrackerTag, 2 );
+            auto planeHits = pfpUtil.GetPFParticleHitsFromPlane( (*pfpVec)[i], evt, fPFParticleTag, 2 );
+            bool found_new = false;
+
+            protoana::MCParticleSharedHits match = protoana::MCParticleSharedHits();
+            if( !evt.isRealData() )
+              match = truthUtil.GetMCParticleByHits( (*pfpVec)[i], evt, fPFParticleTag, fHitTag );
+
+
+            for( size_t j = 0; j < planeHits.size(); ++j ){
+              auto theHit = planeHits[j];
+              if( theHit->WireID().TPC == 1 ){                    
                 
-                if( theHit->PeakTime() > gr_wire_ticks.Eval( theHit->WireID().Wire ) ){
-                  ++nUpperCosmicROI; 
-                }
-                else{
-                  ++nLowerCosmicROI; 
-                }
+                if( int(theHit->WireID().Wire) > wire_to_avg_ticks.begin()->first && int(theHit->WireID().Wire) < wire_to_avg_ticks.rbegin()->first &&
+                    theHit->PeakTime() > min_tick && theHit->PeakTime() < max_tick ){
 
-              }
-              
-              if( !found_new && !evt.isRealData() ){
-                if( match.particle ){
-                  if( pi_serv->TrackIdToMCTruth_P(match.particle->TrackId())->Origin() == 2 ){
-                    std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( *theHit );
-                    for( size_t j = 0; j < ides.size(); ++j ){
-                      if( true_beam_ID == ides[j]->trackID ){
-                        //cosmic_has_beam_IDE.push_back( (*recoTracks)[i].ID() );
-                        cosmic_has_beam_IDE.push_back( i );
-                        found_new = true;
-                        break;
+                  std::cout << "Checking " << theHit->WireID().Wire << " " << theHit->PeakTime() << std::endl;
+                  std::cout << "\tBeam: " << gr_wire_ticks.Eval( theHit->WireID().Wire ) << std::endl;
+                  
+                  if( theHit->PeakTime() > gr_wire_ticks.Eval( theHit->WireID().Wire ) ){
+                    ++nUpperCosmicROI; 
+                  }
+                  else{
+                    ++nLowerCosmicROI; 
+                  }
+
+                }
+                
+                if( !found_new && !evt.isRealData() ){
+                  if( match.particle ){
+                    if( pi_serv->TrackIdToMCTruth_P(match.particle->TrackId())->Origin() == 2 ){
+                      std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( *theHit );
+                      for( size_t j = 0; j < ides.size(); ++j ){
+                        if( true_beam_ID == ides[j]->trackID ){
+                          //cosmic_has_beam_IDE.push_back( (*recoTracks)[i].ID() );
+                          cosmic_has_beam_IDE.push_back( i );
+                          found_new = true;
+                          break;
+                        }
                       }
                     }
                   }
                 }
               }
             }
+
+            n_cosmics_with_beam_IDE = cosmic_has_beam_IDE.size();
+            
+            std::cout << "NHits in Upper ROI: " << nUpperCosmicROI << std::endl;
+            std::cout << "NHits in Lower ROI: " << nLowerCosmicROI << std::endl;
+
+            if( nLowerCosmicROI || nUpperCosmicROI ){
+              reco_beam_cosmic_candidate_lower_hits.push_back( nLowerCosmicROI );
+              reco_beam_cosmic_candidate_upper_hits.push_back( nUpperCosmicROI );
+              reco_beam_cosmic_candidate_ID.push_back( i );
+            }
+
           }
-
-          n_cosmics_with_beam_IDE = cosmic_has_beam_IDE.size();
-          
-          std::cout << "NHits in Upper ROI: " << nUpperCosmicROI << std::endl;
-          std::cout << "NHits in Lower ROI: " << nLowerCosmicROI << std::endl;
-
-          if( nLowerCosmicROI || nUpperCosmicROI ){
-            reco_beam_cosmic_candidate_lower_hits.push_back( nLowerCosmicROI );
-            reco_beam_cosmic_candidate_upper_hits.push_back( nUpperCosmicROI );
-            reco_beam_cosmic_candidate_ID.push_back( i );
-          }
-
         }
       }
-    }
 
-    if( !evt.isRealData() ){
-      std::cout << "Checking beam for cosmic" << std::endl;
-      auto planeHits = trackUtil.GetRecoTrackHitsFromPlane( *thisTrack, evt, fTrackerTag, 2 );
-      for( size_t i = 0; i < planeHits.size(); ++i ){      
-        auto theHit = planeHits[i];
-        //std::cout << theHit->WireID().TPC << std::endl;
-        if( theHit->WireID().TPC == 1 ){
-          std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( *theHit );
-          for( size_t j = 0; j < ides.size(); ++j ){
-            if( pi_serv->TrackIdToMCTruth_P( ides[j]->trackID )->Origin() == 2 ){
-              beam_has_cosmic_IDE = true;
-              break;
+      if( !evt.isRealData() ){
+        std::cout << "Checking beam for cosmic" << std::endl;
+        auto planeHits = trackUtil.GetRecoTrackHitsFromPlane( *thisTrack, evt, fTrackerTag, 2 );
+        for( size_t i = 0; i < planeHits.size(); ++i ){      
+          auto theHit = planeHits[i];
+          //std::cout << theHit->WireID().TPC << std::endl;
+          if( theHit->WireID().TPC == 1 ){
+            std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( *theHit );
+            for( size_t j = 0; j < ides.size(); ++j ){
+              if( pi_serv->TrackIdToMCTruth_P( ides[j]->trackID )->Origin() == 2 ){
+                beam_has_cosmic_IDE = true;
+                break;
+              }
             }
           }
+          if( beam_has_cosmic_IDE ) break;
         }
-        if( beam_has_cosmic_IDE ) break;
       }
     }
 
@@ -2730,7 +2762,70 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
     std::cout << beam_cuts.IsBeamlike( *thisShower, evt, "1" ) << std::endl;
   }
 
+  //Forced tracking for beam particle
+  try{
+    const recob::Track* pandora2Track = pfpUtil.GetPFParticleTrack( *particle, evt, fPFParticleTag, "pandora2Track" );
+    std::cout << "pandora2 track: " << pandora2Track << std::endl;
 
+
+    if( pandora2Track ){
+      reco_beam_allTrack_ID = pandora2Track->ID();
+      reco_beam_allTrack_beam_cuts = beam_cuts.IsBeamlike( *pandora2Track, evt, "1" );
+      reco_beam_allTrack_startX = pandora2Track->Trajectory().Start().X();
+      reco_beam_allTrack_startY = pandora2Track->Trajectory().Start().Y();
+      reco_beam_allTrack_startZ = pandora2Track->Trajectory().Start().Z();
+      reco_beam_allTrack_endX = pandora2Track->Trajectory().End().X();
+      reco_beam_allTrack_endY = pandora2Track->Trajectory().End().Y();
+      reco_beam_allTrack_endZ = pandora2Track->Trajectory().End().Z();
+
+      auto startDir = pandora2Track->StartDirection();
+      auto endDir   = pandora2Track->EndDirection();
+
+      //try flipping
+      if( reco_beam_allTrack_startZ > reco_beam_endZ ){
+        reco_beam_allTrack_flipped = true;
+        reco_beam_allTrack_endX = pandora2Track->Trajectory().Start().X();
+        reco_beam_allTrack_endY = pandora2Track->Trajectory().Start().Y();
+        reco_beam_allTrack_endZ = pandora2Track->Trajectory().Start().Z();
+        reco_beam_allTrack_startX = pandora2Track->Trajectory().End().X();
+        reco_beam_allTrack_startY = pandora2Track->Trajectory().End().Y();
+        reco_beam_allTrack_startZ = pandora2Track->Trajectory().End().Z();
+        
+        reco_beam_allTrack_trackDirX =  -1. * endDir.X(); 
+        reco_beam_allTrack_trackDirY =  -1. * endDir.Y(); 
+        reco_beam_allTrack_trackDirZ =  -1. * endDir.Z(); 
+
+        reco_beam_allTrack_trackEndDirX =  -1. * startDir.X(); 
+        reco_beam_allTrack_trackEndDirY =  -1. * startDir.Y(); 
+        reco_beam_allTrack_trackEndDirZ =  -1. * startDir.Z(); 
+      }
+      else{
+        reco_beam_allTrack_flipped = false;
+        reco_beam_allTrack_trackDirX    =  startDir.X(); 
+        reco_beam_allTrack_trackDirY    =  startDir.Y(); 
+        reco_beam_allTrack_trackDirZ    =  startDir.Z(); 
+        reco_beam_allTrack_trackEndDirX =  endDir.X(); 
+        reco_beam_allTrack_trackEndDirY =  endDir.Y(); 
+        reco_beam_allTrack_trackEndDirZ =  endDir.Z(); 
+      }
+
+      reco_beam_allTrack_len  = pandora2Track->Length();    
+      /*
+        // Now we can look for the interaction point of the particle if one exists, i.e where the particle
+        // scatters off an argon nucleus. Shower-like objects won't have an interaction point, so we can
+        // check this by making sure we get a sensible position
+        const TVector3 interactionVtx = pfpUtil.GetPFParticleSecondaryVertex(*particle,evt,fPFParticleTag,fTrackerTag);
+        reco_beam_vtxX = interactionVtx.X();
+        reco_beam_vtxY = interactionVtx.Y();
+        reco_beam_vtxZ = interactionVtx.Z();
+        ////////////////////////////////////////////
+      */
+
+    }
+  }
+  catch( const cet::exception &e ){
+    std::cout << "beam pandora2Track object not found, moving on" << std::endl;
+  }
 
   fTree->Fill();
 }
@@ -2778,8 +2873,35 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("reco_beam_flipped", &reco_beam_flipped);
   fTree->Branch("reco_beam_passes_beam_cuts", &reco_beam_passes_beam_cuts);
 
+  fTree->Branch("reco_beam_PFP_ID", &reco_beam_PFP_ID);
+  fTree->Branch("reco_beam_PFP_nHits", &reco_beam_PFP_nHits);
+  fTree->Branch("reco_beam_PFP_trackScore", &reco_beam_PFP_trackScore);
+  fTree->Branch("reco_beam_PFP_emScore", &reco_beam_PFP_emScore);
+  fTree->Branch("reco_beam_PFP_michelScore", &reco_beam_PFP_michelScore);
+  fTree->Branch("reco_beam_PFP_trackScore_collection", &reco_beam_PFP_trackScore_collection);
+  fTree->Branch("reco_beam_PFP_emScore_collection", &reco_beam_PFP_emScore_collection);
+  fTree->Branch("reco_beam_PFP_michelScore_collection", &reco_beam_PFP_michelScore_collection);
+
+  fTree->Branch("reco_beam_allTrack_ID",              &reco_beam_allTrack_ID);
+  fTree->Branch("reco_beam_allTrack_beam_cuts",       &reco_beam_allTrack_beam_cuts);
+  fTree->Branch("reco_beam_allTrack_flipped",         &reco_beam_allTrack_flipped);
+  fTree->Branch("reco_beam_allTrack_len",             &reco_beam_allTrack_len);
+  fTree->Branch("reco_beam_allTrack_startX",          &reco_beam_allTrack_startX);
+  fTree->Branch("reco_beam_allTrack_startY",          &reco_beam_allTrack_startY);
+  fTree->Branch("reco_beam_allTrack_startZ",          &reco_beam_allTrack_startZ);
+  fTree->Branch("reco_beam_allTrack_endX",            &reco_beam_allTrack_endX);
+  fTree->Branch("reco_beam_allTrack_endY",            &reco_beam_allTrack_endY);
+  fTree->Branch("reco_beam_allTrack_endZ",            &reco_beam_allTrack_endZ);
+  fTree->Branch("reco_beam_allTrack_trackDirX",       &reco_beam_allTrack_trackDirX);
+  fTree->Branch("reco_beam_allTrack_trackDirY",       &reco_beam_allTrack_trackDirY);
+  fTree->Branch("reco_beam_allTrack_trackDirZ",       &reco_beam_allTrack_trackDirZ);
+  fTree->Branch("reco_beam_allTrack_trackEndDirX",    &reco_beam_allTrack_trackEndDirX);
+  fTree->Branch("reco_beam_allTrack_trackEndDirY",    &reco_beam_allTrack_trackEndDirY);
+  fTree->Branch("reco_beam_allTrack_trackEndDirZ",    &reco_beam_allTrack_trackEndDirZ);
+
 
   //Reconstructed info -- daughters
+  /*
   fTree->Branch("reco_daughter_trackID", &reco_daughter_trackID);
   fTree->Branch("reco_daughter_true_byE_completeness", &reco_daughter_true_byE_completeness);
   fTree->Branch("reco_daughter_true_byE_purity", &reco_daughter_true_byE_purity);
@@ -2813,6 +2935,7 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("reco_daughter_true_byHits_startPz", &reco_daughter_true_byHits_startPz);
   fTree->Branch("reco_daughter_true_byHits_startP", &reco_daughter_true_byHits_startP);
   fTree->Branch("reco_daughter_true_byHits_startE", &reco_daughter_true_byHits_startE);
+  */
   //Alternative reco
   fTree->Branch("reco_daughter_PFP_true_byHits_PDG", &reco_daughter_PFP_true_byHits_PDG);
   fTree->Branch("reco_daughter_PFP_true_byHits_ID", &reco_daughter_PFP_true_byHits_ID);
@@ -2874,6 +2997,7 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("reco_daughter_allShower_startZ", &reco_daughter_allShower_startZ);
 
 
+/*
   fTree->Branch("reco_daughter_shower_true_byE_PDG", &reco_daughter_shower_true_byE_PDG);
   fTree->Branch("reco_daughter_shower_true_byE_ID", &reco_daughter_shower_true_byE_ID);
   fTree->Branch("reco_daughter_shower_true_byE_origin", &reco_daughter_shower_true_byE_origin);
@@ -2900,9 +3024,11 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("reco_daughter_shower_true_byHits_startPz", &reco_daughter_shower_true_byHits_startPz);
   fTree->Branch("reco_daughter_shower_true_byHits_startP", &reco_daughter_shower_true_byHits_startP);
   fTree->Branch("reco_daughter_shower_true_byHits_endProcess", &reco_daughter_shower_true_byHits_endProcess);
+  */
 
 
   ///Reconstructed info -- daughter
+  /*
   fTree->Branch("reco_daughter_showerID", &reco_daughter_showerID);
   fTree->Branch("reco_daughter_dQdX", &reco_daughter_dQdX);
   fTree->Branch("reco_daughter_dEdX", &reco_daughter_dEdX);
@@ -2929,6 +3055,7 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("reco_daughter_shower_startY", &reco_daughter_shower_startY);
   fTree->Branch("reco_daughter_shower_startZ", &reco_daughter_shower_startZ);
   fTree->Branch("reco_daughter_shower_len", &reco_daughter_shower_len);
+  */
 
 
   fTree->Branch("reco_daughter_PFP_ID", &reco_daughter_PFP_ID);
@@ -2936,6 +3063,11 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("reco_daughter_PFP_trackScore", &reco_daughter_PFP_trackScore);
   fTree->Branch("reco_daughter_PFP_emScore", &reco_daughter_PFP_emScore);
   fTree->Branch("reco_daughter_PFP_michelScore", &reco_daughter_PFP_michelScore);
+  fTree->Branch("reco_daughter_PFP_trackScore_collection", &reco_daughter_PFP_trackScore_collection);
+  fTree->Branch("reco_daughter_PFP_emScore_collection", &reco_daughter_PFP_emScore_collection);
+  fTree->Branch("reco_daughter_PFP_michelScore_collection", &reco_daughter_PFP_michelScore_collection);
+
+
 
 
   fTree->Branch("true_beam_PDG", &true_beam_PDG);
@@ -3073,7 +3205,7 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("reco_beam_true_byHits_purity", &reco_beam_true_byHits_purity);
 
   fTree->Branch("true_beam_processes", &true_beam_processes);
-  fTree->Branch("reco_daughter_true_byE_isPrimary", &reco_daughter_true_byE_isPrimary);
+  //fTree->Branch("reco_daughter_true_byE_isPrimary", &reco_daughter_true_byE_isPrimary);
 
   fTree->Branch("data_BI_P", &data_BI_P);
   fTree->Branch("data_BI_X", &data_BI_X);
@@ -3124,6 +3256,7 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("cosmic_has_beam_IDE", &cosmic_has_beam_IDE);
   fTree->Branch("n_cosmics_with_beam_IDE", &n_cosmics_with_beam_IDE);
 
+  /*
   fTree->Branch("reco_daughter_Chi2_proton", &reco_daughter_Chi2_proton);
   fTree->Branch("reco_daughter_Chi2_ndof", &reco_daughter_Chi2_ndof);
   fTree->Branch("reco_daughter_momByRange_proton", &reco_daughter_momByRange_proton);
@@ -3141,6 +3274,7 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("reco_daughter_shower_trackScore", &reco_daughter_shower_trackScore);
   fTree->Branch("reco_daughter_shower_emScore", &reco_daughter_shower_emScore);
   fTree->Branch("reco_daughter_shower_michelScore", &reco_daughter_shower_michelScore);
+  */
 
   fTree->Branch("reco_beam_true_byE_endPx", &reco_beam_true_byE_endPx);
   fTree->Branch("reco_beam_true_byE_endPy", &reco_beam_true_byE_endPy);
@@ -3304,7 +3438,7 @@ void pionana::PionAnalyzer::reset()
   reco_beam_true_byHits_purity = 0.;
 
 
-  reco_daughter_true_byE_isPrimary = false;
+  //reco_daughter_true_byE_isPrimary = false;
   reco_beam_Chi2_proton = 999.;
 
   reco_beam_cosmic_candidate_lower_hits.clear();
@@ -3356,6 +3490,7 @@ void pionana::PionAnalyzer::reset()
 
   reco_beam_Chi2_ndof = -1;
 
+  /*
   reco_daughter_Chi2_proton.clear();
   reco_daughter_Chi2_ndof.clear();
   reco_daughter_momByRange_proton.clear();
@@ -3373,6 +3508,7 @@ void pionana::PionAnalyzer::reset()
   reco_daughter_shower_trackScore.clear();
   reco_daughter_shower_emScore.clear();
   reco_daughter_shower_michelScore.clear();
+  */
 
   true_beam_daughter_PDG.clear();
   true_beam_daughter_len.clear();
@@ -3450,6 +3586,37 @@ void pionana::PionAnalyzer::reset()
   reco_daughter_PFP_trackScore.clear();
   reco_daughter_PFP_emScore.clear();
   reco_daughter_PFP_michelScore.clear();
+  reco_daughter_PFP_trackScore_collection.clear();
+  reco_daughter_PFP_emScore_collection.clear();
+  reco_daughter_PFP_michelScore_collection.clear();
+
+  reco_beam_PFP_ID = -999;
+  reco_beam_PFP_nHits = -999;
+  reco_beam_PFP_trackScore = -999;
+  reco_beam_PFP_emScore = -999;
+  reco_beam_PFP_michelScore = -999;
+  reco_beam_PFP_trackScore_collection = -999;
+  reco_beam_PFP_emScore_collection = -999;
+  reco_beam_PFP_michelScore_collection = -999;
+
+  reco_beam_allTrack_ID = -999;
+  reco_beam_allTrack_beam_cuts = -999;
+  reco_beam_allTrack_flipped = -999;
+  reco_beam_allTrack_len = -999;
+  reco_beam_allTrack_startX = -999;
+  reco_beam_allTrack_startY = -999;
+  reco_beam_allTrack_startZ = -999;
+  reco_beam_allTrack_endX = -999;
+  reco_beam_allTrack_endY = -999;
+  reco_beam_allTrack_endZ = -999;
+  reco_beam_allTrack_trackDirX = -999;
+  reco_beam_allTrack_trackDirY = -999;
+  reco_beam_allTrack_trackDirZ = -999;
+  reco_beam_allTrack_trackEndDirX = -999;
+  reco_beam_allTrack_trackEndDirY = -999;
+  reco_beam_allTrack_trackEndDirZ = -999;
+
+
 
   reco_beam_dQdX.clear();
   reco_beam_dEdX.clear();
@@ -3457,6 +3624,7 @@ void pionana::PionAnalyzer::reset()
   reco_beam_vtxX = -1.;
   reco_beam_vtxY = -1.;
   reco_beam_vtxZ = -1.;
+  /*
   reco_daughter_startX.clear();
   reco_daughter_startY.clear();
   reco_daughter_startZ.clear();
@@ -3475,12 +3643,14 @@ void pionana::PionAnalyzer::reset()
   reco_daughter_shower_startZ.clear();
 
   reco_daughter_shower_len.clear(); 
+  */
 
   reco_beam_resRange.clear();
   reco_beam_TrkPitch.clear();
   reco_beam_calo_wire.clear();
   reco_beam_calo_tick.clear();
 
+/*
   reco_daughter_dQdX.clear();
   reco_daughter_dEdX.clear();
   reco_daughter_resRange.clear();
@@ -3488,7 +3658,7 @@ void pionana::PionAnalyzer::reset()
   reco_daughter_shower_dEdX.clear();
   reco_daughter_shower_resRange.clear();
   reco_daughter_len.clear();
-
+*/
   reco_beam_trackID = -1;
 
   reco_beam_incidentEnergies.clear();
@@ -3496,6 +3666,7 @@ void pionana::PionAnalyzer::reset()
   true_beam_incidentEnergies.clear();
   true_beam_interactingEnergy = -999.;
 
+  /*
   reco_daughter_trackID.clear();
   reco_daughter_true_byE_completeness.clear();
   reco_daughter_true_byE_purity.clear();
@@ -3528,6 +3699,7 @@ void pionana::PionAnalyzer::reset()
   reco_daughter_true_byHits_startPz.clear();
   reco_daughter_true_byHits_startP.clear();
   reco_daughter_true_byHits_startE.clear();
+  */
 
   //Alternative Reco
   reco_daughter_PFP_true_byHits_PDG.clear();
@@ -3590,6 +3762,7 @@ void pionana::PionAnalyzer::reset()
   ///////
   
 
+  /*
   reco_daughter_shower_true_byHits_PDG.clear();
   reco_daughter_shower_true_byHits_ID.clear();
   reco_daughter_shower_true_byHits_origin.clear();
@@ -3620,6 +3793,7 @@ void pionana::PionAnalyzer::reset()
   reco_daughter_shower_true_byE_startPz.clear();
   reco_daughter_shower_true_byE_startP.clear();
   reco_daughter_shower_true_byE_endProcess.clear();
+  */
 
 
 
