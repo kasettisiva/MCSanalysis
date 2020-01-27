@@ -2814,32 +2814,45 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       }
 
       reco_beam_allTrack_len  = pandora2Track->Length();    
-      /*
-        // Now we can look for the interaction point of the particle if one exists, i.e where the particle
-        // scatters off an argon nucleus. Shower-like objects won't have an interaction point, so we can
-        // check this by making sure we get a sensible position
-        const TVector3 interactionVtx = pfpUtil.GetPFParticleSecondaryVertex(*particle,evt,fPFParticleTag,fTrackerTag);
-        reco_beam_vtxX = interactionVtx.X();
-        reco_beam_vtxY = interactionVtx.Y();
-        reco_beam_vtxZ = interactionVtx.Z();
-        ////////////////////////////////////////////
-      */
 
       std::vector< anab::Calorimetry> calo = trackUtil.GetRecoTrackCalorimetry(*pandora2Track, evt, fTrackerTag, fCalorimetryTag);
-      auto calo_range = calo[0].ResidualRange();
-      for( size_t i = 0; i < calo_range.size(); ++i ){
-        reco_beam_allTrack_resRange.push_back( calo_range[i] );
+      if( calo.size() ){
+        auto calo_range = calo[0].ResidualRange();
+        for( size_t i = 0; i < calo_range.size(); ++i ){
+          reco_beam_allTrack_resRange.push_back( calo_range[i] );
+        }
+
+        //New Calibration
+        std::vector< float > new_dEdX = calibration.GetCalibratedCalorimetry(  *pandora2Track, evt, fTrackerTag, fCalorimetryTag );
+        for( size_t i = 0; i < new_dEdX.size(); ++i ){ reco_beam_allTrack_calibrated_dEdX.push_back( new_dEdX[i] ); }
+        ////////////////////////////////////////////
+
+        std::pair< double, int > pid_chi2_ndof = trackUtil.Chi2PID( reco_beam_allTrack_calibrated_dEdX, reco_beam_allTrack_resRange, templates[ 2212 ] );
+        reco_beam_allTrack_Chi2_proton = pid_chi2_ndof.first; 
+        reco_beam_allTrack_Chi2_ndof = pid_chi2_ndof.second;
       }
-
-      //New Calibration
-      std::vector< float > new_dEdX = calibration.GetCalibratedCalorimetry(  *pandora2Track, evt, fTrackerTag, fCalorimetryTag );
-      for( size_t i = 0; i < new_dEdX.size(); ++i ){ reco_beam_allTrack_calibrated_dEdX.push_back( new_dEdX[i] ); }
-      ////////////////////////////////////////////
-
-      std::pair< double, int > pid_chi2_ndof = trackUtil.Chi2PID( reco_beam_allTrack_calibrated_dEdX, reco_beam_allTrack_resRange, templates[ 2212 ] );
-      reco_beam_allTrack_Chi2_proton = pid_chi2_ndof.first; 
-      reco_beam_allTrack_Chi2_ndof = pid_chi2_ndof.second;
-  
+      else{
+        reco_beam_allTrack_Chi2_proton = -999;
+        reco_beam_allTrack_Chi2_ndof = -999;
+      }
+    }
+    else{
+      reco_beam_allTrack_ID = -999;
+      reco_beam_allTrack_beam_cuts = -999;
+      reco_beam_allTrack_startX = -999;
+      reco_beam_allTrack_startY = -999;
+      reco_beam_allTrack_startZ = -999;
+      reco_beam_allTrack_endX = -999;
+      reco_beam_allTrack_endY = -999;
+      reco_beam_allTrack_endZ = -999;
+      reco_beam_allTrack_Chi2_proton = -999;
+      reco_beam_allTrack_Chi2_ndof = -999;
+      reco_beam_allTrack_trackDirX    =  -999; 
+      reco_beam_allTrack_trackDirY    =  -999; 
+      reco_beam_allTrack_trackDirZ    =  -999; 
+      reco_beam_allTrack_trackEndDirX =  -999; 
+      reco_beam_allTrack_trackEndDirY =  -999; 
+      reco_beam_allTrack_trackEndDirZ =  -999; 
 
     }
   }
