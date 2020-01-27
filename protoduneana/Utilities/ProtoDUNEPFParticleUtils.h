@@ -127,6 +127,7 @@ namespace protoana {
     const std::vector<const recob::Hit*> GetPFParticleHits(const recob::PFParticle &particle, art::Event const &evt, const std::string particleLabel) const;
     const std::vector<const recob::Hit*> GetPFParticleHitsFromPlane(const recob::PFParticle &particle, art::Event const &evt, const std::string particleLabel, unsigned int planeID ) const;
     const std::vector< art::Ptr< recob::Hit > > GetPFParticleHits_Ptrs(const recob::PFParticle &particle, art::Event const &evt, const std::string particleLabel) const;
+    const std::vector< art::Ptr< recob::Hit > > GetPFParticleHitsFromPlane_Ptrs(const recob::PFParticle &particle, art::Event const &evt, const std::string particleLabel, size_t planeID) const;
 
     /// Get the number of hits
     unsigned int GetNumberPFParticleHits(const recob::PFParticle &particle, art::Event const &evt, const std::string particleLabel) const; 
