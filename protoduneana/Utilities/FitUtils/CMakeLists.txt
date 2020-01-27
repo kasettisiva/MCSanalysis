@@ -9,7 +9,6 @@ art_make_library( LIBRARY_NAME protodune_fitutils
 			    ${ART_FRAMEWORK_SERVICES_REGISTRY}
 			    ${ART_FRAMEWORK_SERVICES_BASIC}
 			    ${ART_ROOT_IO_TFILE_SUPPORT} 
-			    ${ROOT_CORE}
 			    ${ART_ROOT_IO_TFILESERVICE_SERVICE}
 			    ${ART_PERSISTENCY_COMMON}
 			    canvas
@@ -28,6 +27,8 @@ art_make_library( LIBRARY_NAME protodune_fitutils
 			    ${ROOT_GEOM}
 			    ${ROOT_MINUIT}
 			    ${ROOT_MINUIT2}
+			    ${ROOT_CORE}
+			    ${ROOT_MATHCORE}
 	    )
 
 art_make_exec( NAME runProtoDUNEFit

@@ -962,7 +962,15 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
         pfpUtil.GetPFParticleHits_Ptrs( *thePFP, evt, fPFParticleTag ).size()
       );
 
-      const recob::Track* pandora2Track = pfpUtil.GetPFParticleTrack( *thePFP, evt, fPFParticleTag, "pandora2Track" );
+      const recob::Track* pandora2Track = 0x0;
+      
+      try{ 
+        pandora2Track = pfpUtil.GetPFParticleTrack( *thePFP, evt, fPFParticleTag, "pandora2Track" );
+      }
+      catch( const cet::exception &e ){
+        std::cout << "pandora2Track object not found, moving on" << std::endl;
+      }
+
       if( pandora2Track ){
         true_beam_reco_byHits_allTrack_ID.back().push_back( pandora2Track->ID() );
       }
@@ -1061,7 +1069,14 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
             cnnOutput2D theCNNResults = GetCNNOutputFromPFParticle( *thePFP, evt, hitResults, pfpUtil, fPFParticleTag );
             true_beam_Pi0_decay_reco_byHits_PFP_trackScore.back().push_back( ( ( theCNNResults.nHits > 0 ) ? ( theCNNResults.track / theCNNResults.nHits ) : -999. ) );
 
-            const recob::Track* pandora2Track = pfpUtil.GetPFParticleTrack( *thePFP, evt, fPFParticleTag, "pandora2Track" );
+            const recob::Track* pandora2Track = 0x0; 
+            try{
+              pandora2Track = pfpUtil.GetPFParticleTrack( *thePFP, evt, fPFParticleTag, "pandora2Track" );
+            }
+            catch( const cet::exception &e ){
+              std::cout << "pandora2Track object not found, moving on" << std::endl;
+            }
+
             if( pandora2Track ){
               true_beam_Pi0_decay_reco_byHits_allTrack_ID.back().push_back( pandora2Track->ID() );
               true_beam_Pi0_decay_reco_byHits_allTrack_startX.back().push_back( pandora2Track->Trajectory().Start().X() );
@@ -1084,7 +1099,14 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
               true_beam_Pi0_decay_reco_byHits_allTrack_len.back().push_back( -999. );
             }
 
-            const recob::Shower* pandora2Shower = pfpUtil.GetPFParticleShower( *thePFP, evt, fPFParticleTag, "pandora2Shower" );
+            const recob::Shower* pandora2Shower = 0x0;
+            try{ 
+              pandora2Shower = pfpUtil.GetPFParticleShower( *thePFP, evt, fPFParticleTag, "pandora2Shower" );
+            }
+            catch( const cet::exception &e ){
+              std::cout << "pandora2Shower object not found, moving on" << std::endl;
+            }
+
             if( pandora2Shower ){
               true_beam_Pi0_decay_reco_byHits_allShower_ID.back().push_back( pandora2Shower->ID() );
               true_beam_Pi0_decay_reco_byHits_allShower_startX.back().push_back( pandora2Shower->ShowerStart().X() );
@@ -1147,7 +1169,14 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
         cnnOutput2D theCNNResults = GetCNNOutputFromPFParticle( *thePFP, evt, hitResults, pfpUtil, fPFParticleTag );
         true_beam_daughter_reco_byHits_PFP_trackScore.back().push_back( ( ( theCNNResults.nHits > 0 ) ? ( theCNNResults.track / theCNNResults.nHits ) : -999. ) );
 
-        const recob::Track* pandora2Track = pfpUtil.GetPFParticleTrack( *thePFP, evt, fPFParticleTag, "pandora2Track" );
+        const recob::Track* pandora2Track = 0x0;
+        try{
+           pandora2Track = pfpUtil.GetPFParticleTrack( *thePFP, evt, fPFParticleTag, "pandora2Track" );
+        }
+        catch( const cet::exception &e ){
+          std::cout << "pandora2Track object not found, moving on" << std::endl;
+        }
+
         if( pandora2Track ){
           true_beam_daughter_reco_byHits_allTrack_ID.back().push_back( pandora2Track->ID() );
           true_beam_daughter_reco_byHits_allTrack_startX.back().push_back( pandora2Track->Trajectory().Start().X() );
@@ -1170,7 +1199,14 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
           true_beam_daughter_reco_byHits_allTrack_len.back().push_back( -999. );
         }
 
-        const recob::Shower* pandora2Shower = pfpUtil.GetPFParticleShower( *thePFP, evt, fPFParticleTag, "pandora2Shower" );
+        const recob::Shower* pandora2Shower = 0x0; 
+        try{ 
+          pandora2Shower = pfpUtil.GetPFParticleShower( *thePFP, evt, fPFParticleTag, "pandora2Shower" );
+        }
+        catch( const cet::exception &e ){
+          std::cout << "pandora2Shower object not found, moving on" << std::endl;
+        }
+        
         if( pandora2Shower ){
           true_beam_daughter_reco_byHits_allShower_ID.back().push_back( pandora2Shower->ID() );
           true_beam_daughter_reco_byHits_allShower_startX.back().push_back( pandora2Shower->ShowerStart().X() );

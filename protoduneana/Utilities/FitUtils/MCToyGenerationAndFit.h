@@ -68,6 +68,9 @@ namespace protoana{
     // Option to change the minimiser - default is Minuit2
     void SetMinimiser(std::string min) {_minimizer = TString(min.c_str());}
 
+    // Change algorithm - default is migrad
+    void SetAlgorithm(std::string min) {_algorithm = TString(min.c_str());}
+
     // Option to change fit strategy - default is 1
     void SetFitStrategy(int fs) {_fitstrategy = fs;}
 
@@ -81,6 +84,9 @@ namespace protoana{
     
     // Minimiser
     TString _minimizer;
+
+    // Algorithm
+    TString _algorithm;
     
     // Fit strategy
     int _fitstrategy;

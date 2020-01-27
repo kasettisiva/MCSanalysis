@@ -27,8 +27,8 @@ BackgroundTopologyName:  ["Cosmics","Sec. protons","Muons","Other pion bkg","Oth
 TruthTreeName:           "pionana/beamana"
 
 # Define binning in truth/reco. It doesn't have to be symmetric.
-TruthBinning:            [0.0,200.0,400.0,600.0,800.0,1000.0]
-RecoBinning:             [0.0,200.0,400.0,600.0,800.0,2000.0]
+TruthBinning:            [0.0,200.0,400.0,500.0,600.0,700.0,800.0,900.0,1500.0]
+RecoBinning:             [0.0,200.0,400.0,500.0,600.0,700.0,800.0,900.0,2000.0]
 
 # Fit set up.
 DoAsimovFit:             false       # Will do asimov fit only
