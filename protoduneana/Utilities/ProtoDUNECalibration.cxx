@@ -135,3 +135,29 @@ double protoana::ProtoDUNECalibration::tot_Ef( double x, double y, double z ){
   }
   else return 0.5;
 }
+
+double protoana::ProtoDUNECalibration::HitToEnergy(const art::Ptr<recob::Hit> hit, double X, double Y, double Z){
+
+  //Only do collection plane
+  if( hit->View() != 2 ) return 0.;
+
+  double X_factor = X_correction_hist->GetBinContent( X_correction_hist->FindBin(X) );
+  double YZ_factor = 1.;
+  if(X < 0){
+    YZ_factor = YZ_neg->GetBinContent( YZ_neg->FindBin(Z, Y) );
+  }
+  else{
+    YZ_factor = YZ_pos->GetBinContent( YZ_pos->FindBin(Z, Y) );
+  }
+
+  double energy = hit->Integral();
+  energy *= norm_factor;
+  energy *= Wion/*23.6e-6*/;
+  energy /= calib_factor;
+  energy *= X_factor;
+  energy *= YZ_factor;
+  energy /= 0.69/*recomb_factor*/;
+  
+  return energy;
+
+}

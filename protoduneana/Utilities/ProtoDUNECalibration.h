@@ -21,6 +21,7 @@ namespace protoana{
       ProtoDUNECalibration(){};
       ProtoDUNECalibration(const fhicl::ParameterSet & pset);
       std::vector< float > GetCalibratedCalorimetry(  const recob::Track &track, art::Event const &evt, const std::string trackModule, const std::string caloModule );
+      double HitToEnergy(const art::Ptr<recob::Hit> hit, double X, double Y, double Z);
 
     private:
       float calc_dEdX(double dqdx, double betap, double Rho, double Efield, double Wion, double alpha);
