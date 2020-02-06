@@ -37,11 +37,17 @@ physics:
   pdAnaTree:          @local::proto_AnaTree
  }
  ana:  [ pdAnaTree ]
- 
+
  end_paths:     [ ana ]
 
 }
 
 outputs: {}
-physics.analyzers.pdAnaTree.ShowerCalorimetryTag: "pandoraShowercaloSCE" 
-physics.analyzers.pdAnaTree.CalorimetryTag: "pandoraSCE" 
+# physics.analyzers.pdAnaTree.ShowerCalorimetryTag: "pandoraShowercaloSCE"
+# physics.analyzers.pdAnaTree.CalorimetryTag: "pandoraSCE"
+physics.analyzers.pdAnaTree.UseMCforReco:   false
+physics.analyzers.pdAnaTree.SCEFileName:    "./SCE_DataDriven_180kV_v3.root"
+physics.analyzers.pdAnaTree.YZCorrFileName: "./YZcalo_r5770.root"
+physics.analyzers.pdAnaTree.XCorrFileName:  "./Xcalo_r5770.root"
+physics.analyzers.pdAnaTree.CalibFactor:    0.00559
+physics.analyzers.pdAnaTree.NormFactor:     1.1334

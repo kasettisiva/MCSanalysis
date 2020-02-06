@@ -17,9 +17,14 @@ proto_AnaTree:
    ShowerCalorimetryTag:    "pandoraShowercaloSCE"
    PFParticleTag:           "pandora"
    GeneratorTag:            "generator"
-   HitTag:                  "gaushit"
+   HitTag:                  "hitpdune"
+   SCEFileName:             "/pnfs/dune/resilient/users/milov/SCE_DataDriven_180kV_v3.root"
+   YZCorrFileName:          "/pnfs/dune/resilient/users/milov/YZcalo_sce.root"
+   XCorrFileName:           "/pnfs/dune/resilient/users/milov/Xcalo_sce.root"
+   CalibFactor:             0.00486
+   NormFactor:              0.9947
    UseMCforReco:            true
-   PlotCoords:              true
+   PlotCoords:              false
    Verbose:                 0
    DataUtils:               @local::standard_protodunedatautils
    BeamLineUtils:           @local::standard_protodunebeamlineutils

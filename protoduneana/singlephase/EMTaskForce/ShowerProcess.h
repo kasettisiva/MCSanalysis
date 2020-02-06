@@ -16,6 +16,9 @@
 #include "protoduneana/Utilities/ProtoDUNEShowerUtils.h"
 #include "Cone.h"
 
+#include "TFile.h"
+#include "TH3F.h"
+
 namespace pizero {
 
 // Class to store all relevant objects and variables of a shower process.
@@ -41,8 +44,9 @@ class ShowerProcess {
   void find_tracks();
   void fill_cone();
 
-  // Truth utilities for convenience.
+  // Utilities for convenience.
   protoana::ProtoDUNETruthUtils truthUtils;
+  protoana::ProtoDUNEShowerUtils shUtils;
 
  public:
   // Constructors from MCParticle, shower and both.
@@ -105,7 +109,12 @@ class ShowerProcess {
   std::vector<const simb::MCParticle*> mcparticles() const { return m_mcparts; }
   std::vector<const recob::Shower*> showers() const { return m_showers; }
   std::vector<const recob::Track*> tracks() const { return m_tracks; }
+  // Calorimetry.
+  double energy(const std::string& caloLabel, const double calib,
+    const double norm, const std::string& scefile, const std::string& yzfile,
+    const std::string& xfile) const;
 }; // class ShowerProcess
+
 
 // Find MCParticle based on the biggest shower via truth utilities.
 void ShowerProcess::find_mcparticles() {
@@ -231,6 +240,66 @@ void ShowerProcess::fill_cone() {
   //   cdir = TVector3(tdir.X(), tdir.Y(), tdir.Z());
   // }
 
+}
+
+double ShowerProcess::energy(const std::string& caloLabel, const double calib,
+  const double norm, const std::string& scefile, const std::string& yzfile,
+  const std::string& xfile) const {
+  double totE = 0;
+
+  // Check whether there is a shower associated with this object.
+  if(shower() == 0x0) return totE;
+
+  // Constants from DUNE docDB 15974 by A Paudel.
+  const double Wion = 23.6e-6; // ArgoNeuT-determined parameter at E0 kV/cm
+  const double recob = 0.6417; // Recombination factor from Aaron's talk.
+
+  // Get dQ/dx YZ and X correction factors.
+  TFile* yzf = new TFile(yzfile.c_str());
+  TH2F* yzcorrposhist =(TH2F*)yzf->Get("correction_dqdx_ZvsY_positiveX_hist_2");
+  TH2F* yzcorrneghist =(TH2F*)yzf->Get("correction_dqdx_ZvsY_negativeX_hist_2");
+  TFile* xf = new TFile(xfile.c_str());
+  TH1F* xcorrhist = (TH1F*)xf->Get("dqdx_X_correction_hist_2");
+
+  // Get the calorimetry objects from the event using the shower utilities.
+  std::vector<anab::Calorimetry> calovec =
+    shUtils.GetRecoShowerCalorimetry(*shower(), *m_evt, m_showerLabel, caloLabel);
+
+  // Loop over all plane calorimetry objects, but only use the collection plane.
+  for(const anab::Calorimetry& calo : calovec) {
+    if(calo.PlaneID().Plane != 2) continue;
+
+    // Loop over all hits in the collection plane calorimetry object.
+    for(unsigned i = 0; i < calo.dQdx().size(); ++i) {
+
+      double dQdx = calo.dQdx()[i];
+      const double pitch = calo.TrkPitchVec()[i];
+      const geo::Point_t& pos = calo.XYZ()[i];
+      const double x = pos.X();
+      const double y = pos.Y();
+      const double z = pos.Z();
+      // Can't apply location-dependent corrections if there's no location available.
+      if(x==0 && y==0 && z==0) {
+        totE += dQdx*pitch*norm/calib*Wion/recob * 1e-3;
+        continue;
+      }
+      // Spatial corrections.
+      double yzcorr;
+      if(x >= 0) {
+        yzcorr = yzcorrposhist->GetBinContent(yzcorrposhist->FindBin(z,y));
+      } else {
+        yzcorr = yzcorrneghist->GetBinContent(yzcorrneghist->FindBin(z,y));
+      }
+      // Correct dQ/dx.
+      // std::cout << "Bare energy (GeV): " << dQdx*pitch*norm/calib*Wion/recob * 1e-3 << '\n';
+      const double xcorr = xcorrhist->GetBinContent(xcorrhist->FindBin(x));
+      // std::cout << "Hit energy (GeV): " << xcorr*yzcorr*dQdx*pitch*norm/calib*Wion/recob * 1e-3 << "\n\n";
+      totE += xcorr*yzcorr*dQdx*pitch*norm/calib*Wion/recob * 1e-3; // Convert from MeV to GeV.
+    } // for hits in calo
+  } // for calo objects
+
+  // std::cout << "Total energy: " << totE << '\n';
+  return totE;
 }
 
 } // namespace pizero
