@@ -45,3 +45,9 @@ physics:
 outputs: {}
 # physics.analyzers.pdAnaTree.ShowerCalorimetryTag: "pandoraShowercaloSCE"
 # physics.analyzers.pdAnaTree.CalorimetryTag: "pandoracaloSCE"
+physics.analyzers.pdAnaTree.UseMCforReco:   true
+physics.analyzers.pdAnaTree.SCEFileName:    "./SCE_DataDriven_180kV_v3.root"
+physics.analyzers.pdAnaTree.YZCorrFileName: "./YZcalo_sce.root"
+physics.analyzers.pdAnaTree.XCorrFileName:  "./Xcalo_sce.root"
+physics.analyzers.pdAnaTree.CalibFactor:    0.00486
+physics.analyzers.pdAnaTree.NormFactor:     0.9947

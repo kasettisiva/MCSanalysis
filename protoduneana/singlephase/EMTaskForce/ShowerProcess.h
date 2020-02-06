@@ -110,7 +110,9 @@ class ShowerProcess {
   std::vector<const recob::Shower*> showers() const { return m_showers; }
   std::vector<const recob::Track*> tracks() const { return m_tracks; }
   // Calorimetry.
-  double energy(const std::string& caloLabel, const std::string& scefile, const std::string& yzfile, const std::string& xfile) const;
+  double energy(const std::string& caloLabel, const double calib,
+    const double norm, const std::string& scefile, const std::string& yzfile,
+    const std::string& xfile) const;
 }; // class ShowerProcess
 
 
@@ -240,27 +242,17 @@ void ShowerProcess::fill_cone() {
 
 }
 
-double ShowerProcess::energy(const std::string& caloLabel, const std::string& scefile, const std::string& yzfile, const std::string& xfile) const {
+double ShowerProcess::energy(const std::string& caloLabel, const double calib,
+  const double norm, const std::string& scefile, const std::string& yzfile,
+  const std::string& xfile) const {
   double totE = 0;
 
   // Check whether there is a shower associated with this object.
   if(shower() == 0x0) return totE;
 
   // Constants from DUNE docDB 15974 by A Paudel.
-  const double rho = 1.383; // g/cm^3 (LAr density at 18 psi)
-  const double betap = 0.212; // kV/cm * g/cm / MeV
-  const double E0 = 0.4867; // kV/cm (nominal electric field)
-  const double alpha = 0.93; // ArgoNeuT-determined parameter at E0 kV/cm
   const double Wion = 23.6e-6; // ArgoNeuT-determined parameter at E0 kV/cm
-
-  // Get the variable Efield using data driven maps.
-  TFile* ef = new TFile(scefile.c_str());
-  TH3F* xneg = (TH3F*)ef->Get("Reco_ElecField_X_Neg");
-  TH3F* yneg = (TH3F*)ef->Get("Reco_ElecField_Y_Neg");
-  TH3F* zneg = (TH3F*)ef->Get("Reco_ElecField_Z_Neg");
-  TH3F* xpos = (TH3F*)ef->Get("Reco_ElecField_X_Pos");
-  TH3F* ypos = (TH3F*)ef->Get("Reco_ElecField_Y_Pos");
-  TH3F* zpos = (TH3F*)ef->Get("Reco_ElecField_Z_Pos");
+  const double recob = 0.6417; // Recombination factor from Aaron's talk.
 
   // Get dQ/dx YZ and X correction factors.
   TFile* yzf = new TFile(yzfile.c_str());
@@ -279,39 +271,34 @@ double ShowerProcess::energy(const std::string& caloLabel, const std::string& sc
 
     // Loop over all hits in the collection plane calorimetry object.
     for(unsigned i = 0; i < calo.dQdx().size(); ++i) {
+
       double dQdx = calo.dQdx()[i];
       const double pitch = calo.TrkPitchVec()[i];
       const geo::Point_t& pos = calo.XYZ()[i];
-      // Effective E-field calculation.
       const double x = pos.X();
       const double y = pos.Y();
       const double z = pos.Z();
-      double Ef, yzcorr;
+      // Can't apply location-dependent corrections if there's no location available.
+      if(x==0 && y==0 && z==0) {
+        totE += dQdx*pitch*norm/calib*Wion/recob * 1e-3;
+        continue;
+      }
+      // Spatial corrections.
+      double yzcorr;
       if(x >= 0) {
-        const double Ex = E0+E0*xpos->GetBinContent(xpos->FindBin(x,y,z));
-        const double Ey = E0*ypos->GetBinContent(ypos->FindBin(x,y,z));
-        const double Ez = E0*zpos->GetBinContent(zpos->FindBin(x,y,z));
-        Ef = sqrt(Ex*Ex+Ey*Ey+Ez*Ez);
         yzcorr = yzcorrposhist->GetBinContent(yzcorrposhist->FindBin(z,y));
       } else {
-        const double Ex = E0+E0*xneg->GetBinContent(xneg->FindBin(x,y,z));
-        const double Ey = E0*yneg->GetBinContent(yneg->FindBin(x,y,z));
-        const double Ez = E0*zneg->GetBinContent(zneg->FindBin(x,y,z));
-        Ef = sqrt(Ex*Ex+Ey*Ey+Ez*Ez);
         yzcorr = yzcorrneghist->GetBinContent(yzcorrneghist->FindBin(z,y));
       }
       // Correct dQ/dx.
+      // std::cout << "Bare energy (GeV): " << dQdx*pitch*norm/calib*Wion/recob * 1e-3 << '\n';
       const double xcorr = xcorrhist->GetBinContent(xcorrhist->FindBin(x));
-      const double calib = 5.23e-3; // Calibration constant to convert from ADC/cm to MeV/cm.
-      const double norm = 0.9946; // Normalisation factor to get dQ/dx at anode.
-      dQdx *= norm*xcorr*yzcorr/calib;
-      // dE/dx and E calculation from dQ/dx.
-      const double dEdx = (exp(dQdx*(betap/(rho*Ef)*Wion)) - alpha) / (betap/(rho*Ef));
-      const double E = dEdx * pitch * 1e-3; // Convert from MeV to GeV.
-      totE += E;
+      // std::cout << "Hit energy (GeV): " << xcorr*yzcorr*dQdx*pitch*norm/calib*Wion/recob * 1e-3 << "\n\n";
+      totE += xcorr*yzcorr*dQdx*pitch*norm/calib*Wion/recob * 1e-3; // Convert from MeV to GeV.
     } // for hits in calo
   } // for calo objects
 
+  // std::cout << "Total energy: " << totE << '\n';
   return totE;
 }
 
