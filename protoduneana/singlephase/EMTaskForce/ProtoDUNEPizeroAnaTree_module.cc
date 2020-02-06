@@ -47,12 +47,12 @@
 #include "lardata/ArtDataHelper/MVAReader.h"
 
 
-#include "protoduneana/Utilities/ProtoDUNETrackUtils.h"
-#include "protoduneana/Utilities/ProtoDUNETruthUtils.h"
-#include "protoduneana/Utilities/ProtoDUNEPFParticleUtils.h"
+#include "dune/Protodune/singlephase/DataUtils/ProtoDUNETrackUtils.h"
+#include "dune/Protodune/singlephase/DataUtils/ProtoDUNETruthUtils.h"
+#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEPFParticleUtils.h"
 #include "dune/Protodune/singlephase/DataUtils/ProtoDUNEDataUtils.h"
-#include "protoduneana/Utilities/ProtoDUNEShowerUtils.h"
-#include "protoduneana/Utilities/ProtoDUNEBeamlineUtils.h"
+#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEShowerUtils.h"
+#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEBeamlineUtils.h"
 #include "PiZeroProcess.h"
 
 // ROOT includes
@@ -1385,64 +1385,3 @@ void protoana::ProtoDUNEPizeroAnaTree::ResetPi0Vars() {
 } // ResetPi0Vars
 
 DEFINE_ART_MODULE(protoana::ProtoDUNEPizeroAnaTree)
-
-
-
-// double protoana::ProtoDUNEShowerUtils::GetShowerEnergy(const std::vector<anab::Calorimetry>& calovec) const {
-//
-//   double totE = 0;
-//
-//   // Constants from DUNE docDB 15974 by A Paudel.
-//   const double rho = 1.383; // g/cm^3 (LAr density at 18 psi)
-//   const double betap = 0.212; // kV/cm * g/cm / MeV
-//   const double E0 = 0.4867; // kV/cm (nominal electric field)
-//   const double alpha = 0.93; // ArgoNeuT-determined parameter at E0 kV/cm
-//   const double Wion = 23.6e-6; // ArgoNeuT-determined parameter at E0 kV/cm
-//
-//   // Get the variable Efield using data driven maps.
-//   const TFile* ef = new TFile("/dune/app/users/apaudel/v083001/prod2_calibfactors/SCE_DataDriven_180kV_v3.root");
-//   const TH3F* xneg = (TH3F*)ef->Get("Reco_ElecField_X_Neg");
-//   const TH3F* yneg = (TH3F*)ef->Get("Reco_ElecField_Y_Neg");
-//   const TH3F* zneg = (TH3F*)ef->Get("Reco_ElecField_Z_Neg");
-//   const TH3F* xpos = (TH3F*)ef->Get("Reco_ElecField_X_Pos");
-//   const TH3F* ypos = (TH3F*)ef->Get("Reco_ElecField_Y_Pos");
-//   const TH3F* zpos = (TH3F*)ef->Get("Reco_ElecField_Z_Pos");
-//
-//   // Loop over all plane calorimetry objects, but only use the collection plane.
-//   for(const anab::Calorimetry& calo : calovec) {
-//     if(calo.PlaneID().Plane != 2) continue;
-//
-//     // Loop over all hits in the collection plane calorimetry object.
-//     for(unsigned i = 0; i < calo.dQdx().size(); ++i) {
-//       const double dQdx = calo.dQdx()[i];
-//       const double pitch = calo.TrkPitchVec()[i];
-//       const geo::Point_t& pos = calo.XYZ()[i];
-//       // Effective E-field calculation.
-//       const double x = pos.X();
-//       const double y = pos.Y();
-//       const double z = pos.Z();
-//       double Ef;
-//       if(x >= 0) {
-//         const double Ex = E0+E0*xpos->GetBinContent(xpos->FindBin(x,y,z));
-//         const double Ey = E0*ypos->GetBinContent(ypos->FindBin(x,y,z));
-//         const double Ez = E0*zpos->GetBinContent(zpos->FindBin(x,y,z));
-//         Ef = sqrt(Ex*Ex+Ey*Ey+Ez*Ez);
-//       } else {
-//         const double Ex = E0+E0*xneg->GetBinContent(xneg->FindBin(x,y,z));
-//         const double Ey = E0*yneg->GetBinContent(yneg->FindBin(x,y,z));
-//         const double Ez = E0*zneg->GetBinContent(zneg->FindBin(x,y,z));
-//         Ef = sqrt(Ex*Ex+Ey*Ey+Ez*Ez);
-//       }
-//       // dE/dx and E calculation from dQ/dx.
-//       const double dEdx = (exp(dQdx*(betap/(rho*Ef)*Wion)) - alpha) / (betap/(rho*Ef));
-//       const double E = dEdx * pitch;
-//       totE += E;
-//     } // for hits in calo
-//   } // for calo objects
-//
-//   return totE;
-// }
-//
-// double protoana::ProtoDUNEShowerUtils::GetShowerEnergy(const recob::Shower &shower, art::Event const &evt, const std::string showerModule) const {
-//   return GetShowerEnergy(GetRecoShowerCalorimetry(shower, evt, showerModule));
-// }
