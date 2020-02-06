@@ -47,12 +47,12 @@
 #include "lardata/ArtDataHelper/MVAReader.h"
 
 
-#include "dune/Protodune/singlephase/DataUtils/ProtoDUNETrackUtils.h"
-#include "dune/Protodune/singlephase/DataUtils/ProtoDUNETruthUtils.h"
-#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEPFParticleUtils.h"
+#include "protoduneana/Utilities/ProtoDUNETrackUtils.h"
+#include "protoduneana/Utilities/ProtoDUNETruthUtils.h"
+#include "protoduneana/Utilities/ProtoDUNEPFParticleUtils.h"
 #include "dune/Protodune/singlephase/DataUtils/ProtoDUNEDataUtils.h"
-#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEShowerUtils.h"
-#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEBeamlineUtils.h"
+#include "protoduneana/Utilities/ProtoDUNEShowerUtils.h"
+#include "protoduneana/Utilities/ProtoDUNEBeamlineUtils.h"
 #include "PiZeroProcess.h"
 
 // ROOT includes
@@ -634,7 +634,7 @@ void protoana::ProtoDUNEPizeroAnaTree::analyze(art::Event const & evt){
         daughters.push_back(geantGoodParticle);
         while(daughters.size()) {
           const simb::MCParticle* parent = daughters[0];
-          for(unsigned di = 0; di < parent->NumberDaughters(); ++di) {
+          for(int di = 0; di < parent->NumberDaughters(); ++di) {
             const int daughter_ID = parent->Daughter(di);
             const simb::MCParticle* daughter = MCPmap[daughter_ID];
             daughters.push_back(daughter);
@@ -823,7 +823,7 @@ void protoana::ProtoDUNEPizeroAnaTree::FillPrimaryPFParticle(art::Event const & 
     if( !evt.getByLabel(fPFParticleTag,recoParticleHandle) ) return;
 
     fprimaryNDaughters = particle->NumDaughters();
-    for(unsigned di = 0; di < std::min(fprimaryNDaughters, NMAXDAUGHTERS); ++di) {
+    for(int di = 0; di < std::min(fprimaryNDaughters, NMAXDAUGHTERS); ++di) {
       fprimaryDaughterID[di] = particle->Daughter(di);
       const recob::PFParticle* daughter = &recoParticleHandle->at(fprimaryDaughterID[di]);
       if(daughter == 0x0) continue;
