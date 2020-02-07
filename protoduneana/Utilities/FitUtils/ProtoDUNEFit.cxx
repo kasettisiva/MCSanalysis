@@ -67,15 +67,15 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
   if(!hfilled) return;
 
   // Get pion flux
-  TH1* pionflux_ereco_histo  =  protoana::ProtoDUNESelectionUtils::FillMCFlux_Pions(_MCFileNames[0], _TruthTreeName, _TruthBinning, 1);
-  TH1* pionflux_etruth_histo =  protoana::ProtoDUNESelectionUtils::FillMCFlux_Pions(_MCFileNames[0], _TruthTreeName, _TruthBinning, 2);
-  TH1* pionflux_eff_histo = (TH1*)pionflux_ereco_histo->Clone();
-  pionflux_eff_histo->Divide(pionflux_etruth_histo);
-  pionflux_eff_histo->SetNameTitle("pionflux_eff_histo","Efficiency for incident particles");
-  TH1* pionrecoflux_ereco_histo  =  protoana::ProtoDUNESelectionUtils::FillMCFlux_Pions(_MCFileNames[0], _TruthTreeName, _RecoBinning, 3);
-  TH1* pionrecoflux_eff_histo = (TH1*)pionrecoflux_ereco_histo->Clone();
-  pionrecoflux_eff_histo->Divide(pionflux_etruth_histo);
-  pionrecoflux_eff_histo->SetNameTitle("pionrecoflux_eff_histo","Efficiency for incident particles");
+  //TH1* pionflux_ereco_histo  =  protoana::ProtoDUNESelectionUtils::FillMCFlux_Pions(_MCFileNames[0], _TruthTreeName, _TruthBinning, 1);
+  //TH1* pionflux_etruth_histo =  protoana::ProtoDUNESelectionUtils::FillMCFlux_Pions(_MCFileNames[0], _TruthTreeName, _TruthBinning, 2);
+  //TH1* pionflux_eff_histo = (TH1*)pionflux_ereco_histo->Clone();
+  //pionflux_eff_histo->Divide(pionflux_etruth_histo);
+  //pionflux_eff_histo->SetNameTitle("pionflux_eff_histo","Efficiency for incident particles");
+  //TH1* pionrecoflux_ereco_histo  =  protoana::ProtoDUNESelectionUtils::FillMCFlux_Pions(_MCFileNames[0], _TruthTreeName, _RecoBinning, 3);
+  //TH1* pionrecoflux_eff_histo = (TH1*)pionrecoflux_ereco_histo->Clone();
+  //pionrecoflux_eff_histo->Divide(pionflux_etruth_histo);
+  //pionrecoflux_eff_histo->SetNameTitle("pionrecoflux_eff_histo","Efficiency for incident particles");
 
   // Create measurement object
   RooStats::HistFactory::Measurement meas("ProtoDUNEFitExample","ProtoDUNE fit example");
@@ -127,17 +127,15 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
     truebinsnameVec.push_back(str);
   }
 
-  for(unsigned int l = 1; l <= _TruthBinning.size(); l++){
+  for(unsigned int l = 1; l < _TruthBinning.size(); l++){
     TString str = Form("Signal %.1f-%.1f", _TruthBinning[l-1], _TruthBinning[l]);
     truebinsnameVec.push_back(str);
   }
 
-  Double_t totalchi2bf = 0.0;
-  std::vector<TCanvas*> bfplots = protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(ws, "beforefit", "Poisson", "ratio", totalchi2bf, truebinsnameVec, _RecoBinning, "Before Fit");
+  std::vector<TCanvas*> bfplots = protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(ws, "beforefit", "Poisson", "ratio", truebinsnameVec, _RecoBinning, "Before Fit");
 
   RooAbsData *asimovdata = ws->data("asimovData");
-  totalchi2bf = 0.0;
-  std::vector<TCanvas*> bfAsimovplots = protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(ws, "asimov", "Poisson", "ratio", totalchi2bf, truebinsnameVec, _RecoBinning, "Asimov Dataset", asimovdata);
+  std::vector<TCanvas*> bfAsimovplots = protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(ws, "asimov", "Poisson", "ratio", truebinsnameVec, _RecoBinning, "Asimov Dataset", asimovdata);
 
   // ----------------------------------------------------------------------------------------------------
   // Check if this is MC toys case
@@ -279,8 +277,7 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
   // Print fit results on the screen
   //fitresult->Print();
 
-  totalchi2bf = 0.0;
-  std::vector<TCanvas*> afplots = protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(ws, "afterfit", "Poisson", "ratio", totalchi2bf, truebinsnameVec, _RecoBinning, "After fit", NULL, fitresult);
+  std::vector<TCanvas*> afplots = protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(ws, "afterfit", "Poisson", "ratio", truebinsnameVec, _RecoBinning, "After fit", NULL, fitresult);
 
   // Save post-fit workspace snapshot
   protoana::ProtoDUNEFitUtils::SaveSnapshot(ws, Form("%s_postfit_snapshot",ws->GetName()));
@@ -299,10 +296,10 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
   TCanvas* nuisancecanvas = protoana::ProtoDUNEFitUtils::PlotNuisanceParameters(mctoys_results1, ws);
 
   TTree *mctoys_results2 = (TTree*)toys_tree->Clone();
-  TCanvas* avresultcanvas = protoana::ProtoDUNEFitUtils::PlotAverageResultsFromToys(mctoys_results2, ws, "Channel0", "SigTopo");
+  TCanvas* avresultcanvas = protoana::ProtoDUNEFitUtils::PlotAverageResultsFromToys(mctoys_results2, ws, "POI", "POI");
 
-  TTree *mctoys_results3 = (TTree*)toys_tree->Clone();
-  TCanvas* avresultcanvas_inc = protoana::ProtoDUNEFitUtils::PlotAverageResultsFromToys(mctoys_results3, ws, "ChannelIncident0", "SigTopo");
+  //TTree *mctoys_results3 = (TTree*)toys_tree->Clone();
+  //TCanvas* avresultcanvas_inc = protoana::ProtoDUNEFitUtils::PlotAverageResultsFromToys(mctoys_results3, ws, "POI", "POI");
   
   // Fit fixing nuisance parameters
   //protoana::ProtoDUNEFitUtils::LoadSnapshot(ws, Form("%s_postfitForPlots_snapshot",ws->GetName()));
@@ -328,8 +325,8 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
     nuisancecanvas->Write();
   if(avresultcanvas)
     avresultcanvas->Write();
-  if(avresultcanvas_inc)
-    avresultcanvas_inc->Write();
+  //if(avresultcanvas_inc)
+  //avresultcanvas_inc->Write();
   
   for(unsigned int i=0; i < bfAsimovplots.size(); i++){
     bfAsimovplots[i]->Write();
@@ -341,11 +338,11 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
     afplots[i]->Write();
   }
 
-  pionflux_etruth_histo->Write();
-  pionflux_ereco_histo->Write();
-  pionflux_eff_histo->Write();
-  pionrecoflux_ereco_histo->Write();
-  pionrecoflux_eff_histo->Write();
+  //pionflux_etruth_histo->Write();
+  //pionflux_ereco_histo->Write();
+  //pionflux_eff_histo->Write();
+  //pionrecoflux_ereco_histo->Write();
+  //pionrecoflux_eff_histo->Write();
   
   TDirectory *HistoDir = f->mkdir("OriginalHistograms");
   HistoDir->cd();
@@ -413,7 +410,7 @@ void protoana::ProtoDUNEFit::AddSamplesAndChannelsToMeasurement(RooStats::HistFa
 
   const int nmcchannels = _MCFileNames.size();
   for(int i=0; i < nmcchannels; i++){
-    TString channelname = Form("Channel%i", i);
+    TString channelname = Form("Channel%s", _ChannelNames[i].c_str());
     RooStats::HistFactory::Channel channel(channelname.Data());
     // Add data to channel
     RooStats::HistFactory::Data data;
@@ -518,6 +515,8 @@ void protoana::ProtoDUNEFit::AddSamplesAndChannelsToMeasurement(RooStats::HistFa
 	poiname.ReplaceAll("_Histo","");
 	poiname.ReplaceAll(".0","");
 	poiname.ReplaceAll("-","_");
+	poiname.ReplaceAll(channelname.Data(),"");
+	poiname.ReplaceAll("__","_");
 	meas.SetPOI(poiname.Data()); // AddPOI would also work
 	sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 100.0);
 	mf::LogInfo("AddSamplesAndChannelsToMeasurement") << "Sample " << sample.GetName() << " has normalisation parameter " << poiname.Data();
@@ -541,129 +540,121 @@ void protoana::ProtoDUNEFit::AddSamplesAndChannelsToMeasurement(RooStats::HistFa
 void protoana::ProtoDUNEFit::AddIncidentSamplesAndChannelsToMeasurement(RooStats::HistFactory::Measurement& meas){
   //********************************************************************
 
-  const int nmcchannels = _MCFileNames.size();
-  for(int i=0; i < nmcchannels; i++){
-    TString channelname = Form("ChannelIncident%i", i);
-    RooStats::HistFactory::Channel channel(channelname.Data());
-    // Add data to channel
-    RooStats::HistFactory::Data data;
-    for(unsigned int j=0; j < _incdatahistos.size(); j++){
-      // Clone histogram
-      TH1D* htemp = (TH1D*)(_incdatahistos.at(j)->Clone());
+  TString channelname("ChannelIncident");
+  RooStats::HistFactory::Channel channel(channelname.Data());
+  // Add data to channel
+  RooStats::HistFactory::Data data;
+  for(unsigned int j=0; j < _incdatahistos.size(); j++){
+    // Clone histogram
+    TH1D* htemp = (TH1D*)(_incdatahistos.at(j)->Clone());
 
-      TString hname(htemp->GetName());
-      if(hname.Contains(channelname.Data()) && hname.Contains("Data")){
-	mf::LogInfo("AddIncidentSamplesAndChannelsToMeasurement") << "Adding Incident dataset " << hname.Data() << " to channel " << channelname.Data() << " with " << htemp->Integral() << " events";
-	data.SetHisto(htemp);
-	channel.SetData(data);
-      }
-    }
-    
-    // Get histograms with the systematics 
-    std::vector<TH1*> systvec;
-    if(_EnableSystematicError)
-      systvec = protoana::ProtoDUNEFitUtils::GetSystHistograms(_SystFileNames[i]); 
-    
-    // Add bkg samples to channel
-    for(unsigned int j=0; j < _incbkghistos.size(); j++){
-      // Clone histogram
-      TH1D* htemp = (TH1D*)(_incbkghistos.at(j)->Clone());
-
-      TString hname(htemp->GetName());
-      //if(htemp->GetEntries() == 0 || htemp->Integral() == 0) continue;
-      if(hname.Contains(channelname.Data()) && hname.Contains("MC")){
-	mf::LogInfo("AddIncidentSamplesAndChannelsToMeasurement") << "Adding Incident MC sample " << hname.Data() << " to channel " << channelname.Data() << " with " << htemp->Integral() << " events";
-	TString samplename = hname + TString("_sample");
-	RooStats::HistFactory::Sample sample(samplename.Data());
-	sample.SetNormalizeByTheory(true);
-	
-	// Check to enable statistical uncertainty
-	if(_EnableStatisticalError){
-	  //mf::LogInfo("AddIncidentSamplesAndChannelsToMeasurement") << "Enable statistical uncertainty";
-	  sample.ActivateStatError();
-	  TH1* staterrorhisto = protoana::ProtoDUNEFitUtils::GetStatsSystHistogram(htemp);
-	  RooStats::HistFactory::StatError& staterror = sample.GetStatError();
-	  staterror.SetUseHisto();
-	  staterror.SetErrorHist(staterrorhisto);
-	}
-
-	if(_EnableSystematicError){
-	  ApplySystematicToSample(sample, htemp, systvec, false, false);
-	}
-
-	// Set histogram for sample
-	sample.SetHisto(htemp);
-	
-	if(htemp->Integral() > 0){
-	  //TString poiname = hname;
-	  //poiname.ReplaceAll("MC","POI");
-	  //poiname.ReplaceAll("_Histo","");
-	  //poiname.ReplaceAll(".","");
-	  //poiname.ReplaceAll("-","_");
-	  //poiname.ReplaceAll(channelname.Data(),"");
-	  //poiname.ReplaceAll("__","_");
-	  //meas.SetPOI(poiname.Data());
-	  //sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 2.0);
-	  //mf::LogInfo("BuildMeasurement") << "Sample " << sample.GetName() << " has normalisation parameter " << poiname.Data();
-	}
-
-	// Add sample to channel
-	channel.AddSample(sample);
-      }
-    }
-
-    // Add signal samples to channel
-    for(unsigned int j=0; j < _incsighistos.size(); j++){
-      // Clone histogram
-      TH1D* htemp = (TH1D*)(_incsighistos.at(j)->Clone());
-
-      TString hname(htemp->GetName());
-      //if(htemp->GetEntries() == 0 || htemp->Integral() == 0) continue;
-      if(hname.Contains(channelname.Data()) && hname.Contains("MC")){
-	mf::LogInfo("AddSamplesAndChannelsToMeasurement") << "Adding Incident MC sample" << hname.Data() << " to channel " << channelname.Data() << " with " << htemp->Integral() << " events";
-	TString samplename = hname + TString("_sample");
-	RooStats::HistFactory::Sample sample(samplename.Data());
-	sample.SetNormalizeByTheory(true);
-	
-	// Check to enable statistical uncertainty
-	if(_EnableStatisticalError){
-	  //mf::LogInfo("AddIncidentSamplesAndChannelsToMeasurement") << "Enable statistical uncertainty";
-	  sample.ActivateStatError();
-	  TH1* staterrorhisto = protoana::ProtoDUNEFitUtils::GetStatsSystHistogram(htemp);
-	  RooStats::HistFactory::StatError& staterror = sample.GetStatError();
-	  staterror.SetUseHisto();
-	  staterror.SetErrorHist(staterrorhisto);
-	}
-
-	if(_EnableSystematicError){
-	  ApplySystematicToSample(sample, htemp, systvec, true, _NormalisedSystematic);
-	}
-
-	// Set histogram for sample
-	sample.SetHisto(htemp);
-
-	// Add POI to this sample
-	TString poiname = hname;
-	poiname.ReplaceAll("MC","POI");
-	poiname.ReplaceAll("_Histo","");
-	poiname.ReplaceAll(".0","");
-	poiname.ReplaceAll("-","_");
-	meas.SetPOI(poiname.Data()); // AddPOI would also work
-	sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 100.0);
-	mf::LogInfo("AddIncidentSamplesAndChannelsToMeasurement") << "Sample " << sample.GetName() << " has normalisation parameter " << poiname.Data();
-
-	// Add sample to channel
-	channel.AddSample(sample);
-      }
-    }
-
-    // Statistical uncertainty less than 1% is ignored
-    channel.SetStatErrorConfig(_IgnoreStatisticalErrorBelow,"Poisson"); // Poisson or Gaussian
-
-    // Add channel to measurement
-    mf::LogInfo("AddIncidentSamplesAndChannelsToMeasurement") <<  "Adding channel " << channel.GetName() << " to measurement " << meas.GetName();
-    meas.AddChannel(channel);
+    mf::LogInfo("AddIncidentSamplesAndChannelsToMeasurement") << "Adding Incident dataset " << htemp->GetName() << " to channel " << channelname.Data() << " with " << htemp->Integral() << " events";
+    data.SetHisto(htemp);
+    channel.SetData(data);
   }
+    
+  // Get histograms with the systematics 
+  //std::vector<TH1*> systvec;
+  //if(_EnableSystematicError)
+  //systvec = protoana::ProtoDUNEFitUtils::GetSystHistograms(_SystFileNames[i]); 
+    
+  // Add bkg samples to channel
+  for(unsigned int j=0; j < _incbkghistos.size(); j++){
+    // Clone histogram
+    TH1D* htemp = (TH1D*)(_incbkghistos.at(j)->Clone());
+    
+    TString hname(htemp->GetName());
+    //if(htemp->GetEntries() == 0 || htemp->Integral() == 0) continue;
+   
+    mf::LogInfo("AddIncidentSamplesAndChannelsToMeasurement") << "Adding Incident MC sample " << hname.Data() << " to channel " << channelname.Data() << " with " << htemp->Integral() << " events";
+    TString samplename = hname + TString("_sample");
+    RooStats::HistFactory::Sample sample(samplename.Data());
+    sample.SetNormalizeByTheory(true);
+    
+    // Check to enable statistical uncertainty
+    if(_EnableStatisticalError){
+      //mf::LogInfo("AddIncidentSamplesAndChannelsToMeasurement") << "Enable statistical uncertainty";
+      sample.ActivateStatError();
+      TH1* staterrorhisto = protoana::ProtoDUNEFitUtils::GetStatsSystHistogram(htemp);
+      RooStats::HistFactory::StatError& staterror = sample.GetStatError();
+      staterror.SetUseHisto();
+      staterror.SetErrorHist(staterrorhisto);
+    }
+    
+    //if(_EnableSystematicError){
+    //ApplySystematicToSample(sample, htemp, systvec, false, false);
+    //}
+
+    // Set histogram for sample
+    sample.SetHisto(htemp);
+    
+    if(htemp->Integral() > 0){
+      //TString poiname = hname;
+      //poiname.ReplaceAll("MC","POI");
+      //poiname.ReplaceAll("_Histo","");
+      //poiname.ReplaceAll(".","");
+      //poiname.ReplaceAll("-","_");
+      //poiname.ReplaceAll(channelname.Data(),"");
+      //poiname.ReplaceAll("__","_");
+      //meas.SetPOI(poiname.Data());
+      //sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 2.0);
+      //mf::LogInfo("BuildMeasurement") << "Sample " << sample.GetName() << " has normalisation parameter " << poiname.Data();
+    }
+    
+    // Add sample to channel
+    channel.AddSample(sample);
+  }
+
+  // Add signal samples to channel
+  for(unsigned int j=0; j < _incsighistos.size(); j++){
+    // Clone histogram
+    TH1D* htemp = (TH1D*)(_incsighistos.at(j)->Clone());
+    
+    TString hname(htemp->GetName());
+    //if(htemp->GetEntries() == 0 || htemp->Integral() == 0) continue;
+
+    mf::LogInfo("AddSamplesAndChannelsToMeasurement") << "Adding Incident MC sample" << hname.Data() << " to channel " << channelname.Data() << " with " << htemp->Integral() << " events";
+    TString samplename = hname + TString("_sample");
+    RooStats::HistFactory::Sample sample(samplename.Data());
+    sample.SetNormalizeByTheory(true);
+    
+    // Check to enable statistical uncertainty
+    if(_EnableStatisticalError){
+      //mf::LogInfo("AddIncidentSamplesAndChannelsToMeasurement") << "Enable statistical uncertainty";
+      sample.ActivateStatError();
+      TH1* staterrorhisto = protoana::ProtoDUNEFitUtils::GetStatsSystHistogram(htemp);
+      RooStats::HistFactory::StatError& staterror = sample.GetStatError();
+      staterror.SetUseHisto();
+      staterror.SetErrorHist(staterrorhisto);
+    }
+    
+    //if(_EnableSystematicError){
+    //ApplySystematicToSample(sample, htemp, systvec, true, _NormalisedSystematic);
+    //}
+    
+    // Set histogram for sample
+    sample.SetHisto(htemp);
+    
+    // Add POI to this sample
+    TString poiname = hname;
+    poiname.ReplaceAll("MC","POI");
+    poiname.ReplaceAll("_Histo","");
+    poiname.ReplaceAll(".0","");
+    poiname.ReplaceAll("-","_");
+    meas.SetPOI(poiname.Data()); // AddPOI would also work
+    sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 100.0);
+    mf::LogInfo("AddIncidentSamplesAndChannelsToMeasurement") << "Sample " << sample.GetName() << " has normalisation parameter " << poiname.Data();
+    
+    // Add sample to channel
+    channel.AddSample(sample);
+  }
+
+  // Statistical uncertainty less than 1% is ignored
+  channel.SetStatErrorConfig(_IgnoreStatisticalErrorBelow,"Poisson"); // Poisson or Gaussian
+  
+  // Add channel to measurement
+  mf::LogInfo("AddIncidentSamplesAndChannelsToMeasurement") <<  "Adding channel " << channel.GetName() << " to measurement " << meas.GetName();
+  meas.AddChannel(channel);
 
 }
 
@@ -753,65 +744,122 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
 
   const int nmcchannels   = _MCFileNames.size();
   const int ndatachannels = _DataFileNames.size();
+  const int nchannelnames = _ChannelNames.size();
+  const int ninctoponames = _IncidentTopologyName.size();
 
   const int nbkgtopo      = _BackgroundTopology.size();
+  const int nbkgtoponames = _BackgroundTopologyName.size();
   const int nsigtopo      = _SignalTopology.size();
+  const int nsigtoponames = _SignalTopologyName.size();
+  const int ninctopo      = _IncidentTopology.size();
 
   if(nmcchannels != ndatachannels){
     mf::LogError("FillHistogramVectors_Pions") << "The number of data and MC channels is not the same. Check MCFileNames and DataFileNames in the fcl file. Time to die!";
     return false;
   }
 
+  if(nmcchannels != nchannelnames || ndatachannels != nchannelnames){
+    mf::LogError("FillHistogramVectors_Pions") << "The channel names do not correspond to the input files. Check MCFileNames, DataFileNames and ChannelNames in the fcl file. Time to die!";
+    return false;
+  }
+
+  if(nbkgtopo != nbkgtoponames){
+    mf::LogError("FillHistogramVectors_Pions") << "Background topologies and background names do not have the same length. Check BackgroundTopology and BackgroundTopologyName in the fcl file. Time to die!";
+    return false;
+  }
+
+  if(nsigtopo != nsigtoponames){
+    mf::LogError("FillHistogramVectors_Pions") << "Signal topologies and background name vectors do not have the same size. Check SignalTopology and SignalTopologyName in the fcl file. Time to die!";
+    return false;
+  }
+
+  if(ninctopo != ninctoponames){
+    mf::LogError("FillHistogramVectors_Pions") << "Incident topologies and name vectors do not have the same size. Check  IncidentTopology and IncidentTopologyName in the fcl file. Time to die!";
+    return false;
+  }
+
   // Get total number of data and MC triggers
-  int nmctriggers = protoana::ProtoDUNESelectionUtils::GetNTriggers_Pions(_MCFileNames[0], _RecoTreeName);
-  int ndatatriggers = protoana::ProtoDUNESelectionUtils::GetNTriggers_Pions(_DataFileNames[0], _RecoTreeName, false);
-  double mcnorm = (double)ndatatriggers/nmctriggers;
-  mf::LogInfo("FillHistogramVectors_Pions") << "Total number of MC triggers = " << nmctriggers << ", total number of data triggers = " << ndatatriggers << " , data/MC = " << mcnorm;
+  //int nmctriggers = protoana::ProtoDUNESelectionUtils::GetNTriggers_Pions(_MCFileNames[0], _RecoTreeName);
+  //int ndatatriggers = protoana::ProtoDUNESelectionUtils::GetNTriggers_Pions(_DataFileNames[0], _RecoTreeName, false);
+  //double mcnorm = (double)ndatatriggers/nmctriggers;
+  //mf::LogInfo("FillHistogramVectors_Pions") << "Total number of MC triggers = " << nmctriggers << ", total number of data triggers = " << ndatatriggers << " , data/MC = " << mcnorm;
 
   for(int i=0; i < nmcchannels; i++){
     for(int j=0; j < nbkgtopo; j++){
       int topo = _BackgroundTopology[j];
-      _bkghistos.push_back( protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(_MCFileNames[0], _RecoTreeName, _RecoBinning, i, topo) );
-      _incbkghistos.push_back( protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(_MCFileNames[0], _RecoTreeName, _RecoBinning, i, topo, true) );
+      _bkghistos.push_back( protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(_MCFileNames[i], _RecoTreeName, _RecoBinning, _ChannelNames[i], _BackgroundTopologyName[j], topo) );
+      //_incbkghistos.push_back( protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(_MCFileNames[0], _RecoTreeName, _RecoBinning, i, topo, true) );
     }
 
-    TH1D* sigevenshisto = new TH1D(Form("sigevenshisto_channel%i",i),Form("sigevenshisto_channel%i",i),_TruthBinning.size()-1,0,_TruthBinning.size()-1);
-    TH1D* truevenshisto = new TH1D(Form("truevenshisto_channel%i",i),Form("truevenshisto_channel%i",i),_TruthBinning.size()-1,0,_TruthBinning.size()-1);
+    //TH1D* sigevenshisto = new TH1D(Form("sigevenshisto_channel%i",i),Form("sigevenshisto_channel%i",i),_TruthBinning.size()-1,0,_TruthBinning.size()-1);
+    //TH1D* truevenshisto = new TH1D(Form("truevenshisto_channel%i",i),Form("truevenshisto_channel%i",i),_TruthBinning.size()-1,0,_TruthBinning.size()-1);
 
     for(int j=0; j < nsigtopo; j++){
       int topo = _SignalTopology[j];
       for(unsigned int k=1; k < _TruthBinning.size(); k++){
-	_sighistos.push_back( protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(_MCFileNames[0], _RecoTreeName, _RecoBinning, i, topo, _TruthBinning[k-1], _TruthBinning[k]) );
-	sigevenshisto->SetBinContent(k, (_sighistos.back())->Integral() + sigevenshisto->GetBinContent(k));
+	_sighistos.push_back( protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(_MCFileNames[i], _RecoTreeName, _RecoBinning, _ChannelNames[i], _SignalTopologyName[j], topo, _TruthBinning[k-1], _TruthBinning[k]) );
+	//sigevenshisto->SetBinContent(k, (_sighistos.back())->Integral() + sigevenshisto->GetBinContent(k));
       }
        //_incsighistos.push_back( protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(_MCFileNames[0], _RecoTreeName, _RecoBinning, i, topo, 0, 0, true) );
-      TH1* inchistoall = protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(_MCFileNames[0], _RecoTreeName, _RecoBinning, i, topo, 0, 0, true);
-      for(Int_t k=1; k <= inchistoall->GetNbinsX(); k++){
-	TH1 *newhist = (TH1*)inchistoall->Clone();
-	newhist->SetNameTitle(Form("%s_RecoBin%i",inchistoall->GetName(),k), Form("%s in Reco Bin %i",inchistoall->GetName(),k));
-	for(Int_t kk=1; kk <= newhist->GetNbinsX(); kk++){
-	  if(kk != k){
-	    newhist->SetBinContent(kk,0);
-	    newhist->SetBinError(kk,0);
-	  }
-	}
-	_incsighistos.push_back(newhist);
-      }
+      //TH1* inchistoall = protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(_MCFileNames[0], _RecoTreeName, _RecoBinning, i, topo, 0, 0, true);
+      //for(Int_t k=1; k <= inchistoall->GetNbinsX(); k++){
+      //TH1 *newhist = (TH1*)inchistoall->Clone();
+      //newhist->SetNameTitle(Form("%s_RecoBin%i",inchistoall->GetName(),k), Form("%s in Reco Bin %i",inchistoall->GetName(),k));
+      //for(Int_t kk=1; kk <= newhist->GetNbinsX(); kk++){
+      //  if(kk != k){
+      //    newhist->SetBinContent(kk,0);
+      //    newhist->SetBinError(kk,0);
+      //  }
+      //}
+      //_incsighistos.push_back(newhist);
+      //}
     }
 
-    _truthsighistos.push_back( protoana::ProtoDUNESelectionUtils::FillMCTruthSignalHistogram_Pions( _MCFileNames[0], _TruthTreeName, _TruthBinning, i) );
-    truevenshisto->Add(_truthsighistos.back());
+    //_truthsighistos.push_back( protoana::ProtoDUNESelectionUtils::FillMCTruthSignalHistogram_Pions( _MCFileNames[0], _TruthTreeName, _TruthBinning, i) );
+    //truevenshisto->Add(_truthsighistos.back());
 
-   TGraphAsymmErrors* effgraph = new TGraphAsymmErrors(sigevenshisto,truevenshisto);
-   effgraph->SetNameTitle(Form("Efficiency_channel%i",i), Form("Efficiency for channel %i",i));
-   _efficiencyGraphs.push_back(effgraph); 
+    //TGraphAsymmErrors* effgraph = new TGraphAsymmErrors(sigevenshisto,truevenshisto);
+    //effgraph->SetNameTitle(Form("Efficiency_channel%i",i), Form("Efficiency for channel %i",i));
+    //_efficiencyGraphs.push_back(effgraph); 
 			       
   }
 
   for(int i=0; i < ndatachannels; i++){
-    _datahistos.push_back( protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(_DataFileNames[0], _RecoTreeName, _RecoBinning, i) );
-    _incdatahistos.push_back( protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(_DataFileNames[0], _RecoTreeName, _RecoBinning, i, true) );
+    _datahistos.push_back( protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(_DataFileNames[i], _RecoTreeName, _RecoBinning, _ChannelNames[i]) );
+    //_incdatahistos.push_back( protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(_DataFileNames[0], _RecoTreeName, _RecoBinning, i, true) );
   }
+
+  for(int i=0; i < ninctopo; i++){
+    TH1* inchisto = protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(_MCFileNames[0], _RecoTreeName, _RecoBinning, _ChannelNames[0], _IncidentTopologyName[i], _IncidentTopology[i]);
+    for(int j=1; j < nmcchannels; j++){
+      inchisto->Add(protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(_MCFileNames[j], _RecoTreeName, _RecoBinning, _ChannelNames[j], _IncidentTopologyName[i], _IncidentTopology[i]));
+    }
+
+    inchisto->SetNameTitle(Form("MC_ChannelIncident_%s_Histo",_IncidentTopologyName[i].c_str()), Form("Incident MC for topology %s", _IncidentTopologyName[i].c_str()));
+    if(i == 0){
+      // Split into multiple histograms
+      for(int j=1; j <= inchisto->GetNbinsX(); j++){
+	TString hname = Form("%s_Bin%i",inchisto->GetName(),j);
+	TH1* inchisto_h = (TH1*)inchisto->Clone();
+	inchisto_h->Reset();
+	inchisto_h->SetName(hname.Data());
+	for(int k=1; k <= inchisto->GetNbinsX(); k++){
+	  if(k == j) inchisto_h->SetBinContent(k, inchisto->GetBinContent(k));
+	  else inchisto_h->SetBinContent(k, 0.0);
+	}
+	_incsighistos.push_back(inchisto_h);
+      }   
+    }
+    else{
+      _incbkghistos.push_back(inchisto);
+    }
+  }
+
+  TH1* incdatahisto = protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(_DataFileNames[0], _RecoTreeName, _RecoBinning, _ChannelNames[0], true);
+  for(int i=1; i < ndatachannels; i++){
+    incdatahisto->Add(protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(_DataFileNames[i], _RecoTreeName, _RecoBinning, _ChannelNames[i], true));
+  }
+  _incdatahistos.push_back(incdatahisto);
 
   return true;
 
@@ -960,10 +1008,14 @@ bool protoana::ProtoDUNEFit::Configure(std::string configPath){
   _MCFileNames                 = pset.get< std::vector<std::string> >("MCFileNames");
   _MCControlSampleFiles        = pset.get< std::vector<std::string> >("MCControlSampleFiles");
   _DataControlSampleFiles      = pset.get< std::vector<std::string> >("DataControlSampleFiles");
+  _IncidentMCFileNames         = pset.get< std::vector<std::string> >("IncidentMCFileNames");
   _SystFileNames               = pset.get< std::vector<std::string> >("SystFileNames");
   _SystToConsider              = pset.get< std::vector<std::string> >("SystToConsider");
   _SystType                    = pset.get< std::vector<std::string> >("SystType");
   _BackgroundTopologyName      = pset.get< std::vector<std::string> >("BackgroundTopologyName");
+  _SignalTopologyName          = pset.get< std::vector<std::string> >("SignalTopologyName");
+  _IncidentTopologyName        = pset.get< std::vector<std::string> >("IncidentTopologyName");
+  _ChannelNames                = pset.get< std::vector<std::string> >("ChannelNames");
   
   _FitStrategy                 = pset.get<int>("FitStrategy");
   _NToys                       = pset.get<int>("NToys");
@@ -982,6 +1034,7 @@ bool protoana::ProtoDUNEFit::Configure(std::string configPath){
 
   _SignalTopology              = pset.get< std::vector<int> >("SignalTopology");
   _BackgroundTopology          = pset.get< std::vector<int> >("BackgroundTopology");
+  _IncidentTopology            = pset.get< std::vector<int> >("IncidentTopology");
 
   return true;
 

@@ -1,14 +1,20 @@
-# Path to MC files. Each entry corresponds to a different channel and has to much exactly with the DataFileNames.
-MCFileNames:             ["pionana_mc_1GeV_1_7_20.root"]
+# Path to MC files. Each entry corresponds to a different channel and has to match with the DataFileNames.
+MCFileNames:             ["eventSelection_mc_ABS.root","eventSelection_mc_CEX.root"]
 
-# Path to data file. Each entry corresponds to a different channel and has to much exactly with the MCFileNames.
-DataFileNames:           ["pionana_mc_1GeV_1_7_20.root"]
+# Path to data file. Each entry corresponds to a different channel and has to match with the MCFileNames.
+DataFileNames:           ["eventSelection_mc_ABS.root","eventSelection_mc_CEX.root"]
+
+# Channel names. Follow the order of the MC/Data File Names
+ChannelNames:           ["ABS","CEX"]
 
 # Path to MC control samples.
 MCControlSampleFiles:    []
 
 # Path to Data control samples.
 DataControlSampleFiles:  []
+
+# Path to file to get the number of incident pions
+IncidentMCFileNames:     ["pionana_mc_1GeV_eventSelection.root"]
 
 # Number of toys to generate for MC studies. Any number above 0 will enable toy mc and won't fit the data.
 NToys:                   0	
@@ -17,18 +23,23 @@ NToys:                   0
 RecoTreeName:            "pionana/beamana"
 
 # Signal topologies. Change as appropriate.
-SignalTopology:          [1]
+SignalTopology:          [1,2]
+SignalTopologyName:      ["ABS","CEX"]
 
 # Background topologies. Change as appropriate.
-BackgroundTopology:      [2,3,4,5,6]
-BackgroundTopologyName:  ["Cosmics","Sec. protons","Muons","Other pion bkg","Other bkg"]
+BackgroundTopology:      [3,4,5,6]
+BackgroundTopologyName:  ["Pion Inel. Bkg","Protons","Muons","Other Bkg"]
+
+# Incident particle topologies. First is assumed to be signal
+IncidentTopology:        [3,4,5,6]
+IncidentTopologyName:    ["Pions","Protons","Muons","Other"]
 
 # Name of the tree with the truth signal events.
 TruthTreeName:           "pionana/beamana"
 
 # Define binning in truth/reco. It doesn't have to be symmetric.
-TruthBinning:            [0.0,200.0,400.0,500.0,600.0,700.0,800.0,900.0,1500.0]
-RecoBinning:             [0.0,200.0,400.0,500.0,600.0,700.0,800.0,900.0,2000.0]
+TruthBinning:            [0.0,400.0,600.0,700.0,800.0,1500.0]
+RecoBinning:             [0.0,400.0,600.0,700.0,800.0,1500.0]
 
 # Fit set up.
 DoAsimovFit:             false       # Will do asimov fit only
