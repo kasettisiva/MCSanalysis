@@ -513,7 +513,8 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorksp
     }
 
     Int_t counter = 0;
-    Int_t sigcolor[9] = {2,3,4,5,6,7,8,9,1};
+    Int_t sigcolor[13] = {2,3,4,5,6,7,8,9,1, kMagenta, kGreen+2, kTeal, kOrange+10};
+    //Int_t sigcolor[9] = {1,1,1,1,1,1,1,1,1};
     for(int i = (compFracVec.size()-1); i > -1; i--){
     //for(unsigned int i = 0; i < compFracVec.size(); i++){
       Int_t compPlotColor = i;
@@ -524,6 +525,8 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorksp
 	compPlotColor = sigcolor[counter];
 	counter++;
       }
+      std::cout << "Drawing " << compNameVec[i] << " " << counter << " " << compPlotColor << std::endl;
+
       
       subpdf->plotOn(frame,RooFit::Components(compStackNameVec[i].Data()),RooFit::FillColor(compPlotColor),RooFit::FillStyle(3001),RooFit::DrawOption("F"),RooFit::Normalization(compStackFracVec[i]*normCount,RooAbsReal::NumEvent),RooFit::Precision(1e-5));
     }

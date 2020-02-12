@@ -27,7 +27,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(std::str
   std::string *reco_beam_true_byHits_endProcess = 0;
   std::vector<double> *reco_beam_incidentEnergies = 0;
 
-  Int_t true_chexSignal, true_absSignal, true_backGround;
+  Int_t true_chexSignal, true_absSignal, true_backGround, true_nPi0Signal;
 
   defaultTree->SetBranchAddress("reco_beam_type",                   &reco_beam_type);
   defaultTree->SetBranchAddress("reco_beam_len",                    &reco_beam_len);
@@ -54,8 +54,18 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(std::str
   defaultTree->SetBranchAddress("true_beam_endProcess",             &true_beam_endProcess);
 
   defaultTree->SetBranchAddress("true_chexSignal",                  &true_chexSignal);
+  defaultTree->SetBranchAddress("true_nPi0Signal",                  &true_nPi0Signal);
   defaultTree->SetBranchAddress("true_absSignal",                   &true_absSignal);
   defaultTree->SetBranchAddress("true_backGround",                  &true_backGround);
+
+  //New: backgrounds within the tree
+  bool primaryMuon, isCosmic, isExtraBeam, upstreamInt, isDecay;
+  defaultTree->SetBranchAddress("primaryMuon",                  &primaryMuon);
+  defaultTree->SetBranchAddress("isCosmic",                     &isCosmic);
+  defaultTree->SetBranchAddress("isExtraBeam",                  &isExtraBeam);
+  defaultTree->SetBranchAddress("upstreamInt",                  &upstreamInt);
+  defaultTree->SetBranchAddress("isDecay",                      &isDecay);
+
 
   channel.erase(std::remove(channel.begin(), channel.end(), '.'), channel.end());
   channel.erase(std::remove(channel.begin(), channel.end(), ' '), channel.end());
@@ -75,7 +85,43 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(std::str
     Int_t topology = -1;
     std::string reco_beam_true_byHits_endProcess_str = *reco_beam_true_byHits_endProcess;
 
+
+    // New From Jake
+    if( upstreamInt )
+      topology = 4;
+    else if( primaryMuon )
+      topology = 5;
+    else if( isDecay )
+      topology = 6;
+    else if( isExtraBeam )
+      //topology = 7;
+      topology = 7;
+    else if( isCosmic )
+      //topology = 7;
+      topology = 7;
+    else{
+      if( reco_beam_true_byHits_matched ){
+        if(  true_backGround  )
+          topology = 3;
+        //Else: this is signal
+        //should be caught by topology != toponum check
+      }
+      else
+        topology = 7;
+    }
+       
+
+    /////////////////////
+
+
+    /*
     // If the true energy is negative, then move event to bkgs
+    // Jake: This only happens for positrons. I'm not sure why.
+    //       Need to investigate.
+    //       Or can we just ignore positrons here?
+    //
+    //       If we use the pre-selected files. They're already 
+    //       filtered out
     if(true_beam_interactingEnergy < 0 && (true_chexSignal == 1 || true_absSignal == 1)) true_backGround = 1;
 
     // If there is no classification then move event to bkgs
@@ -97,6 +143,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(std::str
     else if(abs(reco_beam_true_byHits_PDG) == 2212) topology = 4; // protons
     else if(abs(reco_beam_true_byHits_PDG) == 13) topology = 5; // muons
     else topology = 6; // other backgrounds
+    */
 
     // Select only the correct topology
     if(topology != toponum) continue;
@@ -136,7 +183,9 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(std::string 
   std::string *true_beam_endProcess = 0;
   std::string *reco_beam_true_byHits_endProcess = 0;
   std::vector<double> *reco_beam_incidentEnergies = 0;
-  Int_t true_chexSignal, true_absSignal, true_backGround;
+  Int_t true_chexSignal, true_absSignal, true_backGround, true_nPi0Signal;
+
+  int event, run;
 
   defaultTree->SetBranchAddress("reco_beam_type",                   &reco_beam_type);
   defaultTree->SetBranchAddress("reco_beam_len",                    &reco_beam_len);
@@ -163,8 +212,20 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(std::string 
   defaultTree->SetBranchAddress("true_beam_endProcess",             &true_beam_endProcess);
 
   defaultTree->SetBranchAddress("true_chexSignal",                  &true_chexSignal);
+  defaultTree->SetBranchAddress("true_nPi0Signal",                  &true_nPi0Signal);
   defaultTree->SetBranchAddress("true_absSignal",                   &true_absSignal);
   defaultTree->SetBranchAddress("true_backGround",                  &true_backGround);
+
+  defaultTree->SetBranchAddress("event", &event);
+  defaultTree->SetBranchAddress("run", &run);
+
+  bool primaryMuon, isCosmic, isExtraBeam, upstreamInt, isDecay;
+  defaultTree->SetBranchAddress("primaryMuon",                  &primaryMuon);
+  defaultTree->SetBranchAddress("isCosmic",                     &isCosmic);
+  defaultTree->SetBranchAddress("isExtraBeam",                  &isExtraBeam);
+  defaultTree->SetBranchAddress("upstreamInt",                  &upstreamInt);
+  defaultTree->SetBranchAddress("isDecay",                      &isDecay);
+
 
   channel.erase(std::remove(channel.begin(), channel.end(), '.'), channel.end());
   channel.erase(std::remove(channel.begin(), channel.end(), ' '), channel.end());
@@ -180,15 +241,44 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(std::string 
   for(Int_t k=0; k < defaultTree->GetEntries(); k++){
     defaultTree->GetEntry(k);
 
+    /*
+     *  Jake: Should we define the true signal for Charge Exchange
+     *        as any number of pi0? If so, then we'll have to slightly
+     *        change the definition here, and we'll have to make Cex
+     *        (topology 2) include true_nPi0Signal
+     *
+     *
+     *
+     *  NEED TO EDIT IN THE NEW DEFINITIONS FOR SIGNAL/BACKGROUND
+     */
+
+
     Int_t topology = -1;
+
+    if( !( upstreamInt || primaryMuon || isDecay || isExtraBeam || isCosmic ) && reco_beam_true_byHits_matched && !true_backGround ){
+      if( true_absSignal )
+        topology = 1;
+      else if( true_chexSignal || true_nPi0Signal )
+        topology = 2;
+      else{
+        std::cout << "WARNING!!! OTHER CASE CAUGHT. NEED TO INVESTIGATE" << std::endl;
+        std::cout << "Event: " << event << " Run: " << run << std::endl;
+      }
+    }
+
+    /*
     if(true_absSignal == 1) topology = 1;
-    else if(true_chexSignal == 1) topology = 2;
+    //else if(true_chexSignal == 1) topology = 2;
+    //New: including nPi0
+    else if( (true_chexSignal == 1) || (true_nPi0Signal == 1) ) topology = 2;
+    */
 
     // Remove events with the wrong topology
     if(topology != toponum) continue;
 
     // Classified as ABS and CEX signal => Bkg
-    if(true_chexSignal == 1 && true_absSignal == 1) continue;
+    // This never happens
+    //if(true_chexSignal == 1 && true_absSignal == 1) continue;
 
     // Sometimes the reco energy at vertex is mis-reconstructed
     if(reco_beam_interactingEnergy < 0.0) continue;
@@ -529,6 +619,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCFlux_Pions(std::string filename, s
       if(reco_beam_interactingEnergy < 0.0) continue;
 
       // For inelastic scattering at least one daughter is expected
+      // Jake: This is deprecated in later versions
       Int_t allDaughters = reco_beam_nTrackDaughters + reco_beam_nShowerDaughters;
       if(allDaughters <= 0) continue;
 
