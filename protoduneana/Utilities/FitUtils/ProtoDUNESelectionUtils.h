@@ -11,15 +11,18 @@ namespace protoana{
   namespace ProtoDUNESelectionUtils{
 
     // Fill signal and background histograms. The event selection is done at this stage.
-    TH1* FillMCBackgroundHistogram_Pions(std::string filename, std::string treename, std::vector<double> recoBins, int channel, int topo, bool IsIncidentHisto=false, double weight=1.0);
+    TH1* FillMCBackgroundHistogram_Pions(std::string filename, std::string treename, std::vector<double> recoBins, std::string channel, std::string topo, int toponum, double weight=1.0);
 
-    TH1* FillMCSignalHistogram_Pions(std::string filename, std::string treename, std::vector<double> recoBins, int channel, int topo, double minval, double maxval, bool IsIncidentHisto=false, double weight=1.0);
+    TH1* FillMCSignalHistogram_Pions(std::string filename, std::string treename, std::vector<double> recoBins, std::string channel, std::string topo, int toponum, double minval, double maxval, double weight=1.0);
+
+    // Fill incident pions
+    TH1* FillMCIncidentHistogram_Pions(std::string filename, std::string treename, std::vector<double> recoBins, std::string channel, std::string topo, int toponum, double weight=1.0);
 
     // Fill the number of truth beam pions
-    TH1* FillMCTruthSignalHistogram_Pions(std::string filename, std::string treename, std::vector<double> truthBins, int channel, double weight=1.0);
+    TH1* FillMCTruthSignalHistogram_Pions(std::string filename, std::string treename, std::vector<double> truthBins, std::string channel, double weight=1.0);
 
     // Fill data
-    TH1* FillDataHistogram_Pions(std::string filename, std::string treename, std::vector<double> recoBins, int channel, bool IsIncidentHisto=false);
+    TH1* FillDataHistogram_Pions(std::string filename, std::string treename, std::vector<double> recoBins, std::string channel, bool IsIncidentHisto=false);
 
     // Pion flux
     TH1* FillMCFlux_Pions(std::string filename, std::string treename, std::vector<double> Bins, int mode = 1, double weight=1.0);

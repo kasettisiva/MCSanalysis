@@ -52,9 +52,9 @@ namespace protoana{
 
     std::vector<double> _RecoBinning, _TruthBinning;
 
-    std::vector<int> _SignalTopology, _BackgroundTopology;
+    std::vector<int> _SignalTopology, _BackgroundTopology, _IncidentTopology;
 
-    std::vector<std::string> _DataFileNames, _MCFileNames, _DataControlSampleFiles, _MCControlSampleFiles, _SystFileNames, _SystToConsider, _SystType, _BackgroundTopologyName;
+    std::vector<std::string> _DataFileNames, _MCFileNames, _DataControlSampleFiles, _MCControlSampleFiles, _SystFileNames, _SystToConsider, _SystType, _BackgroundTopologyName, _SignalTopologyName, _ChannelNames, _IncidentMCFileNames, _IncidentTopologyName;
 
     int _FitStrategy, _NToys;
     double _IgnoreStatisticalErrorBelow, _IgnoreSystematicErrorBelow;

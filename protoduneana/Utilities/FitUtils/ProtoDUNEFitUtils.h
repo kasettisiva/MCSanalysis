@@ -49,8 +49,11 @@ namespace protoana{
     // Remove empty bins from RooPlot
     void RemoveEmptyBins(RooPlot* frame);
 
+    // Calculate chi2 comparing the data and MC distributions
+    double GetDataMCChi2(RooWorkspace *work, TString channelname, RooAbsData* data=NULL);
+
     // Vector of plots with data and pdfs
-    std::vector<TCanvas*> PlotDatasetsAndPdfs(RooWorkspace *work, TString name, TString error, TString plottodraw, Double_t& totalchi2, std::vector<TString> binnames, std::vector<double> recobins, TString measurement="PDFit", RooAbsData* data=NULL, RooFitResult* result=NULL);
+    std::vector<TCanvas*> PlotDatasetsAndPdfs(RooWorkspace *work, TString name, TString error, TString plottodraw, std::vector<TString> binnames, std::vector<double> recobins, TString measurement="PDFit", RooAbsData* data=NULL, RooFitResult* result=NULL);
     
     // Vector of plots for the NLL
     std::vector<TCanvas*> PlotNLL(RooWorkspace *work, TString name, RooFitResult* result, bool plotPLL=false);
