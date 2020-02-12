@@ -74,8 +74,12 @@
 
 // Maximum number of beam particle daughters to save
 const int NMAXDAUGHTERS = 25;
+// // Maximum number of objects in APA3 to save
+// const int NMAXOBJECTS = 100;
+// Maximum number of primary MC pi0s to save
+const int NMAXPIZEROS = 25;
 // Maximum number of hits to save
-const int NMAXHITS = 5000;
+const int NMAXHITS = 2000;
 
 namespace protoana {
   class ProtoDUNEPizeroAnaTree;
@@ -117,7 +121,8 @@ private:
   void Initialise();
   void ResetPi0Vars();
   void FillPrimaryPFParticle(art::Event const & evt, const recob::PFParticle* particle);
-  void setPiZeroInfo(art::Event const & evt, const pizero::PiZeroProcess& pzproc);
+  void FillAPA3Object(art::Event const & evt, art::Handle<std::vector<recob::PFParticle>> pfpHandle);
+  void setPiZeroInfo(art::Event const & evt, const std::vector<const simb::MCParticle*>& pi0s);
 
   // fcl parameters
   const art::InputTag fBeamModuleLabel;
@@ -136,7 +141,6 @@ private:
   std::string fXCorrFileName;
   double fCalibFactor;
   double fNormFactor;
-  bool fPlotCoords;
   int fVerbose;
 
   TTree *fPandoraBeam;
@@ -169,7 +173,7 @@ private:
   std::vector<std::string> fbeamtrackEndProcess;
   int fbeamtrackNDaughters;
 
-  // Reconstructed tracks/showers
+  // Reconstructed primary particle
   double fprimaryVertex[3];
   int fprimaryIstrack;
   int fprimaryIsshower;
@@ -200,19 +204,14 @@ private:
   int    fprimarynCal;
   double fprimarydEdx[NMAXHITS];
   double fprimarydQdx[NMAXHITS];
-  double fprimary_calX[NMAXHITS];
-  double fprimary_calY[NMAXHITS];
-  double fprimary_calZ[NMAXHITS];
+  double fprimary_cal_pos[NMAXHITS][3];
   double fprimary_cal_pitch[NMAXHITS];
   double fprimaryResidualRange[NMAXHITS];
   int    fprimaryShower_nHits; //collection only
   int    fprimaryShower_hit_w[NMAXHITS];
   double fprimaryShower_hit_q[NMAXHITS];
   double fprimaryShower_hit_t[NMAXHITS];
-  double fprimaryShower_hit_X[NMAXHITS];
-  double fprimaryShower_hit_Y[NMAXHITS];
-  double fprimaryShower_hit_Z[NMAXHITS];
-//  double fprimaryShower_hit_pitch[NMAXHITS];
+  double fprimaryShower_hit_pos[NMAXHITS][3];
   int fprimaryID;
   double fprimaryT0;
   int fprimaryNDaughters;
@@ -229,95 +228,113 @@ private:
   double fprimaryDaughterMomentum[NMAXDAUGHTERS];
   double fprimaryDaughterEndMomentum[NMAXDAUGHTERS];
   double fprimaryDaughterLength[NMAXDAUGHTERS];
-  double fprimaryDaughterStartPosition_X[NMAXDAUGHTERS];
-  double fprimaryDaughterStartPosition_Y[NMAXDAUGHTERS];
-  double fprimaryDaughterStartPosition_Z[NMAXDAUGHTERS];
-  double fprimaryDaughterEndPosition_X[NMAXDAUGHTERS];
-  double fprimaryDaughterEndPosition_Y[NMAXDAUGHTERS];
-  double fprimaryDaughterEndPosition_Z[NMAXDAUGHTERS];
-  double fprimaryDaughterStartDirection_X[NMAXDAUGHTERS];
-  double fprimaryDaughterStartDirection_Y[NMAXDAUGHTERS];
-  double fprimaryDaughterStartDirection_Z[NMAXDAUGHTERS];
-  double fprimaryDaughterEndDirection_X[NMAXDAUGHTERS];
-  double fprimaryDaughterEndDirection_Y[NMAXDAUGHTERS];
-  double fprimaryDaughterEndDirection_Z[NMAXDAUGHTERS];
+  double fprimaryDaughterStartPosition[NMAXDAUGHTERS][3];
+  double fprimaryDaughterEndPosition[NMAXDAUGHTERS][3];
+  double fprimaryDaughterStartDirection[NMAXDAUGHTERS][3];
+  double fprimaryDaughterEndDirection[NMAXDAUGHTERS][3];
   int fprimaryDaughterParentPdg[NMAXDAUGHTERS];
   int fprimaryDaughterGrandparentPdg[NMAXDAUGHTERS];
   int fprimaryDaughterParentID[NMAXDAUGHTERS];
   int fprimaryDaughterGrandparentID[NMAXDAUGHTERS];
+  double fprimaryDaughterParentE[NMAXDAUGHTERS];
+  double fprimaryDaughterGrandparentE[NMAXDAUGHTERS];
+  double fprimaryDaughterHitdQdx[NMAXDAUGHTERS][NMAXHITS];
+  double fprimaryDaughterHitCharge[NMAXDAUGHTERS][NMAXHITS];
+  int fprimaryDaughterHitWire[NMAXDAUGHTERS][NMAXHITS];
+  double fprimaryDaughterHitTime[NMAXDAUGHTERS][NMAXHITS];
+  double fprimaryDaughterHitPosition[NMAXDAUGHTERS][NMAXHITS][3];
+  double fprimaryDaughterCaloHitPosition[NMAXDAUGHTERS][NMAXHITS][3];
 
+  // // Instead of primary daughters, look at all objects in APA3
+  // int fObjID[NMAXOBJECTS];
+  // int fObjIsTrack[NMAXOBJECTS];
+  // int fObjIsShower[NMAXOBJECTS];
+  // int fObjIsPrimaryDaughter[NMAXOBJECTS];
+  // double fObjBDTscore[NMAXOBJECTS];
+  // double fObjCNNscore[NMAXOBJECTS];
+  // double fObjMomentum[NMAXOBJECTS];
+  // double fObjEndMomentum[NMAXOBJECTS];
+  // double fObjLength[NMAXOBJECTS];
+  // double fObjStartPosition[NMAXOBJECTS][3];
+  // double fObjEndPosition[NMAXOBJECTS][3];
+  // double fObjStartDirection[NMAXOBJECTS][3];
+  // double fObjEndDirection[NMAXOBJECTS][3];
+  // int fObjMCParentPdg[NMAXOBJECTS];
+  // int fObjMCGrandparentPdg[NMAXOBJECTS];
+  // int fObjMCParentID[NMAXOBJECTS];
+  // int fObjMCGrandparentID[NMAXOBJECTS];
+  // // Hit information
+  // int fObjNumHits[NMAXOBJECTS];
+  // double fObjHitPosition[NMAXOBJECTS][NMAXHITS][3];
+  // double fObjHitTime[NMAXOBJECTS][NMAXHITS];
+  // int fObjHitWire[NMAXOBJECTS][NMAXHITS];
+  // double fObjHitCharge[NMAXOBJECTS][NMAXHITS];
+  // double fObjHitPitch[NMAXOBJECTS][NMAXHITS];
+  // double fObjHitdEdx[NMAXOBJECTS][NMAXHITS];
+  // double fObjHitdQdx[NMAXOBJECTS][NMAXHITS];
 
   // MC pi0 variables
-  int fMCPi0ID;
-  double fMCPi0Energy;
-  double fMCPi0StartPosition[3];
-  double fMCPi0EndPosition[3];
-  int fMCPhoton1ID;
-  int fMCPhoton2ID;
-  double fMCPhoton1Energy;
-  double fMCPhoton2Energy;
-  double fMCPhoton1StartPosition[3];
-  double fMCPhoton2StartPosition[3];
-  double fMCPhoton1EndPosition[3];
-  double fMCPhoton2EndPosition[3];
+  int fMCPi0ID[NMAXPIZEROS];
+  double fMCPi0Energy[NMAXPIZEROS];
+  double fMCPi0StartPosition[NMAXPIZEROS][3];
+  double fMCPi0EndPosition[NMAXPIZEROS][3];
+  int fMCPhoton1ID[NMAXPIZEROS];
+  int fMCPhoton2ID[NMAXPIZEROS];
+  double fMCPhoton1Energy[NMAXPIZEROS];
+  double fMCPhoton2Energy[NMAXPIZEROS];
+  double fMCPhoton1StartPosition[NMAXPIZEROS][3];
+  double fMCPhoton2StartPosition[NMAXPIZEROS][3];
+  double fMCPhoton1EndPosition[NMAXPIZEROS][3];
+  double fMCPhoton2EndPosition[NMAXPIZEROS][3];
   // Reco hits related to photons
-  int fMCPhoton1NumHits;
-  int fMCPhoton2NumHits;
-  int fMCPhoton1_hit_w[NMAXHITS];
-  int fMCPhoton2_hit_w[NMAXHITS];
-  double fMCPhoton1_hit_t[NMAXHITS];
-  double fMCPhoton2_hit_t[NMAXHITS];
-  double fMCPhoton1_hit_q[NMAXHITS];
-  double fMCPhoton2_hit_q[NMAXHITS];
-  double fMCPhoton1_hit_X[NMAXHITS];
-  double fMCPhoton2_hit_X[NMAXHITS];
-  double fMCPhoton1_hit_Y[NMAXHITS];
-  double fMCPhoton2_hit_Y[NMAXHITS];
-  double fMCPhoton1_hit_Z[NMAXHITS];
-  double fMCPhoton2_hit_Z[NMAXHITS];
-  double fMCPhotonFractionSps;
+  int fMCPhoton1NumHits[NMAXPIZEROS];
+  int fMCPhoton2NumHits[NMAXPIZEROS];
+  int fMCPhoton1_hit_w[NMAXPIZEROS][NMAXHITS];
+  int fMCPhoton2_hit_w[NMAXPIZEROS][NMAXHITS];
+  double fMCPhoton1_hit_t[NMAXPIZEROS][NMAXHITS];
+  double fMCPhoton2_hit_t[NMAXPIZEROS][NMAXHITS];
+  double fMCPhoton1_hit_q[NMAXPIZEROS][NMAXHITS];
+  double fMCPhoton2_hit_q[NMAXPIZEROS][NMAXHITS];
+  double fMCPhoton1_hit_pos[NMAXPIZEROS][NMAXHITS][3];
+  double fMCPhoton2_hit_pos[NMAXPIZEROS][NMAXHITS][3];
 
   // Reco pi0 variables
   // Showers
-  int fShower1ID;
-  int fShower2ID;
-  double fShower1StartPosition[3];
-  double fShower2StartPosition[3];
-  double fShower1Direction[3];
-  double fShower2Direction[3];
-  double fShower1Length;
-  double fShower2Length;
-  double fShower1Completeness;
-  double fShower2Completeness;
-  double fShower1Purity;
-  double fShower2Purity;
+  int fShower1ID[NMAXPIZEROS];
+  int fShower2ID[NMAXPIZEROS];
+  double fShower1StartPosition[NMAXPIZEROS][3];
+  double fShower2StartPosition[NMAXPIZEROS][3];
+  double fShower1Direction[NMAXPIZEROS][3];
+  double fShower2Direction[NMAXPIZEROS][3];
+  double fShower1Length[NMAXPIZEROS];
+  double fShower2Length[NMAXPIZEROS];
+  double fShower1Completeness[NMAXPIZEROS];
+  double fShower2Completeness[NMAXPIZEROS];
+  double fShower1Purity[NMAXPIZEROS];
+  double fShower2Purity[NMAXPIZEROS];
   // Reco hits related to showers
-  int fShower1NumHits;
-  double fShower1_cnn_sc[NMAXHITS];
-  double fShower2_cnn_sc[NMAXHITS];
-  int fShower2NumHits;
-  double fShower1_cal_X[NMAXHITS];
-  double fShower2_cal_X[NMAXHITS];
-  double fShower1_cal_Y[NMAXHITS];
-  double fShower2_cal_Y[NMAXHITS];
-  double fShower1_cal_Z[NMAXHITS];
-  double fShower2_cal_Z[NMAXHITS];
-  double fShower1_cal_E;
-  double fShower2_cal_E;
-  double fShower1Energy;
-  double fShower2Energy;
-  double fShower1EnergyFromHits;
-  double fShower2EnergyFromHits;
-  int fShower1HasBeamParent;
-  int fShower2HasBeamParent;
-  int fShower1HasBeamGrandparent;
-  int fShower2HasBeamGrandparent;
-  double fShower1_cal_pitch[NMAXHITS];
-  double fShower2_cal_pitch[NMAXHITS];
-  double fShower1_cal_dEdx[NMAXHITS];
-  double fShower2_cal_dEdx[NMAXHITS];
-  double fShower1_cal_dQdx[NMAXHITS];
-  double fShower2_cal_dQdx[NMAXHITS];
+  int fShower1NumHits[NMAXPIZEROS];
+  double fShower1_cnn_sc[NMAXPIZEROS][NMAXHITS];
+  double fShower2_cnn_sc[NMAXPIZEROS][NMAXHITS];
+  int fShower2NumHits[NMAXPIZEROS];
+  double fShower1_cal_pos[NMAXPIZEROS][NMAXHITS][3];
+  double fShower2_cal_pos[NMAXPIZEROS][NMAXHITS][3];
+  double fShower1_cal_E[NMAXPIZEROS];
+  double fShower2_cal_E[NMAXPIZEROS];
+  double fShower1Energy[NMAXPIZEROS];
+  double fShower2Energy[NMAXPIZEROS];
+  double fShower1EnergyFromHits[NMAXPIZEROS];
+  double fShower2EnergyFromHits[NMAXPIZEROS];
+  int fShower1HasBeamParent[NMAXPIZEROS];
+  int fShower2HasBeamParent[NMAXPIZEROS];
+  int fShower1HasBeamGrandparent[NMAXPIZEROS];
+  int fShower2HasBeamGrandparent[NMAXPIZEROS];
+  double fShower1_cal_pitch[NMAXPIZEROS][NMAXHITS];
+  double fShower2_cal_pitch[NMAXPIZEROS][NMAXHITS];
+  double fShower1_cal_dEdx[NMAXPIZEROS][NMAXHITS];
+  double fShower2_cal_dEdx[NMAXPIZEROS][NMAXHITS];
+  double fShower1_cal_dQdx[NMAXPIZEROS][NMAXHITS];
+  double fShower2_cal_dQdx[NMAXPIZEROS][NMAXHITS];
 
   // Other
   geo::GeometryCore const* fGeometryService;
@@ -345,7 +362,6 @@ protoana::ProtoDUNEPizeroAnaTree::ProtoDUNEPizeroAnaTree(fhicl::ParameterSet con
   fXCorrFileName(p.get<std::string>("XCorrFileName")),
   fCalibFactor(p.get<double>("CalibFactor")),
   fNormFactor(p.get<double>("NormFactor")),
-  fPlotCoords(p.get<bool>("PlotCoords")),
   fVerbose(p.get<int>("Verbose")) {
   // Get a pointer to the geometry service provider.
   fGeometryService = lar::providerFrom<geo::Geometry>();
@@ -412,9 +428,7 @@ void protoana::ProtoDUNEPizeroAnaTree::beginJob(){
   fPandoraBeam->Branch("primaryRange",                  &fprimaryRange,                 "primaryRange[3]/D");
   fPandoraBeam->Branch("primarynCal",                   &fprimarynCal,                  "primarynCal/I");
   fPandoraBeam->Branch("primarydQdx",                   &fprimarydQdx,                  "primarydQdx[primarynCal]/D");
-  fPandoraBeam->Branch("primary_calX",                  &fprimary_calX,                 "primary_calX[primarynCal]/D");
-  fPandoraBeam->Branch("primary_calY",                  &fprimary_calY,                 "primary_calY[primarynCal]/D");
-  fPandoraBeam->Branch("primary_calZ",                  &fprimary_calZ,                 "primary_calZ[primarynCal]/D");
+  fPandoraBeam->Branch("primary_cal_pos",               &fprimary_cal_pos,              "primary_cal_pos[primarynCal][3]/D");
   fPandoraBeam->Branch("primary_cal_pitch",             &fprimary_cal_pitch,            "primary_cal_pitch[primarynCal]/D");
   fPandoraBeam->Branch("primarydEdx",                   &fprimarydEdx,                  "primarydEdx[primarynCal]/D");
   fPandoraBeam->Branch("primaryResidualRange",          &fprimaryResidualRange,         "primaryResidualRange[primarynCal]/D");
@@ -432,93 +446,111 @@ void protoana::ProtoDUNEPizeroAnaTree::beginJob(){
   fPandoraBeam->Branch("primaryDaughterMomentum",         &fprimaryDaughterMomentum,          ("primaryDaughterMomentum[" + std::to_string(NMAXDAUGHTERS) + "]/D").c_str());
   fPandoraBeam->Branch("primaryDaughterEndMomentum",      &fprimaryDaughterEndMomentum,       ("primaryDaughterEndMomentum[" + std::to_string(NMAXDAUGHTERS) + "]/D").c_str());
   fPandoraBeam->Branch("primaryDaughterLength",           &fprimaryDaughterLength,            ("primaryDaughterLength[" + std::to_string(NMAXDAUGHTERS) + "]/D").c_str());
-  fPandoraBeam->Branch("primaryDaughterStartPosition_X",  &fprimaryDaughterStartPosition_X,   ("primaryDaughterStartPosition_X[" + std::to_string(NMAXDAUGHTERS) + "]/D").c_str());
-  fPandoraBeam->Branch("primaryDaughterStartPosition_Y",  &fprimaryDaughterStartPosition_Y,   ("primaryDaughterStartPosition_Y[" + std::to_string(NMAXDAUGHTERS) + "]/D").c_str());
-  fPandoraBeam->Branch("primaryDaughterStartPosition_Z",  &fprimaryDaughterStartPosition_Z,   ("primaryDaughterStartPosition_Z[" + std::to_string(NMAXDAUGHTERS) + "]/D").c_str());
-  fPandoraBeam->Branch("primaryDaughterEndPosition_X",    &fprimaryDaughterEndPosition_X,     ("primaryDaughterEndPosition_X[" + std::to_string(NMAXDAUGHTERS) + "]/D").c_str());
-  fPandoraBeam->Branch("primaryDaughterEndPosition_Y",    &fprimaryDaughterEndPosition_Y,     ("primaryDaughterEndPosition_Y[" + std::to_string(NMAXDAUGHTERS) + "]/D").c_str());
-  fPandoraBeam->Branch("primaryDaughterEndPosition_Z",    &fprimaryDaughterEndPosition_Z,     ("primaryDaughterEndPosition_Z[" + std::to_string(NMAXDAUGHTERS) + "]/D").c_str());
-  fPandoraBeam->Branch("primaryDaughterStartDirection_X", &fprimaryDaughterStartDirection_X,  ("primaryDaughterStartDirection_X[" + std::to_string(NMAXDAUGHTERS) + "]/D").c_str());
-  fPandoraBeam->Branch("primaryDaughterStartDirection_Y", &fprimaryDaughterStartDirection_Y,  ("primaryDaughterStartDirection_Y[" + std::to_string(NMAXDAUGHTERS) + "]/D").c_str());
-  fPandoraBeam->Branch("primaryDaughterStartDirection_Z", &fprimaryDaughterStartDirection_Z,  ("primaryDaughterStartDirection_Z[" + std::to_string(NMAXDAUGHTERS) + "]/D").c_str());
-  fPandoraBeam->Branch("primaryDaughterEndDirection_X",   &fprimaryDaughterEndDirection_X,    ("primaryDaughterEndDirection_X[" + std::to_string(NMAXDAUGHTERS) + "]/D").c_str());
-  fPandoraBeam->Branch("primaryDaughterEndDirection_Y",   &fprimaryDaughterEndDirection_Y,    ("primaryDaughterEndDirection_Y[" + std::to_string(NMAXDAUGHTERS) + "]/D").c_str());
-  fPandoraBeam->Branch("primaryDaughterEndDirection_Z",   &fprimaryDaughterEndDirection_Z,    ("primaryDaughterEndDirection_Z[" + std::to_string(NMAXDAUGHTERS) + "]/D").c_str());
+  fPandoraBeam->Branch("primaryDaughterStartPosition",    &fprimaryDaughterStartPosition,     ("primaryDaughterStartPosition[" + std::to_string(NMAXDAUGHTERS) + "][3]/D").c_str());
+  fPandoraBeam->Branch("primaryDaughterEndPosition",      &fprimaryDaughterEndPosition,       ("primaryDaughterEndPosition[" + std::to_string(NMAXDAUGHTERS) + "][3]/D").c_str());
+  fPandoraBeam->Branch("primaryDaughterStartDirection",   &fprimaryDaughterStartDirection,    ("primaryDaughterStartDirection[" + std::to_string(NMAXDAUGHTERS) + "][3]/D").c_str());
+  fPandoraBeam->Branch("primaryDaughterEndDirection",     &fprimaryDaughterEndDirection,      ("primaryDaughterEndDirection[" + std::to_string(NMAXDAUGHTERS) + "][3]/D").c_str());
   fPandoraBeam->Branch("primaryDaughterParentPdg",        &fprimaryDaughterParentPdg,         ("primaryDaughterParentPdg[" + std::to_string(NMAXDAUGHTERS) + "]/I").c_str());
   fPandoraBeam->Branch("primaryDaughterGrandparentPdg",   &fprimaryDaughterGrandparentPdg,    ("primaryDaughterGrandparentPdg[" + std::to_string(NMAXDAUGHTERS) + "]/I").c_str());
   fPandoraBeam->Branch("primaryDaughterParentID",         &fprimaryDaughterParentID,          ("primaryDaughterParentID[" + std::to_string(NMAXDAUGHTERS) + "]/I").c_str());
   fPandoraBeam->Branch("primaryDaughterGrandparentID",    &fprimaryDaughterGrandparentID,     ("primaryDaughterGrandparentID[" + std::to_string(NMAXDAUGHTERS) + "]/I").c_str());
+  fPandoraBeam->Branch("primaryDaughterParentE",          &fprimaryDaughterParentE,           ("primaryDaughterParentE[" + std::to_string(NMAXDAUGHTERS) + "]/D").c_str());
+  fPandoraBeam->Branch("primaryDaughterGrandparentE",     &fprimaryDaughterGrandparentE,      ("primaryDaughterGrandparentE[" + std::to_string(NMAXDAUGHTERS) + "]/D").c_str());
+  fPandoraBeam->Branch("primaryDaughterHitPosition",      &fprimaryDaughterHitPosition,       ("primaryDaughterHitPosition[" + std::to_string(NMAXDAUGHTERS) + "][" + std::to_string(NMAXHITS) + "][3]/D").c_str());
+  fPandoraBeam->Branch("primaryDaughterCaloHitPosition",  &fprimaryDaughterCaloHitPosition,   ("primaryDaughterCaloHitPosition[" + std::to_string(NMAXDAUGHTERS) + "][" + std::to_string(NMAXHITS) + "][3]/D").c_str());
+  fPandoraBeam->Branch("primaryDaughterHitCharge",        &fprimaryDaughterHitCharge,         ("primaryDaughterHitCharge[" + std::to_string(NMAXDAUGHTERS) + "][" + std::to_string(NMAXHITS) + "]/D").c_str());
+  fPandoraBeam->Branch("primaryDaughterHitdQdx",          &fprimaryDaughterHitdQdx,           ("primaryDaughterHitdQdx[" + std::to_string(NMAXDAUGHTERS) + "][" + std::to_string(NMAXHITS) + "]/D").c_str());
+  fPandoraBeam->Branch("primaryDaughterHitWire",          &fprimaryDaughterHitWire,           ("primaryDaughterHitWire[" + std::to_string(NMAXDAUGHTERS) + "][" + std::to_string(NMAXHITS) + "]/I").c_str());
+  fPandoraBeam->Branch("primaryDaughterHitTime",          &fprimaryDaughterHitTime,           ("primaryDaughterHitTime[" + std::to_string(NMAXDAUGHTERS) + "][" + std::to_string(NMAXHITS) + "]/D").c_str());
+
+  // fPandoraBeam->Branch("ObjID",                &fObjID,                ("ObjID[" + std::to_string(NMAXOBJECTS) + "]/I").c_str());
+  // fPandoraBeam->Branch("ObjIsTrack",           &fObjIsTrack,           ("ObjIsTrack[" + std::to_string(NMAXOBJECTS) + "]/I").c_str());
+  // fPandoraBeam->Branch("ObjIsShower",          &fObjIsShower,          ("ObjIsShower[" + std::to_string(NMAXOBJECTS) + "]/I").c_str());
+  // fPandoraBeam->Branch("ObjIsPrimaryDaughter", &fObjIsPrimaryDaughter, ("ObjIsPrimaryDaughter[" + std::to_string(NMAXOBJECTS) + "]/I").c_str());
+  // fPandoraBeam->Branch("ObjBDTscore",          &fObjBDTscore,          ("ObjBDTscore[" + std::to_string(NMAXOBJECTS) + "]/D").c_str());
+  // fPandoraBeam->Branch("ObjCNNscore",          &fObjCNNscore,          ("ObjCNNscore[" + std::to_string(NMAXOBJECTS) + "]/D").c_str());
+  // fPandoraBeam->Branch("ObjMomentum",          &fObjMomentum,          ("ObjMomentum[" + std::to_string(NMAXOBJECTS) + "]/D").c_str());
+  // fPandoraBeam->Branch("ObjEndMomentum",       &fObjEndMomentum,       ("ObjEndMomentum[" + std::to_string(NMAXOBJECTS) + "]/D").c_str());
+  // fPandoraBeam->Branch("ObjLength",            &fObjLength,            ("ObjLength[" + std::to_string(NMAXOBJECTS) + "]/D").c_str());
+  // fPandoraBeam->Branch("ObjStartPosition",     &fObjStartPosition,     ("ObjStartPosition[" + std::to_string(NMAXOBJECTS) + "][3]/D").c_str());
+  // fPandoraBeam->Branch("ObjEndPosition",       &fObjEndPosition,       ("ObjEndPosition[" + std::to_string(NMAXOBJECTS) + "][3]/D").c_str());
+  // fPandoraBeam->Branch("ObjStartDirection",    &fObjStartDirection,    ("ObjStartDirection[" + std::to_string(NMAXOBJECTS) + "][3]/D").c_str());
+  // fPandoraBeam->Branch("ObjEndDirection",      &fObjEndDirection,      ("ObjEndDirection[" + std::to_string(NMAXOBJECTS) + "][3]/D").c_str());
+  // fPandoraBeam->Branch("ObjParentPdg",         &fObjMCParentPdg,         ("ObjParentPdg[" + std::to_string(NMAXOBJECTS) + "]/I").c_str());
+  // fPandoraBeam->Branch("ObjGrandparentPdg",    &fObjMCGrandparentPdg,    ("ObjGrandparentPdg[" + std::to_string(NMAXOBJECTS) + "]/I").c_str());
+  // fPandoraBeam->Branch("ObjParentID",          &fObjMCParentID,          ("ObjParentID[" + std::to_string(NMAXOBJECTS) + "]/I").c_str());
+  // fPandoraBeam->Branch("ObjGrandparentID",     &fObjMCGrandparentID,     ("ObjGrandparentID[" + std::to_string(NMAXOBJECTS) + "]/I").c_str());
+  // // Object hit information.
+  // fPandoraBeam->Branch("ObjNumHits",           &fObjNumHits,           ("ObjNumHits[" + std::to_string(NMAXOBJECTS) + "]/I").c_str());
+  // fPandoraBeam->Branch("ObjHitPosition",       &fObjHitPosition,       ("ObjHitPosition[" + std::to_string(NMAXOBJECTS) + "][" + std::to_string(NMAXHITS) + "][3]/D").c_str());
+  // fPandoraBeam->Branch("ObjHitTime",           &fObjHitTime,           ("ObjHitTime[" + std::to_string(NMAXOBJECTS) + "][" + std::to_string(NMAXHITS) + "]/D").c_str());
+  // fPandoraBeam->Branch("ObjHitWire",           &fObjHitWire,           ("ObjHitWire[" + std::to_string(NMAXOBJECTS) + "][" + std::to_string(NMAXHITS) + "]/I").c_str());
+  // fPandoraBeam->Branch("ObjHitCharge",         &fObjHitCharge,         ("ObjHitCharge[" + std::to_string(NMAXOBJECTS) + "][" + std::to_string(NMAXHITS) + "]/D").c_str());
+  // fPandoraBeam->Branch("ObjHitPitch",          &fObjHitPitch,          ("ObjHitPitch[" + std::to_string(NMAXOBJECTS) + "][" + std::to_string(NMAXHITS) + "]/D").c_str());
+  // fPandoraBeam->Branch("ObjHitdEdx",           &fObjHitdEdx,           ("ObjHitdEdx[" + std::to_string(NMAXOBJECTS) + "][" + std::to_string(NMAXHITS) + "]/D").c_str());
+  // fPandoraBeam->Branch("ObjHitdQdx",           &fObjHitdQdx,           ("ObjHitdQdx[" + std::to_string(NMAXOBJECTS) + "][" + std::to_string(NMAXHITS) + "]/D").c_str());
 
   // MC pi0 variables
-  fPandoraBeam->Branch("MCPi0ID",                       &fMCPi0ID,                      "MCPi0ID/I");
-  fPandoraBeam->Branch("MCPi0Energy",                   &fMCPi0Energy,                  "MCPi0Energy/D");
-  fPandoraBeam->Branch("MCPi0StartPosition",            &fMCPi0StartPosition,           "MCPi0StartPosition[3]/D");
-  fPandoraBeam->Branch("MCPi0EndPosition",              &fMCPi0EndPosition,             "MCPi0EndPosition[3]/D");
-  fPandoraBeam->Branch("MCPhoton1ID",                   &fMCPhoton1ID,                  "MCPhoton1ID/I");
-  fPandoraBeam->Branch("MCPhoton2ID",                   &fMCPhoton2ID,                  "MCPhoton2ID/I");
-  fPandoraBeam->Branch("MCPhoton1Energy",               &fMCPhoton1Energy,              "MCPhoton1Energy/D");
-  fPandoraBeam->Branch("MCPhoton2Energy",               &fMCPhoton2Energy,              "MCPhoton2Energy/D");
-  fPandoraBeam->Branch("MCPhoton1StartPosition",        &fMCPhoton1StartPosition,       "MCPhoton1StartPosition[3]/D");
-  fPandoraBeam->Branch("MCPhoton2StartPosition",        &fMCPhoton2StartPosition,       "MCPhoton2StartPosition[3]/D");
-  fPandoraBeam->Branch("MCPhoton1EndPosition",          &fMCPhoton1EndPosition,         "MCPhoton1EndPosition[3]/D");
-  fPandoraBeam->Branch("MCPhoton2EndPosition",          &fMCPhoton2EndPosition,         "MCPhoton2EndPosition[3]/D");
+  fPandoraBeam->Branch("MCPi0ID",                       &fMCPi0ID,                      ("MCPi0ID[" + std::to_string(NMAXPIZEROS) + "]/I").c_str());
+  fPandoraBeam->Branch("MCPi0Energy",                   &fMCPi0Energy,                  ("MCPi0Energy[" + std::to_string(NMAXPIZEROS) + "]/D").c_str());
+  fPandoraBeam->Branch("MCPi0StartPosition",            &fMCPi0StartPosition,           ("MCPi0StartPosition[" + std::to_string(NMAXPIZEROS) + "][3]/D").c_str());
+  fPandoraBeam->Branch("MCPi0EndPosition",              &fMCPi0EndPosition,             ("MCPi0EndPosition[" + std::to_string(NMAXPIZEROS) + "][3]/D").c_str());
+  fPandoraBeam->Branch("MCPhoton1ID",                   &fMCPhoton1ID,                  ("MCPhoton1ID[" + std::to_string(NMAXPIZEROS) + "]/I").c_str());
+  fPandoraBeam->Branch("MCPhoton2ID",                   &fMCPhoton2ID,                  ("MCPhoton2ID[" + std::to_string(NMAXPIZEROS) + "]/I").c_str());
+  fPandoraBeam->Branch("MCPhoton1Energy",               &fMCPhoton1Energy,              ("MCPhoton1Energy[" + std::to_string(NMAXPIZEROS) + "]/D").c_str());
+  fPandoraBeam->Branch("MCPhoton2Energy",               &fMCPhoton2Energy,              ("MCPhoton2Energy[" + std::to_string(NMAXPIZEROS) + "]/D").c_str());
+  fPandoraBeam->Branch("MCPhoton1StartPosition",        &fMCPhoton1StartPosition,       ("MCPhoton1StartPosition[" + std::to_string(NMAXPIZEROS) + "][3]/D").c_str());
+  fPandoraBeam->Branch("MCPhoton2StartPosition",        &fMCPhoton2StartPosition,       ("MCPhoton2StartPosition[" + std::to_string(NMAXPIZEROS) + "][3]/D").c_str());
+  fPandoraBeam->Branch("MCPhoton1EndPosition",          &fMCPhoton1EndPosition,         ("MCPhoton1EndPosition[" + std::to_string(NMAXPIZEROS) + "][3]/D").c_str());
+  fPandoraBeam->Branch("MCPhoton2EndPosition",          &fMCPhoton2EndPosition,         ("MCPhoton2EndPosition[" + std::to_string(NMAXPIZEROS) + "][3]/D").c_str());
   // Reco hits related to photons
-  fPandoraBeam->Branch("MCPhoton1NumHits",              &fMCPhoton1NumHits,             "MCPhoton1NumHits/I");
-  fPandoraBeam->Branch("MCPhoton2NumHits",              &fMCPhoton2NumHits,             "MCPhoton2NumHits/I");
-  fPandoraBeam->Branch("MCPhoton1_hit_w",               &fMCPhoton1_hit_w,              ("MCPhoton1_hit_w[" + std::to_string(NMAXHITS) + "]/I").c_str());
-  fPandoraBeam->Branch("MCPhoton2_hit_w",               &fMCPhoton2_hit_w,              ("MCPhoton2_hit_w[" + std::to_string(NMAXHITS) + "]/I").c_str());
-  fPandoraBeam->Branch("MCPhoton1_hit_q",               &fMCPhoton1_hit_q,              ("MCPhoton1_hit_q[" + std::to_string(NMAXHITS) + "]/D").c_str());
-  fPandoraBeam->Branch("MCPhoton2_hit_q",               &fMCPhoton2_hit_q,              ("MCPhoton2_hit_q[" + std::to_string(NMAXHITS) + "]/D").c_str());
-  fPandoraBeam->Branch("MCPhoton1_hit_t",               &fMCPhoton1_hit_t,              ("MCPhoton1_hit_t[" + std::to_string(NMAXHITS) + "]/D").c_str());
-  fPandoraBeam->Branch("MCPhoton2_hit_t",               &fMCPhoton2_hit_t,              ("MCPhoton2_hit_t[" + std::to_string(NMAXHITS) + "]/D").c_str());
-  fPandoraBeam->Branch("MCPhoton1_hit_X",               &fMCPhoton1_hit_X,              ("MCPhoton1_hit_X[" + std::to_string(NMAXHITS) + "]/D").c_str());
-  fPandoraBeam->Branch("MCPhoton2_hit_X",               &fMCPhoton2_hit_X,              ("MCPhoton2_hit_X[" + std::to_string(NMAXHITS) + "]/D").c_str());
-  fPandoraBeam->Branch("MCPhoton1_hit_Y",               &fMCPhoton1_hit_Y,              ("MCPhoton1_hit_Y[" + std::to_string(NMAXHITS) + "]/D").c_str());
-  fPandoraBeam->Branch("MCPhoton2_hit_Y",               &fMCPhoton2_hit_Y,              ("MCPhoton2_hit_Y[" + std::to_string(NMAXHITS) + "]/D").c_str());
-  fPandoraBeam->Branch("MCPhoton1_hit_Z",               &fMCPhoton1_hit_Z,              ("MCPhoton1_hit_Z[" + std::to_string(NMAXHITS) + "]/D").c_str());
-  fPandoraBeam->Branch("MCPhoton2_hit_Z",               &fMCPhoton2_hit_Z,              ("MCPhoton2_hit_Z[" + std::to_string(NMAXHITS) + "]/D").c_str());
-  fPandoraBeam->Branch("MCPhotonFractionSps",           &fMCPhotonFractionSps,          "MCPhotonFractionSps/D");
+  fPandoraBeam->Branch("MCPhoton1NumHits",              &fMCPhoton1NumHits,             ("MCPhoton1NumHits[" + std::to_string(NMAXPIZEROS) + "]/I").c_str());
+  fPandoraBeam->Branch("MCPhoton2NumHits",              &fMCPhoton2NumHits,             ("MCPhoton2NumHits[" + std::to_string(NMAXPIZEROS) + "]/I").c_str());
+  fPandoraBeam->Branch("MCPhoton1_hit_w",               &fMCPhoton1_hit_w,              ("MCPhoton1_hit_w[" + std::to_string(NMAXPIZEROS) + "][" + std::to_string(NMAXHITS) + "]/I").c_str());
+  fPandoraBeam->Branch("MCPhoton2_hit_w",               &fMCPhoton2_hit_w,              ("MCPhoton2_hit_w[" + std::to_string(NMAXPIZEROS) + "][" + std::to_string(NMAXHITS) + "]/I").c_str());
+  fPandoraBeam->Branch("MCPhoton1_hit_q",               &fMCPhoton1_hit_q,              ("MCPhoton1_hit_q[" + std::to_string(NMAXPIZEROS) + "][" + std::to_string(NMAXHITS) + "]/D").c_str());
+  fPandoraBeam->Branch("MCPhoton2_hit_q",               &fMCPhoton2_hit_q,              ("MCPhoton2_hit_q[" + std::to_string(NMAXPIZEROS) + "][" + std::to_string(NMAXHITS) + "]/D").c_str());
+  fPandoraBeam->Branch("MCPhoton1_hit_t",               &fMCPhoton1_hit_t,              ("MCPhoton1_hit_t[" + std::to_string(NMAXPIZEROS) + "][" + std::to_string(NMAXHITS) + "]/D").c_str());
+  fPandoraBeam->Branch("MCPhoton2_hit_t",               &fMCPhoton2_hit_t,              ("MCPhoton2_hit_t[" + std::to_string(NMAXPIZEROS) + "][" + std::to_string(NMAXHITS) + "]/D").c_str());
+  fPandoraBeam->Branch("MCPhoton1_hit_pos",             &fMCPhoton1_hit_pos,            ("MCPhoton1_hit_pos[" + std::to_string(NMAXPIZEROS) + "][" + std::to_string(NMAXHITS) + "][3]/D").c_str());
+  fPandoraBeam->Branch("MCPhoton2_hit_pos",             &fMCPhoton2_hit_pos,            ("MCPhoton2_hit_pos[" + std::to_string(NMAXPIZEROS) + "][" + std::to_string(NMAXHITS) + "][3]/D").c_str());
 
   // Shower variables
-  fPandoraBeam->Branch("Shower1ID",                     &fShower1ID,                    "Shower1ID/I");
-  fPandoraBeam->Branch("Shower2ID",                     &fShower2ID,                    "Shower2ID/I");
-  fPandoraBeam->Branch("Shower1StartPosition",          &fShower1StartPosition,         "Shower1StartPosition[3]/D");
-  fPandoraBeam->Branch("Shower2StartPosition",          &fShower2StartPosition,         "Shower2StartPosition[3]/D");
-  fPandoraBeam->Branch("Shower1Direction",              &fShower1Direction,             "Shower1Direction[3]/D");
-  fPandoraBeam->Branch("Shower2Direction",              &fShower2Direction,             "Shower2Direction[3]/D");
-  fPandoraBeam->Branch("Shower1Length",                 &fShower1Length,                "Shower1Length/D");
-  fPandoraBeam->Branch("Shower2Length",                 &fShower2Length,                "Shower2Length/D");
-  fPandoraBeam->Branch("Shower1Completeness",           &fShower1Completeness,          "Shower1Completeness/D");
-  fPandoraBeam->Branch("Shower2Completeness",           &fShower2Completeness,          "Shower2Completeness/D");
-  fPandoraBeam->Branch("Shower1Purity",                 &fShower1Purity,                "Shower1Purity/D");
-  fPandoraBeam->Branch("Shower2Purity",                 &fShower2Purity,                "Shower2Purity/D");
+  fPandoraBeam->Branch("Shower1ID",                     &fShower1ID,                    ("Shower1ID[" + std::to_string(NMAXPIZEROS) + "]/I").c_str());
+  fPandoraBeam->Branch("Shower2ID",                     &fShower2ID,                    ("Shower2ID[" + std::to_string(NMAXPIZEROS) + "]/I").c_str());
+  fPandoraBeam->Branch("Shower1StartPosition",          &fShower1StartPosition,         ("Shower1StartPosition[" + std::to_string(NMAXPIZEROS) + "][3]/D").c_str());
+  fPandoraBeam->Branch("Shower2StartPosition",          &fShower2StartPosition,         ("Shower2StartPosition[" + std::to_string(NMAXPIZEROS) + "][3]/D").c_str());
+  fPandoraBeam->Branch("Shower1Direction",              &fShower1Direction,             ("Shower1Direction[" + std::to_string(NMAXPIZEROS) + "][3]/D").c_str());
+  fPandoraBeam->Branch("Shower2Direction",              &fShower2Direction,             ("Shower2Direction[" + std::to_string(NMAXPIZEROS) + "][3]/D").c_str());
+  fPandoraBeam->Branch("Shower1Length",                 &fShower1Length,                ("Shower1Length[" + std::to_string(NMAXPIZEROS) + "]/D").c_str());
+  fPandoraBeam->Branch("Shower2Length",                 &fShower2Length,                ("Shower2Length[" + std::to_string(NMAXPIZEROS) + "]/D").c_str());
+  fPandoraBeam->Branch("Shower1Completeness",           &fShower1Completeness,          ("Shower1Completeness[" + std::to_string(NMAXPIZEROS) + "]/D").c_str());
+  fPandoraBeam->Branch("Shower2Completeness",           &fShower2Completeness,          ("Shower2Completeness[" + std::to_string(NMAXPIZEROS) + "]/D").c_str());
+  fPandoraBeam->Branch("Shower1Purity",                 &fShower1Purity,                ("Shower1Purity[" + std::to_string(NMAXPIZEROS) + "]/D").c_str());
+  fPandoraBeam->Branch("Shower2Purity",                 &fShower2Purity,                ("Shower2Purity[" + std::to_string(NMAXPIZEROS) + "]/D").c_str());
   // Reco hits related to showers
-  fPandoraBeam->Branch("Shower1NumHits",                &fShower1NumHits,               "Shower1NumHits/I");
-  fPandoraBeam->Branch("Shower2NumHits",                &fShower2NumHits,               "Shower2NumHits/I");
-  fPandoraBeam->Branch("Shower1_cnn_sc",                &fShower1_cnn_sc,               ("Shower1_cnn_sc[" + std::to_string(NMAXHITS) + "]/D").c_str());
-  fPandoraBeam->Branch("Shower2_cnn_sc",                &fShower2_cnn_sc,               ("Shower2_cnn_sc[" + std::to_string(NMAXHITS) + "]/D").c_str());
-  fPandoraBeam->Branch("Shower1_cal_X",                 &fShower1_cal_X,                ("Shower1_cal_X[" + std::to_string(NMAXHITS) + "]/D").c_str());
-  fPandoraBeam->Branch("Shower2_cal_X",                 &fShower2_cal_X,                ("Shower2_cal_X[" + std::to_string(NMAXHITS) + "]/D").c_str());
-  fPandoraBeam->Branch("Shower1_cal_Y",                 &fShower1_cal_Y,                ("Shower1_cal_Y[" + std::to_string(NMAXHITS) + "]/D").c_str());
-  fPandoraBeam->Branch("Shower2_cal_Y",                 &fShower2_cal_Y,                ("Shower2_cal_Y[" + std::to_string(NMAXHITS) + "]/D").c_str());
-  fPandoraBeam->Branch("Shower1_cal_Z",                 &fShower1_cal_Z,                ("Shower1_cal_Z[" + std::to_string(NMAXHITS) + "]/D").c_str());
-  fPandoraBeam->Branch("Shower2_cal_Z",                 &fShower2_cal_Z,                ("Shower2_cal_Z[" + std::to_string(NMAXHITS) + "]/D").c_str());
-  fPandoraBeam->Branch("Shower1_cal_E",                 &fShower1_cal_E,                "Shower1_cal_E/D");
-  fPandoraBeam->Branch("Shower2_cal_E",                 &fShower2_cal_E,                "Shower2_cal_E/D");
-  fPandoraBeam->Branch("Shower1Energy",                 &fShower1Energy,                "Shower1Energy/D");
-  fPandoraBeam->Branch("Shower2Energy",                 &fShower2Energy,                "Shower2Energy/D");
-  fPandoraBeam->Branch("Shower1EnergyFromHits",         &fShower1EnergyFromHits,        "Shower1EnergyFromHits/D");
-  fPandoraBeam->Branch("Shower2EnergyFromHits",         &fShower2EnergyFromHits,        "Shower2EnergyFromHits/D");
-  fPandoraBeam->Branch("Shower1HasBeamParent",       &fShower1HasBeamParent,      "Shower1HasBeamParent/I");
-  fPandoraBeam->Branch("Shower2HasBeamParent",       &fShower2HasBeamParent,      "Shower2HasBeamParent/I");
-  fPandoraBeam->Branch("Shower1HasBeamGrandparent",  &fShower1HasBeamGrandparent, "Shower1HasBeamGrandparent/I");
-  fPandoraBeam->Branch("Shower2HasBeamGrandparent",  &fShower2HasBeamGrandparent, "Shower2HasBeamGrandparent/I");
-  fPandoraBeam->Branch("Shower1_cal_pitch",             &fShower1_cal_pitch,            ("Shower1_cal_pitch[" + std::to_string(NMAXHITS) + "]/D").c_str());
-  fPandoraBeam->Branch("Shower2_cal_pitch",             &fShower2_cal_pitch,            ("Shower2_cal_pitch[" + std::to_string(NMAXHITS) + "]/D").c_str());
-  fPandoraBeam->Branch("Shower1_cal_dEdx",              &fShower1_cal_dEdx,             ("Shower1_cal_dEdx[" + std::to_string(NMAXHITS) + "]/D").c_str());
-  fPandoraBeam->Branch("Shower2_cal_dEdx",              &fShower2_cal_dEdx,             ("Shower2_cal_dEdx[" + std::to_string(NMAXHITS) + "]/D").c_str());
-  fPandoraBeam->Branch("Shower1_cal_dQdx",              &fShower1_cal_dQdx,             ("Shower1_cal_dQdx[" + std::to_string(NMAXHITS) + "]/D").c_str());
-  fPandoraBeam->Branch("Shower2_cal_dQdx",              &fShower2_cal_dQdx,             ("Shower2_cal_dQdx[" + std::to_string(NMAXHITS) + "]/D").c_str());
+  fPandoraBeam->Branch("Shower1NumHits",                &fShower1NumHits,               ("Shower1NumHits[" + std::to_string(NMAXPIZEROS) + "]/I").c_str());
+  fPandoraBeam->Branch("Shower2NumHits",                &fShower2NumHits,               ("Shower2NumHits[" + std::to_string(NMAXPIZEROS) + "]/I").c_str());
+  fPandoraBeam->Branch("Shower1_cnn_sc",                &fShower1_cnn_sc,               ("Shower1_cnn_sc[" + std::to_string(NMAXPIZEROS) + "][" + std::to_string(NMAXHITS) + "]/D").c_str());
+  fPandoraBeam->Branch("Shower2_cnn_sc",                &fShower2_cnn_sc,               ("Shower2_cnn_sc[" + std::to_string(NMAXPIZEROS) + "][" + std::to_string(NMAXHITS) + "]/D").c_str());
+  fPandoraBeam->Branch("Shower1_cal_pos",               &fShower1_cal_pos,              ("Shower1_cal_pos[" + std::to_string(NMAXPIZEROS) + "][" + std::to_string(NMAXHITS) + "][3]/D").c_str());
+  fPandoraBeam->Branch("Shower2_cal_pos",               &fShower2_cal_pos,              ("Shower2_cal_pos[" + std::to_string(NMAXPIZEROS) + "][" + std::to_string(NMAXHITS) + "][3]/D").c_str());
+  fPandoraBeam->Branch("Shower1_cal_E",                 &fShower1_cal_E,                ("Shower1_cal_E[" + std::to_string(NMAXPIZEROS) + "]/D").c_str());
+  fPandoraBeam->Branch("Shower2_cal_E",                 &fShower2_cal_E,                ("Shower2_cal_E[" + std::to_string(NMAXPIZEROS) + "]/D").c_str());
+  fPandoraBeam->Branch("Shower1Energy",                 &fShower1Energy,                ("Shower1Energy[" + std::to_string(NMAXPIZEROS) + "]/D").c_str());
+  fPandoraBeam->Branch("Shower2Energy",                 &fShower2Energy,                ("Shower2Energy[" + std::to_string(NMAXPIZEROS) + "]/D").c_str());
+  fPandoraBeam->Branch("Shower1EnergyFromHits",         &fShower1EnergyFromHits,        ("Shower1EnergyFromHits[" + std::to_string(NMAXPIZEROS) + "]/D").c_str());
+  fPandoraBeam->Branch("Shower2EnergyFromHits",         &fShower2EnergyFromHits,        ("Shower2EnergyFromHits[" + std::to_string(NMAXPIZEROS) + "]/D").c_str());
+  fPandoraBeam->Branch("Shower1HasBeamParent",          &fShower1HasBeamParent,         ("Shower1HasBeamParent[" + std::to_string(NMAXPIZEROS) + "]/I").c_str());
+  fPandoraBeam->Branch("Shower2HasBeamParent",          &fShower2HasBeamParent,         ("Shower2HasBeamParent[" + std::to_string(NMAXPIZEROS) + "]/I").c_str());
+  fPandoraBeam->Branch("Shower1HasBeamGrandparent",     &fShower1HasBeamGrandparent,    ("Shower1HasBeamGrandparent[" + std::to_string(NMAXPIZEROS) + "]/I").c_str());
+  fPandoraBeam->Branch("Shower2HasBeamGrandparent",     &fShower2HasBeamGrandparent,    ("Shower2HasBeamGrandparent[" + std::to_string(NMAXPIZEROS) + "]/I").c_str());
+  fPandoraBeam->Branch("Shower1_cal_pitch",             &fShower1_cal_pitch,            ("Shower1_cal_pitch[" + std::to_string(NMAXPIZEROS) + "][" + std::to_string(NMAXHITS) + "]/D").c_str());
+  fPandoraBeam->Branch("Shower2_cal_pitch",             &fShower2_cal_pitch,            ("Shower2_cal_pitch[" + std::to_string(NMAXPIZEROS) + "][" + std::to_string(NMAXHITS) + "]/D").c_str());
+  fPandoraBeam->Branch("Shower1_cal_dEdx",              &fShower1_cal_dEdx,             ("Shower1_cal_dEdx[" + std::to_string(NMAXPIZEROS) + "][" + std::to_string(NMAXHITS) + "]/D").c_str());
+  fPandoraBeam->Branch("Shower2_cal_dEdx",              &fShower2_cal_dEdx,             ("Shower2_cal_dEdx[" + std::to_string(NMAXPIZEROS) + "][" + std::to_string(NMAXHITS) + "]/D").c_str());
+  fPandoraBeam->Branch("Shower1_cal_dQdx",              &fShower1_cal_dQdx,             ("Shower1_cal_dQdx[" + std::to_string(NMAXPIZEROS) + "][" + std::to_string(NMAXHITS) + "]/D").c_str());
+  fPandoraBeam->Branch("Shower2_cal_dQdx",              &fShower2_cal_dQdx,             ("Shower2_cal_dQdx[" + std::to_string(NMAXPIZEROS) + "][" + std::to_string(NMAXHITS) + "]/D").c_str());
 }
 
 void protoana::ProtoDUNEPizeroAnaTree::analyze(art::Event const & evt){
@@ -544,7 +576,7 @@ void protoana::ProtoDUNEPizeroAnaTree::analyze(art::Event const & evt){
   }
   else{
     for(int k=0; k < 6; k++)
-     fNactivefembs[k] = dataUtil.GetNActiveFembsForAPA(evt, k);
+      fNactivefembs[k] = dataUtil.GetNActiveFembsForAPA(evt, k);
   }
 
   //check for reco pandora stuff
@@ -571,6 +603,9 @@ void protoana::ProtoDUNEPizeroAnaTree::analyze(art::Event const & evt){
     // For now only consider the first primary track. Need a proper treatment if more than one primary particles are found.
     break;
   }
+
+  // // Look at all the reconstructed particles that are fully contained in APA3.
+  // FillAPA3Object(evt, recoParticleHandle);
 
   bool beamTriggerEvent = false;
   if(!evt.isRealData()){
@@ -648,15 +683,8 @@ void protoana::ProtoDUNEPizeroAnaTree::analyze(art::Event const & evt){
         }
       }
 
-      // Loop through pi0s
-      for(const simb::MCParticle* pi0 : pi0s) {
-        if(pi0->PdgCode() != 111) continue;
-        pizero::PiZeroProcess mcpzproc(*pi0, evt, fShowerTag);
-        // Use MC information to record shower information
-        setPiZeroInfo(evt, mcpzproc);
-        // Only record one pi0 per event.
-        break;
-      } // for pi0 daughter in event
+      // Record MC and shower information
+      setPiZeroInfo(evt, pi0s);
 
     } //geantGoodParticle
   } // MC
@@ -677,7 +705,11 @@ void protoana::ProtoDUNEPizeroAnaTree::analyze(art::Event const & evt){
       if( beamlineUtil.IsGoodBeamlineTrigger( evt ) ){
         fbeamCheckIsMatched = beaminfo[0]->CheckIsMatched();
         fbeamtrigger = beaminfo[0]->GetTimingTrigger();
-        if(beaminfo[0]->GetTOFChan() != -1){//if TOFChan == -1, then there was not a successful match, if it's 0, 1, 2, or 3, then there was a good match corresponding to the different pair-wise combinations of the upstream and downstream channels
+        // if TOFChan == -1, then there was not a successful match, if it's
+        // 0, 1, 2, or 3, then there was a good match corresponding to the
+        // different pair-wise combinations of the upstream and downstream
+        // channels
+        if(beaminfo[0]->GetTOFChan() != -1){
           ftof = beaminfo[0]->GetTOF();
         }
         // If possible PIDs contain pion, set PDG code to pion.
@@ -717,17 +749,17 @@ void protoana::ProtoDUNEPizeroAnaTree::analyze(art::Event const & evt){
               << " No recob::Shower objects in this event - "
               << " Line " << __LINE__ << " in file " << __FILE__ << std::endl;
         }
-        // Loop through showers
-        for(const recob::Shower& shower : *rShowerHandle) {
-          pizero::PiZeroProcess recopzproc(shower, evt, fShowerTag);
-          // Only record if the showers come somewhat close
-          if(!recopzproc.allRecoSet()) continue;
-          const double shdist = pizero::ClosestDistance(recopzproc.shower1(), recopzproc.shower2());
-          if(shdist > 0 && shdist < 100) {
-            setPiZeroInfo(evt, recopzproc);
-            break;
-          }
-        }
+        // // Loop through showers
+        // for(const recob::Shower& shower : *rShowerHandle) {
+        //   pizero::PiZeroProcess recopzproc(shower, evt, fShowerTag);
+        //   // Only record if the showers come somewhat close
+        //   if(!recopzproc.allRecoSet()) continue;
+        //   const double shdist = pizero::ClosestDistance(recopzproc.shower1(), recopzproc.shower2());
+        //   if(shdist > 0 && shdist < 100) {
+        //     setPiZeroInfo(evt, recopzproc);
+        //     break;
+        //   }
+        // }
       } //good beam trigger
     } //good beaminfo
   }//for data
@@ -811,9 +843,9 @@ void protoana::ProtoDUNEPizeroAnaTree::FillPrimaryPFParticle(art::Event const & 
          fprimarydQdx[l]= calovector[k].dQdx()[l];
          fprimaryResidualRange[l]= calovector[k].ResidualRange()[l];
          const auto &pos=(calovector[k].XYZ())[l];
-         fprimary_calX[l] = pos.X();
-         fprimary_calY[l] = pos.Y();
-         fprimary_calZ[l] = pos.Z();
+         fprimary_cal_pos[l][0] = pos.X();
+         fprimary_cal_pos[l][1] = pos.Y();
+         fprimary_cal_pos[l][2] = pos.Z();
          fprimary_cal_pitch[l] =calovector[k].TrkPitchVec()[l];
       }
     }
@@ -828,34 +860,94 @@ void protoana::ProtoDUNEPizeroAnaTree::FillPrimaryPFParticle(art::Event const & 
       const recob::PFParticle* daughter = &recoParticleHandle->at(fprimaryDaughterID[di]);
       if(daughter == 0x0) continue;
 
+      const recob::Track* daughterTrack   = pfpUtil.GetPFParticleTrack(*daughter, evt,fPFParticleTag,fTrackTag);
+      const recob::Shower* daughterShower = pfpUtil.GetPFParticleShower(*daughter,evt,fPFParticleTag,fShowerTag);
+
       // Pandora's BDT beam-cosmic score
       fprimaryDaughterBDTScore[di] = (double)pfpUtil.GetBeamCosmicScore(*daughter,evt,fPFParticleTag);
-      // NHits associated with this pfParticle
-      const std::vector<const recob::Cluster*> pfpClusters = pfpUtil.GetPFParticleClusters(*daughter,evt,fPFParticleTag);
-      auto allClusters = evt.getValidHandle<std::vector<recob::Cluster>>(fPFParticleTag);
-      const art::FindManyP<recob::Hit> findHits(allClusters, evt, fPFParticleTag);
-      std::vector<art::Ptr<recob::Hit>> pfpDHits;
-      for(auto cluster : pfpClusters){
-        const std::vector<art::Ptr<recob::Hit>> clusterHits = findHits.at(cluster->ID());
-        for(art::Ptr<recob::Hit> hit : clusterHits){
-          pfpDHits.push_back(hit);
-        }
+      // Hits and calorimetry associated with this pfParticle
+      auto recoShowers = evt.getValidHandle< std::vector< recob::Shower > >(fShowerTag);
+      auto recoTracks = evt.getValidHandle< std::vector< recob::Track > >(fTrackTag);
+      art::FindManyP<recob::Hit> findHitsFromShowers(recoShowers,evt,fShowerTag);
+      art::FindManyP<recob::Hit> findHitsFromTracks(recoTracks,evt,fTrackTag);
+      std::vector<const recob::Hit*> pfpDHits;
+      std::vector<anab::Calorimetry> calovector;
+      std::vector<art::Ptr<recob::Hit >> tmp_hits;
+      if(daughterTrack != 0x0) {
+        pfpDHits = trackUtil.GetRecoTrackHits(*daughterTrack, evt, fTrackTag);
+        calovector = trackUtil.GetRecoTrackCalorimetry(*daughterTrack, evt, fTrackTag, fCalorimetryTag);
+        tmp_hits = findHitsFromTracks.at( daughterTrack->ID() );
+      } else if(daughterShower != 0x0) {
+        pfpDHits = showerUtil.GetRecoShowerHits(*daughterShower, evt, fShowerTag);
+        calovector = showerUtil.GetRecoShowerCalorimetry(*daughterShower, evt, fShowerTag, fShowerCaloTag);
+        tmp_hits = findHitsFromShowers.at( daughterShower->ID() );
+        // std::cout << "Daughter shower ID: " << daughterShower->ID() << '\n';
       }
-      fprimaryDaughterNHits[di] = pfpDHits.size();
+      if(calovector.size() != 3 && fVerbose > 0) {
+        std::cerr << "WARNING::Calorimetry vector size for track is = " << calovector.size() << std::endl;
+      }
+
+      fprimaryDaughterNHits[di] = 0;
       // Aidan's CNN track-like score: determine the average for this object and save.
       anab::MVAReader<recob::Hit,4> hitResults(evt, "emtrkmichelid:emtrkmichel" );
+      art::FindManyP<recob::SpacePoint> spFromHits(pfpDHits, evt, fHitTag);
       fprimaryDaughterCNNScore[di] = 0;
-      for( unsigned i = 0; i < pfpDHits.size(); ++i){
-         std::array<float,4> cnn_out = hitResults.getOutput( pfpDHits[i] );
-         const double p_trk_or_sh = cnn_out[ hitResults.getIndex("track") ]+ cnn_out[ hitResults.getIndex("em") ];
-         const double cnn_score = cnn_out[ hitResults.getIndex("em") ]/p_trk_or_sh;
-         fprimaryDaughterCNNScore[di] += cnn_score;
+      for( unsigned i = 0; i < pfpDHits.size() && i < NMAXHITS; ++i){
+        if(pfpDHits[i]->WireID().Plane != 2) continue;
+
+        const geo::WireGeo* pwire = fGeometryService->WirePtr(pfpDHits[i]->WireID());
+        TVector3 xyzWire = pwire->GetCenter<TVector3>();
+        fprimaryDaughterHitWire[di][i] = pfpDHits[i]->WireID().Wire;
+        fprimaryDaughterHitTime[di][i] = pfpDHits[i]->PeakTime();
+        fprimaryDaughterHitPosition[di][i][0] = detprop->ConvertTicksToX(pfpDHits[i]->PeakTime(),pfpDHits[i]->WireID().Plane,pfpDHits[i]->WireID().TPC,0);
+        fprimaryDaughterHitPosition[di][i][2] = xyzWire.Z();
+        std::vector<art::Ptr<recob::SpacePoint>> sps = spFromHits.at(i);
+        if(!sps.empty() ){
+          //fprimaryDaughterHitPosition[di][i][0]= sps[0]->XYZ()[0];
+          fprimaryDaughterHitPosition[di][i][1] = sps[0]->XYZ()[1];
+          //fprimaryDaughterHitPosition[di][i][2] = sps[0]->XYZ()[2];
+        }
+
+        ++fprimaryDaughterNHits[di];
+        std::array<float,4> cnn_out = hitResults.getOutput( tmp_hits[i] );
+        const double p_trk_or_sh = cnn_out[ hitResults.getIndex("track") ]+ cnn_out[ hitResults.getIndex("em") ];
+        const double cnn_score = cnn_out[ hitResults.getIndex("em") ]/p_trk_or_sh;
+        fprimaryDaughterCNNScore[di] += cnn_score;
+        // Record general hit information.
+        fprimaryDaughterHitCharge[di][i] = pfpDHits[i]->Integral();
+        // // Get spacepoint if possible.
+        // if(sps.size() != 0 && daughterShower != 0) {
+        //   const TVector3 spvec(sps[0]->XYZ());
+        //   std::cout << "Hit " << i << " distance to shower start: " << (spvec - daughterShower->ShowerStart()).Mag() << '\n';
+        // } else if(daughterShower != 0) {
+        //   std::cout << "Hit " << i << " has no spacepoint.\n";
+        // }
       }
       fprimaryDaughterCNNScore[di] /= fprimaryDaughterNHits[di];
       // std::cout << "CNN score: " << fprimaryDaughterCNNScore[di] << ". Pandora says:\n";
+      for(size_t k = 0; k < calovector.size() && k<3; k++){
+        int plane = calovector[k].PlaneID().Plane;
+        if(plane !=2 ) continue;
+        for(size_t l=0; l<calovector[k].dEdx().size() && l<NMAXHITS; ++l){
+           // fprimaryDaughterHitdEdx[di][l]= calovector[k].dEdx()[l];
+           fprimaryDaughterHitdQdx[di][l]= calovector[k].dQdx()[l];
+           // fprimaryDaughterResidualRange[l]= calovector[k].ResidualRange()[l];
+           const geo::Point_t &pos=(calovector[k].XYZ())[l];
+           if(daughterShower != 0) {
+             const TVector3 hitvec(pos.X(), pos.Y(), pos.Z());
+             // std::cout << "Calo hit " << l << " distance to shower start: " << (hitvec - daughterShower->ShowerStart()).Mag() << '\n';
+           }
+           fprimaryDaughterCaloHitPosition[di][l][0] = pos.X();
+           fprimaryDaughterCaloHitPosition[di][l][1] = pos.Y();
+           fprimaryDaughterCaloHitPosition[di][l][2] = pos.Z();
+           // fprimaryDaughterHitPitch[di][l] = calovector[k].TrkPitchVec()[l];
+        }
+      }
+      // if(calovector.size() == 3) {
+      //   std::cout << "Calo size: " << calovector[2].dEdx().size() << ", hit size: " <<
+      //   fprimaryDaughterNHits[di] << '\n';
+      // }
 
-      const recob::Track* daughterTrack   = pfpUtil.GetPFParticleTrack(*daughter, evt,fPFParticleTag,fTrackTag);
-      const recob::Shower* daughterShower = pfpUtil.GetPFParticleShower(*daughter,evt,fPFParticleTag,fShowerTag);
       if(daughterTrack != 0x0) {
         // std::cout << "Track\n";
         fprimaryDaughterIstrack[di] = 1;
@@ -864,18 +956,18 @@ void protoana::ProtoDUNEPizeroAnaTree::FillPrimaryPFParticle(art::Event const & 
         fprimaryDaughterMomentum[di]           = daughterTrack->StartMomentum();
         fprimaryDaughterEndMomentum[di]        = daughterTrack->EndMomentum();
         fprimaryDaughterLength[di]             = daughterTrack->Length();
-        fprimaryDaughterStartPosition_X[di]    = daughterTrack->Trajectory().Start().X();
-        fprimaryDaughterStartPosition_Y[di]    = daughterTrack->Trajectory().Start().Y();
-        fprimaryDaughterStartPosition_Z[di]    = daughterTrack->Trajectory().Start().Z();
-        fprimaryDaughterEndPosition_X[di]      = daughterTrack->Trajectory().End().X();
-        fprimaryDaughterEndPosition_Y[di]      = daughterTrack->Trajectory().End().Y();
-        fprimaryDaughterEndPosition_Z[di]      = daughterTrack->Trajectory().End().Z();
-        fprimaryDaughterStartDirection_X[di]   = daughterTrack->Trajectory().StartDirection().X();
-        fprimaryDaughterStartDirection_Y[di]   = daughterTrack->Trajectory().StartDirection().Y();
-        fprimaryDaughterStartDirection_Z[di]   = daughterTrack->Trajectory().StartDirection().Z();
-        fprimaryDaughterEndDirection_X[di]     = daughterTrack->Trajectory().EndDirection().X();
-        fprimaryDaughterEndDirection_Y[di]     = daughterTrack->Trajectory().EndDirection().Y();
-        fprimaryDaughterEndDirection_Z[di]     = daughterTrack->Trajectory().EndDirection().Z();
+        fprimaryDaughterStartPosition[di][0]   = daughterTrack->Trajectory().Start().X();
+        fprimaryDaughterStartPosition[di][1]   = daughterTrack->Trajectory().Start().Y();
+        fprimaryDaughterStartPosition[di][2]   = daughterTrack->Trajectory().Start().Z();
+        fprimaryDaughterEndPosition[di][0]     = daughterTrack->Trajectory().End().X();
+        fprimaryDaughterEndPosition[di][1]     = daughterTrack->Trajectory().End().Y();
+        fprimaryDaughterEndPosition[di][2]     = daughterTrack->Trajectory().End().Z();
+        fprimaryDaughterStartDirection[di][0]  = daughterTrack->Trajectory().StartDirection().X();
+        fprimaryDaughterStartDirection[di][1]  = daughterTrack->Trajectory().StartDirection().Y();
+        fprimaryDaughterStartDirection[di][2]  = daughterTrack->Trajectory().StartDirection().Z();
+        fprimaryDaughterEndDirection[di][0]    = daughterTrack->Trajectory().EndDirection().X();
+        fprimaryDaughterEndDirection[di][1]    = daughterTrack->Trajectory().EndDirection().Y();
+        fprimaryDaughterEndDirection[di][2]    = daughterTrack->Trajectory().EndDirection().Z();
       } else if(daughterShower != 0x0) {
         // std::cout << "Shower\n";
         fprimaryDaughterIstrack[di] = 0;
@@ -888,25 +980,30 @@ void protoana::ProtoDUNEPizeroAnaTree::FillPrimaryPFParticle(art::Event const & 
         fprimaryDaughterEnergyFromHits[di]     = showerUtil.EstimateEnergyFromHitCharge(shHits, fCalorimetryAlg)[2];
         // std::cout << "Energy: " << fprimaryDaughterEnergy[di] << ", from hits: " << fprimaryDaughterEnergyFromHits[di] << '\n';
         fprimaryDaughterLength[di]             = daughterShower->Length();
-        fprimaryDaughterStartDirection_X[di]   = daughterShower->Direction().X();
-        fprimaryDaughterStartDirection_Y[di]   = daughterShower->Direction().Y();
-        fprimaryDaughterStartDirection_Z[di]   = daughterShower->Direction().Z();
-        fprimaryDaughterStartPosition_X[di]    = daughterShower->ShowerStart().X();
-        fprimaryDaughterStartPosition_Y[di]    = daughterShower->ShowerStart().Y();
-        fprimaryDaughterStartPosition_Z[di]    = daughterShower->ShowerStart().Z();
+        fprimaryDaughterStartDirection[di][0]   = daughterShower->Direction().X();
+        fprimaryDaughterStartDirection[di][1]   = daughterShower->Direction().Y();
+        fprimaryDaughterStartDirection[di][2]   = daughterShower->Direction().Z();
+        fprimaryDaughterStartPosition[di][0]    = daughterShower->ShowerStart().X();
+        fprimaryDaughterStartPosition[di][1]    = daughterShower->ShowerStart().Y();
+        fprimaryDaughterStartPosition[di][2]    = daughterShower->ShowerStart().Z();
       }
+      // std::cout << "Daughter length: " << fprimaryDaughterLength[di] << '\n';
+
       // Attempt to get the (grand)parent of this daughter.
       art::ServiceHandle<cheat::ParticleInventoryService> pi_serv;
       const simb::MCParticle* parent = truthUtil.GetMCParticleFromReco(*daughter, evt, fPFParticleTag);
       if(parent != 0x0) {
         fprimaryDaughterParentPdg[di]          = parent->PdgCode();
-        // std::cout << "True parent: " << fprimaryDaughterParentPdg[di] << '\n';
+        // std::cout << "True parent PDG: " << fprimaryDaughterParentPdg[di] << '\n';
         fprimaryDaughterParentID[di]          = parent->TrackId();
         // std::cout << "Daughter parent: " << fprimaryDaughterParentID[di] << '\n';
+        fprimaryDaughterParentE[di]          = parent->E();
+        // std::cout << "True parent E: " << fprimaryDaughterParentE[di] << '\n';
         if(parent->Mother() != 0) {
           fprimaryDaughterGrandparentPdg[di]   =  pi_serv->TrackIdToParticle_P(parent->Mother())->PdgCode();
           fprimaryDaughterGrandparentID[di]   =  pi_serv->TrackIdToParticle_P(parent->Mother())->TrackId();
-          // std::cout << "Shower grandparent: " << fprimaryDaughterGrandparentID[di] << '\n';
+          fprimaryDaughterGrandparentE[di]   =  pi_serv->TrackIdToParticle_P(parent->Mother())->E();
+          // std::cout << "True grandparent PDG: " << fprimaryDaughterGrandparentPdg[di] << '\n';
         }
       }
     } // for track daughters
@@ -955,227 +1052,444 @@ void protoana::ProtoDUNEPizeroAnaTree::FillPrimaryPFParticle(art::Event const & 
          fprimarydQdx[l]= calovector[k].dQdx()[l];
          fprimaryResidualRange[l]= calovector[k].ResidualRange()[l];
          const auto &pos=(calovector[k].XYZ())[l];
-         fprimary_calX[l] = pos.X();
-         fprimary_calY[l] = pos.Y();
-         fprimary_calZ[l] = pos.Z();
+         fprimary_cal_pos[l][0] = pos.X();
+         fprimary_cal_pos[l][1] = pos.Y();
+         fprimary_cal_pos[l][2] = pos.Z();
          fprimary_cal_pitch[l] =calovector[k].TrkPitchVec()[l];
       }
     }
   } // end is shower
 
 
-}
+} // FillPrimaryPFParticle
 
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
-void protoana::ProtoDUNEPizeroAnaTree::setPiZeroInfo(art::Event const & evt, const pizero::PiZeroProcess& pzproc) {
+// void protoana::ProtoDUNEPizeroAnaTree::FillAPA3Object(art::Event const & evt, art::Handle<std::vector<recob::PFParticle>> pfpHandle) {
+//   // Put all PFParticles in a map by ID.
+//   std::unordered_map<size_t, const recob::PFParticle*> PFPmap;
+//   for(const recob::PFParticle& pfp : *pfpHandle) {
+//     PFPmap[pfp.Self()] = &pfp;
+//   }
+//   // Primary particle ID.
+//   const size_t beamID = pfpUtil.GetPFParticlesFromBeamSlice(evt,fPFParticleTag).size() > 0? pfpUtil.GetPFParticlesFromBeamSlice(evt,fPFParticleTag)[0]->Self(): -1;
+//   // Keep track of the number of saved objects
+//   unsigned obji = 0;
+//   for(const recob::PFParticle& pfp : *pfpHandle) {
+//     if(obji >= NMAXOBJECTS) break;
+//
+//     // Determine whether particle is classified as track or shower.
+//     const recob::Track* track   = pfpUtil.GetPFParticleTrack(pfp, evt,fPFParticleTag,fTrackTag);
+//     const recob::Shower* shower = pfpUtil.GetPFParticleShower(pfp,evt,fPFParticleTag,fShowerTag);
+//
+//     // Do initial check whether object is fully contained in APA3.
+//     if(track != 0x0) {
+//       const int TPCstart = fGeometryService->FindTPCAtPosition(track->Start()).deepestIndex();
+//       const int TPCend = fGeometryService->FindTPCAtPosition(track->End()).deepestIndex();
+//       // APA3 == TPCID 1??
+//       if(TPCstart != 1 || TPCend != 1) continue;
+//     } else if(shower != 0x0) {
+//       const int TPCstart = fGeometryService->FindTPCAtPosition(shower->ShowerStart()).deepestIndex();
+//       const int TPCend = fGeometryService->FindTPCAtPosition(shower->ShowerStart() + shower->Length() * shower->Direction()).deepestIndex();
+//       // APA3 == TPCID 1??
+//       if(TPCstart != 1 || TPCend != 1) continue;
+//     } else {
+//       continue;
+//     }
+//
+//     // General PFParticle attributes
+//     fObjID[obji] = pfp.Self();
+//     if(PFPmap[pfp.Parent()] != 0x0 && PFPmap[pfp.Parent()]->Self() == beamID) {
+//       fObjIsPrimaryDaughter[obji] = 1;
+//       // std::cout << "Yes, ID " << fObjID[obji] << '\n';
+//     } else {
+//       // std::cout << "No, ID " << fObjID[obji] << '\n';
+//       fObjIsPrimaryDaughter[obji] = 0;
+//     }
+//
+//     // Pandora's BDT beam-cosmic score
+//     fObjBDTscore[obji] = (double)pfpUtil.GetBeamCosmicScore(pfp,evt,fPFParticleTag);
+//
+//     // Get associations between PFParticles, clusters and hits.
+//     const std::vector<const recob::Cluster*> pfpClusters = pfpUtil.GetPFParticleClusters(pfp,evt,fPFParticleTag);
+//     const auto allClusters = evt.getValidHandle<std::vector<recob::Cluster>>(fPFParticleTag);
+//     const art::FindManyP<recob::Hit> findHits(allClusters, evt, fPFParticleTag);
+//     std::vector<art::Ptr<recob::Hit>> pfpHits;
+//     for(auto cluster : pfpClusters){
+//       const std::vector<art::Ptr<recob::Hit>> clusterHits = findHits.at(cluster->ID());
+//       for(art::Ptr<recob::Hit> hit : clusterHits){
+//         pfpHits.push_back(hit);
+//       }
+//     }
+//     // NHits associated with this pfParticle
+//     fObjNumHits[obji] = pfpHits.size();
+//
+//     // Aidan's CNN track-like score: determine the average for this object and save.
+//     anab::MVAReader<recob::Hit,4> hitResults(evt, "emtrkmichelid:emtrkmichel" );
+//     fObjCNNscore[obji] = 0;
+//     // Loop over PFP hits.
+//     for( unsigned i = 0; i < pfpHits.size() && i < NMAXHITS; ++i){
+//       // Collection plane only.
+//       if(pfpHits[i]->WireID().Plane != 2) continue;
+//       // Record CNN score per hit.
+//       const std::array<float,4> cnn_out = hitResults.getOutput( pfpHits[i] );
+//       const double p_trk_or_sh = cnn_out[ hitResults.getIndex("track") ]+ cnn_out[ hitResults.getIndex("em") ];
+//       const double cnn_score = cnn_out[ hitResults.getIndex("em") ]/p_trk_or_sh;
+//       fObjCNNscore[obji] += cnn_score;
+//       // Record other hit information.
+//       fObjHitTime[obji][i] = pfpHits[i]->PeakTime();
+//       fObjHitWire[obji][i] = pfpHits[i]->WireID().Wire;
+//       fObjHitCharge[obji][i] = pfpHits[i]->Integral();
+//     }
+//     fObjCNNscore[obji] /= fObjNumHits[obji];
+//     // std::cout << "CNN score: " << fObjCNNscore[obji] << ". Pandora says:\n";
+//
+//     // Distinctive track/shower information.
+//     const simb::MCParticle* mcparticle;
+//     if(track != 0) {
+//       // PFParticle is marked as track by Pandora.
+//       mcparticle = truthUtil.GetMCParticleFromReco(*track, evt, fTrackTag);
+//
+//       fObjIsShower[obji]                    = 0;
+//       fObjIsTrack[obji]                     = 1;
+//       fObjLength[obji]                      = track->Length();
+//       fObjStartPosition[obji][0]            = track->Start().X();
+//       fObjStartPosition[obji][1]            = track->Start().Y();
+//       fObjStartPosition[obji][2]            = track->Start().Z();
+//       fObjEndPosition[obji][0]              = track->End().X();
+//       fObjEndPosition[obji][1]              = track->End().Y();
+//       fObjEndPosition[obji][2]              = track->End().Z();
+//       fObjStartDirection[obji][0]           = track->StartDirection().X();
+//       fObjStartDirection[obji][1]           = track->StartDirection().Y();
+//       fObjStartDirection[obji][2]           = track->StartDirection().Z();
+//       fObjEndDirection[obji][0]             = track->EndDirection().X();
+//       fObjEndDirection[obji][1]             = track->EndDirection().Y();
+//       fObjEndDirection[obji][2]             = track->EndDirection().Z();
+//       fObjMomentum[obji]                    = track->StartMomentum();
+//       fObjEndMomentum[obji]                 = track->EndMomentum();
+//
+//       // Calorimetry only collection plane
+//       std::vector<anab::Calorimetry> calovector = trackUtil.GetRecoTrackCalorimetry(*track, evt, fTrackTag, fCalorimetryTag);
+//       if(calovector.size() != 3 && fVerbose > 0)
+//         std::cerr << "WARNING::Calorimetry vector size for track is = " << calovector.size() << std::endl;
+//
+//       for(size_t k = 0; k < calovector.size() && k<3; k++){
+//         int plane = calovector[k].PlaneID().Plane;
+//         if(plane !=2 ) continue;
+//         for(size_t l=0; l<calovector[k].dEdx().size() && l<NMAXHITS; ++l){
+//            fObjHitdEdx[obji][l]= calovector[k].dEdx()[l];
+//            fObjHitdQdx[obji][l]= calovector[k].dQdx()[l];
+//            // fObjResidualRange[l]= calovector[k].ResidualRange()[l];
+//            const auto &pos=(calovector[k].XYZ())[l];
+//            fObjHitPosition[obji][l][0] = pos.X();
+//            fObjHitPosition[obji][l][1] = pos.Y();
+//            fObjHitPosition[obji][l][2] = pos.Z();
+//            fObjHitPitch[obji][l] = calovector[k].TrkPitchVec()[l];
+//         }
+//       }
+//     } else if(shower != 0) {
+//       // PFParticle is marked as shower by Pandora.
+//       mcparticle = truthUtil.GetMCParticleFromReco(*shower, evt, fShowerTag);
+//
+//       fObjIsTrack[obji]                     = 0;
+//       fObjIsShower[obji]                    = 1;
+//       fObjLength[obji]                      = shower->Length();
+//       // fObjShowerBestPlane[obji]          = shower->best_plane();
+//       // fObjOpeningAngle[obji]             = shower->OpenAngle();
+//       fObjStartPosition[obji][0]            = shower->ShowerStart().X();
+//       fObjStartPosition[obji][1]            = shower->ShowerStart().Y();
+//       fObjStartPosition[obji][2]            = shower->ShowerStart().Z();
+//       const TVector3 shEnd = shower->ShowerStart() + shower->Length()*shower->Direction();
+//       fObjEndPosition[obji][0]              = shEnd.X();
+//       fObjEndPosition[obji][1]              = shEnd.Y();
+//       fObjEndPosition[obji][2]              = shEnd.Z();
+//       fObjStartDirection[obji][0]           = shower->Direction().X();
+//       fObjStartDirection[obji][1]           = shower->Direction().Y();
+//       fObjStartDirection[obji][2]           = shower->Direction().Z();
+//       fObjEndDirection[obji][0]             = shower->Direction().X();
+//       fObjEndDirection[obji][1]             = shower->Direction().Y();
+//       fObjEndDirection[obji][2]             = shower->Direction().Z();
+//
+//       // Calorimetry only collection plane
+//       std::vector<anab::Calorimetry> calovector = showerUtil.GetRecoShowerCalorimetry(*shower, evt, fShowerTag, fShowerCaloTag);
+//       if(calovector.size() != 3 && fVerbose > 0)
+//         std::cerr << "WARNING::Calorimetry vector size for shower is = " << calovector.size() << std::endl;
+//
+//       for(size_t k = 0; k < calovector.size() && k<3; k++){
+//         int plane = calovector[k].PlaneID().Plane;
+//         if(plane !=2 ) continue;
+//         for(size_t l=0; l<calovector[k].dEdx().size() && l<NMAXHITS; ++l){
+//            fObjHitdEdx[obji][l]= calovector[k].dEdx()[l];
+//            fObjHitdQdx[obji][l]= calovector[k].dQdx()[l];
+//            // fObjResidualRange[l]= calovector[k].ResidualRange()[l];
+//            const auto &pos=(calovector[k].XYZ())[l];
+//            fObjHitPosition[obji][l][0] = pos.X();
+//            fObjHitPosition[obji][l][1] = pos.Y();
+//            fObjHitPosition[obji][l][2] = pos.Z();
+//            fObjHitPitch[obji][l] = calovector[k].TrkPitchVec()[l];
+//         }
+//       }
+//     } else {
+//       continue;
+//     }
+//     // MCParticle matching
+//     if(mcparticle){
+//       art::ServiceHandle<cheat::ParticleInventoryService> pi_serv;
+//       fObjMCParentPdg[obji] = mcparticle->PdgCode();
+//       fObjMCParentID[obji] = mcparticle->TrackId();
+//       if(mcparticle->Mother() > 0 && pi_serv->TrackIdToParticle_P(mcparticle->Mother()) != 0x0) {
+//         fObjMCGrandparentPdg[obji] = pi_serv->TrackIdToParticle_P(mcparticle->Mother())->PdgCode();
+//         fObjMCGrandparentID[obji] = pi_serv->TrackIdToParticle_P(mcparticle->Mother())->TrackId();
+//       }
+//     }
+//
+//     // int fObjID[NMAXOBJECTS];
+//     // int fObjIsTrack[NMAXOBJECTS];
+//     // int fObjIsShower[NMAXOBJECTS];
+//     // int fObjIsPrimaryDaughter[NMAXOBJECTS];
+//     // double fObjBDTscore[NMAXOBJECTS];
+//     // double fObjCNNscore[NMAXOBJECTS];
+//     // double fObjMomentum[NMAXOBJECTS];
+//     // double fObjEndMomentum[NMAXOBJECTS];
+//     // double fObjLength[NMAXOBJECTS];
+//     // double fObjStartPosition[NMAXOBJECTS][3];
+//     // double fObjEndPosition[NMAXOBJECTS][3];
+//     // double fObjStartDirection[NMAXOBJECTS][3];
+//     // double fObjEndDirection[NMAXOBJECTS][3];
+//     // int fObjMCParentPdg[NMAXOBJECTS];
+//     // int fObjMCGrandparentPdg[NMAXOBJECTS];
+//     // int fObjMCParentID[NMAXOBJECTS];
+//     // int fObjMCGrandparentID[NMAXOBJECTS];
+//     // // Hit information
+//     // int fObjNumHits[NMAXOBJECTS];
+//     // double fObjHitPosition[NMAXOBJECTS][NMAXHITS][3];
+//     // double fObjHitTime[NMAXOBJECTS][NMAXHITS];
+//     // int fObjHitWire[NMAXOBJECTS][NMAXHITS];
+//     // double fObjHitCharge[NMAXOBJECTS][NMAXHITS];
+//     // double fObjHitPitch[NMAXOBJECTS][NMAXHITS];
+//     // double fObjHitdEdx[NMAXOBJECTS][NMAXHITS];
+//     // double fObjHitdQdx[NMAXOBJECTS][NMAXHITS];
+//
+//     // Only increment the counter if the object was contained in APA3.
+//     ++obji;
+//   }
+// }
+
+// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+void protoana::ProtoDUNEPizeroAnaTree::setPiZeroInfo(art::Event const & evt, const std::vector<const simb::MCParticle*>& pi0s) {
   // Clean slate
   ResetPi0Vars();
 
-  // Set MC object variables
-  if(pzproc.allMCSet()) {
+  // Loop over all pi0s in the array by index.
+  for(unsigned pi0i = 0; pi0i < NMAXPIZEROS && pi0i < pi0s.size(); ++pi0i) {
+    pizero::PiZeroProcess pzproc(*(pi0s[pi0i]), evt, fShowerTag);
 
-    const simb::MCParticle* pi0 = pzproc.pi0();
-    const simb::MCParticle* photon1 = pzproc.photon1();
-    const simb::MCParticle* photon2 = pzproc.photon2();
+    // Set MC object variables
+    if(pzproc.allMCSet()) {
 
-    // MC pi0 variables
-    fMCPi0ID = pi0->TrackId();
-    fMCPi0Energy = pi0->E();
-    pi0->Position().Vect().GetXYZ(fMCPi0StartPosition);
-    pi0->EndPosition().Vect().GetXYZ(fMCPi0EndPosition);
-    fMCPhoton1ID = photon1->TrackId();
-    fMCPhoton2ID = photon2->TrackId();
-    fMCPhoton1Energy = photon1->E();
-    fMCPhoton2Energy = photon2->E();
-    photon1->Position().Vect().GetXYZ(fMCPhoton1StartPosition);
-    photon2->Position().Vect().GetXYZ(fMCPhoton2StartPosition);
-    photon1->EndPosition().Vect().GetXYZ(fMCPhoton1EndPosition);
-    photon2->EndPosition().Vect().GetXYZ(fMCPhoton2EndPosition);
-    // Reco hits related to photons
-    std::vector<const recob::Hit*> ph1hits = truthUtil.GetMCParticleHits(*photon1, evt, fHitTag);
-    std::vector<const recob::Hit*> ph2hits = truthUtil.GetMCParticleHits(*photon2, evt, fHitTag);
-    // Photon 1 hits
-    art::FindManyP<recob::SpacePoint> ph1sps(ph1hits, evt, fPFParticleTag);
-    unsigned phi1 = 0;
-    for(unsigned i=0; i<ph1hits.size(); ++i) {
-      if(ph1hits[i]->WireID().Plane != 2) continue;
-      fMCPhoton1_hit_w[phi1] = ph1hits[phi1]->WireID().Wire;
-      fMCPhoton1_hit_t[phi1] = ph1hits[phi1]->PeakTime();
-      fMCPhoton1_hit_q[phi1] = ph1hits[phi1]->Integral();
-      std::vector<art::Ptr<recob::SpacePoint>> sps = ph1sps.at(i);
-      if(!sps.empty()) {
-        fMCPhoton1_hit_X[phi1] = sps[0]->XYZ()[0];
-        fMCPhoton1_hit_Y[phi1] = sps[0]->XYZ()[1];
-        fMCPhoton1_hit_Z[phi1] = sps[0]->XYZ()[2];
+      const simb::MCParticle* pi0 = pzproc.pi0();
+      const simb::MCParticle* photon1 = pzproc.photon1();
+      const simb::MCParticle* photon2 = pzproc.photon2();
+
+      // MC pi0 variables
+      fMCPi0ID[pi0i] = pi0->TrackId();
+      fMCPi0Energy[pi0i] = pi0->E();
+      pi0->Position().Vect().GetXYZ(fMCPi0StartPosition[pi0i]);
+      pi0->EndPosition().Vect().GetXYZ(fMCPi0EndPosition[pi0i]);
+      fMCPhoton1ID[pi0i] = photon1->TrackId();
+      fMCPhoton2ID[pi0i] = photon2->TrackId();
+      fMCPhoton1Energy[pi0i] = photon1->E();
+      fMCPhoton2Energy[pi0i] = photon2->E();
+      photon1->Position().Vect().GetXYZ(fMCPhoton1StartPosition[pi0i]);
+      photon2->Position().Vect().GetXYZ(fMCPhoton2StartPosition[pi0i]);
+      photon1->EndPosition().Vect().GetXYZ(fMCPhoton1EndPosition[pi0i]);
+      photon2->EndPosition().Vect().GetXYZ(fMCPhoton2EndPosition[pi0i]);
+      // Reco hits related to photons
+      std::vector<const recob::Hit*> ph1hits = truthUtil.GetMCParticleHits(*photon1, evt, fHitTag);
+      std::vector<const recob::Hit*> ph2hits = truthUtil.GetMCParticleHits(*photon2, evt, fHitTag);
+      // Photon 1 hits
+      art::FindManyP<recob::SpacePoint> ph1sps(ph1hits, evt, fPFParticleTag);
+      unsigned phi1 = 0;
+      for(unsigned i=0; i<ph1hits.size(); ++i) {
+        if(ph1hits[i]->WireID().Plane != 2) continue;
+        fMCPhoton1_hit_w[pi0i][phi1] = ph1hits[phi1]->WireID().Wire;
+        fMCPhoton1_hit_t[pi0i][phi1] = ph1hits[phi1]->PeakTime();
+        fMCPhoton1_hit_q[pi0i][phi1] = ph1hits[phi1]->Integral();
+        std::vector<art::Ptr<recob::SpacePoint>> sps = ph1sps.at(i);
+        if(!sps.empty()) {
+          fMCPhoton1_hit_pos[pi0i][phi1][0] = sps[0]->XYZ()[0];
+          fMCPhoton1_hit_pos[pi0i][phi1][1] = sps[0]->XYZ()[1];
+          fMCPhoton1_hit_pos[pi0i][phi1][2] = sps[0]->XYZ()[2];
+        }
+        ++phi1;
       }
-      ++phi1;
-    }
-    // Photon 2 hits
-    art::FindManyP<recob::SpacePoint> ph2sps(ph2hits, evt, fPFParticleTag);
-    unsigned phi2 = 0;
-    for(unsigned i=0; i<ph2hits.size(); ++i) {
-      if(ph2hits[i]->WireID().Plane != 2) continue;
-      fMCPhoton2_hit_w[phi2] = ph2hits[phi2]->WireID().Wire;
-      fMCPhoton2_hit_t[phi2] = ph2hits[phi2]->PeakTime();
-      fMCPhoton2_hit_q[phi2] = ph2hits[phi2]->Integral();
-      std::vector<art::Ptr<recob::SpacePoint>> sps = ph2sps.at(i);
-      if(!sps.empty()) {
-        fMCPhoton2_hit_X[phi2] = sps[0]->XYZ()[0];
-        fMCPhoton2_hit_Y[phi2] = sps[0]->XYZ()[1];
-        fMCPhoton2_hit_Z[phi2] = sps[0]->XYZ()[2];
+      // Photon 2 hits
+      art::FindManyP<recob::SpacePoint> ph2sps(ph2hits, evt, fPFParticleTag);
+      unsigned phi2 = 0;
+      for(unsigned i=0; i<ph2hits.size(); ++i) {
+        if(ph2hits[i]->WireID().Plane != 2) continue;
+        fMCPhoton2_hit_w[pi0i][phi2] = ph2hits[phi2]->WireID().Wire;
+        fMCPhoton2_hit_t[pi0i][phi2] = ph2hits[phi2]->PeakTime();
+        fMCPhoton2_hit_q[pi0i][phi2] = ph2hits[phi2]->Integral();
+        std::vector<art::Ptr<recob::SpacePoint>> sps = ph2sps.at(i);
+        if(!sps.empty()) {
+          fMCPhoton2_hit_pos[pi0i][phi2][0] = sps[0]->XYZ()[0];
+          fMCPhoton2_hit_pos[pi0i][phi2][1] = sps[0]->XYZ()[1];
+          fMCPhoton2_hit_pos[pi0i][phi2][2] = sps[0]->XYZ()[2];
+        }
+        ++phi2;
       }
-      ++phi2;
-    }
-    fMCPhoton1NumHits = phi1;
-    fMCPhoton2NumHits = phi2;
+      fMCPhoton1NumHits[pi0i] = phi1;
+      fMCPhoton2NumHits[pi0i] = phi2;
 
-  } // if MC set
+    } // if MC set
 
-  //This is how we get cnn score for now
-  auto recoShowers = evt.getValidHandle< std::vector< recob::Shower > >(fShowerTag);
-  auto recoTracks = evt.getValidHandle< std::vector< recob::Track > >(fTrackTag);
-  art::FindManyP<recob::Hit> findHitsFromShowers(recoShowers,evt,fShowerTag);
-  art::FindManyP<recob::Hit> findHitsFromTracks(recoTracks,evt,fTrackTag);
-  anab::MVAReader<recob::Hit,4> hitResults(evt, "emtrkmichelid:emtrkmichel" );
+    //This is how we get cnn score for now
+    auto recoShowers = evt.getValidHandle< std::vector< recob::Shower > >(fShowerTag);
+    auto recoTracks = evt.getValidHandle< std::vector< recob::Track > >(fTrackTag);
+    art::FindManyP<recob::Hit> findHitsFromShowers(recoShowers,evt,fShowerTag);
+    art::FindManyP<recob::Hit> findHitsFromTracks(recoTracks,evt,fTrackTag);
+    anab::MVAReader<recob::Hit,4> hitResults(evt, "emtrkmichelid:emtrkmichel" );
 
-  // First shower
-  const recob::Shower* shower1 = pzproc.shower1();
-  if(shower1 != 0x0) {
-    fShower1ID = showerUtil.GetShowerIndex(*shower1, evt, fShowerTag);
-    std::vector< art::Ptr< recob::Hit > > sh1_hits = findHitsFromShowers.at(fShower1ID);
-    for( size_t i=0; i<sh1_hits.size(); ++i){
-       std::array<float,4> cnn_out = hitResults.getOutput( sh1_hits[i] );
-       double p_trk_or_sh = cnn_out[ hitResults.getIndex("track") ]+ cnn_out[ hitResults.getIndex("em") ];
-       double cnn_score = cnn_out[ hitResults.getIndex("em") ]/p_trk_or_sh;
-       fShower1_cnn_sc[i] = cnn_score;
-    }
-    shower1->ShowerStart().GetXYZ(fShower1StartPosition);
-    shower1->Direction().GetXYZ(fShower1Direction);
-    fShower1Length = shower1->Length();
-    unsigned numMChits = truthUtil.GetMCParticleHits(*pzproc.photon1(), evt, fHitTag).size();
-    unsigned showerHits = showerUtil.GetRecoShowerHits(*shower1, evt, fShowerTag).size();
-    unsigned sharedHits = truthUtil.GetSharedHits(*pzproc.photon1(), *shower1, evt, fShowerTag, true).size();
-    fShower1Completeness = (double)sharedHits/numMChits;
-    fShower1Purity = (double)sharedHits/showerHits;
-    // Find out whether (grand)parent of shower was primary.
-    // Go through all PFParticles until the right one is found.
-    const recob::PFParticle* shpfp = 0x0;
-    std::vector<const recob::PFParticle*> beamPFParticles = pfpUtil.GetPFParticlesFromBeamSlice(evt,fPFParticleTag);
-    art::Handle<std::vector<recob::PFParticle>> PFParticleHandle;
-    if (evt.getByLabel(fPFParticleTag, PFParticleHandle) && beamPFParticles.size() != 0) {
-      const recob::PFParticle* beampfp = beamPFParticles[0];
-      for(const recob::PFParticle& pfp : *PFParticleHandle) {
-        const recob::Shower* thish = pfpUtil.GetPFParticleShower(pfp,evt,fPFParticleTag,fShowerTag);
-        if(thish == 0x0) continue;
-        // Test whether it's the right shower by comparing lengths.
-        if(thish->Length() - shower1->Length() < 1e-5) {
-          shpfp = &pfp;
-          break;
+    // First shower
+    const recob::Shower* shower1 = pzproc.shower1();
+    if(shower1 != 0x0) {
+      fShower1ID[pi0i] = showerUtil.GetShowerIndex(*shower1, evt, fShowerTag);
+      std::vector< art::Ptr< recob::Hit > > sh1_hits = findHitsFromShowers.at(fShower1ID[pi0i]);
+      for( size_t i=0; i<sh1_hits.size(); ++i){
+         std::array<float,4> cnn_out = hitResults.getOutput( sh1_hits[i] );
+         double p_trk_or_sh = cnn_out[ hitResults.getIndex("track") ]+ cnn_out[ hitResults.getIndex("em") ];
+         double cnn_score = cnn_out[ hitResults.getIndex("em") ]/p_trk_or_sh;
+         fShower1_cnn_sc[pi0i][i] = cnn_score;
+      }
+      shower1->ShowerStart().GetXYZ(fShower1StartPosition[pi0i]);
+      shower1->Direction().GetXYZ(fShower1Direction[pi0i]);
+      fShower1Length[pi0i] = shower1->Length();
+      unsigned numMChits = truthUtil.GetMCParticleHits(*pzproc.photon1(), evt, fHitTag).size();
+      unsigned showerHits = showerUtil.GetRecoShowerHits(*shower1, evt, fShowerTag).size();
+      unsigned sharedHits = truthUtil.GetSharedHits(*pzproc.photon1(), *shower1, evt, fShowerTag, true).size();
+      fShower1Completeness[pi0i] = (double)sharedHits/numMChits;
+      fShower1Purity[pi0i] = (double)sharedHits/showerHits;
+      // Find out whether (grand)parent of shower was primary.
+      // Go through all PFParticles until the right one is found.
+      const recob::PFParticle* shpfp = 0x0;
+      std::vector<const recob::PFParticle*> beamPFParticles = pfpUtil.GetPFParticlesFromBeamSlice(evt,fPFParticleTag);
+      art::Handle<std::vector<recob::PFParticle>> PFParticleHandle;
+      if (evt.getByLabel(fPFParticleTag, PFParticleHandle) && beamPFParticles.size() != 0) {
+        const recob::PFParticle* beampfp = beamPFParticles[0];
+        for(const recob::PFParticle& pfp : *PFParticleHandle) {
+          const recob::Shower* thish = pfpUtil.GetPFParticleShower(pfp,evt,fPFParticleTag,fShowerTag);
+          if(thish == 0x0) continue;
+          // Test whether it's the right shower by comparing lengths.
+          if(thish->Length() - shower1->Length() < 1e-5) {
+            shpfp = &pfp;
+            break;
+          }
+        }
+        // Is PFP's parent or PFP's grandparent the beam particle?
+        const recob::PFParticle* parent = 0x0;
+        const recob::PFParticle* gparent = 0x0;
+        if(shpfp && shpfp->Parent() != 0 && shpfp->Parent() < PFParticleHandle->size())
+          parent = &PFParticleHandle->at(shpfp->Parent());
+        if(parent && parent->Parent() != 0 && parent->Parent() < PFParticleHandle->size()) gparent = &PFParticleHandle->at(parent->Parent());
+
+        fShower1HasBeamParent[pi0i] = parent && parent->Self() == beampfp->Self()? 1: 0;
+        fShower1HasBeamGrandparent[pi0i] = gparent && gparent->Self() == beampfp->Self()? 1: 0;
+      } // if get pfparticles and beampfparticles
+
+      // Calorimetry related to showers
+      std::vector<anab::Calorimetry> sh1calo = showerUtil.GetRecoShowerCalorimetry(*shower1, evt, fShowerTag, fShowerCaloTag);
+      for(unsigned k=0; k<sh1calo.size(); ++k) {
+        if(sh1calo[k].PlaneID().Plane != 2) continue;
+
+        fShower1NumHits[pi0i] = std::min((int)sh1calo[k].dEdx().size(), NMAXHITS);
+        fShower1_cal_E[pi0i] = sh1calo[k].KineticEnergy();
+        std::vector<const recob::Hit*> shHitPtrs = showerUtil.GetRecoShowerHits(
+                    *shower1, evt, fShowerTag);
+        fShower1Energy[pi0i] = pzproc.showerProcess1()->energy(fShowerCaloTag, fCalibFactor, fNormFactor, fSCEFileName, fYZCorrFileName, fXCorrFileName);
+        fShower1EnergyFromHits[pi0i] = showerUtil.EstimateEnergyFromHitCharge(shHitPtrs, fCalorimetryAlg)[2];
+
+        for(int i=0; i<fShower1NumHits[pi0i]; ++i) {
+          const geo::Point_t& pos = sh1calo[k].XYZ()[i];
+          fShower1_cal_pos[pi0i][i][0] = pos.X();
+          fShower1_cal_pos[pi0i][i][1] = pos.Y();
+          fShower1_cal_pos[pi0i][i][2] = pos.Z();
+          fShower1_cal_pitch[pi0i][i] = sh1calo[k].TrkPitchVec()[i];
+          fShower1_cal_dEdx[pi0i][i] = sh1calo[k].dEdx()[i];
+          fShower1_cal_dQdx[pi0i][i] = sh1calo[k].dQdx()[i];
         }
       }
-      // Is PFP's parent or PFP's grandparent the beam particle?
-      const recob::PFParticle* parent = 0x0;
-      const recob::PFParticle* gparent = 0x0;
-      if(shpfp && shpfp->Parent() != 0 && shpfp->Parent() < PFParticleHandle->size())
-        parent = &PFParticleHandle->at(shpfp->Parent());
-      if(parent && parent->Parent() != 0 && parent->Parent() < PFParticleHandle->size()) gparent = &PFParticleHandle->at(parent->Parent());
-
-      fShower1HasBeamParent = parent && parent->Self() == beampfp->Self()? 1: 0;
-      fShower1HasBeamGrandparent = gparent && gparent->Self() == beampfp->Self()? 1: 0;
-    } // if get pfparticles and beampfparticles
-
-    // Calorimetry related to showers
-    std::vector<anab::Calorimetry> sh1calo = showerUtil.GetRecoShowerCalorimetry(*shower1, evt, fShowerTag, fShowerCaloTag);
-    for(unsigned k=0; k<sh1calo.size(); ++k) {
-      if(sh1calo[k].PlaneID().Plane != 2) continue;
-
-      fShower1NumHits = std::min((int)sh1calo[k].dEdx().size(), NMAXHITS);
-      fShower1_cal_E = sh1calo[k].KineticEnergy();
-      std::vector<const recob::Hit*> shHitPtrs = showerUtil.GetRecoShowerHits(
-                  *shower1, evt, fShowerTag);
-      fShower1Energy = pzproc.showerProcess1()->energy(fShowerCaloTag, fCalibFactor, fNormFactor, fSCEFileName, fYZCorrFileName, fXCorrFileName);
-      fShower1EnergyFromHits = showerUtil.EstimateEnergyFromHitCharge(shHitPtrs, fCalorimetryAlg)[2];
-
-      for(int i=0; i<fShower1NumHits; ++i) {
-        const geo::Point_t& pos = sh1calo[k].XYZ()[i];
-        fShower1_cal_X[i] = pos.X();
-        fShower1_cal_Y[i] = pos.Y();
-        fShower1_cal_Z[i] = pos.Z();
-        fShower1_cal_pitch[i] = sh1calo[k].TrkPitchVec()[i];
-        fShower1_cal_dEdx[i] = sh1calo[k].dEdx()[i];
-        fShower1_cal_dQdx[i] = sh1calo[k].dQdx()[i];
+    } // if shower1 != 0x0
+    // Second shower
+    const recob::Shower* shower2 = pzproc.shower2();
+    if(shower2 != 0x0) {
+      // Reco pi0 variables
+      fShower2ID[pi0i] = showerUtil.GetShowerIndex(*shower2, evt, fShowerTag);
+      std::vector< art::Ptr< recob::Hit > > sh2_hits = findHitsFromShowers.at(fShower2ID[pi0i]);
+      for( size_t i=0; i<sh2_hits.size(); ++i){
+         std::array<float,4> cnn_out = hitResults.getOutput( sh2_hits[i] );
+         double p_trk_or_sh = cnn_out[ hitResults.getIndex("track") ]+ cnn_out[ hitResults.getIndex("em") ];
+         double cnn_score = cnn_out[ hitResults.getIndex("em") ]/p_trk_or_sh;
+         fShower2_cnn_sc[pi0i][i] = cnn_score;
       }
-    }
-  } // if shower1 != 0x0
-  // Second shower
-  const recob::Shower* shower2 = pzproc.shower2();
-  if(shower2 != 0x0) {
-    // Reco pi0 variables
-    fShower2ID = showerUtil.GetShowerIndex(*shower2, evt, fShowerTag);
-    std::vector< art::Ptr< recob::Hit > > sh2_hits = findHitsFromShowers.at(fShower2ID);
-    for( size_t i=0; i<sh2_hits.size(); ++i){
-       std::array<float,4> cnn_out = hitResults.getOutput( sh2_hits[i] );
-       double p_trk_or_sh = cnn_out[ hitResults.getIndex("track") ]+ cnn_out[ hitResults.getIndex("em") ];
-       double cnn_score = cnn_out[ hitResults.getIndex("em") ]/p_trk_or_sh;
-       fShower2_cnn_sc[i] = cnn_score;
-    }
-    shower2->ShowerStart().GetXYZ(fShower2StartPosition);
-    shower2->Direction().GetXYZ(fShower2Direction);
-    fShower2Length = shower2->Length();
-    unsigned numMChits = truthUtil.GetMCParticleHits(*pzproc.photon2(), evt, fHitTag).size();
-    unsigned showerHits = showerUtil.GetRecoShowerHits(*shower2, evt, fShowerTag).size();
-    unsigned sharedHits = truthUtil.GetSharedHits(*pzproc.photon2(), *shower2, evt, fShowerTag, true).size();
-    fShower2Completeness = (double)sharedHits/numMChits;
-    fShower2Purity = (double)sharedHits/showerHits;
-    // Find out whether (grand)parent of shower was primary.
-    // Go through all PFParticles until the right one is found.
-    const recob::PFParticle* shpfp = 0x0;
-    std::vector<const recob::PFParticle*> beamPFParticles = pfpUtil.GetPFParticlesFromBeamSlice(evt,fPFParticleTag);
-    art::Handle<std::vector<recob::PFParticle>> PFParticleHandle;
-    if (evt.getByLabel(fPFParticleTag, PFParticleHandle) && beamPFParticles.size() != 0) {
-      const recob::PFParticle* beampfp = beamPFParticles[0];
-      for(const recob::PFParticle& pfp : *PFParticleHandle) {
-        const recob::Shower* thish = pfpUtil.GetPFParticleShower(pfp,evt,fPFParticleTag,fShowerTag);
-        if(thish == 0x0) continue;
-        // Test whether it's the right shower by comparing lengths.
-        if(thish->Length() - shower2->Length() < 1e-5) {
-          shpfp = &pfp;
-          break;
+      shower2->ShowerStart().GetXYZ(fShower2StartPosition[pi0i]);
+      shower2->Direction().GetXYZ(fShower2Direction[pi0i]);
+      fShower2Length[pi0i] = shower2->Length();
+      unsigned numMChits = truthUtil.GetMCParticleHits(*pzproc.photon2(), evt, fHitTag).size();
+      unsigned showerHits = showerUtil.GetRecoShowerHits(*shower2, evt, fShowerTag).size();
+      unsigned sharedHits = truthUtil.GetSharedHits(*pzproc.photon2(), *shower2, evt, fShowerTag, true).size();
+      fShower2Completeness[pi0i] = (double)sharedHits/numMChits;
+      fShower2Purity[pi0i] = (double)sharedHits/showerHits;
+      // Find out whether (grand)parent of shower was primary.
+      // Go through all PFParticles until the right one is found.
+      const recob::PFParticle* shpfp = 0x0;
+      std::vector<const recob::PFParticle*> beamPFParticles = pfpUtil.GetPFParticlesFromBeamSlice(evt,fPFParticleTag);
+      art::Handle<std::vector<recob::PFParticle>> PFParticleHandle;
+      if (evt.getByLabel(fPFParticleTag, PFParticleHandle) && beamPFParticles.size() != 0) {
+        const recob::PFParticle* beampfp = beamPFParticles[0];
+        for(const recob::PFParticle& pfp : *PFParticleHandle) {
+          const recob::Shower* thish = pfpUtil.GetPFParticleShower(pfp,evt,fPFParticleTag,fShowerTag);
+          if(thish == 0x0) continue;
+          // Test whether it's the right shower by comparing lengths.
+          if(thish->Length() - shower2->Length() < 1e-5) {
+            shpfp = &pfp;
+            break;
+          }
+        }
+        // Is PFP's parent or PFP's grandparent the beam particle?
+        const recob::PFParticle* parent = 0x0;
+        const recob::PFParticle* gparent = 0x0;
+        if(shpfp && shpfp->Parent() != 0 && shpfp->Parent() < PFParticleHandle->size()) parent = &PFParticleHandle->at(shpfp->Parent());
+        if(parent && parent->Parent() != 0 && parent->Parent() < PFParticleHandle->size()) gparent = &PFParticleHandle->at(parent->Parent());
+
+        fShower2HasBeamParent[pi0i] = parent && parent->Self() == beampfp->Self()? 1: 0;
+        fShower2HasBeamGrandparent[pi0i] = gparent && gparent->Self() == beampfp->Self()? 1: 0;
+      } // if get pfparticles and beampfparticles
+
+      // Calorimetry related to showers
+      std::vector<anab::Calorimetry> sh2calo = showerUtil.GetRecoShowerCalorimetry(*shower2, evt, fShowerTag, fShowerCaloTag);
+      for(unsigned k=0; k<sh2calo.size(); ++k) {
+        if(sh2calo[k].PlaneID().Plane != 2) continue;
+
+        fShower2NumHits[pi0i] = std::min((int)sh2calo[k].dEdx().size(), NMAXHITS);
+        fShower2_cal_E[pi0i] = sh2calo[k].KineticEnergy();
+        std::vector<const recob::Hit*> shHitPtrs = showerUtil.GetRecoShowerHits(
+                    *shower2, evt, fShowerTag);
+        fShower2Energy[pi0i] = pzproc.showerProcess2()->energy(fShowerCaloTag, fCalibFactor, fNormFactor, fSCEFileName, fYZCorrFileName, fXCorrFileName);
+        fShower2EnergyFromHits[pi0i] = showerUtil.EstimateEnergyFromHitCharge(shHitPtrs, fCalorimetryAlg)[2];
+        for(int i=0; i<fShower2NumHits[pi0i]; ++i) {
+          const geo::Point_t& pos = sh2calo[k].XYZ()[i];
+          fShower2_cal_pos[pi0i][i][0] = pos.X();
+          fShower2_cal_pos[pi0i][i][1] = pos.Y();
+          fShower2_cal_pos[pi0i][i][2] = pos.Z();
+          fShower2_cal_pitch[pi0i][i] = sh2calo[k].TrkPitchVec()[i];
+          fShower2_cal_dEdx[pi0i][i] = sh2calo[k].dEdx()[i];
+          fShower2_cal_dQdx[pi0i][i] = sh2calo[k].dQdx()[i];
         }
       }
-      // Is PFP's parent or PFP's grandparent the beam particle?
-      const recob::PFParticle* parent = 0x0;
-      const recob::PFParticle* gparent = 0x0;
-      if(shpfp && shpfp->Parent() != 0 && shpfp->Parent() < PFParticleHandle->size()) parent = &PFParticleHandle->at(shpfp->Parent());
-      if(parent && parent->Parent() != 0 && parent->Parent() < PFParticleHandle->size()) gparent = &PFParticleHandle->at(parent->Parent());
-
-      fShower1HasBeamParent = parent && parent->Self() == beampfp->Self()? 1: 0;
-      fShower1HasBeamGrandparent = gparent && gparent->Self() == beampfp->Self()? 1: 0;
-    } // if get pfparticles and beampfparticles
-
-    // Calorimetry related to showers
-    std::vector<anab::Calorimetry> sh2calo = showerUtil.GetRecoShowerCalorimetry(*shower2, evt, fShowerTag, fShowerCaloTag);
-    for(unsigned k=0; k<sh2calo.size(); ++k) {
-      if(sh2calo[k].PlaneID().Plane != 2) continue;
-
-      fShower2NumHits = std::min((int)sh2calo[k].dEdx().size(), NMAXHITS);
-      fShower2_cal_E = sh2calo[k].KineticEnergy();
-      std::vector<const recob::Hit*> shHitPtrs = showerUtil.GetRecoShowerHits(
-                  *shower2, evt, fShowerTag);
-      fShower2Energy = pzproc.showerProcess2()->energy(fShowerCaloTag, fCalibFactor, fNormFactor, fSCEFileName, fYZCorrFileName, fXCorrFileName);
-      fShower2EnergyFromHits = showerUtil.EstimateEnergyFromHitCharge(shHitPtrs, fCalorimetryAlg)[2];
-      for(int i=0; i<fShower2NumHits; ++i) {
-        const geo::Point_t& pos = sh2calo[k].XYZ()[i];
-        fShower2_cal_X[i] = pos.X();
-        fShower2_cal_Y[i] = pos.Y();
-        fShower2_cal_Z[i] = pos.Z();
-        fShower2_cal_pitch[i] = sh2calo[k].TrkPitchVec()[i];
-        fShower2_cal_dEdx[i] = sh2calo[k].dEdx()[i];
-        fShower2_cal_dQdx[i] = sh2calo[k].dQdx()[i];
-      }
-    }
-  } // if shower2 != 0x0
+    } // if shower2 != 0x0
+  } // Loop over pi0s
 
 } // setPiZeroInfo
 
@@ -1216,18 +1530,18 @@ void protoana::ProtoDUNEPizeroAnaTree::Initialise(){
   for( int m=0; m<NMAXHITS; m ++){
      fprimarydEdx[m]= -999.0;
      fprimarydQdx[m]= -999.0;
-     fprimary_calX[m] =-999.0;
-     fprimary_calY[m] =-999.0;
-     fprimary_calZ[m] =-999.0;
+     fprimary_cal_pos[m][0] = -999.0;
+     fprimary_cal_pos[m][1] = -999.0;
+     fprimary_cal_pos[m][2] = -999.0;
      fprimary_cal_pitch[m]=-999.0;
      fprimaryResidualRange[m] = -999.0;
 
      fprimaryShower_hit_w[m] =-999.0;
      fprimaryShower_hit_q[m] =-999.0;
      fprimaryShower_hit_t[m] =-999.0;
-     fprimaryShower_hit_X[m] =-999.0;
-     fprimaryShower_hit_Y[m] =-999.0;
-     fprimaryShower_hit_Z[m] =-999.0;
+     fprimaryShower_hit_pos[m][0] =-999.0;
+     fprimaryShower_hit_pos[m][1] =-999.0;
+     fprimaryShower_hit_pos[m][2] =-999.0;
   }
   fprimaryTruth_trkID =-999;
   fprimaryTruth_pdg = -999;
@@ -1280,108 +1594,153 @@ void protoana::ProtoDUNEPizeroAnaTree::Initialise(){
     fprimaryDaughterMomentum[k] = -999.0;
     fprimaryDaughterEndMomentum[k] = -999.0;
     fprimaryDaughterLength[k] = -999.0;
-    fprimaryDaughterStartPosition_X[k] = -999.0;
-    fprimaryDaughterStartPosition_Y[k] = -999.0;
-    fprimaryDaughterStartPosition_Z[k] = -999.0;
-    fprimaryDaughterEndPosition_X[k] = -999.0;
-    fprimaryDaughterEndPosition_Y[k] = -999.0;
-    fprimaryDaughterEndPosition_Z[k] = -999.0;
-    fprimaryDaughterStartDirection_X[k] = -999.0;
-    fprimaryDaughterStartDirection_Y[k] = -999.0;
-    fprimaryDaughterStartDirection_Z[k] = -999.0;
-    fprimaryDaughterEndDirection_X[k] = -999.0;
-    fprimaryDaughterEndDirection_Y[k] = -999.0;
-    fprimaryDaughterEndDirection_Z[k] = -999.0;
+    for(unsigned l = 0; l < 3; ++l) {
+      fprimaryDaughterStartPosition[k][l] = -999.0;
+      fprimaryDaughterEndPosition[k][l] = -999.0;
+      fprimaryDaughterStartDirection[k][l] = -999.0;
+      fprimaryDaughterEndDirection[k][l] = -999.0;
+    }
     fprimaryDaughterParentPdg[k] = -999;
     fprimaryDaughterGrandparentPdg[k] = -999;
     fprimaryDaughterParentID[k] = -999;
     fprimaryDaughterGrandparentID[k] = -999;
+    fprimaryDaughterParentE[k] = -999;
+    fprimaryDaughterGrandparentE[k] = -999;
+    for(unsigned l = 0; l < NMAXHITS; ++l) {
+      fprimaryDaughterHitdQdx[k][l] = -999.0;
+      fprimaryDaughterHitCharge[k][l] = -999.0;
+      fprimaryDaughterHitWire[k][l] = -999;
+      fprimaryDaughterHitTime[k][l] = -999.0;
+      fprimaryDaughterHitPosition[k][l][0] = -999.0;
+      fprimaryDaughterHitPosition[k][l][1] = -999.0;
+      fprimaryDaughterHitPosition[k][l][2] = -999.0;
+      fprimaryDaughterCaloHitPosition[k][l][0] = -999.0;
+      fprimaryDaughterCaloHitPosition[k][l][1] = -999.0;
+      fprimaryDaughterCaloHitPosition[k][l][2] = -999.0;
+    }
   }
+
+  // // Instead of primary daughters, look at all objects in APA3
+  // for(int obji = 0; obji < NMAXOBJECTS; ++obji) {
+  //   fObjID[obji] = -999;
+  //   fObjIsTrack[obji] = -999;
+  //   fObjIsShower[obji] = -999;
+  //   fObjIsPrimaryDaughter[obji] = -999;
+  //   fObjBDTscore[obji] = -999.0;
+  //   fObjCNNscore[obji] = -999.0;
+  //   fObjMomentum[obji] = -999.0;
+  //   fObjEndMomentum[obji] = -999.0;
+  //   fObjLength[obji] = -999.0;
+  //   for(int pi = 0; pi < 3; ++pi) {
+  //     fObjStartPosition[obji][pi] = -999.0;
+  //     fObjEndPosition[obji][pi] = -999.0;
+  //     fObjStartDirection[obji][pi] = -999.0;
+  //     fObjEndDirection[obji][pi] = -999.0;
+  //   }
+  //   fObjMCParentPdg[obji] = -999;
+  //   fObjMCGrandparentPdg[obji] = -999;
+  //   fObjMCParentID[obji] = -999;
+  //   fObjMCGrandparentID[obji] = -999;
+  //   // Hit information
+  //   fObjNumHits[obji] = -999;
+  //   for(int hiti = 0; hiti < NMAXHITS; ++hiti) {
+  //     fObjHitPosition[obji][hiti][0] = -999.0;
+  //     fObjHitPosition[obji][hiti][1] = -999.0;
+  //     fObjHitPosition[obji][hiti][2] = -999.0;
+  //     fObjHitTime[obji][hiti] = -999.0;
+  //     fObjHitWire[obji][hiti] = -999;
+  //     fObjHitCharge[obji][hiti] = -999.0;
+  //     fObjHitPitch[obji][hiti] = -999.0;
+  //     fObjHitdEdx[obji][hiti] = -999.0;
+  //     fObjHitdQdx[obji][hiti] = -999.0;
+  //   }
+  // }
 
   ResetPi0Vars();
 } // Initialise
 
 void protoana::ProtoDUNEPizeroAnaTree::ResetPi0Vars() {
-  // MC pi0 variables
-  fMCPi0ID = -999;
-  fMCPi0Energy = -999.0;
-  for(int i=0; i<3; ++i) {
-    fMCPi0StartPosition[i] = -999.0;
-    fMCPi0EndPosition[i] = -999.0;
-  }
-  fMCPhoton1ID = -999;
-  fMCPhoton2ID = -999;
-  fMCPhoton1Energy = -999.0;
-  fMCPhoton2Energy = -999.0;
-  for(int i=0; i<3; ++i) {
-    fMCPhoton1StartPosition[i] = -999.0;
-    fMCPhoton2StartPosition[i] = -999.0;
-    fMCPhoton1EndPosition[i] = -999.0;
-    fMCPhoton2EndPosition[i] = -999.0;
-  }
-  // Reco hits related to photons
-  fMCPhoton1NumHits = -999;
-  fMCPhoton2NumHits = -999;
-  fMCPhotonFractionSps = -999.0;
-  for(int i=0; i < NMAXHITS; ++i) {
-    fMCPhoton1_hit_w[i] = -999;
-    fMCPhoton2_hit_w[i] = -999;
-    fMCPhoton1_hit_t[i] = -999.0;
-    fMCPhoton2_hit_t[i] = -999.0;
-    fMCPhoton1_hit_q[i] = -999.0;
-    fMCPhoton2_hit_q[i] = -999.0;
-    fMCPhoton1_hit_X[i] = -999.0;
-    fMCPhoton2_hit_X[i] = -999.0;
-    fMCPhoton1_hit_Y[i] = -999.0;
-    fMCPhoton2_hit_Y[i] = -999.0;
-    fMCPhoton1_hit_Z[i] = -999.0;
-    fMCPhoton2_hit_Z[i] = -999.0;
-  }
+  for(int pi0i = 0; pi0i < NMAXPIZEROS; ++pi0i) {
+    // MC pi0 variables
+    fMCPi0ID[pi0i] = -999;
+    fMCPi0Energy[pi0i] = -999.0;
+    for(int i=0; i<3; ++i) {
+      fMCPi0StartPosition[pi0i][i] = -999.0;
+      fMCPi0EndPosition[pi0i][i] = -999.0;
+    }
+    fMCPhoton1ID[pi0i] = -999;
+    fMCPhoton2ID[pi0i] = -999;
+    fMCPhoton1Energy[pi0i] = -999.0;
+    fMCPhoton2Energy[pi0i] = -999.0;
+    for(int i=0; i<3; ++i) {
+      fMCPhoton1StartPosition[pi0i][i] = -999.0;
+      fMCPhoton2StartPosition[pi0i][i] = -999.0;
+      fMCPhoton1EndPosition[pi0i][i] = -999.0;
+      fMCPhoton2EndPosition[pi0i][i] = -999.0;
+    }
+    // Reco hits related to photons
+    fMCPhoton1NumHits[pi0i] = -999;
+    fMCPhoton2NumHits[pi0i] = -999;
+    for(int i=0; i < NMAXHITS; ++i) {
+      fMCPhoton1_hit_w[pi0i][i] = -999;
+      fMCPhoton2_hit_w[pi0i][i] = -999;
+      fMCPhoton1_hit_t[pi0i][i] = -999.0;
+      fMCPhoton2_hit_t[pi0i][i] = -999.0;
+      fMCPhoton1_hit_q[pi0i][i] = -999.0;
+      fMCPhoton2_hit_q[pi0i][i] = -999.0;
+      fMCPhoton1_hit_pos[pi0i][i][0] = -999.0;
+      fMCPhoton2_hit_pos[pi0i][i][0] = -999.0;
+      fMCPhoton1_hit_pos[pi0i][i][1] = -999.0;
+      fMCPhoton2_hit_pos[pi0i][i][1] = -999.0;
+      fMCPhoton1_hit_pos[pi0i][i][2] = -999.0;
+      fMCPhoton2_hit_pos[pi0i][i][2] = -999.0;
+    }
 
-  // Reco pi0 variables
-  fShower1ID = -999;
-  fShower2ID = -999;
-  for(int i=0; i<3; ++i) {
-    fShower1StartPosition[i] = -999.0;
-    fShower2StartPosition[i] = -999.0;
-    fShower1Direction[i] = -999.0;
-    fShower2Direction[i] = -999.0;
-  }
-  fShower1Length = -999.0;
-  fShower2Length = -999.0;
-  fShower1Completeness = -999.0;
-  fShower2Completeness = -999.0;
-  fShower1Purity = -999.0;
-  fShower2Purity = -999.0;
-  // Reco hits related to showers
-  fShower1NumHits = -999;
-  fShower2NumHits = -999;
-  fShower1_cal_E = -999.0;
-  fShower2_cal_E = -999.0;
-  fShower1Energy = -999.0;
-  fShower2Energy = -999.0;
-  fShower1EnergyFromHits = -999.0;
-  fShower2EnergyFromHits = -999.0;
-  fShower1HasBeamParent = -999;
-  fShower2HasBeamParent = -999;
-  fShower1HasBeamGrandparent = -999;
-  fShower2HasBeamGrandparent = -999;
-  for(int i=0; i<NMAXHITS; ++i) {
-    fShower1_cnn_sc[i] = -999.0;
-    fShower2_cnn_sc[i] = -999.0;
-    fShower1_cal_X[i] = -999.0;
-    fShower2_cal_X[i] = -999.0;
-    fShower1_cal_Y[i] = -999.0;
-    fShower2_cal_Y[i] = -999.0;
-    fShower1_cal_Z[i] = -999.0;
-    fShower2_cal_Z[i] = -999.0;
-    fShower1_cal_pitch[i] = -999.0;
-    fShower2_cal_pitch[i] = -999.0;
-    fShower1_cal_dEdx[i] = -999.0;
-    fShower2_cal_dEdx[i] = -999.0;
-    fShower1_cal_dQdx[i] = -999.0;
-    fShower2_cal_dQdx[i] = -999.0;
-  }
+    // Reco pi0 variables
+    fShower1ID[pi0i] = -999;
+    fShower2ID[pi0i] = -999;
+    for(int i=0; i<3; ++i) {
+      fShower1StartPosition[pi0i][i] = -999.0;
+      fShower2StartPosition[pi0i][i] = -999.0;
+      fShower1Direction[pi0i][i] = -999.0;
+      fShower2Direction[pi0i][i] = -999.0;
+    }
+    fShower1Length[pi0i] = -999.0;
+    fShower2Length[pi0i] = -999.0;
+    fShower1Completeness[pi0i] = -999.0;
+    fShower2Completeness[pi0i] = -999.0;
+    fShower1Purity[pi0i] = -999.0;
+    fShower2Purity[pi0i] = -999.0;
+    // Reco hits related to showers
+    fShower1NumHits[pi0i] = -999;
+    fShower2NumHits[pi0i] = -999;
+    fShower1_cal_E[pi0i] = -999.0;
+    fShower2_cal_E[pi0i] = -999.0;
+    fShower1Energy[pi0i] = -999.0;
+    fShower2Energy[pi0i] = -999.0;
+    fShower1EnergyFromHits[pi0i] = -999.0;
+    fShower2EnergyFromHits[pi0i] = -999.0;
+    fShower1HasBeamParent[pi0i] = -999;
+    fShower2HasBeamParent[pi0i] = -999;
+    fShower1HasBeamGrandparent[pi0i] = -999;
+    fShower2HasBeamGrandparent[pi0i] = -999;
+    for(int i=0; i<NMAXHITS; ++i) {
+      fShower1_cnn_sc[pi0i][i] = -999.0;
+      fShower2_cnn_sc[pi0i][i] = -999.0;
+      fShower1_cal_pos[pi0i][i][0] = -999.0;
+      fShower2_cal_pos[pi0i][i][0] = -999.0;
+      fShower1_cal_pos[pi0i][i][1] = -999.0;
+      fShower2_cal_pos[pi0i][i][1] = -999.0;
+      fShower1_cal_pos[pi0i][i][2] = -999.0;
+      fShower2_cal_pos[pi0i][i][2] = -999.0;
+      fShower1_cal_pitch[pi0i][i] = -999.0;
+      fShower2_cal_pitch[pi0i][i] = -999.0;
+      fShower1_cal_dEdx[pi0i][i] = -999.0;
+      fShower2_cal_dEdx[pi0i][i] = -999.0;
+      fShower1_cal_dQdx[pi0i][i] = -999.0;
+      fShower2_cal_dQdx[pi0i][i] = -999.0;
+    }
+  } // Loop over NMAXPIZEROS
 } // ResetPi0Vars
 
 DEFINE_ART_MODULE(protoana::ProtoDUNEPizeroAnaTree)
