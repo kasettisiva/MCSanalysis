@@ -1,19 +1,18 @@
 #include "services_dune.fcl"
-#include "ProtoDUNEPizeroAnaTree.fcl"
 #include "protodune_tools_dune.fcl"
 
-process_name: pdAnaTreeProcess
+process_name: pdWireAnaTree
 
 services:
 {
   # Load the service that manages root files for histograms.
-  TFileService: { fileName: "pdAnaTree.root" }
+  TFileService: { fileName: "MCWireAnaTree.root" }
   TimeTracker:       {}
   MemoryTracker:     {}
   RandomNumberGenerator: {} #ART native random number generator
   message:                      @local::dune_message_services_prod_debug
   FileCatalogMetadata:          @local::art_file_catalog_mc
-				@table::protodune_data_reco_services
+				@table::protodune_reco_services
   PdspChannelMapService:        @local::pdspchannelmap
   ChannelStatusService:         @local::pdsp_channel_status
   Geometry:                     @local::protodune_geo
@@ -22,7 +21,6 @@ services:
 }
 services.message.destinations.LogStandardOut.threshold: "INFO"
 
-#source is now a root file
 source:
 {
   module_type: RootInput
@@ -34,20 +32,18 @@ physics:
 {
  analyzers:
  {
-  pdAnaTree:          @local::proto_AnaTree
+   pdWireAnaTree:
+   {
+     module_type: "ProtoDUNEelectronWireAna"
+   }
  }
- ana:  [ pdAnaTree ]
-
+ ana:  [ pdWireAnaTree ]
+ 
  end_paths:     [ ana ]
 
 }
 
 outputs: {}
-# physics.analyzers.pdAnaTree.ShowerCalorimetryTag: "pandoraShowercaloSCE"
-# physics.analyzers.pdAnaTree.CalorimetryTag: "pandoraSCE"
-physics.analyzers.pdAnaTree.UseMCforReco:   false
-physics.analyzers.pdAnaTree.SCEFileName:    "./SCE_DataDriven_180kV_v3.root"
-physics.analyzers.pdAnaTree.YZCorrFileName: "./YZcalo_r5770.root"
-physics.analyzers.pdAnaTree.XCorrFileName:  "./Xcalo_r5770.root"
-physics.analyzers.pdAnaTree.CalibFactor:    0.00559
-physics.analyzers.pdAnaTree.NormFactor:     1.1334
+physics.analyzers.pdWireAnaTree.ShowerTag: "pandoraShower"
+physics.analyzers.pdWireAnaTree.PFParticleTag: "pandora"
+physics.analyzers.pdWireAnaTree.WireTag: "caldata"

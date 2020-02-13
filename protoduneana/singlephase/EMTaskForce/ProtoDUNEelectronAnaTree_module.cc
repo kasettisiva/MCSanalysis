@@ -25,6 +25,7 @@
 #include "larreco/Calorimetry/CalorimetryAlg.h"
 #include "larsim/MCCheater/BackTrackerService.h"
 #include "larsim/MCCheater/ParticleInventoryService.h"
+#include "lardataobj/RecoBase/Wire.h"
 #include "lardataobj/RecoBase/Hit.h"
 #include "lardataobj/RecoBase/Track.h"
 #include "lardataobj/RecoBase/Shower.h"
@@ -107,8 +108,8 @@ private:
   const detinfo::DetectorProperties* detprop = lar::providerFrom<detinfo::DetectorPropertiesService>();
   geo::GeometryCore const * fGeometry = &*(art::ServiceHandle<geo::Geometry>());
 
-  // Initialise tree variables
-  void Initialise();
+  // Initialize tree variables
+  void Initialize();
   void FillPrimaryPFParticle(art::Event const & evt, const recob::PFParticle* particle);
   void FillPrimaryDaughterPFParticle(art::Event const & evt, const recob::PFParticle* daughterParticle, int daughterID);
 
@@ -203,6 +204,7 @@ private:
   double fprimaryShower_hit_q[MAXHits];
   double fprimaryShower_hit_t[MAXHits]; 
   double fprimaryShower_hit_X[MAXHits];
+  int    fprimaryShower_hit_ch[MAXHits];
   //int    fnumberof_wire; //collection -- not used -- clang warns
 
   int    fprimaryNewShower_nHits; //collection only
@@ -339,6 +341,7 @@ void protoana::ProtoDUNEelectronAnaTree::beginJob(){
   fPandoraBeam->Branch("primaryShower_hit_X",        &fprimaryShower_hit_X,       "primaryShower_hit_X[primaryShower_nHits]/D");
   fPandoraBeam->Branch("primaryShower_hit_Y",        &fprimaryShower_hit_Y,       "primaryShower_hit_Y[primaryShower_nHits]/D");
   fPandoraBeam->Branch("primaryShower_hit_Z",        &fprimaryShower_hit_Z,       "primaryShower_hit_Z[primaryShower_nHits]/D");
+  fPandoraBeam->Branch("primaryShower_hit_ch",        &fprimaryShower_hit_ch,       "primaryShower_hit_ch[primaryShower_nHits]/I");
  
   fPandoraBeam->Branch("primaryNewShower_hit_q",        &fprimaryNewShower_hit_q,       "primaryNewShower_hit_q[primaryNewShower_nHits]/D");
   fPandoraBeam->Branch("primaryNewShower_hit_w",        &fprimaryNewShower_hit_w,       "primaryNewShower_hit_w[primaryNewShower_nHits]/I");
@@ -393,8 +396,8 @@ void protoana::ProtoDUNEelectronAnaTree::beginJob(){
 
 void protoana::ProtoDUNEelectronAnaTree::analyze(art::Event const & evt){
 
-  // Initialise tree parameters
-  Initialise();
+  // Initialize tree parameters
+  Initialize();
   fRun = evt.run();
   fSubRun = evt.subRun();
   fevent  = evt.id().event(); 
@@ -691,6 +694,8 @@ void protoana::ProtoDUNEelectronAnaTree::FillPrimaryPFParticle(art::Event const 
     fprimaryShowerCharge =0.0;
     for( size_t j=0; j<sh_hits.size() && j<MAXHits; ++j){
        if( sh_hits[j]->WireID().Plane != 2 ) continue;
+       art::FindManyP<recob::Wire> wFromHits(sh_hits,evt,"hitpdune");
+       std::vector<art::Ptr<recob::Wire>> wires = wFromHits.at(j);
        const geo::WireGeo* pwire = fGeometry->WirePtr(sh_hits[j]->WireID());
        TVector3 xyzWire = pwire->GetCenter<TVector3>();
        std::array<float,4> cnn_out = hitResults.getOutput( tmp_sh_hits[j] );
@@ -703,6 +708,7 @@ void protoana::ProtoDUNEelectronAnaTree::FillPrimaryPFParticle(art::Event const 
        fprimaryShower_hit_q[idx]=sh_hits[j]->Integral(); 
        fprimaryShower_hit_X[idx]=detprop->ConvertTicksToX(sh_hits[j]->PeakTime(),sh_hits[j]->WireID().Plane,sh_hits[j]->WireID().TPC,0);
        fprimaryShower_hit_Z[idx]= xyzWire.Z();  
+       fprimaryShower_hit_ch[idx]= wires[0]->Channel(); //only one channel per wire at collection plane
        std::vector<art::Ptr<recob::SpacePoint>> sp = spFromShowerHits.at(j); 
 
        if(!sp.empty() ){
@@ -846,7 +852,7 @@ void protoana::ProtoDUNEelectronAnaTree::FillPrimaryDaughterPFParticle(art::Even
 }
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
-void protoana::ProtoDUNEelectronAnaTree::Initialise(){
+void protoana::ProtoDUNEelectronAnaTree::Initialize(){
   fRun = -999;
   fSubRun = -999;
   fevent = -999;

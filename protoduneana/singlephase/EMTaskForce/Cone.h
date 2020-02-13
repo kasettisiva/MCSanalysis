@@ -78,7 +78,7 @@ class Cone {
     return shUtil.EstimateEnergyFromHitCharge(m_hits, caloAlg)[2];
   }
   double completeness(const simb::MCParticle& mcpart,
-                      const std::string hitLabel = "gaushit") const;
+                      const std::string hitLabel = "hitpdune") const;
   double purity(const simb::MCParticle& mcpart) const;
 };
 
