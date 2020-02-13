@@ -238,8 +238,13 @@ private:
   int fprimaryDaughterGrandparentID[NMAXDAUGHTERS];
   double fprimaryDaughterParentE[NMAXDAUGHTERS];
   double fprimaryDaughterGrandparentE[NMAXDAUGHTERS];
+  double fprimaryDaughterParentStart[NMAXDAUGHTERS][3];
+  double fprimaryDaughterGrandparentStart[NMAXDAUGHTERS][3];
+  double fprimaryDaughterParentEnd[NMAXDAUGHTERS][3];
+  double fprimaryDaughterGrandparentEnd[NMAXDAUGHTERS][3];
   double fprimaryDaughterHitdQdx[NMAXDAUGHTERS][NMAXHITS];
   double fprimaryDaughterHitCharge[NMAXDAUGHTERS][NMAXHITS];
+  double fprimaryDaughterHitdEdxArea[NMAXDAUGHTERS][NMAXHITS];
   int fprimaryDaughterHitWire[NMAXDAUGHTERS][NMAXHITS];
   double fprimaryDaughterHitTime[NMAXDAUGHTERS][NMAXHITS];
   double fprimaryDaughterHitPosition[NMAXDAUGHTERS][NMAXHITS][3];
@@ -456,9 +461,14 @@ void protoana::ProtoDUNEPizeroAnaTree::beginJob(){
   fPandoraBeam->Branch("primaryDaughterGrandparentID",    &fprimaryDaughterGrandparentID,     ("primaryDaughterGrandparentID[" + std::to_string(NMAXDAUGHTERS) + "]/I").c_str());
   fPandoraBeam->Branch("primaryDaughterParentE",          &fprimaryDaughterParentE,           ("primaryDaughterParentE[" + std::to_string(NMAXDAUGHTERS) + "]/D").c_str());
   fPandoraBeam->Branch("primaryDaughterGrandparentE",     &fprimaryDaughterGrandparentE,      ("primaryDaughterGrandparentE[" + std::to_string(NMAXDAUGHTERS) + "]/D").c_str());
+  fPandoraBeam->Branch("primaryDaughterParentStart",      &fprimaryDaughterParentStart,       ("primaryDaughterParentStart[" + std::to_string(NMAXDAUGHTERS) + "][3]/D").c_str());
+  fPandoraBeam->Branch("primaryDaughterGrandparentStart", &fprimaryDaughterGrandparentStart,  ("primaryDaughterGrandparentStart[" + std::to_string(NMAXDAUGHTERS) + "][3]/D").c_str());
+  fPandoraBeam->Branch("primaryDaughterParentEnd",        &fprimaryDaughterParentEnd,         ("primaryDaughterParentEnd[" + std::to_string(NMAXDAUGHTERS) + "][3]/D").c_str());
+  fPandoraBeam->Branch("primaryDaughterGrandparentEnd",   &fprimaryDaughterGrandparentEnd,    ("primaryDaughterGrandparentEnd[" + std::to_string(NMAXDAUGHTERS) + "][3]/D").c_str());
   fPandoraBeam->Branch("primaryDaughterHitPosition",      &fprimaryDaughterHitPosition,       ("primaryDaughterHitPosition[" + std::to_string(NMAXDAUGHTERS) + "][" + std::to_string(NMAXHITS) + "][3]/D").c_str());
   fPandoraBeam->Branch("primaryDaughterCaloHitPosition",  &fprimaryDaughterCaloHitPosition,   ("primaryDaughterCaloHitPosition[" + std::to_string(NMAXDAUGHTERS) + "][" + std::to_string(NMAXHITS) + "][3]/D").c_str());
   fPandoraBeam->Branch("primaryDaughterHitCharge",        &fprimaryDaughterHitCharge,         ("primaryDaughterHitCharge[" + std::to_string(NMAXDAUGHTERS) + "][" + std::to_string(NMAXHITS) + "]/D").c_str());
+  fPandoraBeam->Branch("primaryDaughterHitdEdxArea",      &fprimaryDaughterHitdEdxArea,       ("primaryDaughterHitdEdxArea[" + std::to_string(NMAXDAUGHTERS) + "][" + std::to_string(NMAXHITS) + "]/D").c_str());
   fPandoraBeam->Branch("primaryDaughterHitdQdx",          &fprimaryDaughterHitdQdx,           ("primaryDaughterHitdQdx[" + std::to_string(NMAXDAUGHTERS) + "][" + std::to_string(NMAXHITS) + "]/D").c_str());
   fPandoraBeam->Branch("primaryDaughterHitWire",          &fprimaryDaughterHitWire,           ("primaryDaughterHitWire[" + std::to_string(NMAXDAUGHTERS) + "][" + std::to_string(NMAXHITS) + "]/I").c_str());
   fPandoraBeam->Branch("primaryDaughterHitTime",          &fprimaryDaughterHitTime,           ("primaryDaughterHitTime[" + std::to_string(NMAXDAUGHTERS) + "][" + std::to_string(NMAXHITS) + "]/D").c_str());
@@ -915,14 +925,20 @@ void protoana::ProtoDUNEPizeroAnaTree::FillPrimaryPFParticle(art::Event const & 
         fprimaryDaughterCNNScore[di] += cnn_score;
         // Record general hit information.
         fprimaryDaughterHitCharge[di][i] = pfpDHits[i]->Integral();
-        // // Get spacepoint if possible.
-        // if(sps.size() != 0 && daughterShower != 0) {
-        //   const TVector3 spvec(sps[0]->XYZ());
-        //   std::cout << "Hit " << i << " distance to shower start: " << (spvec - daughterShower->ShowerStart()).Mag() << '\n';
-        // } else if(daughterShower != 0) {
-        //   std::cout << "Hit " << i << " has no spacepoint.\n";
-        // }
-      }
+        const double wirePitch = fGeometryService->WirePitch(pfpDHits[i]->WireID().planeID());
+        double dx = 0;
+        if(daughterTrack != 0x0) {
+          const TVector3 dir(daughterTrack->Trajectory().StartDirection().X(),
+                             daughterTrack->Trajectory().StartDirection().Y(),
+                             daughterTrack->Trajectory().StartDirection().Z());
+          dx = wirePitch / abs(cos(dir.Theta()));
+        } else if(daughterShower != 0x0) {
+            dx = wirePitch / abs(cos(daughterShower->Direction().Theta()));
+        }
+        if(dx != 0) {
+          fprimaryDaughterHitdEdxArea[di][i] = fCalorimetryAlg.dEdx_AREA(*pfpDHits[i], dx);
+        }
+      } // Loop over hits.
       fprimaryDaughterCNNScore[di] /= fprimaryDaughterNHits[di];
       // std::cout << "CNN score: " << fprimaryDaughterCNNScore[di] << ". Pandora says:\n";
       for(size_t k = 0; k < calovector.size() && k<3; k++){
@@ -942,11 +958,7 @@ void protoana::ProtoDUNEPizeroAnaTree::FillPrimaryPFParticle(art::Event const & 
            fprimaryDaughterCaloHitPosition[di][l][2] = pos.Z();
            // fprimaryDaughterHitPitch[di][l] = calovector[k].TrkPitchVec()[l];
         }
-      }
-      // if(calovector.size() == 3) {
-      //   std::cout << "Calo size: " << calovector[2].dEdx().size() << ", hit size: " <<
-      //   fprimaryDaughterNHits[di] << '\n';
-      // }
+      } // Loop over calorimetry.
 
       if(daughterTrack != 0x0) {
         // std::cout << "Track\n";
@@ -989,7 +1001,7 @@ void protoana::ProtoDUNEPizeroAnaTree::FillPrimaryPFParticle(art::Event const & 
       }
       // std::cout << "Daughter length: " << fprimaryDaughterLength[di] << '\n';
 
-      // Attempt to get the (grand)parent of this daughter.
+      // Attempt to get the (grand)parent truth information of this daughter.
       art::ServiceHandle<cheat::ParticleInventoryService> pi_serv;
       const simb::MCParticle* parent = truthUtil.GetMCParticleFromReco(*daughter, evt, fPFParticleTag);
       if(parent != 0x0) {
@@ -999,11 +1011,16 @@ void protoana::ProtoDUNEPizeroAnaTree::FillPrimaryPFParticle(art::Event const & 
         // std::cout << "Daughter parent: " << fprimaryDaughterParentID[di] << '\n';
         fprimaryDaughterParentE[di]          = parent->E();
         // std::cout << "True parent E: " << fprimaryDaughterParentE[di] << '\n';
+        parent->Position().Vect().GetXYZ(fprimaryDaughterParentStart[di]);
+        parent->EndPosition().Vect().GetXYZ(fprimaryDaughterParentEnd[di]);
         if(parent->Mother() != 0) {
-          fprimaryDaughterGrandparentPdg[di]   =  pi_serv->TrackIdToParticle_P(parent->Mother())->PdgCode();
-          fprimaryDaughterGrandparentID[di]   =  pi_serv->TrackIdToParticle_P(parent->Mother())->TrackId();
-          fprimaryDaughterGrandparentE[di]   =  pi_serv->TrackIdToParticle_P(parent->Mother())->E();
+          const simb::MCParticle* gparent = pi_serv->TrackIdToParticle_P(parent->Mother());
+          fprimaryDaughterGrandparentPdg[di]   =  gparent->PdgCode();
+          fprimaryDaughterGrandparentID[di]   =  gparent->TrackId();
+          fprimaryDaughterGrandparentE[di]   =  gparent->E();
           // std::cout << "True grandparent PDG: " << fprimaryDaughterGrandparentPdg[di] << '\n';
+          gparent->Position().Vect().GetXYZ(fprimaryDaughterGrandparentStart[di]);
+          gparent->EndPosition().Vect().GetXYZ(fprimaryDaughterGrandparentEnd[di]);
         }
       }
     } // for track daughters
@@ -1604,11 +1621,24 @@ void protoana::ProtoDUNEPizeroAnaTree::Initialise(){
     fprimaryDaughterGrandparentPdg[k] = -999;
     fprimaryDaughterParentID[k] = -999;
     fprimaryDaughterGrandparentID[k] = -999;
-    fprimaryDaughterParentE[k] = -999;
-    fprimaryDaughterGrandparentE[k] = -999;
+    fprimaryDaughterParentE[k] = -999.0;
+    fprimaryDaughterGrandparentE[k] = -999.0;
+    fprimaryDaughterParentStart[k][0] = -999.0;
+    fprimaryDaughterParentStart[k][1] = -999.0;
+    fprimaryDaughterParentStart[k][2] = -999.0;
+    fprimaryDaughterGrandparentStart[k][0] = -999.0;
+    fprimaryDaughterGrandparentStart[k][1] = -999.0;
+    fprimaryDaughterGrandparentStart[k][2] = -999.0;
+    fprimaryDaughterParentEnd[k][0] = -999.0;
+    fprimaryDaughterParentEnd[k][1] = -999.0;
+    fprimaryDaughterParentEnd[k][2] = -999.0;
+    fprimaryDaughterGrandparentEnd[k][0] = -999.0;
+    fprimaryDaughterGrandparentEnd[k][1] = -999.0;
+    fprimaryDaughterGrandparentEnd[k][2] = -999.0;
     for(unsigned l = 0; l < NMAXHITS; ++l) {
       fprimaryDaughterHitdQdx[k][l] = -999.0;
       fprimaryDaughterHitCharge[k][l] = -999.0;
+      fprimaryDaughterHitdEdxArea[k][l] = -999.0;
       fprimaryDaughterHitWire[k][l] = -999;
       fprimaryDaughterHitTime[k][l] = -999.0;
       fprimaryDaughterHitPosition[k][l][0] = -999.0;
