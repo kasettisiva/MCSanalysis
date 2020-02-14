@@ -1,5 +1,6 @@
 #include "ProtoDUNEFembFilter.fcl"
 #include "ProtoDUNEUnstableHVFilter.fcl"
+#include "missingproductfilter.fcl"
 #include "services_dune.fcl"
 #include "ProtoDUNEelectronAnaTree.fcl"
 #include "protodune_tools_dune.fcl"
@@ -38,9 +39,9 @@ physics:
  {
    fHVfilter: @local::HVfilter
    fFEMBfilter: @local::pdsp_fembfilter_beamside
-
+   fMissingproductfilter: @local::standard_missingproductfilter
  }
- fpath: [fHVfilter,fFEMBfilter]
+ fpath: [fHVfilter,fFEMBfilter,fMissingproductfilter]
  analyzers:
  {
   pdAnaTree:          @local::proto_AnaTree
