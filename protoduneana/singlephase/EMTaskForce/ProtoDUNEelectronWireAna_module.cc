@@ -28,6 +28,9 @@
 
 #include "protoduneana/Utilities/ProtoDUNEPFParticleUtils.h"
 #include "protoduneana/Utilities/ProtoDUNEShowerUtils.h"
+#include "protoduneana/Utilities/ProtoDUNETruthUtils.h"
+#include "larsim/MCCheater/BackTrackerService.h"
+#include "larsim/MCCheater/ParticleInventoryService.h"
 
 #include "TFile.h"
 #include "TProfile.h"
@@ -69,6 +72,7 @@ private:
   // Declare member data here.
   protoana::ProtoDUNEPFParticleUtils pfpUtil;
   protoana::ProtoDUNEShowerUtils showerUtil;
+  protoana::ProtoDUNETruthUtils truthUtil;
  
   geo::GeometryCore const * fGeometry = &*(art::ServiceHandle<geo::Geometry>());
   const detinfo::DetectorProperties* detprop = lar::providerFrom<detinfo::DetectorPropertiesService>();
@@ -86,6 +90,9 @@ private:
   std::vector<float>fprimary_Shower_wire_X;  
   std::vector<float>fprimary_Shower_wire_Z;  
   std::vector<float>fprimary_Shower_wire_Y;  
+
+  std::vector<float>  fprimary_Shower_MCwire_ch;
+  std::vector<int>  fprimary_Shower_MCwire_w;
   float fprimaryStartPosition[3];
 };
 
@@ -104,7 +111,9 @@ void ProtoDUNEelectronWireAna::beginJob()
   fTree->Branch("primary_Shower_wire_X",&fprimary_Shower_wire_X);
   fTree->Branch("primary_Shower_wire_Z",&fprimary_Shower_wire_Z);
   fTree->Branch("primary_Shower_wire_Y",&fprimary_Shower_wire_Y);
-
+  fTree->Branch("primary_Shower_MCwire_w",&fprimary_Shower_MCwire_w);
+  fTree->Branch("primary_Shower_MCwire_ch",&fprimary_Shower_MCwire_ch);
+ 
 }
 
 
@@ -135,14 +144,19 @@ void ProtoDUNEelectronWireAna::analyze(art::Event const& evt)
   std::map<int,std::vector<double>> hit_w_and_y;
   std::map<int,std::vector<double>> hit_w_and_x;
   std::vector<const recob::PFParticle*> pfParticles = pfpUtil.GetPFParticlesFromBeamSlice(evt,fPFParticleTag);
-  bool doWireAna = false;
+  const simb::MCParticle* mcparticle = NULL;
+  bool doAna = false;
   for(const recob::PFParticle* particle : pfParticles){
      const recob::Shower* thisShower = pfpUtil.GetPFParticleShower(*particle,evt,fPFParticleTag,fShowerTag);
      if( thisShower == 0x0 ) continue;
+     if( !evt.isRealData() ){
+       mcparticle = truthUtil.GetMCParticleFromRecoShower(*thisShower, evt, "pandoraShower");
+       if( abs(mcparticle->PdgCode()) != 11 ) return;
+     }
      fprimaryStartPosition[0] = thisShower->ShowerStart().X();
      fprimaryStartPosition[1] = thisShower->ShowerStart().Y();
      fprimaryStartPosition[2] = thisShower->ShowerStart().Z();
-     doWireAna = true; 
+     doAna = true; 
      const std::vector<const recob::Hit*> sh_hits = showerUtil.GetRecoShowerHits(*thisShower, evt, fShowerTag);
      art::FindManyP<recob::Wire> wFromHits(sh_hits,evt,"hitpdune");
      art::FindManyP<recob::SpacePoint> spFromShowerHits(sh_hits,evt,fPFParticleTag);
@@ -167,7 +181,7 @@ void ProtoDUNEelectronWireAna::analyze(art::Event const& evt)
   //std::sort(hit_w.begin(),hit_w.end());
   //hit_w.erase(std::unique(hit_w.begin(),hit_w.end()), hit_w.end()); 
   
-  if( doWireAna ){
+  if( doAna ){
     auto const& wires = evt.getValidHandle<std::vector<recob::Wire> >(fWireTag);
     //auto const& wires = evt.getValidHandle<std::vector<recob::Wire> >("wclsdatasp:gauss"); //new reco 
     auto w1 = hit_w_and_t1.begin();
@@ -213,7 +227,39 @@ void ProtoDUNEelectronWireAna::analyze(art::Event const& evt)
       w1 ++; w2 ++;
       x ++; y ++;
     }//wire from shower 
+
+    //look at MC info if available
+    if(!evt.isRealData()){ 
+      auto mcTruths = evt.getValidHandle<std::vector<simb::MCTruth>>("generator");
+      const simb::MCParticle* geantGoodParticle = truthUtil.GetGeantGoodParticle((*mcTruths)[0],evt);
+      art::Handle< std::vector<sim::SimChannel> > simchannelHandle;
+      int trackid = mcparticle->TrackId();
+      if( mcparticle->TrackId() == geantGoodParticle->TrackId() ){
+        if( doAna ){   //we have a reco shower
+          if(evt.getByLabel("largeant", simchannelHandle)){
+            for(auto const& simchannel : (*simchannelHandle)){
+               if(fGeometry->View(simchannel.Channel()) != 2) continue;
+               auto const& alltimeslices = simchannel.TDCIDEMap();
+               double EperCh=0;
+               for(auto const& tslice : alltimeslices){
+	          auto const& simide = tslice.second;
+	          // Loop over energy deposits
+	          for(auto const& eDep : simide){
+	             if(eDep.trackID == trackid || eDep.trackID == -trackid){
+                       EperCh += eDep.energy;
+                     }
+	          }
+               } 
+               if( EperCh== 0 ) continue;//save only channeles with ID
+               fprimary_Shower_MCwire_w.push_back(simchannel.Channel());
+               fprimary_Shower_MCwire_ch.push_back(EperCh);
+            }
+          }
+        }//do analysis of MC
+      }//is MC same as beam?
+    }//is MC?
   }//shower
+
 
   fTree->Fill();
 }
@@ -226,6 +272,8 @@ void ProtoDUNEelectronWireAna::Initialize(){
   fprimary_Shower_wire_X.clear();
   fprimary_Shower_wire_Z.clear();
   fprimary_Shower_wire_ch.clear();
+  fprimary_Shower_MCwire_w.clear();
+  fprimary_Shower_MCwire_ch.clear();
   for(int k=0; k < 3; k++){
     fprimaryStartPosition[k] = -999.0;
   }
