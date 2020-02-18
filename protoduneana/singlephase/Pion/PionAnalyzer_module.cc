@@ -75,12 +75,16 @@ namespace pionana {
   }
 
 
-  std::map< int, std::vector< const sim::IDE* > > slice_IDEs( std::vector< const sim::IDE* > ides, double the_z0, double the_pitch){
+  std::map< int, std::vector< const sim::IDE* > > slice_IDEs( std::vector< const sim::IDE* > ides, double the_z0, double the_pitch, double true_endZ){
 
     std::map< int, std::vector< const sim::IDE* > > results;
 
     for( size_t i = 0; i < ides.size(); ++i ){
+
+      //if( ides[i]->z > true_endZ )break;
+
       int slice_num = std::floor( ( ides[i]->z - the_z0 ) / the_pitch );
+      std::cout << "IDE: " << i << " ID: " << ides[i]->trackID << " Edep: " << ides[i]->energy << " (X,Y,Z): " << "("<<ides[i]->x<<","<<ides[i]->y<<","<<ides[i]->z << ") Z0: " << the_z0 << " Slice: " << slice_num << std::endl;
       results[slice_num].push_back( ides[i] );
     }
 
@@ -158,6 +162,51 @@ namespace pionana {
     return result;
   }
 
+  std::vector< std::pair< int, double > > getTrueSliceListFromRecoHit_electrons( const recob::Hit & hit, art::ServiceHandle<cheat::BackTrackerService> bt, const std::map< int, std::vector< const sim::IDE* > > & true_slices, int beam_id ){
+
+    std::vector< std::pair< int, double > > results;
+
+    auto ides = bt->HitToSimIDEs_Ps(hit);
+    std::map< int, double > ID_to_IDE_electrons;
+    //First, check if the hit is matched to the beam id
+    for( size_t i = 0; i < ides.size(); ++i ){
+      //std::cout << "Adding " << ides[i]->trackID << " " << ides[i]->z << std::endl;
+      ID_to_IDE_electrons[ abs( ides[i]->trackID ) ] += ides[i]->numElectrons;
+    }
+
+    int max_id = -999;
+    double prev_max_electrons = -999.;
+    for( auto it = ID_to_IDE_electrons.begin(); it != ID_to_IDE_electrons.end(); ++it ){
+      if( it->second > prev_max_electrons ){
+        max_id = it->first;
+        prev_max_electrons = it->second;
+      }
+    }
+    //If it's not matched to beam, return default
+    if( max_id != beam_id ){
+      results.push_back( {-999,-999.} );
+      return results;
+    }
+
+    std::unordered_map< int, double > slice_to_nElectrons;
+    //Now, count the number of electrons from ides in this hit ordered by slice number 
+    for( size_t i = 0; i < ides.size(); ++i ){
+      const sim::IDE * theIDE = ides[i];
+      for( auto it = true_slices.begin(); it != true_slices.end(); ++it ){
+        if( std::find( it->second.begin(), it->second.end(), theIDE ) != it->second.end() ){
+          slice_to_nElectrons[it->first] += theIDE->numElectrons; 
+          break;
+        }
+      }
+    }
+
+    std::vector< std::pair< int, double > > pair_vec(slice_to_nElectrons.begin(), slice_to_nElectrons.end());
+
+    std::sort( pair_vec.begin(), pair_vec.end(), [](std::pair<int,double> a, std::pair<int,double> b){return (a.second > b.second);});
+
+    return pair_vec;
+  }
+
   std::pair< int,size_t > getTrueSliceFromRecoHit( const recob::Hit & hit, art::ServiceHandle<cheat::BackTrackerService> bt, const std::map< int, std::vector< const sim::IDE* > > & true_slices, int beam_id ){
 
     std::pair< int,size_t > result(-999,9999);
@@ -221,6 +270,30 @@ namespace pionana {
       result += ides[i]->numElectrons;
     }
     return result;
+  }
+  
+  int getTrueIDFromHit( const recob::Hit & hit, art::ServiceHandle<cheat::BackTrackerService> bt ){
+    int max_id = -999;
+    double prev_max_electrons = -999.;
+
+    std::map< int, double > ID_to_IDE_electrons;
+
+    auto ides = bt->HitToSimIDEs_Ps(hit);
+    //First, check if the hit is matched to the beam id
+    //std::cout << "N IDES " << ides.size() << std::endl;
+    for( size_t i = 0; i < ides.size(); ++i ){
+      ID_to_IDE_electrons[ abs( ides[i]->trackID ) ] += ides[i]->numElectrons;
+    }
+
+
+    for( auto it = ID_to_IDE_electrons.begin(); it != ID_to_IDE_electrons.end(); ++it ){
+      if( it->second > prev_max_electrons ){
+        max_id = it->first;
+        prev_max_electrons = it->second;
+      }
+    }
+
+    return max_id;
   }
 
   enum RecoVertexType{
@@ -363,6 +436,10 @@ private:
   double true_beam_IDE_totalDep;
   bool true_beam_IDE_found_in_recoVtx;
   std::vector< std::string > true_beam_processes;
+  std::vector< int > true_beam_process_dSlice;
+  std::vector< int > true_beam_process_slice;
+  std::vector< int > true_beam_process_matched;
+
 
   std::vector< std::vector< int > > true_beam_reco_byHits_PFP_ID, true_beam_reco_byHits_PFP_nHits,
                                     true_beam_reco_byHits_allTrack_ID;
@@ -437,6 +514,7 @@ private:
   std::vector< double > reco_beam_dEdX, reco_beam_dQdX, reco_beam_resRange, reco_beam_TrkPitch;
   std::vector< double > reco_beam_calo_wire, reco_beam_calo_tick;
   std::vector< double > reco_beam_calibrated_dEdX;
+  std::vector< int >    reco_beam_hit_true_ID, reco_beam_hit_true_slice; 
   int reco_beam_trackID;
   bool reco_beam_flipped;
   
@@ -1080,9 +1158,8 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
     true_beam_endProcess = true_beam_particle->EndProcess();
     
     true_beam_PDG         = true_beam_particle->PdgCode();
+    std::cout << "True beam PDG: " << true_beam_PDG << std::endl;
     true_beam_ID          = true_beam_particle->TrackId();
-    std::cout << "Checking true beam par: " << true_beam_particle->TrackId() << " " 
-              << pi_serv->TrackIdToMotherParticle_P( true_beam_particle->TrackId() )->TrackId() << std::endl;
     true_beam_endX = true_beam_particle->EndX();
     true_beam_endY = true_beam_particle->EndY();
     true_beam_endZ = true_beam_particle->EndZ();
@@ -1680,25 +1757,13 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       reco_beam_resRange.push_back( calo_range[i] );
       reco_beam_TrkPitch.push_back( calo[0].TrkPitchVec()[i] );
 
-      //std::cout << TpIndices[i] << std::endl;
       const recob::Hit & theHit = (*allHits)[ TpIndices[i] ];
       reco_beam_calo_wire.push_back( theHit.WireID().Wire );
       reco_beam_calo_tick.push_back( theHit.PeakTime() );
       calo_hit_indices.push_back( TpIndices[i] );
-
-
-
-      //const sim::IDE * matched = getMatchedIDEFromHit( theHit, bt_serv );
-      //std::cout << "Hit " << i << " " << TpIndices[i] << " matched to " <<  matched << " " << matched->trackID << std::endl;
-      //calo_hits.push_back( theHit );
-      //auto theHit = trajPtsToHits[ TpIndices[i] ];
-      //std::cout << i << " Pt: " << TpIndices[i] << " Hit: " << theHit->WireID().Wire << " " << theHit->View() << std::endl;
     }
     ////////////////////////////////////////////
 
-    //auto TpIndices1 = calo[1].TpIndices();
-    //auto TpIndices2 = calo[2].TpIndices();
-    
     //New Calibration
     std::vector< float > new_dEdX = calibration.GetCalibratedCalorimetry(  *thisTrack, evt, fTrackerTag, fCalorimetryTag );
     std::cout << "n dEdX: " << reco_beam_dEdX.size() << " " << new_dEdX.size() << std::endl;
@@ -1721,8 +1786,18 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
         );
       }
 
+      std::cout << "N Calo points: " << reco_beam_calo_points.size() << std::endl;
       //Sort
       std::sort( reco_beam_calo_points.begin(), reco_beam_calo_points.end(), [](calo_point a, calo_point b) {return ( a.wire < b.wire );} ); 
+
+      //And also put these in the right order
+      for( size_t i = 0; i < reco_beam_calo_points.size(); ++i ){
+        calo_point thePoint = reco_beam_calo_points[i];
+        reco_beam_calo_wire[i] = thePoint.wire;
+        reco_beam_calibrated_dEdX[i] = thePoint.dEdX;
+        reco_beam_TrkPitch[i] = thePoint.pitch;
+        calo_hit_indices[i] = thePoint.hit_index;
+      }
 
 
       //Get the initial Energy KE
@@ -1886,10 +1961,33 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       std::cout << "Looking at IDEs" << std::endl;
 
       auto view2_IDEs = bt_serv->TrackIdToSimIDEs_Ps( true_beam_ID, geo::View_t(2) );
+      /*
+      for( auto const & ide : view2_IDEs ){
+        std::cout << ide->trackID << " " << ide->z << std::endl;
+      }
+      */
+      std::cout << "N view2 IDEs: " << view2_IDEs.size() << std::endl;
       std::sort( view2_IDEs.begin(), view2_IDEs.end(), sort_IDEs );
+      
+      size_t remove_index = 0;   
+      bool   do_remove = false;
+      if( view2_IDEs.size() ){
+        for( size_t i = 1; i < view2_IDEs.size()-1; ++i ){
+          const sim::IDE * prev_IDE = view2_IDEs[i-1]; 
+          const sim::IDE * this_IDE = view2_IDEs[i];
 
-     // auto all_IDEs = bt_serv->TrackIdToSimIDEs_Ps( true_beam_ID );
-      //std::sort( all_IDEs.begin(), all_IDEs.end(), sort_IDEs );
+          if( this_IDE->trackID < 0 && ( this_IDE->z - prev_IDE->z ) > 5 ){
+            remove_index = i;
+            do_remove = true;
+            break;            
+          }
+        }
+      }
+
+      if( do_remove ){
+        std::cout << "Removing from view2 IDEs" << std::endl;
+        view2_IDEs.erase( view2_IDEs.begin() + remove_index, view2_IDEs.end() );
+      }
 
       double new_total_dE = 0.;
       if( max_IDE ){
@@ -1973,8 +2071,19 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       }
 
       //slice up the view2_IDEs up by the wire pitch
-      auto sliced_ides = slice_IDEs( view2_IDEs, z0, pitch);
+      auto sliced_ides = slice_IDEs( view2_IDEs, z0, pitch, true_beam_endZ);
+      std::cout << "N Sliced IDEs: " << sliced_ides.size() << std::endl;
       std::vector< int > found_slices;
+
+
+      ///TEMPORARY --- JUST FOR CHECKING EM DEPOSIT STUFF
+      if( event == 1154 && run == 23385343 ){
+        std::cout << "Checking IDEs from muon daughter -- " << 23014 << std::endl;
+        auto muon_IDEs = bt_serv->TrackIdToSimIDEs_Ps( 23014, geo::View_t(2) );
+        for( auto const & ide : muon_IDEs ){
+          if( ide->trackID < 0 ) std::cout << "ID: " << ide->trackID << " Z: " << ide->z << " Electrons: " << ide->numElectrons << std::endl; 
+        }
+      }
 
       new_true_beam_incidentEnergies.push_back( init_KE );
 
@@ -1989,15 +2098,6 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
         bool slice_found = false;
         double deltaE = 0.;
         for( size_t i = 0; i < theIDEs.size(); ++i ){
-          /*
-          std::cout << "\tChecking " << theIDEs[i] << std::endl;
-          
-          
-          std::cout << "\t" << ( std::find( true_ides_from_reco.begin(), true_ides_from_reco.end(), theIDEs[i] )
-              != true_ides_from_reco.end() ) << " " 
-                    << ( std::find( all_IDEs.begin(), all_IDEs.end(), theIDEs[i] ) != all_IDEs.end() ) 
-                    << std::endl;
-                    */
           deltaE += theIDEs[i]->energy;
           if( std::find( true_ides_from_reco.begin(), true_ides_from_reco.end(), theIDEs[i] ) != true_ides_from_reco.end() ){
             slice_found = true;
@@ -2019,33 +2119,189 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       if( new_true_beam_incidentEnergies.size() ) new_true_beam_interactingEnergy = new_true_beam_incidentEnergies.back();
 
       std::cout << "Found " << found_slices.size() << "/" << sliced_ides.size() << " slices" << std::endl;
-      std::cout << "Maximum true slice: " << sliced_ides.rbegin()->first << std::endl;
-      std::cout << "Max found: " << found_slices.back() << std::endl;
+      std::cout << "Maximum true slice: " << (found_slices.size() ? sliced_ides.rbegin()->first : -999 ) << std::endl;
+      std::cout << "Max found: " << (found_slices.size() ? found_slices.back() : -999 ) << std::endl;
 
 
       std::cout << "Testing hit to true slice matching" << std::endl;
-      std::map< int, size_t > true_slice_to_nHits;
+      std::map< int, std::vector< std::pair<int, double> > > true_slice_to_reco_electrons;
+      std::map< int, int > reco_beam_hit_to_true_ID;
+      std::vector< int > reco_beam_hit_index;
       for( size_t i = 0; i < reco_beam_calo_points.size(); ++i ){
         calo_point thePoint = reco_beam_calo_points[i];
         
-        const recob::Hit & theHit = (*allHits)[ thePoint.hit_index ];
-        std::pair< int, size_t > true_slice_matches = getTrueSliceFromRecoHit( theHit, bt_serv, sliced_ides, true_beam_ID );
-        std::cout << "Hit " << i << " " << thePoint.hit_index << " matched to slice " << true_slice_matches.first << " " 
-                  << true_slice_matches.second << "/" << sliced_ides[ true_slice_matches.first ].size() << std::endl;
+        auto theHit = (*allHits)[thePoint.hit_index];
 
-        std::pair< int, double > true_slice_matches_electrons = getTrueSliceFromRecoHit_electrons( theHit, bt_serv, sliced_ides, true_beam_ID );
-        std::cout << "Hit " << i << " " << thePoint.hit_index << " matched to slice " << true_slice_matches_electrons.first  
-                  << " Efficiency: " << true_slice_matches_electrons.second << "/" << total_electrons( sliced_ides[ true_slice_matches_electrons.first ] ) 
-                  << " Purity: " << ( true_slice_matches_electrons.second / total_electrons( bt_serv->HitToSimIDEs_Ps( theHit ) ) ) << std::endl;
+        reco_beam_hit_index.push_back( thePoint.hit_index );
 
-        true_slice_to_nHits[ true_slice_matches_electrons.first ]++;                  
+        std::vector< std::pair< int, double > > theMap = getTrueSliceListFromRecoHit_electrons( theHit, bt_serv, sliced_ides, true_beam_ID );
+        reco_beam_hit_to_true_ID[thePoint.hit_index] = getTrueIDFromHit( theHit, bt_serv );
+        
+        //std::cout << "Reco hit: " << thePoint.hit_index << " ID: " << reco_beam_hit_to_true_ID[thePoint.hit_index] << std::endl;
 
+        if( theMap[0].first != -999 ){
+          for( size_t j = 0; j < theMap.size(); ++j ){
+            true_slice_to_reco_electrons[theMap[j].first].push_back({thePoint.hit_index, theMap[j].second});
+          }
+        }
       }
 
-      for( auto it = true_slice_to_nHits.begin(); it != true_slice_to_nHits.end(); ++it ){
-        std::cout << "True slice: " << it->first << " has " << it->second << " matches to reco hits" << std::endl;
+      bool all_good = false;
+      size_t maxTries = 5; 
+      size_t nTries = 0;
+
+      //std::cout << "Checking true slices for duplicate matches" << std::endl;
+
+      while( !all_good && nTries < maxTries ){
+        //std::cout << "Try " << nTries << std::endl;
+
+        bool found_duplicate = false;
+
+        //Iterate over the slices     
+        for( auto it = true_slice_to_reco_electrons.begin(); it != true_slice_to_reco_electrons.end(); ++it ){
+          
+          //skip default slice
+          if( it->first == -999 ) continue;
+
+          //std::cout << "Checking True Slice " << it->first << std::endl;
+
+          std::vector< std::pair< int, double > > & reco_electrons = it->second;
+
+          if(reco_electrons.size()){
+            //Get the max hit & contributing electrons(if size permits)
+            int maxHit = reco_electrons[0].first;
+            double maxElectrons = reco_electrons[0].second;
+
+            //std::cout << "Has max hit " << maxHit << " with electrons " << maxElectrons << std::endl;
+
+            //Next iterate over the slices again
+            for( auto it2 = true_slice_to_reco_electrons.begin(); it2 != true_slice_to_reco_electrons.end(); ++it2 ){
+
+              //Skipping the slice in question and default
+              if( it2->first == -999 ) continue;
+              if( it->first == it2->first ) continue;
+
+              //std::cout << "\tComparing to true slice " << it2->first << " with " << it2->second.size() << " reco hits" << std::endl;
+              
+              if( it2->second.size() ){
+                //Get the max hit & contributing electrons for this true slice
+                int maxHit2 = it2->second[0].first;
+                double maxElectrons2 = it2->second[0].second;
+
+                //std::cout << "\tWith max hit " << maxHit2 << " with electrons " << maxElectrons2 << std::endl;
+
+                //Check if the max hit for each slice is the same 
+                if( maxHit == maxHit2 ){
+
+                  //std::cout << "\tThis is a match!!!" << std::endl;
+
+                  found_duplicate = true;
+                  //If the first true slice's electrons are less, remove that hit from the true slice
+                  if( maxElectrons < maxElectrons2 ){
+                    //std::cout << "\tHit2 has more electrons. Removing hit from true slice " << it->first << " " << reco_electrons.size();
+                    reco_electrons.erase( reco_electrons.begin(), reco_electrons.begin()+1 );
+                    //std::cout << " " << reco_electrons.size() << std::endl;
+                    break;
+                  }
+                }
+              }
+            }
+
+          }
+          //else continue;
+        }
+
+        all_good = !found_duplicate;
+        ++nTries;
       }
       
+
+      std::cout << "Checking all slices" << std::endl;
+      std::map< int, int > reco_beam_hit_to_true_slice;
+      for( size_t i = 0; i < true_beam_slices.size(); ++i ){
+
+        int slice = true_beam_slices[i];
+
+        //std::cout << "True beam slice " << slice << ". Found? " << true_beam_slices_found[i] << std::endl;
+        //if( true_beam_slices_found[i] && slice > max_slice_found ) max_slice_found = slice;
+        //std::cout << "\tIn slice map? " << ( true_slice_to_reco_electrons.find( slice ) != true_slice_to_reco_electrons.end() ) << std::endl;
+        if( true_slice_to_reco_electrons.find( slice ) != true_slice_to_reco_electrons.end() ){
+          //std::cout << "\tMatched to " << true_slice_to_reco_electrons[slice].size() << " Hits. with max hit: "
+          //          << ( true_slice_to_reco_electrons[slice].size() ? true_slice_to_reco_electrons[slice][0].first : -1 )
+          //          << std::endl;
+          reco_beam_hit_to_true_slice[true_slice_to_reco_electrons[slice][0].first] = slice;
+        }
+      }
+
+      int max_slice_found = -999;
+      std::cout << "Checking all hits" << std::endl;
+      for( size_t i = 0; i < reco_beam_calo_points.size(); ++i ){
+        calo_point thePoint = reco_beam_calo_points[i];
+        std::cout << "Reco hit: " << thePoint.hit_index << " matched to True ID " << reco_beam_hit_to_true_ID[thePoint.hit_index];
+
+        bool found_in_true_slices = ( reco_beam_hit_to_true_slice.find( thePoint.hit_index ) != reco_beam_hit_to_true_slice.end() );
+        std::cout << " And slice " << ( found_in_true_slices ? reco_beam_hit_to_true_slice[thePoint.hit_index] : -999) << std::endl;
+
+        reco_beam_hit_true_ID.push_back( reco_beam_hit_to_true_ID[thePoint.hit_index] );
+        reco_beam_hit_true_slice.push_back( ( found_in_true_slices ? reco_beam_hit_to_true_slice[thePoint.hit_index] : -999) );
+
+        if( reco_beam_hit_to_true_ID[thePoint.hit_index] == true_beam_ID && found_in_true_slices ){
+          if( reco_beam_hit_to_true_slice[thePoint.hit_index] > max_slice_found )
+            max_slice_found = reco_beam_hit_to_true_slice[thePoint.hit_index];
+        }
+      }
+      std::cout << "Max slice found: " << max_slice_found << std::endl;
+      
+      
+
+      std::cout << "Comparing max slice to processes" << std::endl;
+      //const simb::MCTrajectory & true_beam_trajectory = true_beam_particle->Trajectory();
+      //auto true_beam_proc_map = true_beam_trajectory.TrajectoryProcesses();
+      for( auto itProc = true_beam_proc_map.begin(); itProc != true_beam_proc_map.end(); ++itProc ){
+        int index = itProc->first;
+        std::string process = true_beam_trajectory.KeyToProcess(itProc->second);
+
+        double process_X = true_beam_trajectory.X( index );
+        double process_Y = true_beam_trajectory.Y( index );
+        double process_Z = true_beam_trajectory.Z( index );
+
+        int slice_num = std::floor( ( process_Z - z0 ) / pitch );
+        std::cout << "Process " << index << ", " << process << "(" << process_X <<","<< process_Y <<","<< process_Z <<")" << " at slice " << slice_num << std::endl;
+        std::cout << "d(Slice) to max slice found: " <<  slice_num - max_slice_found << std::endl;
+        true_beam_process_slice.push_back( slice_num );
+        true_beam_process_dSlice.push_back( slice_num - max_slice_found );
+      }
+
+      if( true_beam_endProcess.find( "Inelastic" ) == std::string::npos ){
+        std::cout << "true end: " << true_beam_endZ << std::endl;
+        double process_X = true_beam_endX;
+        double process_Y = true_beam_endY;
+        double process_Z = true_beam_endZ;
+        int slice_num = std::floor( ( process_Z - z0 ) / pitch );
+        std::cout << "Process " << -1 << ", " << true_beam_endProcess << "(" << process_X <<","<< process_Y <<","<< process_Z <<")" << " at slice " << slice_num << std::endl;
+        std::cout << "d(Slice) to max slice found: " <<  slice_num - max_slice_found << std::endl;
+        true_beam_process_slice.push_back( slice_num );
+        true_beam_process_dSlice.push_back( slice_num - max_slice_found );
+      }
+      //Check the last process as well
+
+      std::cout << "N Procs, Slice, dSlice: " << true_beam_processes.size() << ", " << true_beam_process_slice.size() << ", " 
+                << true_beam_process_dSlice.size() << std::endl;
+      for( size_t i = 0; i < true_beam_processes.size(); ++i ){
+        std::cout << "Process " << i << true_beam_processes[i] << " At slice " << true_beam_process_slice[i] << std::endl;
+        std::cout << "Is " << true_beam_process_dSlice[i] << " slices away from the max found" << std::endl;
+        
+        //Everything before the last process
+        if( i < true_beam_processes.size() - 1 ){
+          //Look before and after this process
+          if( abs(true_beam_process_dSlice[i]) <= 5 ) true_beam_process_matched.push_back(1);
+          else true_beam_process_matched.push_back(0);
+        }
+        else{//Last process -- just look before it (in this matching, it can't be above) 
+          if( true_beam_process_dSlice[i] <= 5 ) true_beam_process_matched.push_back(1);
+          else true_beam_process_matched.push_back(0);
+        }
+      }
     }
 
     // Alternative Reconstruction.
@@ -2699,6 +2955,8 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("reco_beam_TrkPitch", &reco_beam_TrkPitch);
   fTree->Branch("reco_beam_calo_wire", &reco_beam_calo_wire);
   fTree->Branch("reco_beam_calo_tick", &reco_beam_calo_tick);
+  fTree->Branch("reco_beam_hit_true_ID", &reco_beam_hit_true_ID);
+  fTree->Branch("reco_beam_hit_true_slice", &reco_beam_hit_true_slice);
   fTree->Branch("reco_beam_nTrackDaughters", &reco_beam_nTrackDaughters);
   fTree->Branch("reco_beam_nShowerDaughters", &reco_beam_nShowerDaughters);
   fTree->Branch("reco_beam_flipped", &reco_beam_flipped);
@@ -3040,6 +3298,9 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("reco_beam_true_byHits_purity", &reco_beam_true_byHits_purity);
 
   fTree->Branch("true_beam_processes", &true_beam_processes);
+  fTree->Branch("true_beam_process_slice", &true_beam_process_slice);
+  fTree->Branch("true_beam_process_dSlice", &true_beam_process_dSlice);
+  fTree->Branch("true_beam_process_matched", &true_beam_process_matched);
   //fTree->Branch("reco_daughter_true_byE_isPrimary", &reco_daughter_true_byE_isPrimary);
 
   fTree->Branch("data_BI_P", &data_BI_P);
@@ -3230,6 +3491,9 @@ void pionana::PionAnalyzer::reset()
 
 
   true_beam_processes.clear();
+  true_beam_process_slice.clear();
+  true_beam_process_dSlice.clear();
+  true_beam_process_matched.clear();
   true_beam_nElasticScatters = 0;
   true_beam_elastic_costheta.clear();
   true_beam_elastic_X.clear();
@@ -3495,6 +3759,8 @@ void pionana::PionAnalyzer::reset()
   reco_beam_TrkPitch.clear();
   reco_beam_calo_wire.clear();
   reco_beam_calo_tick.clear();
+  reco_beam_hit_true_ID.clear();
+  reco_beam_hit_true_slice.clear();
 
 /*
   reco_daughter_dQdX.clear();

@@ -35,10 +35,11 @@ physics:
  }
 
  filters: { 
-   f1: @local::pion_primary_filter
+   fTruth: @local::beam_filter
+   fPrimaryPion: @local::pion_primary_filter
  }
 
- fpath: [f1]
+ fpath: [fTruth, fPrimaryPion]
 
  analyzers:
  {
@@ -53,6 +54,7 @@ physics:
 
 outputs: {}
 
+physics.filters.fTruth.PDG: [211, -13]
 physics.analyzers.pionana.SelectEvents: ["fpath"]
 physics.analyzers.pionana.NSliceCheck: 2
 physics.analyzers.pionana.CalorimetryTag: "pandoracaloSCE"
