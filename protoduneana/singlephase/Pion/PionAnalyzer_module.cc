@@ -171,6 +171,7 @@ namespace pionana {
     //First, check if the hit is matched to the beam id
     for( size_t i = 0; i < ides.size(); ++i ){
       //std::cout << "Adding " << ides[i]->trackID << " " << ides[i]->z << std::endl;
+      //ID_to_IDE_electrons[ ides[i]->trackID ] += ides[i]->numElectrons;
       ID_to_IDE_electrons[ abs( ides[i]->trackID ) ] += ides[i]->numElectrons;
     }
 
@@ -2076,15 +2077,6 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       std::vector< int > found_slices;
 
 
-      ///TEMPORARY --- JUST FOR CHECKING EM DEPOSIT STUFF
-      if( event == 1154 && run == 23385343 ){
-        std::cout << "Checking IDEs from muon daughter -- " << 23014 << std::endl;
-        auto muon_IDEs = bt_serv->TrackIdToSimIDEs_Ps( 23014, geo::View_t(2) );
-        for( auto const & ide : muon_IDEs ){
-          if( ide->trackID < 0 ) std::cout << "ID: " << ide->trackID << " Z: " << ide->z << " Electrons: " << ide->numElectrons << std::endl; 
-        }
-      }
-
       new_true_beam_incidentEnergies.push_back( init_KE );
 
       for( auto it = sliced_ides.begin(); it != sliced_ides.end(); ++it ){
@@ -2302,6 +2294,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
           else true_beam_process_matched.push_back(0);
         }
       }
+     
     }
 
     // Alternative Reconstruction.
