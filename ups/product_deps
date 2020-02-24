@@ -63,7 +63,7 @@ product          version
 dunetpc          v08_43_00
 hep_hpc          v0_12_01       -       optional
 cetbuildtools	 v7_15_01	-	only_for_build
-geant4reweight   v01_00_03
+geant4reweight   v01_00_04
 end_product_list
 
 
@@ -74,14 +74,14 @@ end_product_list
 # Make a table by adding columns before "notes".
 # e15  - with gcc 6.4.0 and -std=c++14
 qualifier	dunetpc         hep_hpc         geant4reweight          notes
-c7:py3:debug	c7:py3:debug	c7:py3:debug    c7:py3:debug:s94        -nq-
-c7:py3:prof	c7:py3:prof	c7:py3:prof     c7:py3:prof:s94         -nq-
-e19:py3:debug	e19:py3:debug	e19:py3:debug   e19:py3debug:s94        -nq-
-e19:py3:prof	e19:py3:prof    e19:py3:prof    e19:py3prof:s94         -nq-
-c7:debug	c7:debug	c7:debug        c7:debug:s94            -nq-
-c7:prof		c7:prof         c7:prof         c7:prof:s94             -nq-
-e19:debug	e19:debug       e19:debug       e19:debug:s94           -nq-
-e19:prof	e19:prof        e19             e19:prof:s94            -nq-
+c7:py3:debug	c7:py3:debug	c7:py3:debug    c7:py3:debug:s95        -nq-
+c7:py3:prof	c7:py3:prof	c7:py3:prof     c7:py3:prof:s95         -nq-
+e19:py3:debug	e19:py3:debug	e19:py3:debug   e19:py3debug:s95        -nq-
+e19:py3:prof	e19:py3:prof    e19:py3:prof    e19:py3prof:s95         -nq-
+c7:debug	c7:debug	c7:debug        c7:debug:s95            -nq-
+c7:prof		c7:prof         c7:prof         c7:prof:s95             -nq-
+e19:debug	e19:debug       e19:debug       e19:debug:s95           -nq-
+e19:prof	e19:prof        e19             e19:prof:s95            -nq-
 end_qualifier_list
 
 #qualifier	dunetpc         hep_hpc         notes
