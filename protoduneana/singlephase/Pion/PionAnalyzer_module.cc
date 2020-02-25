@@ -84,7 +84,7 @@ namespace pionana {
       //if( ides[i]->z > true_endZ )break;
 
       int slice_num = std::floor( ( ides[i]->z - the_z0 ) / the_pitch );
-      std::cout << "IDE: " << i << " ID: " << ides[i]->trackID << " Edep: " << ides[i]->energy << " (X,Y,Z): " << "("<<ides[i]->x<<","<<ides[i]->y<<","<<ides[i]->z << ") Z0: " << the_z0 << " Slice: " << slice_num << std::endl;
+      //std::cout << "IDE: " << i << " ID: " << ides[i]->trackID << " Edep: " << ides[i]->energy << " (X,Y,Z): " << "("<<ides[i]->x<<","<<ides[i]->y<<","<<ides[i]->z << ") Z0: " << the_z0 << " Slice: " << slice_num << std::endl;
       results[slice_num].push_back( ides[i] );
     }
 
@@ -515,7 +515,7 @@ private:
   std::vector< double > reco_beam_dEdX, reco_beam_dQdX, reco_beam_resRange, reco_beam_TrkPitch;
   std::vector< double > reco_beam_calo_wire, reco_beam_calo_tick;
   std::vector< double > reco_beam_calibrated_dEdX;
-  std::vector< int >    reco_beam_hit_true_ID, reco_beam_hit_true_slice; 
+  std::vector< int >    reco_beam_hit_true_ID, reco_beam_hit_true_origin, reco_beam_hit_true_slice; 
   int reco_beam_trackID;
   bool reco_beam_flipped;
   
@@ -1901,9 +1901,9 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
           
 
           std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( *(vertex_hits[i]) );
-          std::cout << "Hit: " << vertex_hits[i]->WireID().Wire << " " << vertex_hits[i]->WireID().TPC  << " " << vertex_hits[i]->WireID().Plane << std::endl;
+          //std::cout << "Hit: " << vertex_hits[i]->WireID().Wire << " " << vertex_hits[i]->WireID().TPC  << " " << vertex_hits[i]->WireID().Plane << std::endl;
           for( size_t j = 0; j < ides.size(); ++j ){
-            std::cout << "\tIDE: " << ides[j]->trackID << " " << ides[j]->x << " " << ides[j]->y << " " << ides[j]->z << std::endl;
+            //std::cout << "\tIDE: " << ides[j]->trackID << " " << ides[j]->x << " " << ides[j]->y << " " << ides[j]->z << std::endl;
             temp_dRs.push_back( sqrt( std::pow( (ides[j]->x - procX), 2 ) +
                                       std::pow( (ides[j]->y - procY), 2 ) +
                                       std::pow( (ides[j]->z - procZ), 2 ) ) );
@@ -2229,12 +2229,14 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       std::cout << "Checking all hits" << std::endl;
       for( size_t i = 0; i < reco_beam_calo_points.size(); ++i ){
         calo_point thePoint = reco_beam_calo_points[i];
-        std::cout << "Reco hit: " << thePoint.hit_index << " matched to True ID " << reco_beam_hit_to_true_ID[thePoint.hit_index];
+        //std::cout << "Reco hit: " << thePoint.hit_index << " matched to True ID " << reco_beam_hit_to_true_ID[thePoint.hit_index];
 
         bool found_in_true_slices = ( reco_beam_hit_to_true_slice.find( thePoint.hit_index ) != reco_beam_hit_to_true_slice.end() );
-        std::cout << " And slice " << ( found_in_true_slices ? reco_beam_hit_to_true_slice[thePoint.hit_index] : -999) << std::endl;
+        //std::cout << " And slice " << ( found_in_true_slices ? reco_beam_hit_to_true_slice[thePoint.hit_index] : -999) << std::endl;
+        //std::cout << " and origin " << pi_serv->TrackIdToMCTruth_P( reco_beam_hit_to_true_ID[thePoint.hit_index] )->Origin() << std::endl;
 
         reco_beam_hit_true_ID.push_back( reco_beam_hit_to_true_ID[thePoint.hit_index] );
+        reco_beam_hit_true_origin.push_back( pi_serv->TrackIdToMCTruth_P( reco_beam_hit_to_true_ID[thePoint.hit_index] )->Origin() );
         reco_beam_hit_true_slice.push_back( ( found_in_true_slices ? reco_beam_hit_to_true_slice[thePoint.hit_index] : -999) );
 
         if( reco_beam_hit_to_true_ID[thePoint.hit_index] == true_beam_ID && found_in_true_slices ){
@@ -2950,6 +2952,7 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("reco_beam_calo_tick", &reco_beam_calo_tick);
   fTree->Branch("reco_beam_hit_true_ID", &reco_beam_hit_true_ID);
   fTree->Branch("reco_beam_hit_true_slice", &reco_beam_hit_true_slice);
+  fTree->Branch("reco_beam_hit_true_origin", &reco_beam_hit_true_origin);
   fTree->Branch("reco_beam_nTrackDaughters", &reco_beam_nTrackDaughters);
   fTree->Branch("reco_beam_nShowerDaughters", &reco_beam_nShowerDaughters);
   fTree->Branch("reco_beam_flipped", &reco_beam_flipped);
@@ -3753,6 +3756,7 @@ void pionana::PionAnalyzer::reset()
   reco_beam_calo_wire.clear();
   reco_beam_calo_tick.clear();
   reco_beam_hit_true_ID.clear();
+  reco_beam_hit_true_origin.clear();
   reco_beam_hit_true_slice.clear();
 
 /*
