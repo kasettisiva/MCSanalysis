@@ -58,7 +58,7 @@ namespace protoana{
 
     int _FitStrategy, _NToys;
     double _IgnoreStatisticalErrorBelow, _IgnoreSystematicErrorBelow;
-    bool _EnableMinosError, _DoAsimovFit, _EnableStatisticalError, _EnableSystematicError, _NormalisedSystematic;
+    bool _EnableMinosError, _DoAsimovFit, _EnableStatisticalError, _EnableSystematicError, _NormalisedSystematic, _FitInReco;
 
     std::vector<TH1*> _bkghistos, _sighistos, _truthsighistos, _datahistos;
     std::vector<TH1*> _incbkghistos, _incsighistos, _incdatahistos;

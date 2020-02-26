@@ -521,13 +521,15 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorksp
       if(compNameVec[i].Contains("ChannelABS_CEX") || compNameVec[i].Contains("ChannelCEX_ABS")){
 	compPlotColor = 0;
       }
+      else if(compNameVec[i].Contains("RecoBin")){
+	compPlotColor = 40;
+      }
       else{
 	compPlotColor = sigcolor[counter];
 	counter++;
       }
-      std::cout << "Drawing " << compNameVec[i] << " " << counter << " " << compPlotColor << std::endl;
-
-      
+      std::cout << "INFO::Drawing " << compNameVec[i] << " " << counter << " " << compPlotColor << std::endl;
+     
       subpdf->plotOn(frame,RooFit::Components(compStackNameVec[i].Data()),RooFit::FillColor(compPlotColor),RooFit::FillStyle(3001),RooFit::DrawOption("F"),RooFit::Normalization(compStackFracVec[i]*normCount,RooAbsReal::NumEvent),RooFit::Precision(1e-5));
     }
 
@@ -545,7 +547,7 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorksp
     RemoveEmptyBins(frame);
     
     Int_t counter2 = 0;
-    bool found = false;
+    bool found = false; bool found2 = false;
     //for(int i = (compNameVec.size()-1) ; i > -1; i--){
     for(unsigned int i = 0; i < compFracVec.size(); i++){
       Int_t compPlotColor = i;
@@ -565,6 +567,15 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorksp
 	entry->SetFillColor(compPlotColor);
 	entry->SetFillStyle(3001);
 	found = true;
+	continue;
+      }
+      else if(compNameVec[i].Contains("RecoBin") && !found2){
+	compPlotColor = 40;
+	entry=legend->AddEntry("","Signal","f");
+	entry->SetLineColor(40);
+	entry->SetFillColor(compPlotColor);
+	entry->SetFillStyle(3001);
+	found2 = true;
 	continue;
       }
       else{

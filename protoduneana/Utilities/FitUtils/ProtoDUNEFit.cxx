@@ -90,7 +90,7 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
 
   // Add samples and channels to measurement
   AddSamplesAndChannelsToMeasurement(meas);
-  AddIncidentSamplesAndChannelsToMeasurement(meas);
+  //AddIncidentSamplesAndChannelsToMeasurement(meas);
   // AddSidebandSamplesAndChannelsToMeasurement(meas);
 
   // Print info about meas
@@ -127,9 +127,11 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
     truebinsnameVec.push_back(str);
   }
 
-  for(unsigned int l = 1; l < _TruthBinning.size(); l++){
-    TString str = Form("Signal %.1f-%.1f", _TruthBinning[l-1], _TruthBinning[l]);
-    truebinsnameVec.push_back(str);
+  if(!_FitInReco){
+    for(unsigned int l = 1; l < _TruthBinning.size(); l++){
+      TString str = Form("Signal %.1f-%.1f", _TruthBinning[l-1], _TruthBinning[l]);
+      truebinsnameVec.push_back(str);
+    }
   }
 
   std::vector<TCanvas*> bfplots = protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(ws, "beforefit", "Poisson", "ratio", truebinsnameVec, _RecoBinning, "Before Fit");
@@ -176,6 +178,8 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
       bfplots[i]->Write();
     }
 
+    // Histograms below are also saved from the measurement
+    /*
     // Save all input histograms
     TDirectory *HistoDir = f->mkdir("OriginalHistograms");
     HistoDir->cd();
@@ -220,7 +224,8 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
     }
     
     HistoDir->cd("..");
-    
+    */
+
     f->Close();
 
     // Nothing else to do here
@@ -517,6 +522,7 @@ void protoana::ProtoDUNEFit::AddSamplesAndChannelsToMeasurement(RooStats::HistFa
 	poiname.ReplaceAll("-","_");
 	poiname.ReplaceAll(channelname.Data(),"");
 	poiname.ReplaceAll("__","_");
+	poiname.ReplaceAll("_0_1000000","");
 	meas.SetPOI(poiname.Data()); // AddPOI would also work
 	sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 100.0);
 	mf::LogInfo("AddSamplesAndChannelsToMeasurement") << "Sample " << sample.GetName() << " has normalisation parameter " << poiname.Data();
@@ -784,10 +790,17 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
   //double mcnorm = (double)ndatatriggers/nmctriggers;
   //mf::LogInfo("FillHistogramVectors_Pions") << "Total number of MC triggers = " << nmctriggers << ", total number of data triggers = " << ndatatriggers << " , data/MC = " << mcnorm;
 
+  Double_t tmin = _TruthBinning[0];
+  Double_t tmax = _TruthBinning[_TruthBinning.size()-1];
+  if(_FitInReco){
+    tmin = 0.0;
+    tmax = 1000000.0;
+  }
+
   for(int i=0; i < nmcchannels; i++){
     for(int j=0; j < nbkgtopo; j++){
       int topo = _BackgroundTopology[j];
-      _bkghistos.push_back( protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(_MCFileNames[i], _RecoTreeName, _RecoBinning, _ChannelNames[i], _BackgroundTopologyName[j], topo) );
+      _bkghistos.push_back( protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(_MCFileNames[i], _RecoTreeName, _RecoBinning, _ChannelNames[i], _BackgroundTopologyName[j], topo, tmin, tmax) );
       //_incbkghistos.push_back( protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(_MCFileNames[0], _RecoTreeName, _RecoBinning, i, topo, true) );
     }
 
@@ -797,8 +810,25 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
     for(int j=0; j < nsigtopo; j++){
       int topo = _SignalTopology[j];
       for(unsigned int k=1; k < _TruthBinning.size(); k++){
-	_sighistos.push_back( protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(_MCFileNames[i], _RecoTreeName, _RecoBinning, _ChannelNames[i], _SignalTopologyName[j], topo, _TruthBinning[k-1], _TruthBinning[k]) );
+	if(_FitInReco){
+	  TH1* hsignal = protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(_MCFileNames[i], _RecoTreeName, _RecoBinning, _ChannelNames[i], _SignalTopologyName[j], topo, tmin, tmax);
+	  // Make one histogram per bin
+	  for(int k=1; k <= hsignal->GetNbinsX(); k++){
+	    TString hname = Form("%s_RecoBin%i",hsignal->GetName(), k);
+	    TH1 *hsignal_clone = (TH1*)hsignal->Clone();
+	    hsignal_clone->SetName(hname.Data());
+	    hsignal_clone->SetBinContent(k, hsignal->GetBinContent(k));
+	    for(int kk=1; kk <= hsignal_clone->GetNbinsX(); kk++){
+	      if(kk == k) continue;
+	      hsignal_clone->SetBinContent(kk, 0.0);
+	    }
+	    _sighistos.push_back(hsignal_clone);
+	  }
+	}
+	else{
+	  _sighistos.push_back( protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(_MCFileNames[i], _RecoTreeName, _RecoBinning, _ChannelNames[i], _SignalTopologyName[j], topo, _TruthBinning[k-1], _TruthBinning[k]) );
 	//sigevenshisto->SetBinContent(k, (_sighistos.back())->Integral() + sigevenshisto->GetBinContent(k));
+	}
       }
        //_incsighistos.push_back( protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(_MCFileNames[0], _RecoTreeName, _RecoBinning, i, topo, 0, 0, true) );
       //TH1* inchistoall = protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(_MCFileNames[0], _RecoTreeName, _RecoBinning, i, topo, 0, 0, true);
@@ -839,7 +869,7 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
     if(i == 0){
       // Split into multiple histograms
       for(int j=1; j <= inchisto->GetNbinsX(); j++){
-	TString hname = Form("%s_Bin%i",inchisto->GetName(),j);
+	TString hname = Form("%s_IncBin%i",inchisto->GetName(),j);
 	TH1* inchisto_h = (TH1*)inchisto->Clone();
 	inchisto_h->Reset();
 	inchisto_h->SetName(hname.Data());
@@ -1031,6 +1061,7 @@ bool protoana::ProtoDUNEFit::Configure(std::string configPath){
 
   _RecoBinning                 = pset.get< std::vector<double> >("RecoBinning");
   _TruthBinning                = pset.get< std::vector<double> >("TruthBinning");
+  _FitInReco                   = pset.get<bool>("FitInReco");
 
   _SignalTopology              = pset.get< std::vector<int> >("SignalTopology");
   _BackgroundTopology          = pset.get< std::vector<int> >("BackgroundTopology");

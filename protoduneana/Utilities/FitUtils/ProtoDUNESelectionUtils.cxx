@@ -10,7 +10,7 @@
 #include "messagefacility/MessageLogger/MessageLogger.h"
 
 //********************************************************************
-TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(std::string filename, std::string treename, std::vector<double> recoBins, std::string channel, std::string topo, int toponum, double weight){
+TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(std::string filename, std::string treename, std::vector<double> recoBins, std::string channel, std::string topo, int toponum, double minval, double maxval, double weight){
   //********************************************************************
 
   TFile *file = new TFile(filename.c_str(), "READ");
@@ -60,12 +60,11 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(std::str
 
   //New: backgrounds within the tree
   bool primaryMuon, isCosmic, isExtraBeam, upstreamInt, isDecay;
-  defaultTree->SetBranchAddress("primaryMuon",                  &primaryMuon);
-  defaultTree->SetBranchAddress("isCosmic",                     &isCosmic);
-  defaultTree->SetBranchAddress("isExtraBeam",                  &isExtraBeam);
-  defaultTree->SetBranchAddress("upstreamInt",                  &upstreamInt);
-  defaultTree->SetBranchAddress("isDecay",                      &isDecay);
-
+  defaultTree->SetBranchAddress("primaryMuon",                      &primaryMuon);
+  defaultTree->SetBranchAddress("isCosmic",                         &isCosmic);
+  defaultTree->SetBranchAddress("isExtraBeam",                      &isExtraBeam);
+  defaultTree->SetBranchAddress("upstreamInt",                      &upstreamInt);
+  defaultTree->SetBranchAddress("isDecay",                          &isDecay);
 
   channel.erase(std::remove(channel.begin(), channel.end(), '.'), channel.end());
   channel.erase(std::remove(channel.begin(), channel.end(), ' '), channel.end());
@@ -85,20 +84,18 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(std::str
     Int_t topology = -1;
     std::string reco_beam_true_byHits_endProcess_str = *reco_beam_true_byHits_endProcess;
 
+    // Bin edges cases. If there are signal events that fall out the truth bins, but are present in the reco bins then count them as backgrounds
+    if( true_backGround == 0 && (true_chexSignal == 1 || true_absSignal == 1 || true_nPi0Signal == 1) ){
+      if(true_beam_interactingEnergy < minval && reco_beam_interactingEnergy > recoBins[0]) true_backGround = 1;
+      if(true_beam_interactingEnergy > maxval && reco_beam_interactingEnergy < recoBins[nrecobins-1]) true_backGround = 1;
+    }
 
     // New From Jake
-    if( upstreamInt )
-      topology = 4;
-    else if( primaryMuon )
-      topology = 5;
-    else if( isDecay )
-      topology = 6;
-    else if( isExtraBeam )
-      //topology = 7;
-      topology = 7;
-    else if( isCosmic )
-      //topology = 7;
-      topology = 7;
+    if( upstreamInt )      topology = 4;
+    else if( primaryMuon ) topology = 5;
+    else if( isDecay )     topology = 6;
+    else if( isExtraBeam ) topology = 7;
+    else if( isCosmic )    topology = 7;
     else{
       if( reco_beam_true_byHits_matched ){
         if(  true_backGround  )
@@ -109,8 +106,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(std::str
       else
         topology = 7;
     }
-       
-
+    
     /////////////////////
 
 
@@ -152,7 +148,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(std::str
     if(reco_beam_interactingEnergy < 0.0) continue;
 
     // Fill histogram in reco energy
-    for(Int_t l = 1; l <= nrecobins; l++){
+    for(Int_t l = 1; l < nrecobins; l++){
       if(reco_beam_interactingEnergy > recoBins[l-1] && reco_beam_interactingEnergy <= recoBins[l]){
 	mchisto->SetBinContent(l, mchisto->GetBinContent(l) + weight);
 	break;
@@ -216,16 +212,15 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(std::string 
   defaultTree->SetBranchAddress("true_absSignal",                   &true_absSignal);
   defaultTree->SetBranchAddress("true_backGround",                  &true_backGround);
 
-  defaultTree->SetBranchAddress("event", &event);
-  defaultTree->SetBranchAddress("run", &run);
+  defaultTree->SetBranchAddress("event",                            &event);
+  defaultTree->SetBranchAddress("run",                              &run);
 
   bool primaryMuon, isCosmic, isExtraBeam, upstreamInt, isDecay;
-  defaultTree->SetBranchAddress("primaryMuon",                  &primaryMuon);
-  defaultTree->SetBranchAddress("isCosmic",                     &isCosmic);
-  defaultTree->SetBranchAddress("isExtraBeam",                  &isExtraBeam);
-  defaultTree->SetBranchAddress("upstreamInt",                  &upstreamInt);
-  defaultTree->SetBranchAddress("isDecay",                      &isDecay);
-
+  defaultTree->SetBranchAddress("primaryMuon",                      &primaryMuon);
+  defaultTree->SetBranchAddress("isCosmic",                         &isCosmic);
+  defaultTree->SetBranchAddress("isExtraBeam",                      &isExtraBeam);
+  defaultTree->SetBranchAddress("upstreamInt",                      &upstreamInt);
+  defaultTree->SetBranchAddress("isDecay",                          &isDecay);
 
   channel.erase(std::remove(channel.begin(), channel.end(), '.'), channel.end());
   channel.erase(std::remove(channel.begin(), channel.end(), ' '), channel.end());
@@ -288,7 +283,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(std::string 
     if(true_beam_interactingEnergy >= maxval) continue;
 
     // Fill histogram in reco energy
-    for(Int_t l = 1; l <= nrecobins; l++){
+    for(Int_t l = 1; l < nrecobins; l++){
       if(reco_beam_interactingEnergy > recoBins[l-1] && reco_beam_interactingEnergy <= recoBins[l]){
 	mchisto->SetBinContent(l, mchisto->GetBinContent(l) + weight);
 	break;
@@ -363,7 +358,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(std::string file
 
     if(IsIncidentHisto){
       for(UInt_t l = 0; l < reco_beam_incidentEnergies->size(); l++){
-	for(Int_t m = 1; m <= nrecobins; m++){
+	for(Int_t m = 1; m < nrecobins; m++){
 	  if(reco_beam_incidentEnergies->at(l) > recoBins[m-1] && reco_beam_incidentEnergies->at(l) <= recoBins[m]){
 	    datahisto->SetBinContent(m, datahisto->GetBinContent(m) + 1);
 	    break;
@@ -374,7 +369,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(std::string file
     }
 
     // Fill histogram in reco energy
-    for(Int_t l = 1; l <= nrecobins; l++){
+    for(Int_t l = 1; l < nrecobins; l++){
       if(reco_beam_interactingEnergy > recoBins[l-1] && reco_beam_interactingEnergy <= recoBins[l]){
 	datahisto->SetBinContent(l, datahisto->GetBinContent(l) + 1);
 	break;
@@ -468,7 +463,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(std::strin
     if(reco_beam_interactingEnergy < 0.0) continue;
 
     for(UInt_t l = 0; l < reco_beam_incidentEnergies->size(); l++){
-      for(Int_t m = 1; m <= nrecobins; m++){
+      for(Int_t m = 1; m < nrecobins; m++){
 	if(reco_beam_incidentEnergies->at(l) > recoBins[m-1] && reco_beam_incidentEnergies->at(l) <= recoBins[m]){
 	  mchisto->SetBinContent(m, mchisto->GetBinContent(m) + weight);
 	  break;
@@ -521,7 +516,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCTruthSignalHistogram_Pions(std::st
     //if(true_beam_interactingEnergy < minval) continue;
     //if(true_beam_interactingEnergy >= maxval) continue;
 
-    for(Int_t l = 1; l <= ntruthbins; l++){
+    for(Int_t l = 1; l < ntruthbins; l++){
       if(true_beam_interactingEnergy > truthBins[l-1] && true_beam_interactingEnergy <= truthBins[l]){
 	mchisto->SetBinContent(l, mchisto->GetBinContent(l) + weight);
 	break;
@@ -625,7 +620,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCFlux_Pions(std::string filename, s
 
       if(mode == 2){
 	for(UInt_t l = 0; l < true_beam_incidentEnergies->size(); l++){
-	  for(Int_t m = 1; m <= nbins; m++){
+	  for(Int_t m = 1; m < nbins; m++){
 	    if(true_beam_incidentEnergies->at(l) > Bins[m-1] && true_beam_incidentEnergies->at(l) <= Bins[m]){
 	      mchisto->SetBinContent(m, mchisto->GetBinContent(m) + weight);
 	      break;
@@ -635,7 +630,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCFlux_Pions(std::string filename, s
       }
       else if(mode == 3){
 	for(UInt_t l = 0; l < reco_beam_incidentEnergies->size(); l++){
-	  for(Int_t m = 1; m <= nbins; m++){
+	  for(Int_t m = 1; m < nbins; m++){
 	    if(reco_beam_incidentEnergies->at(l) > Bins[m-1] && reco_beam_incidentEnergies->at(l) <= Bins[m]){
 	      mchisto->SetBinContent(m, mchisto->GetBinContent(m) + weight);
 	      break;

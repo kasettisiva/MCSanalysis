@@ -7,7 +7,7 @@ MCFileNames:             ["/dune/app/users/calcuttj/PionStudies/rDataFrame/event
 DataFileNames:             ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_ABS.root", "/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_CEX.root"]
 
 # Channel names. Follow the order of the MC/Data File Names
-ChannelNames:           ["ABS","CEX"]
+ChannelNames:            ["ABS","CEX"]
 
 # Path to MC control samples.
 MCControlSampleFiles:    []
@@ -18,7 +18,7 @@ DataControlSampleFiles:  []
 # Path to file to get the number of incident pions
 IncidentMCFileNames:     ["/dune/app/users/calcuttj/PionStudies/rDataFrame/pionana_mc_1GeV_eventSelection.root"]
 
-# Number of toys to generate for MC studies. Any number above 0 will enable toy mc and won't fit the data.
+# Number of toys to generate for MC studies. Any number above 0 will enable toy mc generation and won't fit the data.
 NToys:                   0	
 
 # Name of the tree with reconstructed events.
@@ -45,8 +45,11 @@ IncidentTopologyName:    ["Pions","Protons","Muons","Other"]
 TruthTreeName:           "pionana/beamana"
 
 # Define binning in truth/reco. It doesn't have to be symmetric.
-TruthBinning:            [0.0,400.0,600.0,700.0,800.0,1500.0]
-RecoBinning:             [0.0,400.0,600.0,700.0,800.0,1500.0]
+TruthBinning:            [0.0,400.0,600.0,700.0,800.0,1200.0]
+RecoBinning:             [0.0,400.0,600.0,700.0,800.0,1200.0]
+
+# Option to fit in reco. If enabled will ignore the truth binning and introduce one free parameter per reco bin
+FitInReco:               false
 
 # Fit set up.
 DoAsimovFit:             false       # Will do asimov fit only
