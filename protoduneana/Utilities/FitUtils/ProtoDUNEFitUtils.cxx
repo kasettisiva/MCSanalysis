@@ -368,7 +368,7 @@ double protoana::ProtoDUNEFitUtils::GetDataMCChi2(RooWorkspace *work, TString ch
 }
 
 //********************************************************************
-std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorkspace *work, TString name, TString error, TString plottodraw, std::vector<TString> binnames, std::vector<double> recobins, TString measurement, RooAbsData* data, RooFitResult* result){
+std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorkspace *work, TString name, TString error, TString plottodraw, std::vector<TString> binnames, std::vector<double> recobins, std::vector<TString> incidentBinNames, TString measurement, RooAbsData* data, RooFitResult* result){
   //********************************************************************
 
   std::vector<TCanvas*> rooplots;
@@ -574,7 +574,7 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorksp
 
       if(counter2 < (int)binnames.size()){
 	TString legName = binnames[counter2];
-	if(compNameVec[i].Contains("Incident")) legName = binnames[counter2+1];
+	if(compNameVec[i].Contains("Incident")) legName = incidentBinNames[counter2];
 	
 	entry=legend->AddEntry("",legName.Data(),"f");
 	entry->SetLineColor(compPlotColor);
