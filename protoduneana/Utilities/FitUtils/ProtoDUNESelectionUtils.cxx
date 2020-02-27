@@ -66,6 +66,27 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(std::str
   defaultTree->SetBranchAddress("upstreamInt",                  &upstreamInt);
   defaultTree->SetBranchAddress("isDecay",                      &isDecay);
 
+  //New: slice matching
+  std::vector< int > * reco_beam_hit_true_origin = 0x0;
+  std::vector< int > * reco_beam_hit_true_ID = 0x0;
+  std::vector< int > * reco_beam_hit_true_slice = 0x0;
+  std::vector< int > * true_beam_process_matched = 0x0;
+  std::vector< int > * true_beam_process_slice = 0x0;
+  std::vector< int > * true_beam_daughter_ID = 0x0;
+  std::vector< int > * true_beam_grand_daughter_ID = 0x0;
+  int true_beam_ID;
+  int true_daughter_nPiPlus, true_daughter_nPiMinus;
+  defaultTree->SetBranchAddress( "reco_beam_hit_true_origin", &reco_beam_hit_true_origin );
+  defaultTree->SetBranchAddress( "reco_beam_hit_true_ID", &reco_beam_hit_true_ID );
+  defaultTree->SetBranchAddress( "reco_beam_hit_true_slice", &reco_beam_hit_true_slice );
+  defaultTree->SetBranchAddress( "true_beam_process_matched", &true_beam_process_matched );
+  defaultTree->SetBranchAddress( "true_beam_process_slice", &true_beam_process_slice );
+  defaultTree->SetBranchAddress( "true_beam_ID", &true_beam_ID );
+  defaultTree->SetBranchAddress( "true_daughter_nPiPlus", &true_daughter_nPiPlus );
+  defaultTree->SetBranchAddress( "true_daughter_nPiMinus", &true_daughter_nPiMinus );
+  defaultTree->SetBranchAddress( "true_beam_daughter_ID", &true_beam_daughter_ID );
+  defaultTree->SetBranchAddress( "true_beam_grand_daughter_ID", &true_beam_grand_daughter_ID );
+
 
   channel.erase(std::remove(channel.begin(), channel.end(), '.'), channel.end());
   channel.erase(std::remove(channel.begin(), channel.end(), ' '), channel.end());
@@ -86,6 +107,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(std::str
     std::string reco_beam_true_byHits_endProcess_str = *reco_beam_true_byHits_endProcess;
 
 
+/*
     // New From Jake
     if( upstreamInt )
       topology = 4;
@@ -109,9 +131,122 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(std::str
       else
         topology = 7;
     }
-       
+*/      
 
     /////////////////////
+
+    // New slice matching
+    /*
+    if( true_beam_PDG == 211 && *true_beam_endProcess == "pi+Inelastic" &&
+        true_daughter_nPiPlus == 0 && true_daughter_nPiMinus == 0 ){
+      
+      if( true_beam_processes->back() != *true_beam_endProcess ){
+        std::cout << "WARNING -- THE LAST PROCESS IN THE LIST ISN'T THE END PROCESS" << std::endl;
+        break;
+      }
+
+      //Now check if the last hit is matched to the interacting slice 
+      //
+      //make sure there is any hits at all
+      if( !reco_beam_hit_true_ID->size() ) continue;
+
+      //Make sure it's the true beam ID
+      if( reco_beam_hit_true_ID->back() != true_beam_ID ) continue;
+      
+      //make sure it's matched to the last process slice
+      if( reco_beam_hit_true_slice->back() == true_beam_process_slice->back() ){
+        if( true_daughter_nPi0 == 0 ) topology = 1;
+        else topology = 2;
+      }
+      else continue;
+      
+    }
+    else continue;
+*/
+    if( reco_beam_hit_true_origin->back() == 2 ) topology = 7;
+    else if( true_beam_PDG == -13 ){
+      if( reco_beam_hit_true_ID->back() == true_beam_ID )
+        topology = 5;
+      else topology = 7;
+    }
+    else if( true_beam_PDG == 211 ){
+/*
+      int max_slice_found = -999;
+      //Go through the reco beam hits and find the max slice found
+      for( size_t l = 0; l < reco_beam_hit_true_ID->size(); ++l ){
+        int true_id = (*reco_beam_hit_true_ID)[l]; 
+        int true_slice = (*reco_beam_hit_true_slice)[l]; 
+
+        //Found the slice
+        if( true_id == true_beam_ID && true_slice != -999 ){
+          if( true_slice > max_slice_found ) max_slice_found = true_slice;
+        }
+      }
+
+      //Determine if any process was matched 
+      size_t max_matched = 999;
+      bool any_matched = false;
+      for( size_t l = 0; l < true_beam_process_matched->size(); ++l ){
+        if( (*true_beam_process_matched)[l] ){
+          max_matched = l; 
+          any_matched = true;
+        }
+      }
+
+
+
+      bool found_last_proc = false;
+      if( any_matched ){
+        //Check if the max_matched is the last
+        if( max_matched == (true_beam_process_matched->size()-1) ){
+          //This means we should treat all of the slices up to the last process
+          found_last_proc = true;
+        }
+      }*/
+
+      if( !reco_beam_hit_true_ID->size() ){
+        topology =7;
+      }
+      else{
+        //Make sure it's the true beam ID
+        if( reco_beam_hit_true_ID->back() != true_beam_ID ){
+          bool found_daughter = false;
+          for( size_t l = 0; l < true_beam_daughter_ID->size(); ++l ){
+            if( reco_beam_hit_true_ID->back() == (*true_beam_daughter_ID)[l] ){
+              found_daughter = true;
+              break;
+            }
+          }
+          if( !found_daughter ){
+            for( size_t l = 0; l < true_beam_grand_daughter_ID->size(); ++l ){
+               if( reco_beam_hit_true_ID->back() == (*true_beam_grand_daughter_ID)[l] ){
+                found_daughter = true;
+                break;
+              }
+            }
+          }
+           
+          if( found_daughter )
+            topology = 4; 
+          else
+            topology = 7;
+        }
+        else{
+          //We've found a match to the interacting slice.
+          //Check if the interaction is BG
+          if( reco_beam_hit_true_slice->back() == true_beam_process_slice->back() ){
+            if( ( true_daughter_nPiPlus + true_daughter_nPiMinus ) > 0 ){
+              topology = 3;
+            }
+            else topology = -1;
+          }
+          else{
+            topology = 6;
+          }
+        }
+      }
+    } 
+
 
 
     // Select only the correct topology
@@ -196,6 +331,23 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(std::string 
   defaultTree->SetBranchAddress("isDecay",                      &isDecay);
 
 
+  //Slice matching
+  int true_daughter_nPiPlus, true_daughter_nPiMinus, true_daughter_nPi0, true_beam_ID;
+  std::vector< std::string > * true_beam_processes = 0x0;
+  std::vector< int > * true_beam_process_slice = 0x0;
+  std::vector< int > * reco_beam_hit_true_ID = 0x0;
+  std::vector< int > * reco_beam_hit_true_slice = 0x0;
+  double new_true_beam_interactingEnergy;
+  defaultTree->SetBranchAddress( "true_daughter_nPiPlus", &true_daughter_nPiPlus );
+  defaultTree->SetBranchAddress( "true_daughter_nPiMinus", &true_daughter_nPiMinus );
+  defaultTree->SetBranchAddress( "true_daughter_nPi0", &true_daughter_nPi0 );
+  defaultTree->SetBranchAddress( "true_beam_ID", &true_beam_ID );
+  defaultTree->SetBranchAddress( "true_beam_processes", &true_beam_processes );
+  defaultTree->SetBranchAddress( "true_beam_process_slice", &true_beam_process_slice );
+  defaultTree->SetBranchAddress( "reco_beam_hit_true_slice", &reco_beam_hit_true_slice );
+  defaultTree->SetBranchAddress( "reco_beam_hit_true_ID", &reco_beam_hit_true_ID );
+  defaultTree->SetBranchAddress("new_true_beam_interactingEnergy",      &new_true_beam_interactingEnergy);
+
   channel.erase(std::remove(channel.begin(), channel.end(), '.'), channel.end());
   channel.erase(std::remove(channel.begin(), channel.end(), ' '), channel.end());
   topo.erase(std::remove(topo.begin(), topo.end(), '.'), topo.end());
@@ -224,6 +376,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(std::string 
 
     Int_t topology = -1;
 
+/*
     if( !( upstreamInt || primaryMuon || isDecay || isExtraBeam || isCosmic ) && reco_beam_true_byHits_matched && !true_backGround ){
       if( true_absSignal )
         topology = 1;
@@ -234,6 +387,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(std::string 
         std::cout << "Event: " << event << " Run: " << run << std::endl;
       }
     }
+    */
 
     /*
     if(true_absSignal == 1) topology = 1;
@@ -242,6 +396,37 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(std::string 
     else if( (true_chexSignal == 1) || (true_nPi0Signal == 1) ) topology = 2;
     */
 
+
+    //New Slice by slice matching
+    //
+    //First determine if this is a pion ending in abs/cex/nPi0
+    if( true_beam_PDG == 211 && *true_beam_endProcess == "pi+Inelastic" &&
+        true_daughter_nPiPlus == 0 && true_daughter_nPiMinus == 0 ){
+      
+      if( true_beam_processes->back() != *true_beam_endProcess ){
+        std::cout << "WARNING -- THE LAST PROCESS IN THE LIST ISN'T THE END PROCESS" << std::endl;
+        break;
+      }
+
+      //Now check if the last hit is matched to the interacting slice 
+      //
+      //make sure there is any hits at all
+      if( !reco_beam_hit_true_ID->size() ) continue;
+
+      //Make sure it's the true beam ID
+      if( reco_beam_hit_true_ID->back() != true_beam_ID ) continue;
+      
+      //make sure it's matched to the last process slice
+      if( reco_beam_hit_true_slice->back() == true_beam_process_slice->back() ){
+        if( true_daughter_nPi0 == 0 ) topology = 1;
+        else topology = 2;
+      }
+      else continue;
+      
+    }
+    else continue;
+
+   
     // Remove events with the wrong topology
     if(topology != toponum) continue;
 
@@ -253,8 +438,9 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(std::string 
     if(reco_beam_interactingEnergy < 0.0) continue;
 
     // True energy bin
-    if(true_beam_interactingEnergy < minval) continue;
-    if(true_beam_interactingEnergy >= maxval) continue;
+    //if(true_beam_interactingEnergy < minval) continue;
+    //if(true_beam_interactingEnergy >= maxval) continue;
+    if( new_true_beam_interactingEnergy < minval || new_true_beam_interactingEnergy >= maxval ) continue;
 
     // Fill histogram in reco energy
     for(Int_t l = 1; l <= nrecobins; l++){
