@@ -30,6 +30,8 @@ namespace protoana{
     // Get number of triggers
     int GetNTriggers_Pions(std::string filename, std::string treename, bool IsMC=true);
 
+    int GetVertexType( const std::vector< std::string > & processes, const std::vector< int > & vertex_hits_slices, const std::vector< std::vector< double > > & vertex_dRs, double cut = 5., int max_slices = 1 );
+
   }
 }
 

@@ -134,10 +134,16 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
     }
   }
 
-  std::vector<TCanvas*> bfplots = protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(ws, "beforefit", "Poisson", "ratio", truebinsnameVec, _RecoBinning, "Before Fit");
+  std::vector< TString > incidentNameVec;
+  for( size_t l = 0; l < _IncidentTopologyName.size(); ++l ){
+    TString str = Form("%s", _IncidentTopologyName[l].c_str());
+    incidentNameVec.push_back(str); 
+  }
+
+  std::vector<TCanvas*> bfplots = protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(ws, "beforefit", "Poisson", "ratio", truebinsnameVec, _RecoBinning, incidentNameVec, "Before Fit");
 
   RooAbsData *asimovdata = ws->data("asimovData");
-  std::vector<TCanvas*> bfAsimovplots = protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(ws, "asimov", "Poisson", "ratio", truebinsnameVec, _RecoBinning, "Asimov Dataset", asimovdata);
+  std::vector<TCanvas*> bfAsimovplots = protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(ws, "asimov", "Poisson", "ratio", truebinsnameVec, _RecoBinning, incidentNameVec, "Asimov Dataset", asimovdata);
 
   // ----------------------------------------------------------------------------------------------------
   // Check if this is MC toys case
@@ -282,7 +288,7 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
   // Print fit results on the screen
   //fitresult->Print();
 
-  std::vector<TCanvas*> afplots = protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(ws, "afterfit", "Poisson", "ratio", truebinsnameVec, _RecoBinning, "After fit", NULL, fitresult);
+  std::vector<TCanvas*> afplots = protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(ws, "afterfit", "Poisson", "ratio", truebinsnameVec, _RecoBinning, incidentNameVec, "After fit", NULL, fitresult);
 
   // Save post-fit workspace snapshot
   protoana::ProtoDUNEFitUtils::SaveSnapshot(ws, Form("%s_postfit_snapshot",ws->GetName()));
@@ -866,6 +872,7 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
     }
 
     inchisto->SetNameTitle(Form("MC_ChannelIncident_%s_Histo",_IncidentTopologyName[i].c_str()), Form("Incident MC for topology %s", _IncidentTopologyName[i].c_str()));
+    /*
     if(i == 0){
       // Split into multiple histograms
       for(int j=1; j <= inchisto->GetNbinsX(); j++){
@@ -880,9 +887,9 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
 	_incsighistos.push_back(inchisto_h);
       }   
     }
-    else{
+    else{*/
       _incbkghistos.push_back(inchisto);
-    }
+    //}
   }
 
   TH1* incdatahisto = protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(_DataFileNames[0], _RecoTreeName, _RecoBinning, _ChannelNames[0], true);
