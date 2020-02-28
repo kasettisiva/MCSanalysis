@@ -65,6 +65,8 @@ namespace protoana{
     std::vector<TH1*> _sidhistos, _siddatahistos;
 
     std::vector<TGraphAsymmErrors*> _efficiencyGraphs;
+
+    bool _AddIncidentToMeasurement;
   };
 }
 

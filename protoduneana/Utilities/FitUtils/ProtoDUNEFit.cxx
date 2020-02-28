@@ -90,7 +90,8 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
 
   // Add samples and channels to measurement
   AddSamplesAndChannelsToMeasurement(meas);
-  //AddIncidentSamplesAndChannelsToMeasurement(meas);
+  if( _AddIncidentToMeasurement )
+    AddIncidentSamplesAndChannelsToMeasurement(meas);
   // AddSidebandSamplesAndChannelsToMeasurement(meas);
 
   // Print info about meas
@@ -1073,6 +1074,8 @@ bool protoana::ProtoDUNEFit::Configure(std::string configPath){
   _SignalTopology              = pset.get< std::vector<int> >("SignalTopology");
   _BackgroundTopology          = pset.get< std::vector<int> >("BackgroundTopology");
   _IncidentTopology            = pset.get< std::vector<int> >("IncidentTopology");
+
+  _AddIncidentToMeasurement        = pset.get<bool>("AddIncidentToMeasurement");
 
   return true;
 

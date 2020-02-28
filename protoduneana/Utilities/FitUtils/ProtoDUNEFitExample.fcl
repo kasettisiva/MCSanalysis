@@ -16,7 +16,7 @@ MCControlSampleFiles:    []
 DataControlSampleFiles:  []
 
 # Path to file to get the number of incident pions
-IncidentMCFileNames:     ["/dune/app/users/calcuttj/PionStudies/rDataFrame/pionana_mc_1GeV_eventSelection.root"]
+IncidentMCFileNames:     ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_PRIMARYPION.root"]
 
 # Number of toys to generate for MC studies. Any number above 0 will enable toy mc generation and won't fit the data.
 NToys:                   0	
@@ -70,3 +70,5 @@ SystFileNames:           ["/path/to/file.root"]
 SystToConsider:          ["Systematic1","Systematic2"]
 SystType:                ["NormShape"  ,"NormShape"]   # For each systematic the type should be defined, options are: NormOnly, ShapeOnly, NormShape
 IgnoreSystematicErrorBelow: 0.01                     # Sytematic error will be ignored if below this value
+
+AddIncidentToMeasurement: false 
