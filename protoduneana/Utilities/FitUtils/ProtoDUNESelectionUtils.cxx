@@ -88,6 +88,13 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(std::str
   defaultTree->SetBranchAddress( "true_beam_daughter_ID", &true_beam_daughter_ID );
   defaultTree->SetBranchAddress( "true_beam_grand_daughter_ID", &true_beam_grand_daughter_ID );
 
+  std::vector< std::string > * true_beam_processes = 0x0;
+  std::vector< std::vector < double > > * reco_beam_vertex_dRs = 0x0;
+  std::vector< int > * reco_beam_vertex_hits_slices = 0x0;
+  defaultTree->SetBranchAddress( "true_beam_processes", &true_beam_processes );
+  defaultTree->SetBranchAddress( "reco_beam_vertex_dRs", &reco_beam_vertex_dRs );
+  defaultTree->SetBranchAddress( "reco_beam_vertex_hits_slices", &reco_beam_vertex_hits_slices );
+
 
   channel.erase(std::remove(channel.begin(), channel.end(), '.'), channel.end());
   channel.erase(std::remove(channel.begin(), channel.end(), ' '), channel.end());
@@ -108,173 +115,58 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(std::str
     std::string reco_beam_true_byHits_endProcess_str = *reco_beam_true_byHits_endProcess;
 
 
-/*
-    // New From Jake
-    if( upstreamInt )
-      topology = 4;
-    else if( primaryMuon )
-      topology = 5;
-    else if( isDecay )
-      topology = 6;
-    else if( isExtraBeam )
-      //topology = 7;
-      topology = 7;
-    else if( isCosmic )
-      //topology = 7;
-      topology = 7;
-    else{
-      if( reco_beam_true_byHits_matched ){
-        if(  true_backGround  )
-          topology = 3;
-        //Else: this is signal
-        //should be caught by topology != toponum check
-      }
-      else
-        topology = 7;
-    }
-*/      
-
     /////////////////////
 
     // New slice matching
     //
-    bool keep_checking = true; 
-
     // This checks if it was an inelastic event and matched to the end
-    if( true_beam_PDG == 211 && *true_beam_endProcess == "pi+Inelastic" ){
+    if( true_beam_PDG == 211 ){
       
-      //Now check if the last hit is matched to the interacting slice 
-      //
       //make sure there is any hits at all
       if( !reco_beam_hit_true_ID->size() ) continue;
 
-      size_t start = 0;
-      if( reco_beam_hit_true_ID->size() > 5 ){ 
-        start = reco_beam_hit_true_ID->size() - 5;
-      }
+      //Get the vertex type
+      int vertex_type = GetVertexType( *true_beam_processes, *reco_beam_vertex_hits_slices, *reco_beam_vertex_dRs );  
 
-      bool found_int_slice = false;
-      for( size_t iR = start; iR < reco_beam_hit_true_ID->size(); ++iR ){
-        if( ( (*reco_beam_hit_true_ID)[iR] == true_beam_ID ) &&
-            ( ( true_beam_process_slice->back() - (*reco_beam_hit_true_slice)[iR] < 2) ) ){
-          found_int_slice = true;
-          break;
-        }
+      //Check if it's matched to the inelastic vertex
+      //If so -- regardless of how where the hit comes 
+      //from -- consider it Signal/Pion Inel BG
+      if( vertex_type == 1 || vertex_type == 3 ){
+        if( true_daughter_nPiPlus == 0 && true_daughter_nPiMinus == 0 ) topology = 1;
+        else topology = 3; 
       }
+      else if( vertex_type == 2 ){
+        topology = 6; //Elastic just set to true unmatched
+      }
+      else{
+        if( reco_beam_hit_true_ID->back() == true_beam_ID )
+          topology = 6; //last hit matches the beam set to true unmatched
 
-      //make sure it's matched to the last process slice
-      if( found_int_slice ){ 
-        if( true_daughter_nPiPlus == 0 && true_daughter_nPiMinus == 0 ){
-          if( true_daughter_nPi0 == 0 ) topology = 1;
-          else topology = 2;
-        }
-        else{
-          topology = 3;
-          keep_checking = false;
-        }
+        //Next 2: if the last hit ID is from daughter or GD, 
+        //        consider it upstream int
+        else if( std::find( true_beam_daughter_ID->begin(), true_beam_daughter_ID->end(), reco_beam_hit_true_ID->back() ) !=
+                 true_beam_daughter_ID->end() ) 
+          topology = 4;
+        else if( std::find( true_beam_grand_daughter_ID->begin(), true_beam_grand_daughter_ID->end(), reco_beam_hit_true_ID->back() ) !=
+                  true_beam_grand_daughter_ID->end() ) 
+          topology = 4;
+
+        else topology = 7;
+
       }
+      
     }
-
-    if( topology == 1 || topology == 2 ) continue;
-
-    //First check if the ending is from cosmics
-    if( keep_checking ){
-      int n_hits_from_cosmic = 0;
-      size_t start = 0;
-
-      if( reco_beam_hit_true_origin->size() > 5 ){ 
-        start = reco_beam_hit_true_origin->size() - 5;
-      }
-      int n_checked = reco_beam_hit_true_ID->size() - start;
-
-      for( size_t iR = start; iR < reco_beam_hit_true_origin->size(); ++iR ){
-        if( (*reco_beam_hit_true_origin)[iR] == 2 ) 
-          ++n_hits_from_cosmic;
-      }
-
-      if( ( n_hits_from_cosmic / (1.*n_checked) ) >= .5 ){
-        topology = 7;
-        keep_checking = false;
-      }
-    }
-    ///////
-
-
-
-    //Check if it comes from a muon
-    if( keep_checking && true_beam_PDG == -13 ){
-      int n_hits_from_true_beam = 0;
-      size_t start = 0;
-
-      if( reco_beam_hit_true_ID->size() > 5 ){ 
-        start = reco_beam_hit_true_ID->size() - 5;
-      }
-      int n_checked = reco_beam_hit_true_ID->size() - start;
-
-      for( size_t iR = start; iR < reco_beam_hit_true_ID->size(); ++iR ){
-        if( (*reco_beam_hit_true_ID)[iR] == true_beam_ID ) 
-          ++n_hits_from_true_beam;       
-      }
-
-      if( ( n_hits_from_true_beam / (1.*n_checked) ) >= .5 ){
+    else if( true_beam_PDG == -13 ){
+      //First check that if the last hit is from a cosmic
+      if( reco_beam_hit_true_origin->back() == 2 )
+        topology = 7; //Other for now
+      else if( reco_beam_hit_true_ID->back() == true_beam_ID )
         topology = 5;
-        keep_checking = false;
-      }
+      else topology = 7;
     }
-    
-    //Check if true beam was 211
-    if( keep_checking && true_beam_PDG == 211 ){
-      //make sure there is any hits at all
-      if( !reco_beam_hit_true_ID->size() ) continue;
-
-      size_t start = 0;
-      if( reco_beam_hit_true_ID->size() > 5 ){ 
-        start = reco_beam_hit_true_ID->size() - 5;
-      }
-      int n_checked = reco_beam_hit_true_ID->size() - start;
-
-      int n_hits_from_true_beam = 0;
-      int n_hits_from_downstream = 0;
-      for( size_t iR = start; iR < reco_beam_hit_true_ID->size(); ++iR ){
-        //Look for for in the beam itself, somewhere else
-        if( (*reco_beam_hit_true_ID)[iR] == true_beam_ID )
-          ++n_hits_from_true_beam;
-        else{
-          
-          //Look in the downstream
-          bool found_daughter = false;
-          for( size_t iD = 0; iD < true_beam_daughter_ID->size(); ++iD ){
-            if( (*reco_beam_hit_true_ID)[iR] == (*true_beam_daughter_ID)[iD] ){
-              ++n_hits_from_downstream;
-              found_daughter = true;
-              break;
-            }
-          }
-
-          if( !found_daughter ){
-            for( size_t iD = 0; iD < true_beam_grand_daughter_ID->size(); ++iD ){
-              if( (*reco_beam_hit_true_ID)[iR] == (*true_beam_grand_daughter_ID)[iD] ){
-                ++n_hits_from_downstream;
-                break;
-              }
-            }
-          }
-        }
-      }
-
-      if( ( n_hits_from_true_beam / (1.*n_checked) ) >= .5 ){
-        topology = 6;
-      }
-      else if( ( n_hits_from_downstream / (1.*n_checked) ) >= .5 ){
-        topology = 4;
-      }
-      else{ 
-        topology = 7;
-      }
-
+    else{ //Shouldn't be any but w/e
+      topology = 7;
     }
-
-
 
     // Select only the correct topology
     if(topology != toponum) continue;
@@ -375,6 +267,12 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(std::string 
   defaultTree->SetBranchAddress( "reco_beam_hit_true_ID", &reco_beam_hit_true_ID );
   defaultTree->SetBranchAddress("new_true_beam_interactingEnergy",      &new_true_beam_interactingEnergy);
 
+
+  std::vector< int > * reco_beam_vertex_hits_slices = 0x0; 
+  std::vector< std::vector< double > > * reco_beam_vertex_dRs = 0x0;
+  defaultTree->SetBranchAddress( "reco_beam_vertex_hits_slices", &reco_beam_vertex_hits_slices );
+  defaultTree->SetBranchAddress( "reco_beam_vertex_dRs", &reco_beam_vertex_dRs );
+
   channel.erase(std::remove(channel.begin(), channel.end(), '.'), channel.end());
   channel.erase(std::remove(channel.begin(), channel.end(), ' '), channel.end());
   topo.erase(std::remove(topo.begin(), topo.end(), '.'), topo.end());
@@ -403,27 +301,6 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(std::string 
 
     Int_t topology = -1;
 
-/*
-    if( !( upstreamInt || primaryMuon || isDecay || isExtraBeam || isCosmic ) && reco_beam_true_byHits_matched && !true_backGround ){
-      if( true_absSignal )
-        topology = 1;
-      else if( true_chexSignal || true_nPi0Signal )
-        topology = 2;
-      else{
-        std::cout << "WARNING!!! OTHER CASE CAUGHT. NEED TO INVESTIGATE" << std::endl;
-        std::cout << "Event: " << event << " Run: " << run << std::endl;
-      }
-    }
-    */
-
-    /*
-    if(true_absSignal == 1) topology = 1;
-    //else if(true_chexSignal == 1) topology = 2;
-    //New: including nPi0
-    else if( (true_chexSignal == 1) || (true_nPi0Signal == 1) ) topology = 2;
-    */
-
-
     //New Slice by slice matching
     //
     //First determine if this is a pion ending in abs/cex/nPi0
@@ -435,26 +312,12 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(std::string 
       //make sure there is any hits at all
       if( !reco_beam_hit_true_ID->size() ) continue;
 
-      size_t start = 0;
-      if( reco_beam_hit_true_ID->size() > 5 ){ 
-        start = reco_beam_hit_true_ID->size() - 5;
-      }
-      bool found_int_slice = false;
-      for( size_t iR = start; iR < reco_beam_hit_true_ID->size(); ++iR ){
-        if( ( (*reco_beam_hit_true_ID)[iR] == true_beam_ID ) &&
-            ( ( true_beam_process_slice->back() - (*reco_beam_hit_true_slice)[iR] < 2) ) ){
-          
-          found_int_slice = true;
-          break;
-        }
-      }
+      //Get the vertex type
+      int vertex_type = GetVertexType( *true_beam_processes, *reco_beam_vertex_hits_slices, *reco_beam_vertex_dRs );  
+      if( !( vertex_type == 1 || vertex_type == 3 ) ) continue;
 
-      //make sure it's matched to the last process slice
-      if( found_int_slice ){
-        if( true_daughter_nPi0 == 0 ) topology = 1;
-        else topology = 2;
-      }
-      else continue;
+      if( true_daughter_nPi0 == 0 ) topology = 1;
+      else topology = 2;
       
     }
     else continue;
@@ -647,6 +510,15 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(std::strin
   defaultTree->SetBranchAddress("true_beam_process_dSlice", &true_beam_process_dSlice);
   defaultTree->SetBranchAddress("true_beam_process_slice", &true_beam_process_slice);
 
+  std::vector< int > * reco_beam_vertex_hits_slices = 0x0;
+  std::vector< std::vector<double> > * reco_beam_vertex_dRs = 0x0;
+  std::vector< int > * true_beam_daughter_ID = 0x0;
+  std::vector< int > * true_beam_grand_daughter_ID = 0x0;
+  defaultTree->SetBranchAddress( "reco_beam_vertex_hits_slices", &reco_beam_vertex_hits_slices );
+  defaultTree->SetBranchAddress( "reco_beam_vertex_dRs", &reco_beam_vertex_dRs );
+  defaultTree->SetBranchAddress( "true_beam_daughter_ID", &true_beam_daughter_ID );
+  defaultTree->SetBranchAddress( "true_beam_grand_daughter_ID", &true_beam_grand_daughter_ID );
+
   //std::replace(channel.begin(), channel.end(), ' ', '-');
   channel.erase(std::remove(channel.begin(), channel.end(), '.'), channel.end());
   channel.erase(std::remove(channel.begin(), channel.end(), ' '), channel.end());
@@ -681,27 +553,8 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(std::strin
       }
     }
 
-    //Determine if any process was matched 
-    size_t max_matched = 999;
-    bool any_matched = false;
-    for( size_t l = 0; l < true_beam_process_matched->size(); ++l ){
-      if( (*true_beam_process_matched)[l] ){
-        max_matched = l; 
-        any_matched = true;
-      }
-    }
-
-
-    bool found_last_proc = false;
-    if( any_matched ){
-      //Check if the max_matched is the last
-      if( max_matched == (true_beam_process_matched->size()-1) ){
-        //This means we should treat all of the slices up to the last process
-        found_last_proc = true;
-      }
-    }
-
-
+    //Get the vertex type
+    int vertex_type = GetVertexType( *true_beam_processes, *reco_beam_vertex_hits_slices, *reco_beam_vertex_dRs );  
 
     bool passed_last_found = false;
     //Go through the incident energies in the beamline
@@ -712,7 +565,8 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(std::strin
       int true_origin = (*reco_beam_hit_true_origin)[l]; 
       int true_slice = (*reco_beam_hit_true_slice)[l]; 
 
-      if( max_slice_found > -999 && !passed_last_found && found_last_proc ){
+      if( max_slice_found > -999 && !passed_last_found && 
+          ( vertex_type == 1 || vertex_type == 3 || vertex_type == 4) ){
         if( true_slice >= max_slice_found ) passed_last_found = true;
       }
 
@@ -724,7 +578,13 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(std::strin
           if( true_id == -999 ) topology = 8; 
           else{
             if( passed_last_found ) topology = 7;
-            else topology = 8;
+            else{
+              if( std::find( true_beam_daughter_ID->begin(), true_beam_daughter_ID->end(), true_id ) !=
+                  true_beam_daughter_ID->end() ) topology = 7;
+              else if( std::find( true_beam_grand_daughter_ID->begin(), true_beam_grand_daughter_ID->end(), true_id ) !=
+                  true_beam_grand_daughter_ID->end() ) topology = 7;
+              else topology = 8;
+            }
           }
         }
         else{
@@ -960,6 +820,8 @@ int protoana::ProtoDUNESelectionUtils::GetVertexType( const std::vector< std::st
   bool el = false;
   bool other = false;
   
+  //int matched_proc = -1;
+
   for( size_t i = 0; i < processes.size(); ++i ){
     std::vector< double > the_dRs;     
     for( size_t j = 0; j < vertex_dRs[i].size(); ++j ){
@@ -979,7 +841,8 @@ int protoana::ProtoDUNESelectionUtils::GetVertexType( const std::vector< std::st
 
     if( min_dR < cut ){
       matched = true;
-      if( processes[i] == "hadElastic" )
+      //matched_proc = i; // Will return the last proc matched
+      if( processes[i] == "hadElastic" )     
         el = true;
       else if( processes[i] == "pi+Inelastic" ) 
         inel = true;
@@ -989,10 +852,15 @@ int protoana::ProtoDUNESelectionUtils::GetVertexType( const std::vector< std::st
 
   }
 
-  if( matched && inel && !other && !el ) return 1;
-  else if( matched && el && !other && !inel ) return 2;
-  else if( matched && el && inel && !other )  return 3;
-  else if( matched && other ) return 4;
-  else return 0;
+  if( matched && inel && !other && !el ) 
+    return 1;
+  else if( matched && el && !other && !inel ) 
+    return 2;
+  else if( matched && el && inel && !other )  
+    return 3;
+  else if( matched && other ) 
+    return 4;
+  else 
+    return 0;
   
 }
