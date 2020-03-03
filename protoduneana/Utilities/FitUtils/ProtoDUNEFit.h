@@ -67,7 +67,11 @@ namespace protoana{
     std::vector<TGraphAsymmErrors*> _efficiencyGraphs;
 
     TGraphAsymmErrors * _incidentEfficiency;
+    TH1 * _incidentEfficiencyNum;
+    TH1 * _incidentEfficiencyDenom;
     std::vector< TH1 * > _interactingEfficiencyDenoms;
+    std::vector< TH1 * > _interactingEfficiencyNums;
+    std::vector< TGraphAsymmErrors * > _interactingEfficiencies;
  
     bool _AddIncidentToMeasurement;
   };

@@ -429,11 +429,15 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
   ceffgraph->Write();
 
   _incidentEfficiency->Write();
+  _incidentEfficiencyNum->Write();
+  _incidentEfficiencyDenom->Write();
   ////////////////////////////
   
   //Interacting efficiency
   for( size_t i = 0; i < _interactingEfficiencyDenoms.size(); ++i ){
     _interactingEfficiencyDenoms[i]->Write();
+    _interactingEfficiencyNums[i]->Write();
+
 
 /*
     TGraphAsymmErrors * interactingEff = new TGraphAsymmErrors(
@@ -449,6 +453,10 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
 
     interactingEff->Write();
 */    
+  }
+
+  for ( size_t i = 0; i < _interactingEfficiencies.size(); ++i ) {
+    _interactingEfficiencies[i]->Write();
   }
 
   
@@ -943,12 +951,43 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
   }
   _incdatahistos.push_back(incdatahisto);
 
-  _incidentEfficiency = protoana::ProtoDUNESelectionUtils::GetMCIncidentEfficiency( _IncidentMCFileNames[0], _TruthTreeName, _TruthBinning );
+  std::pair<TH1 *, TH1 *> inc_eff_num_denom = 
+        protoana::ProtoDUNESelectionUtils::GetMCIncidentEfficiency(
+        _IncidentMCFileNames[0], _TruthTreeName, _TruthBinning);
+
+  _incidentEfficiencyNum = inc_eff_num_denom.first;
+  _incidentEfficiencyDenom = inc_eff_num_denom.second;
+
+  _incidentEfficiency = new TGraphAsymmErrors(_incidentEfficiencyNum,
+        _incidentEfficiencyDenom);
+
+  _incidentEfficiency->SetNameTitle("MC_Incident_Efficiency", "Efficiency");
+
+  //_incidentEfficiency = protoana::ProtoDUNESelectionUtils::GetMCIncidentEfficiency( _IncidentMCFileNames[0], _TruthTreeName, _TruthBinning );
 
   //Interacting Efficiencies
   for( int i = 0; i < nsigtopo; ++i ){
     int topo = _SignalTopology[i];
-    _interactingEfficiencyDenoms.push_back( protoana::ProtoDUNESelectionUtils::GetMCInteractingEfficiencyDenominator( _IncidentMCFileNames[0], _TruthTreeName, _TruthBinning, _ChannelNames[i], _SignalTopologyName[i], topo ) );
+    //_interactingEfficiencyDenoms.push_back( protoana::ProtoDUNESelectionUtils::GetMCInteractingEfficiencyDenominator( _IncidentMCFileNames[0], _TruthTreeName, _TruthBinning, _ChannelNames[i], _SignalTopologyName[i], topo ) );
+    
+    std::pair< TH1 *, TH1 * > eff_num_denom = 
+        protoana::ProtoDUNESelectionUtils::GetMCInteractingEfficiency( 
+            _IncidentMCFileNames[0], _TruthTreeName, _TruthBinning,
+            _ChannelNames[i], _SignalTopologyName[i], topo);
+
+    _interactingEfficiencyNums.push_back(eff_num_denom.first); 
+    _interactingEfficiencyDenoms.push_back(eff_num_denom.second); 
+
+    TGraphAsymmErrors * eff = new TGraphAsymmErrors(eff_num_denom.first,
+        eff_num_denom.second);
+
+    std::string name = "MC_Channel_" + _ChannelNames[i] + "_" + 
+        _SignalTopologyName[i] + "_Interacting_Efficiency";
+
+    eff->SetNameTitle(name.c_str(), "Efficiency");
+
+    _interactingEfficiencies.push_back(eff);
+    
   }
 
 

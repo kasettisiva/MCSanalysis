@@ -33,9 +33,9 @@ namespace protoana{
 
     int GetVertexType( const std::vector< std::string > & processes, const std::vector< int > & vertex_hits_slices, const std::vector< std::vector< double > > & vertex_dRs, double cut = 5., int max_slices = 1 );
 
-    TGraphAsymmErrors * GetMCIncidentEfficiency( std::string fileName, std::string treeName, std::vector< double > bins, double weight = 1. );
+    /*TGraphAsymmErrors **/ std::pair< TH1 *, TH1 * > GetMCIncidentEfficiency( std::string fileName, std::string treeName, std::vector< double > bins, double weight = 1. );
 
-    TH1 * GetMCInteractingEfficiencyDenominator( std::string fileName, std::string treeName, std::vector< double > bins, std::string channel, std::string topo, int toponum, double weight = 1. );
+    /*TH1TGraphAsymmErrors **/ std::pair< TH1 *, TH1 * > GetMCInteractingEfficiency/*Denominator*/( std::string fileName, std::string treeName, std::vector< double > bins, std::string channel, std::string topo, int toponum, double weight = 1. );
 
   }
 }
