@@ -408,6 +408,50 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
     _incdatahistos[k]->Write();
   }
 
+  //Incident efficiency
+  TCanvas* ceffgraph = new TCanvas( "ceffgraph", "Efficiency" );
+  TAxis *ax = _incidentEfficiency->GetHistogram()->GetXaxis();
+  Double_t x1 = ax->GetBinLowEdge(1); 
+  _incidentEfficiency->GetHistogram()->GetXaxis()->Set(_TruthBinning.size()-1,x1,_TruthBinning.size()-1);
+  for(unsigned int i = 1; i < _TruthBinning.size(); i++){
+    TString ibinstr = Form("%.1f-%.1f",_TruthBinning[i-1],_TruthBinning[i]);
+    _incidentEfficiency->GetHistogram()->GetXaxis()->SetBinLabel(i, ibinstr.Data());
+  }
+  
+  _incidentEfficiency->Draw("*a");
+  _incidentEfficiency->SetMarkerStyle(20);
+  _incidentEfficiency->SetMarkerColor(1);
+  _incidentEfficiency->SetTitle("Efficiency");
+  _incidentEfficiency->GetXaxis()->SetTitle("E_{true} [MeV]");
+  _incidentEfficiency->GetYaxis()->SetTitle("Efficiency");
+  _incidentEfficiency->GetYaxis()->SetTitleOffset(1.25);
+
+  ceffgraph->Write();
+
+  _incidentEfficiency->Write();
+  ////////////////////////////
+  
+  //Interacting efficiency
+  for( size_t i = 0; i < _interactingEfficiencyDenoms.size(); ++i ){
+    _interactingEfficiencyDenoms[i]->Write();
+
+/*
+    TGraphAsymmErrors * interactingEff = new TGraphAsymmErrors(
+        _interactingEfficiencyDenoms[i], _incsighistos[i]);
+
+    std::string name = "MC_Channel" + _ChannelNames[i] + "_" 
+        + _SignalTopologyName[i] + "_Interacting_Efficiency";
+
+    std::string title = "Interacting MC Efficiency for channel "
+        + _ChannelNames[i] + " and topology " + _SignalTopologyName[i];
+
+    interactingEff->SetNameTitle(name.c_str(), title.c_str());
+
+    interactingEff->Write();
+*/    
+  }
+
+  
   HistoDir->cd("..");
 
   f->Close();
@@ -898,6 +942,16 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
     incdatahisto->Add(protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(_DataFileNames[i], _RecoTreeName, _RecoBinning, _ChannelNames[i], true));
   }
   _incdatahistos.push_back(incdatahisto);
+
+  _incidentEfficiency = protoana::ProtoDUNESelectionUtils::GetMCIncidentEfficiency( _IncidentMCFileNames[0], _TruthTreeName, _TruthBinning );
+
+  //Interacting Efficiencies
+  for( int i = 0; i < nsigtopo; ++i ){
+    int topo = _SignalTopology[i];
+    _interactingEfficiencyDenoms.push_back( protoana::ProtoDUNESelectionUtils::GetMCInteractingEfficiencyDenominator( _IncidentMCFileNames[0], _TruthTreeName, _TruthBinning, _ChannelNames[i], _SignalTopologyName[i], topo ) );
+  }
+
+
 
   return true;
 
