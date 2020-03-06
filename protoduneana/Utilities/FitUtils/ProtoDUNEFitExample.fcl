@@ -71,4 +71,5 @@ SystToConsider:          ["Systematic1","Systematic2"]
 SystType:                ["NormShape"  ,"NormShape"]   # For each systematic the type should be defined, options are: NormOnly, ShapeOnly, NormShape
 IgnoreSystematicErrorBelow: 0.01                     # Sytematic error will be ignored if below this value
 
-AddIncidentToMeasurement: false 
+AddIncidentToMeasurement: true
+DoNegativeReco:           true 

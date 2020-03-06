@@ -10,25 +10,35 @@
 #include "messagefacility/MessageLogger/MessageLogger.h"
 
 //********************************************************************
-TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(std::string filename, std::string treename, std::vector<double> recoBins, std::string channel, std::string topo, int toponum, double minval, double maxval, double weight){
-  //********************************************************************
+TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
+    std::string filename, std::string treename, std::vector<double> recoBins,
+    std::string channel, std::string topo, int toponum, double minval,
+    double maxval, bool doNegativeReco, double weight) {
+//********************************************************************
 
   TFile *file = new TFile(filename.c_str(), "READ");
   TTree *defaultTree  = (TTree*)file->Get(treename.c_str());
 
-  Int_t reco_beam_type; // 13 -> track-like, 11 -> shower-like
-  Int_t reco_beam_nTrackDaughters, reco_beam_nShowerDaughters;
-  Double_t reco_beam_len, reco_beam_vtxX, reco_beam_vtxY, reco_beam_vtxZ, reco_beam_startX, reco_beam_startY, reco_beam_startZ, reco_beam_trackDirZ, reco_beam_interactingEnergy, reco_beam_Chi2_proton;
-  bool reco_beam_true_byHits_matched; // Does the true particle contributing most to the reconstructed beam track coincide with the actual beam particle that generated the event
-  Int_t reco_beam_true_byHits_origin, reco_beam_true_byHits_PDG;  // Origin and PDG of the reconstructed beam track
-  Int_t true_beam_PDG;
+  int reco_beam_type; // 13 -> track-like, 11 -> shower-like
+  int reco_beam_nTrackDaughters, reco_beam_nShowerDaughters;
+  double reco_beam_len, reco_beam_vtxX, reco_beam_vtxY, reco_beam_vtxZ,
+      reco_beam_startX, reco_beam_startY, reco_beam_startZ, reco_beam_trackDirZ,
+      reco_beam_interactingEnergy, reco_beam_Chi2_proton;
+
+  // Does the true particle contributing most to the reconstructed beam track 
+  // coincide with the actual beam particle that generated the event
+  bool reco_beam_true_byHits_matched; 
+
+  // Origin and PDG of the reconstructed beam track
+  int reco_beam_true_byHits_origin, reco_beam_true_byHits_PDG;
+  int true_beam_PDG;
   double true_beam_endZ;
-  Double_t true_beam_interactingEnergy;
+  double true_beam_interactingEnergy;
   std::string *true_beam_endProcess = 0;
   std::string *reco_beam_true_byHits_endProcess = 0;
   std::vector<double> *reco_beam_incidentEnergies = 0;
 
-  Int_t true_chexSignal, true_absSignal, true_backGround, true_nPi0Signal;
+  int true_chexSignal, true_absSignal, true_backGround, true_nPi0Signal;
 
   defaultTree->SetBranchAddress("reco_beam_type",                   &reco_beam_type);
   defaultTree->SetBranchAddress("reco_beam_len",                    &reco_beam_len);
@@ -60,15 +70,6 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(std::str
   defaultTree->SetBranchAddress("true_absSignal",                   &true_absSignal);
   defaultTree->SetBranchAddress("true_backGround",                  &true_backGround);
 
-  //New: backgrounds within the tree
-  /* take out for now
-  bool primaryMuon, isCosmic, isExtraBeam, upstreamInt, isDecay;
-  defaultTree->SetBranchAddress("primaryMuon",                  &primaryMuon);
-  defaultTree->SetBranchAddress("isCosmic",                     &isCosmic);
-  defaultTree->SetBranchAddress("isExtraBeam",                  &isExtraBeam);
-  defaultTree->SetBranchAddress("upstreamInt",                  &upstreamInt);
-  defaultTree->SetBranchAddress("isDecay",                      &isDecay);
-  */
 
   std::vector< int > * reco_beam_hit_true_origin = 0x0;
   std::vector< int > * reco_beam_hit_true_ID = 0x0;
@@ -99,22 +100,40 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(std::str
   topo.erase(std::remove(topo.begin(), topo.end(), ' '), topo.end());
 
   const int nrecobins = recoBins.size();
-  TH1D* mchisto = new TH1D(Form("MC_Channel%s_%s_Histo",channel.c_str(),topo.c_str()), Form("MC Background for channel %s and topology %s", channel.c_str(),topo.c_str()), nrecobins-1, 0, nrecobins-1);
+  std::string hist_name = "MC_Channel" + channel + "_" + topo + "_Histo";
+  std::string hist_title = "MC Background for channel " + channel + 
+                           " and topology " + topo;
+  
+  TH1D* mchisto = new TH1D(hist_name.c_str(), hist_title.c_str(), 
+                           (doNegativeReco ? nrecobins : (nrecobins-1)),
+                           (doNegativeReco ? -1 : 0), nrecobins-1);
+
   mchisto->SetDirectory(0);
 
-  mf::LogInfo("FillMCBackgroundHistogram_Pions") << "Filling MC background histogram " << mchisto->GetName() << " from file " << filename.c_str() << " for channel " << channel.c_str() << " with topology " << topo.c_str();
+  mf::LogInfo("FillMCBackgroundHistogram_Pions") << 
+      "Filling MC background histogram " << mchisto->GetName() << 
+      " from file " << filename.c_str() << " for channel " << 
+      channel.c_str() << " with topology " << topo.c_str();
 
   for(Int_t k=0; k < defaultTree->GetEntries(); k++){
     defaultTree->GetEntry(k);
 
     // Different background topologies
     Int_t topology = -1;
-    std::string reco_beam_true_byHits_endProcess_str = *reco_beam_true_byHits_endProcess;
 
-    // Bin edges cases. If there are signal events that fall out the truth bins, but are present in the reco bins then count them as backgrounds
-    if( true_backGround == 0 && (true_chexSignal == 1 || true_absSignal == 1 || true_nPi0Signal == 1) ){
-      if(true_beam_interactingEnergy < minval && reco_beam_interactingEnergy > recoBins[0]) true_backGround = 1;
-      if(true_beam_interactingEnergy > maxval && reco_beam_interactingEnergy < recoBins[nrecobins-1]) true_backGround = 1;
+    //Bin edges cases. If there are signal events that fall out the truth bins,
+    //but are present in the reco bins then count them as backgrounds
+    if (true_backGround == 0 && (true_chexSignal == 1 || true_absSignal == 1 ||
+                                 true_nPi0Signal == 1)){
+      if (true_beam_interactingEnergy < minval &&
+          reco_beam_interactingEnergy > recoBins[0]){
+        true_backGround = 1;
+      }
+
+      if (true_beam_interactingEnergy > maxval &&
+          reco_beam_interactingEnergy < recoBins[nrecobins-1]){
+        true_backGround = 1;
+      }
     }
 
     /////////////////////
@@ -155,16 +174,33 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(std::str
     }
 
     // Select only the correct topology
-    if(topology != toponum) continue;
+    if (topology != toponum) continue;
 
-    // Sometimes the reco energy at vertex is mis-reconstructed
-    if(reco_beam_interactingEnergy < 0.0) continue;
+    if (doNegativeReco) {
+      if (reco_beam_interactingEnergy < 0.) {
+        mchisto->AddBinContent(1, weight);
+      }
+      else{
+        for (int l = 1; l < nrecobins; ++l) {
+          if (reco_beam_interactingEnergy > recoBins[l-1] &&
+              reco_beam_interactingEnergy <= recoBins[l]) {
+            //Fill +1 because the first bin is negative
+            mchisto->AddBinContent(l+1, weight);
+            break;
+          }
+        }       
+      }
+    }
+    else {
+      // Sometimes the reco energy at vertex is mis-reconstructed
+      if (reco_beam_interactingEnergy < 0.0) continue;
 
-    // Fill histogram in reco energy
-    for(Int_t l = 1; l < nrecobins; l++){
-      if(reco_beam_interactingEnergy > recoBins[l-1] && reco_beam_interactingEnergy <= recoBins[l]){
-	mchisto->SetBinContent(l, mchisto->GetBinContent(l) + weight);
-	break;
+      for (int l = 1; l < nrecobins; ++l) {
+        if (reco_beam_interactingEnergy > recoBins[l-1] &&
+            reco_beam_interactingEnergy <= recoBins[l]) {
+          mchisto->AddBinContent(l+1, weight);
+          break;
+        }
       }
     }
   }
@@ -176,24 +212,27 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(std::str
 }
 
 //********************************************************************
-TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(std::string filename, std::string treename, std::vector<double> recoBins, std::string channel, std::string topo, int toponum, double minval, double maxval, double weight){
-  //********************************************************************
+TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
+    std::string filename, std::string treename, std::vector<double> recoBins,
+    std::string channel, std::string topo, int toponum, double minval,
+    double maxval, bool doNegativeReco, double weight){
+//********************************************************************
 
   TFile *file = new TFile(filename.c_str(), "READ");
   TTree *defaultTree  = (TTree*)file->Get(treename.c_str());
 
-  Int_t reco_beam_type; // 13 -> track-like, 11 -> shower-like
-  Int_t reco_beam_nTrackDaughters, reco_beam_nShowerDaughters;
-  Double_t reco_beam_len, reco_beam_vtxX, reco_beam_vtxY, reco_beam_vtxZ, reco_beam_startX, reco_beam_startY, reco_beam_startZ, reco_beam_trackDirZ, reco_beam_interactingEnergy, reco_beam_Chi2_proton;
+  int reco_beam_type; // 13 -> track-like, 11 -> shower-like
+  int reco_beam_nTrackDaughters, reco_beam_nShowerDaughters;
+  double reco_beam_len, reco_beam_vtxX, reco_beam_vtxY, reco_beam_vtxZ, reco_beam_startX, reco_beam_startY, reco_beam_startZ, reco_beam_trackDirZ, reco_beam_interactingEnergy, reco_beam_Chi2_proton;
   bool reco_beam_true_byHits_matched; // Does the true particle contributing most to the reconstructed beam track coincide with the actual beam particle that generated the event
-  Int_t reco_beam_true_byHits_origin, reco_beam_true_byHits_PDG;  // Origin and PDG of the reconstructed beam track
-  Int_t true_beam_PDG;
+  int reco_beam_true_byHits_origin, reco_beam_true_byHits_PDG;  // Origin and PDG of the reconstructed beam track
+  int true_beam_PDG;
   double true_beam_endZ;
-  Double_t true_beam_interactingEnergy;
+  double true_beam_interactingEnergy;
   std::string *true_beam_endProcess = 0;
   std::string *reco_beam_true_byHits_endProcess = 0;
   std::vector<double> *reco_beam_incidentEnergies = 0;
-  Int_t true_chexSignal, true_absSignal, true_backGround, true_nPi0Signal;
+  int true_chexSignal, true_absSignal, true_backGround, true_nPi0Signal;
 
   int event, run;
 
@@ -230,16 +269,6 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(std::string 
   defaultTree->SetBranchAddress("event",                            &event);
   defaultTree->SetBranchAddress("run",                              &run);
 
-  /*
-   * take out for now
-  bool primaryMuon, isCosmic, isExtraBeam, upstreamInt, isDecay;
-  defaultTree->SetBranchAddress("primaryMuon",                      &primaryMuon);
-  defaultTree->SetBranchAddress("isCosmic",                         &isCosmic);
-  defaultTree->SetBranchAddress("isExtraBeam",                      &isExtraBeam);
-  defaultTree->SetBranchAddress("upstreamInt",                      &upstreamInt);
-  defaultTree->SetBranchAddress("isDecay",                          &isDecay);
-  */
-
   int true_daughter_nPiPlus, true_daughter_nPiMinus, true_daughter_nPi0, true_beam_ID;
   std::vector< std::string > * true_beam_processes = 0x0;
   std::vector< int > * reco_beam_hit_true_ID = 0x0;
@@ -264,12 +293,21 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(std::string 
   topo.erase(std::remove(topo.begin(), topo.end(), ' '), topo.end());
 
   const int nrecobins = recoBins.size();
-  TH1D* mchisto = new TH1D(Form("MC_Channel%s_%s_%.1f-%.1f_Histo",channel.c_str(),topo.c_str(),minval,maxval), Form("MC Signal for channel %s and topology %s and true region %.1f-%.1f", channel.c_str(),topo.c_str(),minval,maxval), nrecobins-1, 0, nrecobins-1);
+  TString hist_name = Form("MC_Channel%s_%s_%.1f-%.1f_Histo",
+                           channel.c_str(), topo.c_str(), minval, maxval);
+  TString hist_title = Form("MC Signal for channel %s and topology %s and true region %.1f-%.1f",
+                            channel.c_str(), topo.c_str(), minval, maxval);
+  TH1D* mchisto = new TH1D(hist_name, hist_title,
+                           (doNegativeReco ? nrecobins : (nrecobins-1)),
+                           (doNegativeReco ? -1 : 0), nrecobins-1);
   mchisto->SetDirectory(0);
 
-  mf::LogInfo("FillMCSignalHistogram_Pions") << "Filling MC signal histogram " << mchisto->GetName() << " from file " << filename.c_str() << " for channel " << channel.c_str() << " with topology " << topo.c_str() << " in the true region " << minval << "-" << maxval;
+  mf::LogInfo("FillMCSignalHistogram_Pions") << "Filling MC signal histogram " <<
+              mchisto->GetName() << " from file " << filename.c_str() <<
+              " for channel " << channel.c_str() << " with topology " <<
+              topo.c_str() << " in the true region " << minval << "-" << maxval;
 
-  for(Int_t k=0; k < defaultTree->GetEntries(); k++){
+  for (int k=0; k < defaultTree->GetEntries(); k++) {
     defaultTree->GetEntry(k);
 
     int topology = -1;
@@ -299,19 +337,37 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(std::string 
     // Remove events with the wrong topology
     if(topology != toponum) continue;
 
-    // Sometimes the reco energy at vertex is mis-reconstructed
-    if(reco_beam_interactingEnergy < 0.0) continue;
-
     // True energy bin
     //if(true_beam_interactingEnergy < minval) continue;
     //if(true_beam_interactingEnergy >= maxval) continue;
-    if( new_true_beam_interactingEnergy < minval || new_true_beam_interactingEnergy >= maxval ) continue;
+    if (new_true_beam_interactingEnergy < minval ||
+        new_true_beam_interactingEnergy >= maxval) continue;
 
-    // Fill histogram in reco energy
-    for(Int_t l = 1; l < nrecobins; l++){
-      if(reco_beam_interactingEnergy > recoBins[l-1] && reco_beam_interactingEnergy <= recoBins[l]){
-	mchisto->SetBinContent(l, mchisto->GetBinContent(l) + weight);
-	break;
+    if (doNegativeReco) {
+      if (reco_beam_interactingEnergy < 0.0){
+        mchisto->AddBinContent(1, weight);        
+      }
+      else{
+        for (int l = 1; l < nrecobins; l++) {
+          if (reco_beam_interactingEnergy > recoBins[l-1] && 
+              reco_beam_interactingEnergy <= recoBins[l]) {
+            mchisto->AddBinContent(l+1, weight);
+            break;
+          }
+        }
+      }
+    }
+    else {
+      // Sometimes the reco energy at vertex is mis-reconstructed
+      if (reco_beam_interactingEnergy < 0.0) continue;
+
+      // Fill histogram in reco energy
+      for (int l = 1; l < nrecobins; l++) {
+        if (reco_beam_interactingEnergy > recoBins[l-1] && 
+            reco_beam_interactingEnergy <= recoBins[l]) {
+          mchisto->AddBinContent(l, weight);
+          break;
+        }
       }
     }
   }
@@ -835,7 +891,12 @@ int protoana::ProtoDUNESelectionUtils::GetVertexType( const std::vector< std::st
   
 }
 
-/*TGraphAsymmErrors **/std::pair< TH1 *, TH1 * > protoana::ProtoDUNESelectionUtils::GetMCIncidentEfficiency( std::string fileName, std::string treeName, std::vector< double > bins, double weight ){
+std::pair< TH1 *, TH1 * > 
+    protoana::ProtoDUNESelectionUtils::GetMCIncidentEfficiency(
+        std::string fileName, std::string treeName, 
+        std::vector< double > bins, bool doNegativeReco,
+        double weight) {
+
   TFile * file = new TFile(fileName.c_str(), "READ");
   TTree * defaultTree  = (TTree*)file->Get(treeName.c_str());
 
@@ -879,7 +940,7 @@ int protoana::ProtoDUNESelectionUtils::GetVertexType( const std::vector< std::st
       continue;
 
     // Sometimes the reco energy at vertex is mis-reconstructed
-    if ( reco_beam_interactingEnergy < 0.0 ) 
+    if (!doNegativeReco && reco_beam_interactingEnergy < 0.0) 
       continue;
 
     if ( true_beam_endZ < 0. && true_beam_slices->size() )
@@ -938,18 +999,16 @@ int protoana::ProtoDUNESelectionUtils::GetVertexType( const std::vector< std::st
     }
   }
 
-   
-  //TGraphAsymmErrors* efficiency = new TGraphAsymmErrors(numerator, denominator);
-  //efficiency->SetNameTitle( "MC_Incident_Efficiency", "Efficiency" );
-
   file->Close();
 
   return {numerator, denominator};
-  //return efficiency;
-
 }
 
-std::pair< TH1 *, TH1 *> protoana::ProtoDUNESelectionUtils::GetMCInteractingEfficiency/*Denominator*/( std::string fileName, std::string treeName, std::vector< double > bins, std::string channel, std::string topo, int toponum, double weight ){
+std::pair< TH1 *, TH1 *>
+    protoana::ProtoDUNESelectionUtils::GetMCInteractingEfficiency(
+        std::string fileName, std::string treeName,
+        std::vector< double > bins, std::string channel,
+        std::string topo, int toponum, double weight) {
      
   TFile * file = new TFile(fileName.c_str(), "READ");
   TTree * defaultTree  = (TTree*)file->Get(treeName.c_str());
@@ -1030,14 +1089,6 @@ std::pair< TH1 *, TH1 *> protoana::ProtoDUNESelectionUtils::GetMCInteractingEffi
   }
 
 
-/*
-  TGraphAsymmErrors* efficiency = new TGraphAsymmErrors(numerator, denominator);
-  efficiency->SetNameTitle( 
-      ("MC_Channel_" + channel + "_" + topo + "_Interacting_Efficiency").c_str(),
-      "Efficiency");
-*/
   file->Close();
   return {numerator, denominator};
-  //return efficiency;
-  //return denominator;
 }

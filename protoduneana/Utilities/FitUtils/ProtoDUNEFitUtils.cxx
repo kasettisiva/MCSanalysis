@@ -368,7 +368,7 @@ double protoana::ProtoDUNEFitUtils::GetDataMCChi2(RooWorkspace *work, TString ch
 }
 
 //********************************************************************
-std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorkspace *work, TString name, TString error, TString plottodraw, std::vector<TString> binnames, std::vector<double> recobins, std::vector<TString> incidentBinNames, TString measurement, RooAbsData* data, RooFitResult* result){
+std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorkspace *work, TString name, TString error, TString plottodraw, std::vector<TString> binnames, std::vector<double> recobins, std::vector<TString> incidentBinNames, TString measurement, bool doNegativeReco, RooAbsData* data, RooFitResult* result){
   //********************************************************************
 
   std::vector<TCanvas*> rooplots;
@@ -715,7 +715,7 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorksp
       nominal_curve->GetPoint(2,xstart,y);
       nominal_curve->GetPoint(nominal_curve->GetN()-1,xstop,y);
      
-      for(Int_t i=0; i < nominal_hist->GetN(); i++){    
+      for(Int_t i=0; i < nominal_hist->GetN(); i++){
 	Double_t x,ypoint;
 	nominal_hist->GetPoint(i,x,ypoint);
 	
@@ -758,8 +758,11 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorksp
     if(plottodraw == "ratio" && result) frame2->addPlotable(ratio_curve,"F");
     frame2->addPlotable(hratio,"P");
     
+    //if (doNegativeReco)
+    //  frame2->GetXaxis()->SetBinLabel(1, "< 0.");
     for(unsigned int i = 1; i < recobins.size(); i++){
       TString ibinstr = Form("%.1f-%.1f",recobins[i-1],recobins[i]);
+      //frame2->GetXaxis()->SetBinLabel((doNegativeReco ? i+1 : i), ibinstr.Data());
       frame2->GetXaxis()->SetBinLabel(i, ibinstr.Data());
     }
     
