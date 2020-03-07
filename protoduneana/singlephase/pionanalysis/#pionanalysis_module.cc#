@@ -2,7 +2,7 @@
 // Class:       pionanalysis
 // Plugin Type: analyzer (art v2_11_02)
 // File:        pionanalysis_module.cc
-// Pionanalysis module: Ajib Paudel 
+// Pionanalysis module: Contact Heng-Ye Liao (liao@phys.ksu.edu) 
 // from cetlib version v3_03_01.
 ////////////////////////////////////////////////////////////////////////
 
@@ -134,7 +134,7 @@ private:
   double high_pressure;
 
   //Beamline utils   
-protoana::ProtoDUNEBeamCuts beam_cuts; 
+  protoana::ProtoDUNEBeamCuts beam_cuts; 
   protoana::ProtoDUNEBeamlineUtils fBeamlineUtils;
   protoana::ProtoDUNEDataUtils dataUtil;
 
