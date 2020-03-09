@@ -942,6 +942,7 @@ void protoana::mcsXsection::analyze(art::Event const & evt){
   if(evt.getByLabel("hitpdune",hitListHandle)) art::fill_ptr_vector(hitlist, hitListHandle);
 
   if(evt.getByLabel("pandoraTrack",trackListHandle)) art::fill_ptr_vector(tracklist, trackListHandle);
+  else return;
   if(evt.getByLabel("pandora",PFPListHandle)) art::fill_ptr_vector(pfplist, PFPListHandle);
   
   art::Handle< std::vector<recob::Cluster> > clusterListHandle; // to get information about the hits

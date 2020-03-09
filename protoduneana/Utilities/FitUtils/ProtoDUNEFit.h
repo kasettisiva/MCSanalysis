@@ -48,6 +48,8 @@ namespace protoana{
     void AddIncidentSamplesAndChannelsToMeasurement(RooStats::HistFactory::Measurement& meas);
     void AddSidebandSamplesAndChannelsToMeasurement(RooStats::HistFactory::Measurement& meas);
 
+    void DecorateEfficiency( TGraphAsymmErrors * eff );
+
     std::string _RecoTreeName, _Minimizer, _TruthTreeName;
 
     std::vector<double> _RecoBinning, _TruthBinning;
@@ -66,7 +68,14 @@ namespace protoana{
 
     std::vector<TGraphAsymmErrors*> _efficiencyGraphs;
 
-    bool _AddIncidentToMeasurement;
+    TGraphAsymmErrors * _incidentEfficiency;
+    TH1 * _incidentEfficiencyNum;
+    TH1 * _incidentEfficiencyDenom;
+    std::vector< TH1 * > _interactingEfficiencyDenoms;
+    std::vector< TH1 * > _interactingEfficiencyNums;
+    std::vector< TGraphAsymmErrors * > _interactingEfficiencies;
+ 
+    bool _AddIncidentToMeasurement, _DoNegativeReco;
   };
 }
 

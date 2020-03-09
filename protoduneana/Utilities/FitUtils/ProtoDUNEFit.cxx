@@ -141,10 +141,10 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
     incidentNameVec.push_back(str); 
   }
 
-  std::vector<TCanvas*> bfplots = protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(ws, "beforefit", "Poisson", "ratio", truebinsnameVec, _RecoBinning, incidentNameVec, "Before Fit");
+  std::vector<TCanvas*> bfplots = protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(ws, "beforefit", "Poisson", "ratio", truebinsnameVec, _RecoBinning, incidentNameVec, "Before Fit", _DoNegativeReco);
 
   RooAbsData *asimovdata = ws->data("asimovData");
-  std::vector<TCanvas*> bfAsimovplots = protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(ws, "asimov", "Poisson", "ratio", truebinsnameVec, _RecoBinning, incidentNameVec, "Asimov Dataset", asimovdata);
+  std::vector<TCanvas*> bfAsimovplots = protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(ws, "asimov", "Poisson", "ratio", truebinsnameVec, _RecoBinning, incidentNameVec, "Asimov Dataset", _DoNegativeReco, asimovdata);
 
   // ----------------------------------------------------------------------------------------------------
   // Check if this is MC toys case
@@ -289,7 +289,7 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
   // Print fit results on the screen
   //fitresult->Print();
 
-  std::vector<TCanvas*> afplots = protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(ws, "afterfit", "Poisson", "ratio", truebinsnameVec, _RecoBinning, incidentNameVec, "After fit", NULL, fitresult);
+  std::vector<TCanvas*> afplots = protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(ws, "afterfit", "Poisson", "ratio", truebinsnameVec, _RecoBinning, incidentNameVec, "After fit", _DoNegativeReco, NULL, fitresult);
 
   // Save post-fit workspace snapshot
   protoana::ProtoDUNEFitUtils::SaveSnapshot(ws, Form("%s_postfit_snapshot",ws->GetName()));
@@ -378,22 +378,8 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
     
     TCanvas* ceffgraph = new TCanvas(Form("ceffgraph%i",i),Form("Efficiency for channel %i",i));
     
-    TAxis *ax = effgraph->GetHistogram()->GetXaxis();
-    Double_t x1 = ax->GetBinLowEdge(1); 
-    //Double_t x2 = ax->GetBinUpEdge(ax->GetNbins());
-    effgraph->GetHistogram()->GetXaxis()->Set(_TruthBinning.size(),x1,_TruthBinning.size());
-    for(unsigned int i = 1; i < _TruthBinning.size(); i++){
-      TString ibinstr = Form("%.1f-%.1f",_TruthBinning[i-1],_TruthBinning[i]);
-      effgraph->GetHistogram()->GetXaxis()->SetBinLabel(i, ibinstr.Data());
-    }
-    
+    DecorateEfficiency( effgraph );
     effgraph->Draw("*a");
-    effgraph->SetMarkerStyle(20);
-    effgraph->SetMarkerColor(1);
-    effgraph->SetTitle("Efficiency");
-    effgraph->GetXaxis()->SetTitle("E_{true} at vertex [MeV]");
-    effgraph->GetYaxis()->SetTitle("Efficiency");
-    effgraph->GetYaxis()->SetTitleOffset(1.25);
 
     ceffgraph->Write();
   }
@@ -406,6 +392,29 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
   }
   for(unsigned int k = 0; k < _incdatahistos.size(); k++){
     _incdatahistos[k]->Write();
+  }
+
+  //Incident efficiency
+  TCanvas* ceffgraph = new TCanvas( "ceffgraph", "Efficiency" );
+
+  _incidentEfficiency->Draw("a");
+  DecorateEfficiency(_incidentEfficiency);
+
+  ceffgraph->Write();
+
+  _incidentEfficiency->Write();
+  _incidentEfficiencyNum->Write();
+  _incidentEfficiencyDenom->Write();
+  ////////////////////////////
+  
+  //Interacting efficiency
+  for( size_t i = 0; i < _interactingEfficiencyDenoms.size(); ++i ){
+    _interactingEfficiencyDenoms[i]->Write();
+    _interactingEfficiencyNums[i]->Write();
+
+    DecorateEfficiency(_interactingEfficiencies[i]);
+    _interactingEfficiencies[i]->Write();
+
   }
 
   HistoDir->cd("..");
@@ -807,7 +816,10 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
   for(int i=0; i < nmcchannels; i++){
     for(int j=0; j < nbkgtopo; j++){
       int topo = _BackgroundTopology[j];
-      _bkghistos.push_back( protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(_MCFileNames[i], _RecoTreeName, _RecoBinning, _ChannelNames[i], _BackgroundTopologyName[j], topo, tmin, tmax) );
+      _bkghistos.push_back(
+          protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
+              _MCFileNames[i], _RecoTreeName, _RecoBinning, _ChannelNames[i],
+              _BackgroundTopologyName[j], topo, tmin, tmax, _DoNegativeReco));
       //_incbkghistos.push_back( protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(_MCFileNames[0], _RecoTreeName, _RecoBinning, i, topo, true) );
     }
 
@@ -818,7 +830,11 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
       int topo = _SignalTopology[j];
       for(unsigned int k=1; k < _TruthBinning.size(); k++){
 	if(_FitInReco){
-	  TH1* hsignal = protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(_MCFileNames[i], _RecoTreeName, _RecoBinning, _ChannelNames[i], _SignalTopologyName[j], topo, tmin, tmax);
+          TH1* hsignal =
+              protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
+                  _MCFileNames[i], _RecoTreeName, _RecoBinning,
+                  _ChannelNames[i], _SignalTopologyName[j], topo, tmin, tmax);
+
 	  // Make one histogram per bin
 	  for(int k=1; k <= hsignal->GetNbinsX(); k++){
 	    TString hname = Form("%s_RecoBin%i",hsignal->GetName(), k);
@@ -833,7 +849,11 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
 	  }
 	}
 	else{
-	  _sighistos.push_back( protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(_MCFileNames[i], _RecoTreeName, _RecoBinning, _ChannelNames[i], _SignalTopologyName[j], topo, _TruthBinning[k-1], _TruthBinning[k]) );
+          _sighistos.push_back(
+              protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
+                  _MCFileNames[i], _RecoTreeName, _RecoBinning,
+                  _ChannelNames[i], _SignalTopologyName[j], topo,
+                  _TruthBinning[k-1], _TruthBinning[k], _DoNegativeReco));
 	//sigevenshisto->SetBinContent(k, (_sighistos.back())->Integral() + sigevenshisto->GetBinContent(k));
 	}
       }
@@ -898,6 +918,47 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
     incdatahisto->Add(protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(_DataFileNames[i], _RecoTreeName, _RecoBinning, _ChannelNames[i], true));
   }
   _incdatahistos.push_back(incdatahisto);
+
+  std::pair<TH1 *, TH1 *> inc_eff_num_denom = 
+        protoana::ProtoDUNESelectionUtils::GetMCIncidentEfficiency(
+        _IncidentMCFileNames[0], _TruthTreeName, _TruthBinning);
+
+  _incidentEfficiencyNum = inc_eff_num_denom.first;
+  _incidentEfficiencyDenom = inc_eff_num_denom.second;
+
+  _incidentEfficiency = new TGraphAsymmErrors(_incidentEfficiencyNum,
+        _incidentEfficiencyDenom);
+
+  _incidentEfficiency->SetNameTitle("MC_Incident_Efficiency", "Efficiency");
+
+  //_incidentEfficiency = protoana::ProtoDUNESelectionUtils::GetMCIncidentEfficiency( _IncidentMCFileNames[0], _TruthTreeName, _TruthBinning );
+
+  //Interacting Efficiencies
+  for( int i = 0; i < nsigtopo; ++i ){
+    int topo = _SignalTopology[i];
+    //_interactingEfficiencyDenoms.push_back( protoana::ProtoDUNESelectionUtils::GetMCInteractingEfficiencyDenominator( _IncidentMCFileNames[0], _TruthTreeName, _TruthBinning, _ChannelNames[i], _SignalTopologyName[i], topo ) );
+    
+    std::pair< TH1 *, TH1 * > eff_num_denom = 
+        protoana::ProtoDUNESelectionUtils::GetMCInteractingEfficiency( 
+            _IncidentMCFileNames[0], _TruthTreeName, _TruthBinning,
+            _ChannelNames[i], _SignalTopologyName[i], topo);
+
+    _interactingEfficiencyNums.push_back(eff_num_denom.first); 
+    _interactingEfficiencyDenoms.push_back(eff_num_denom.second); 
+
+    TGraphAsymmErrors * eff = new TGraphAsymmErrors(eff_num_denom.first,
+        eff_num_denom.second);
+
+    std::string name = "MC_Channel_" + _ChannelNames[i] + "_" + 
+        _SignalTopologyName[i] + "_Interacting_Efficiency";
+
+    eff->SetNameTitle(name.c_str(), "Efficiency");
+
+    _interactingEfficiencies.push_back(eff);
+    
+  }
+
+
 
   return true;
 
@@ -1075,8 +1136,30 @@ bool protoana::ProtoDUNEFit::Configure(std::string configPath){
   _BackgroundTopology          = pset.get< std::vector<int> >("BackgroundTopology");
   _IncidentTopology            = pset.get< std::vector<int> >("IncidentTopology");
 
-  _AddIncidentToMeasurement        = pset.get<bool>("AddIncidentToMeasurement");
+  _AddIncidentToMeasurement    = pset.get<bool>("AddIncidentToMeasurement");
+  _DoNegativeReco              = pset.get<bool>("DoNegativeReco"); 
 
   return true;
+
+}
+
+void protoana::ProtoDUNEFit::DecorateEfficiency( TGraphAsymmErrors * eff ){
+  TAxis * ax = eff->GetHistogram()->GetXaxis();
+  double x1 = ax->GetBinLowEdge(1); 
+  /*eff->GetHistogram()->GetXaxis()*/ax->Set((_TruthBinning.size() - 1), 
+                                             x1, (_TruthBinning.size() - 1));
+
+  for(size_t i = 1; i < _TruthBinning.size(); ++i) {
+    TString label = Form("%.1f-%.1f", _TruthBinning[i-1], _TruthBinning[i]);
+    /*eff->GetHistogram()->GetXaxis()*/ax->SetBinLabel(i, label.Data());
+  }
+  
+  //eff->Draw("*a");
+  eff->SetMarkerStyle(20);
+  eff->SetMarkerColor(1);
+  eff->SetTitle("Efficiency");
+  eff->GetXaxis()->SetTitle("E_{true} at vertex [MeV]");
+  eff->GetYaxis()->SetTitle("Efficiency");
+  eff->GetYaxis()->SetTitleOffset(1.25);
 
 }
