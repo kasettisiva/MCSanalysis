@@ -35,6 +35,19 @@ pionanalysis:
   CheckCosmics: false
   TrueToReco: false
 
+  FracsFile: "/dune/data2/users/calcuttj/GeantReweight/FlatTree/LAr_PiPlus_cascade.root"
+  XSecFile: "/dune/data2/users/calcuttj/GeantReweight/FlatTree/LAr_cross_section.root"
+
+  ParameterSet: [
+    { 
+      Cut:    "reac"
+      Name: "fReac"
+      Range: [000., 1200.]
+      Nominal: 1.5 
+    }
+  ]
+
+
 }
 
 END_PROLOG

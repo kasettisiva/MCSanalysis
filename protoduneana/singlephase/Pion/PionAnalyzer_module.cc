@@ -51,13 +51,13 @@
 
 #include "lardata/ArtDataHelper/MVAReader.h"
 
-/*
+
 #include "geant4reweight/src/ReweightBase/G4ReweighterFactory.hh"
 #include "geant4reweight/src/ReweightBase/G4Reweighter.hh"
 #include "geant4reweight/src/ReweightBase/G4ReweightTraj.hh"
 #include "geant4reweight/src/ReweightBase/G4ReweightStep.hh"
 #include "geant4reweight/src/PropBase/G4ReweightParameterMaker.hh"
-*/
+
 
 
 #include "art_root_io/TFileService.h"
@@ -403,6 +403,12 @@ private:
   int event;
   int MC;
 
+  //functions
+  bool CreateRWTraj(const simb::MCParticle & part,
+                    const sim::ParticleList & plist,
+                    art::ServiceHandle < geo::Geometry > geo_serv, int event,
+                    G4ReweightTraj * theTraj);
+
 
   /////////////////////////////////////////////
   //Truth level info of the primary beam particle
@@ -535,6 +541,10 @@ private:
   int n_cosmics_with_beam_IDE;
   ////////////////////////
 
+  
+  //GeantReweight stuff
+  // -- Maybe think of new naming scheme?
+  std::vector<double> g4rw_primary_weights;
   
 
   //EDIT: STANDARDIZE
@@ -817,10 +827,6 @@ private:
   std::vector< std::vector< double > > reco_daughter_shower_spacePts_X, reco_daughter_shower_spacePts_Y, reco_daughter_shower_spacePts_Z;
 
 
-  //Geant4Reweight stuff
-  //G4ReweighterFactory RWFactory;
-  //G4Reweighter * theRW;
-  //G4ReweightParameterMaker ParMaker;
 
 
   ////New section -- mechanical class members
@@ -847,6 +853,11 @@ private:
   bool fSaveHits;
   bool fCheckCosmics;
   bool fTrueToReco;
+  //Geant4Reweight stuff
+  TFile FracsFile, XSecFile;
+  G4ReweightParameterMaker ParMaker;
+  G4ReweighterFactory RWFactory;
+  G4Reweighter * theRW;
 };
 
 
@@ -871,7 +882,11 @@ pionana::PionAnalyzer::PionAnalyzer(fhicl::ParameterSet const& p)
   CalibrationPars(p.get<fhicl::ParameterSet>("CalibrationPars")),
   fSaveHits( p.get<bool>( "SaveHits" ) ),
   fCheckCosmics( p.get<bool>( "CheckCosmics" ) ),
-  fTrueToReco( p.get<bool>( "TrueToReco" ) )
+  fTrueToReco( p.get<bool>( "TrueToReco" ) ),
+
+  FracsFile( (p.get< std::string >( "FracsFile" )).c_str(), "OPEN" ),
+  XSecFile( (p.get< std::string >( "XSecFile" )).c_str(), "OPEN"),
+  ParMaker( p.get< std::vector< fhicl::ParameterSet> >("ParameterSet"))
 {
 
   templates[ 211 ]  = (TProfile*)dEdX_template_file.Get( "dedx_range_pi"  );
@@ -881,6 +896,8 @@ pionana::PionAnalyzer::PionAnalyzer(fhicl::ParameterSet const& p)
 
   calibration = protoana::ProtoDUNECalibration( CalibrationPars );
   beam_cuts = protoana::ProtoDUNEBeamCuts( BeamCuts );
+
+  theRW = RWFactory.BuildReweighter( 211, &XSecFile, &FracsFile, ParMaker.GetFSHists(), ParMaker.GetElasticHist() );
 
   // Call appropriate consumes<>() for any products to be retrieved by this module.
 }
@@ -2909,6 +2926,19 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
     std::cout << "beam pandora2Track object not found, moving on" << std::endl;
   }
 
+
+  //New geant4reweight stuff
+  
+  if (!evt.isRealData()) {
+    if (true_beam_PDG == 211) {
+      G4ReweightTraj theTraj(true_beam_ID, true_beam_PDG, 0, event, {0,0});
+      bool created = CreateRWTraj(*true_beam_particle, plist,
+                                  fGeometryService, event, &theTraj);
+      if (created)
+        g4rw_primary_weights.push_back(theRW->GetWeight(&theTraj));
+    }
+  }
+
   fTree->Fill();
 }
 
@@ -3403,6 +3433,8 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("true_beam_slices_deltaE", &true_beam_slices_deltaE);
   fTree->Branch("new_true_beam_incidentEnergies", &new_true_beam_incidentEnergies);
   fTree->Branch("new_true_beam_interactingEnergy", &new_true_beam_interactingEnergy);
+
+  fTree->Branch("g4rw_primary_weights", &g4rw_primary_weights);
 
   if( fSaveHits ){
     fTree->Branch( "reco_beam_spacePts_X", &reco_beam_spacePts_X );
@@ -3927,6 +3959,119 @@ void pionana::PionAnalyzer::reset()
   reco_daughter_shower_spacePts_Z.clear();
   //
 
+  g4rw_primary_weights.clear();
+}
+
+bool pionana::PionAnalyzer::CreateRWTraj(
+    const simb::MCParticle & part, const sim::ParticleList & plist,
+    art::ServiceHandle < geo::Geometry > geo_serv, int event,
+    G4ReweightTraj * theTraj) {
+
+  //Loop over daughters
+  for (int i = 0; i < part.NumberDaughters(); ++i) {
+    int d_index = part.Daughter(i);
+    auto d_part = plist[d_index];
+    
+    int d_PDG = d_part->PdgCode();
+    int d_ID = d_part->TrackId();
+
+    theTraj->AddChild(new G4ReweightTraj(d_ID, d_PDG, part.TrackId(),
+                      event, {0,0}));
+  }
+
+  //Create process map
+  auto procs = part.Trajectory().TrajectoryProcesses();
+  std::map<size_t, std::string> proc_map;
+  for (auto it = procs.begin(); it != procs.end(); ++it) {
+    proc_map[it->first] = part.Trajectory().KeyToProcess(it->second);
+  }
+
+  std::vector<double> traj_X, traj_Y, traj_Z;
+  std::vector<double> traj_PX, traj_PY, traj_PZ;
+  std::vector<size_t> elastic_indices;
+
+  bool found_last = false;
+  //G4ReweightTraj theTraj(part.TrackId(), part.PdgCode(), 0, event, {0,0});
+  for (size_t i = 0; i < part.NumberTrajectoryPoints(); ++i) {
+    double x = part.Position(i).X();
+    double y = part.Position(i).Y();
+    double z = part.Position(i).Z();
+    
+    geo::Point_t test_point{x, y, z};
+    const TGeoMaterial * test_material = geo_serv->Material(test_point);
+
+    if (!strcmp(test_material->GetName(), "LAr")) {
+      traj_X.push_back(x);
+      traj_Y.push_back(y);
+      traj_Z.push_back(z);
+
+      traj_PX.push_back(part.Px(i));
+      traj_PY.push_back(part.Py(i));
+      traj_PZ.push_back(part.Pz(i));
+
+      auto itProc = proc_map.find(i);
+      if (itProc != proc_map.end() && itProc->second == "hadElastic") {
+        elastic_indices.push_back(i);
+      }
+    }
+
+    if (i == part.NumberTrajectoryPoints() - 1)
+      found_last = true;
+  }
+
+  double mass = 0.;
+
+  switch (abs(part.PdgCode())) {
+    case 211: {
+      mass = 139.57;
+      break;
+    }
+    case 2212: {
+      mass = 938.28;
+      break;
+    }
+    default: {
+      return false;
+      break;
+    }
+  }
+
+  for (size_t i = 1; i < traj_X.size(); ++i) {
+    std::string proc = "default";
+    if (found_last && i == traj_X.size() - 1) {
+      proc = part.EndProcess();
+    }
+    else if (std::find(elastic_indices.begin(), elastic_indices.end(), i) !=
+             elastic_indices.end()){
+      proc = "hadElastic";
+    }
+
+    double dX = traj_X[i] - traj_X[i-1];
+    double dY = traj_Y[i] - traj_Y[i-1];
+    double dZ = traj_Z[i] - traj_Z[i-1];
+
+    double len = sqrt(dX*dX + dY*dY + dZ*dZ);
+
+    double preStepP[3] = {traj_PX[i-1]*1.e3, 
+                          traj_PY[i-1]*1.e3, 
+                          traj_PZ[i-1]*1.e3};
+
+    double postStepP[3] = {traj_PX[i]*1.e3, 
+                           traj_PY[i]*1.e3, 
+                           traj_PZ[i]*1.e3};
+    if (i == 1) {
+      double p_squared = preStepP[0]*preStepP[0] + preStepP[1]*preStepP[1] +
+                         preStepP[2]*preStepP[2];
+      theTraj->SetEnergy(sqrt(p_squared + mass*mass));
+    }
+
+    G4ReweightStep * step = new G4ReweightStep(part.TrackId(), part.PdgCode(),
+                                               0, event, preStepP, postStepP,
+                                               len, proc);
+    theTraj->AddStep(step);
+  }
+
+  return true;
 }
 
 DEFINE_ART_MODULE(pionana::PionAnalyzer)
