@@ -12,8 +12,8 @@
 //********************************************************************
 TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
     std::string filename, std::string treename, std::vector<double> recoBins,
-    std::string channel, std::string topo, int toponum, double minval,
-    double maxval, bool doNegativeReco, double weight) {
+    std::string channel, std::string topo, int toponum, double endZ_cut,
+    double minval, double maxval, bool doNegativeReco, double weight) {
 //********************************************************************
 
   TFile *file = new TFile(filename.c_str(), "READ");
@@ -146,18 +146,23 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
       //make sure there is any hits at all
       if( !reco_beam_hit_true_ID->size() ) continue;
 
-      if ( true_beam_endZ < 0. ) 
+      if (true_beam_endZ < 0.) {
         topology = 4;
-
-      else if ( *true_beam_endProcess == "pi+Inelastic" ){
-        if ( true_daughter_nPiPlus == 0 && true_daughter_nPiMinus == 0 ) 
-          topology = 1;
-        else 
-          topology = 3; 
       }
-      else
+      else if (true_beam_endZ > endZ_cut) {
         topology = 7;
-      
+      }
+      else if ( *true_beam_endProcess == "pi+Inelastic" ){
+        if ( true_daughter_nPiPlus == 0 && true_daughter_nPiMinus == 0 ) {
+          topology = 1;
+        }
+        else {
+          topology = 3;
+        }
+      }
+      else {
+        topology = 7;
+      }
       
     }
     else if ( true_beam_PDG == -13 ){
@@ -215,7 +220,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
 TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
     std::string filename, std::string treename, std::vector<double> recoBins,
     std::string channel, std::string topo, int toponum, double minval,
-    double maxval, bool doNegativeReco, double weight){
+    double maxval, double endZ_cut, bool doNegativeReco, double weight){
 //********************************************************************
 
   TFile *file = new TFile(filename.c_str(), "READ");
@@ -322,7 +327,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
       //make sure there is any hits at all
       if ( !reco_beam_hit_true_ID->size() ) continue;
 
-      if ( true_beam_endZ < 0. ) continue;
+      if (true_beam_endZ < 0. || true_beam_endZ > endZ_cut) continue;
 
       // Absorption
       if ( true_daughter_nPi0 == 0 ) 
@@ -466,7 +471,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(std::string file
 }
 
 //********************************************************************
-TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(std::string filename, std::string treename, std::vector<double> recoBins, std::string channel, std::string topo, int toponum, double weight){
+TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(std::string filename, std::string treename, std::vector<double> recoBins, std::string channel, std::string topo, int toponum, double reco_beam_endZ_cut, double weight){
   //********************************************************************
 
   TFile *file = new TFile(filename.c_str(), "READ");
@@ -549,6 +554,10 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(std::strin
 
   mf::LogInfo("FillMCBackgroundHistogram_Pions") << "Filling MC background histogram " << mchisto->GetName() << " from file " << filename.c_str() << " for channel " << channel.c_str() << " with topology " << topo.c_str();
 
+  double pitch = 0.4792;
+  double z0 = 0.56035;
+  int slice_cut = std::floor((reco_beam_endZ_cut - (z0 - pitch/2.)) / pitch);
+
   for(Int_t k=0; k < defaultTree->GetEntries(); k++){
     defaultTree->GetEntry(k);
 
@@ -613,14 +622,21 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(std::strin
         else{
           // True id matched to hit, but no slice matched
           // i.e. This is a 'messy' event
-          if ( true_slice == -999 ) {
+          if (true_slice == -999) {
             topology = 6;
           }
           else{
-            if ( true_beam_PDG == 211 ) 
-              topology = 3; // Is Pion
-            else if ( true_beam_PDG == -13 ) 
+            if (true_beam_PDG == 211) {
+              if (true_slice > slice_cut) {
+                topology = 8; // Past endZ cut 
+              }
+              else {
+                topology = 3; // Is Pion
+              }
+            }
+            else if (true_beam_PDG == -13) {
               topology = 4; // Is muon
+            }
           }
         }
       }
@@ -894,8 +910,8 @@ int protoana::ProtoDUNESelectionUtils::GetVertexType( const std::vector< std::st
 std::pair< TH1 *, TH1 * > 
     protoana::ProtoDUNESelectionUtils::GetMCIncidentEfficiency(
         std::string fileName, std::string treeName, 
-        std::vector< double > bins, bool doNegativeReco,
-        double weight) {
+        std::vector< double > bins, double reco_beam_endZ_cut,
+        bool doNegativeReco, double weight) {
 
   TFile * file = new TFile(fileName.c_str(), "READ");
   TTree * defaultTree  = (TTree*)file->Get(treeName.c_str());
@@ -950,11 +966,19 @@ std::pair< TH1 *, TH1 * >
     //if ( true_beam_endZ > 225. ) 
     //  continue;
 
+    double pitch = 0.4792;
+    double z0 = 0.56035;
+    int slice_cut = std::floor((reco_beam_endZ_cut - (z0 - pitch/2.)) / pitch);
+
     std::vector< int > denom_slices;
 
     //First, fill the denominator histogram
     //
-    for ( size_t i = 0; i < new_true_beam_incidentEnergies->size(); ++i ) {
+    for (size_t i = 0; i < new_true_beam_incidentEnergies->size(); ++i) {
+
+      int the_slice = (*true_beam_slices)[i];
+      if (the_slice > slice_cut) continue;
+
       for ( size_t j = 1; j < nBins; ++j ) {
         if ( new_true_beam_incidentEnergies->at(i) > bins[j-1] && 
             new_true_beam_incidentEnergies->at(i) <= bins[j] ) {
@@ -962,7 +986,7 @@ std::pair< TH1 *, TH1 * >
           break;
         }
       }
-      denom_slices.push_back( (*true_beam_slices)[i] );
+      denom_slices.push_back(the_slice);
     }
 
 
@@ -972,19 +996,21 @@ std::pair< TH1 *, TH1 * >
       // Check the ID, origin, true_slice
       int true_id = (*reco_beam_hit_true_ID)[i]; 
       int true_slice = (*reco_beam_hit_true_slice)[i]; 
-      
+     
       if ( true_id == true_beam_ID ) {
+        if (true_slice > slice_cut) continue;
+      
         //search through the true beam slices
         for ( size_t j = 0; j < true_beam_slices->size(); ++j ) {
           if ( true_slice == (*true_beam_slices)[j] ) {
 
             auto slice_check = std::find(denom_slices.begin(), 
-                denom_slices.end(), 
-                true_slice);
+                                         denom_slices.end(), 
+                                         true_slice);
 
             if ( slice_check == denom_slices.end() ) {
               std::cout << "Warning found true slice from hit"
-                  << "that was not in denominator" << std::endl;
+                        << "that was not in denominator" << std::endl;
             }
             for ( size_t m = 1; m < nBins; ++m ) {
               if ( (*new_true_beam_incidentEnergies)[j] > bins[m-1] 
@@ -1008,7 +1034,7 @@ std::pair< TH1 *, TH1 *>
     protoana::ProtoDUNESelectionUtils::GetMCInteractingEfficiency(
         std::string fileName, std::string treeName,
         std::vector< double > bins, std::string channel,
-        std::string topo, int toponum, double weight) {
+        std::string topo, int toponum, double endZ_cut, double weight) {
      
   TFile * file = new TFile(fileName.c_str(), "READ");
   TTree * defaultTree  = (TTree*)file->Get(treeName.c_str());
@@ -1055,10 +1081,12 @@ std::pair< TH1 *, TH1 *>
     if ( true_beam_endZ < 0. ) 
       continue;
 
-    //Then if it ends in abs/cex/nPi0 
-    if ( !( *true_beam_endProcess == "pi+Inelastic" 
-        && true_daughter_nPiPlus == 0 && true_daughter_nPiMinus == 0 ) ) 
+    //Then if it ends in abs/cex/nPi0 in the FV
+    if (!(*true_beam_endProcess == "pi+Inelastic" &&
+          true_daughter_nPiPlus == 0 && true_daughter_nPiMinus == 0 &&
+          true_beam_endZ < endZ_cut)){
       continue;
+    }
 
     //Abs
     if ( true_daughter_nPi0 == 0 ) 
@@ -1067,20 +1095,23 @@ std::pair< TH1 *, TH1 *>
     else 
       topology = 2;
 
-    if ( topology != toponum ) 
+    if (topology != toponum){
       continue;
+    }
 
     //Fill the denominator
     for ( size_t i = 1; i < nBins; ++i ) {
-      if ( new_true_beam_interactingEnergy > bins[i-1] 
-          && new_true_beam_interactingEnergy <= bins[i] ){
+      if (new_true_beam_interactingEnergy > bins[i-1] 
+          && new_true_beam_interactingEnergy <= bins[i]){
         denominator->AddBinContent(i, weight);          
 
         if ( has_noPion_daughter ) { //Abs/Cex selection
-          if ( topology == 1 && !has_shower_nHits_distance )
+          if (topology == 1 && !has_shower_nHits_distance) {
             numerator->AddBinContent(i, weight); //Abs
-          else if ( topology == 2 && has_shower_nHits_distance )
+          }
+          else if (topology == 2 && has_shower_nHits_distance) {
             numerator->AddBinContent(i, weight); //Cex
+          }
         } 
         break;
 

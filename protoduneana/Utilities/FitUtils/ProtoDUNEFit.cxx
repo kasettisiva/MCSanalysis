@@ -819,7 +819,8 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
       _bkghistos.push_back(
           protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
               _MCFileNames[i], _RecoTreeName, _RecoBinning, _ChannelNames[i],
-              _BackgroundTopologyName[j], topo, tmin, tmax, _DoNegativeReco));
+              _BackgroundTopologyName[j], topo, _EndZCut, tmin, tmax,
+              _DoNegativeReco));
       //_incbkghistos.push_back( protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(_MCFileNames[0], _RecoTreeName, _RecoBinning, i, topo, true) );
     }
 
@@ -833,7 +834,8 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
           TH1* hsignal =
               protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
                   _MCFileNames[i], _RecoTreeName, _RecoBinning,
-                  _ChannelNames[i], _SignalTopologyName[j], topo, tmin, tmax);
+                  _ChannelNames[i], _SignalTopologyName[j], topo, tmin, tmax,
+                  _EndZCut);
 
 	  // Make one histogram per bin
 	  for(int k=1; k <= hsignal->GetNbinsX(); k++){
@@ -853,7 +855,8 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
               protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
                   _MCFileNames[i], _RecoTreeName, _RecoBinning,
                   _ChannelNames[i], _SignalTopologyName[j], topo,
-                  _TruthBinning[k-1], _TruthBinning[k], _DoNegativeReco));
+                  _TruthBinning[k-1], _TruthBinning[k], _EndZCut,
+                  _DoNegativeReco));
 	//sigevenshisto->SetBinContent(k, (_sighistos.back())->Integral() + sigevenshisto->GetBinContent(k));
 	}
       }
@@ -887,9 +890,9 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
   }
 
   for(int i=0; i < ninctopo; i++){
-    TH1* inchisto = protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(_MCFileNames[0], _RecoTreeName, _RecoBinning, _ChannelNames[0], _IncidentTopologyName[i], _IncidentTopology[i]);
+    TH1* inchisto = protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(_MCFileNames[0], _RecoTreeName, _RecoBinning, _ChannelNames[0], _IncidentTopologyName[i], _IncidentTopology[i], _EndZCut);
     for(int j=1; j < nmcchannels; j++){
-      inchisto->Add(protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(_MCFileNames[j], _RecoTreeName, _RecoBinning, _ChannelNames[j], _IncidentTopologyName[i], _IncidentTopology[i]));
+      inchisto->Add(protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(_MCFileNames[j], _RecoTreeName, _RecoBinning, _ChannelNames[j], _IncidentTopologyName[i], _IncidentTopology[i], _EndZCut));
     }
 
     inchisto->SetNameTitle(Form("MC_ChannelIncident_%s_Histo",_IncidentTopologyName[i].c_str()), Form("Incident MC for topology %s", _IncidentTopologyName[i].c_str()));
@@ -921,7 +924,7 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
 
   std::pair<TH1 *, TH1 *> inc_eff_num_denom = 
         protoana::ProtoDUNESelectionUtils::GetMCIncidentEfficiency(
-        _IncidentMCFileNames[0], _TruthTreeName, _TruthBinning);
+        _IncidentMCFileNames[0], _TruthTreeName, _TruthBinning, _EndZCut);
 
   _incidentEfficiencyNum = inc_eff_num_denom.first;
   _incidentEfficiencyDenom = inc_eff_num_denom.second;
@@ -941,7 +944,7 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
     std::pair< TH1 *, TH1 * > eff_num_denom = 
         protoana::ProtoDUNESelectionUtils::GetMCInteractingEfficiency( 
             _IncidentMCFileNames[0], _TruthTreeName, _TruthBinning,
-            _ChannelNames[i], _SignalTopologyName[i], topo);
+            _ChannelNames[i], _SignalTopologyName[i], topo, _EndZCut);
 
     _interactingEfficiencyNums.push_back(eff_num_denom.first); 
     _interactingEfficiencyDenoms.push_back(eff_num_denom.second); 
@@ -1138,6 +1141,7 @@ bool protoana::ProtoDUNEFit::Configure(std::string configPath){
 
   _AddIncidentToMeasurement    = pset.get<bool>("AddIncidentToMeasurement");
   _DoNegativeReco              = pset.get<bool>("DoNegativeReco"); 
+  _EndZCut                     = pset.get<double>("EndZCut");
 
   return true;
 

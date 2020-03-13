@@ -513,7 +513,7 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorksp
     }
 
     Int_t counter = 0;
-    Int_t sigcolor[13] = {2,3,4,5,6,7,8,9,1, kMagenta, kGreen+2, kTeal, kOrange+10};
+    Int_t sigcolor[13] = {2,3,4,5,6,7,8,9,kMagenta, 1, kGreen+2, kTeal, kOrange+10};
     //Int_t sigcolor[9] = {1,1,1,1,1,1,1,1,1};
     for(int i = (compFracVec.size()-1); i > -1; i--){
     //for(unsigned int i = 0; i < compFracVec.size(); i++){
