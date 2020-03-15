@@ -37,7 +37,7 @@
 #include "protoduneana/Utilities/ProtoDUNEShowerUtils.h"
 #include "protoduneana/Utilities/ProtoDUNETruthUtils.h"
 #include "protoduneana/Utilities/ProtoDUNEPFParticleUtils.h"
-#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEDataUtils.h"
+//#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEDataUtils.h"
 
 // ROOT includes
 #include "TTree.h"
@@ -239,7 +239,7 @@ void protoana::ProtoDUNEAnalCosmicTree::analyze(art::Event const & evt){
     TTimeStamp ts2(ts.timeHigh(), ts.timeLow());
     fTimeStamp = ts2.AsDouble();
   }
-
+  /*
   // Get number of active fembs
   int allactivefembs = 0;
   if(!evt.isRealData()){
@@ -258,7 +258,7 @@ void protoana::ProtoDUNEAnalCosmicTree::analyze(art::Event const & evt){
   
   // For cosmics only save events if the all fembs are active
   if(allactivefembs != 120) return;
-
+  */
   FillCosmicsTree(evt);
 
 }
