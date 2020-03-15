@@ -160,7 +160,7 @@ private:
 protoana::ProtoDUNEAnalCosmicTree::ProtoDUNEAnalCosmicTree(fhicl::ParameterSet const & p)
   :
   EDAnalyzer(p),
-  dataUtil(p.get<fhicl::ParameterSet>("DataUtils")),
+  //dataUtil(p.get<fhicl::ParameterSet>("DataUtils")),
   fBeamModuleLabel(p.get< art::InputTag >("BeamModuleLabel")),
   fCalorimetryTag(p.get<std::string>("CalorimetryTag")),
   fParticleIDTag(p.get<std::string>("ParticleIDTag")),
@@ -239,7 +239,7 @@ void protoana::ProtoDUNEAnalCosmicTree::analyze(art::Event const & evt){
     TTimeStamp ts2(ts.timeHigh(), ts.timeLow());
     fTimeStamp = ts2.AsDouble();
   }
-  
+  /*
   // Get number of active fembs
   int allactivefembs = 0;
   if(!evt.isRealData()){
@@ -258,7 +258,7 @@ void protoana::ProtoDUNEAnalCosmicTree::analyze(art::Event const & evt){
   
   // For cosmics only save events if the all fembs are active
   if(allactivefembs != 120) return;
-  
+  */
   FillCosmicsTree(evt);
 
 }

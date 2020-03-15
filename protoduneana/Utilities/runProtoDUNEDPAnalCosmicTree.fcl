@@ -1,5 +1,9 @@
 #include "services_dune.fcl"
 #include "ProtoDUNEAnalCosmicTree.fcl"
+#include "pddp_sam.fcl"
+#include "channelstatus_pddp.fcl"
+#include "tools_dune.fcl"
+
 
 process_name: pdAnalCosmicTreeProcess
 
@@ -13,10 +17,17 @@ services:
   message:                      @local::dune_message_services_prod_debug
   FileCatalogMetadata:          @local::art_file_catalog_mc
                                 @table::dunefddphase_reco_services
-  PdspChannelMapService:        @local::pdspchannelmap
-  ChannelStatusService:         @local::pdsp_channel_status
+  #PddpChannelMapService:        @local::PDDPChannelMappings
+  ChannelStatusService:         @local::pddp_channel_status
 }
 services.message.destinations.LogStandardOut.threshold: "INFO"
+services.Geometry: @local::protodunedphase_geo
+services.DetectorPropertiesService: @local::protodunedphase_detproperties
+services.RawDigitPrepService:          @local::adcprep_with_tools_data
+
+dataprep_tool_list: [ "digitReader", "pddp_RemoveBadChannels", "def_adcPedestalFit", "adcSampleFiller", "pddp_adcMultiThreshSignalFinder"]
+services.RawDigitPrepService.AdcChannelToolNames: @local::dataprep_tool_list
+services.AdcWireBuildingService.SaveChanPedRMS: false
 
 #source is now a root file
 source:
