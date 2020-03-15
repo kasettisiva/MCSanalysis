@@ -37,7 +37,7 @@
 #include "protoduneana/Utilities/ProtoDUNEShowerUtils.h"
 #include "protoduneana/Utilities/ProtoDUNETruthUtils.h"
 #include "protoduneana/Utilities/ProtoDUNEPFParticleUtils.h"
-//#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEDataUtils.h"
+#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEDataUtils.h"
 
 // ROOT includes
 #include "TTree.h"
@@ -81,7 +81,7 @@ public:
 private:
 
   // Helper utility functions
-  protoana::ProtoDUNEDataUtils dataUtil;
+  //protoana::ProtoDUNEDataUtils dataUtil;
   protoana::ProtoDUNEPFParticleUtils pfpUtil;
   protoana::ProtoDUNETrackUtils trackUtil;
   protoana::ProtoDUNETruthUtils truthUtil;
@@ -160,7 +160,7 @@ private:
 protoana::ProtoDUNEAnalCosmicTree::ProtoDUNEAnalCosmicTree(fhicl::ParameterSet const & p)
   :
   EDAnalyzer(p),
-  dataUtil(p.get<fhicl::ParameterSet>("DataUtils")),
+  //dataUtil(p.get<fhicl::ParameterSet>("DataUtils")),
   fBeamModuleLabel(p.get< art::InputTag >("BeamModuleLabel")),
   fCalorimetryTag(p.get<std::string>("CalorimetryTag")),
   fParticleIDTag(p.get<std::string>("ParticleIDTag")),
