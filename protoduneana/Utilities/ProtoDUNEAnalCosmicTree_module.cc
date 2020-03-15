@@ -81,7 +81,7 @@ public:
 private:
 
   // Helper utility functions
-  //protoana::ProtoDUNEDataUtils dataUtil;
+  protoana::ProtoDUNEDataUtils dataUtil;
   protoana::ProtoDUNEPFParticleUtils pfpUtil;
   protoana::ProtoDUNETrackUtils trackUtil;
   protoana::ProtoDUNETruthUtils truthUtil;
