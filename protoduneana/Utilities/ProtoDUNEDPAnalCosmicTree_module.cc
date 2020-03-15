@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////
-// Class:       ProtoDUNEAnalCosmicTree
-// File:        ProtoDUNEAnalCosmicTree_module.cc
+// Class:       ProtoDUNEDPAnalCosmicTree
+// File:        ProtoDUNEDPAnalCosmicTree_module.cc
 //
 // Extract protoDUNE useful information, do a firs tpre-selection and save output to a flat tree
 // 
@@ -37,7 +37,7 @@
 #include "protoduneana/Utilities/ProtoDUNEShowerUtils.h"
 #include "protoduneana/Utilities/ProtoDUNETruthUtils.h"
 #include "protoduneana/Utilities/ProtoDUNEPFParticleUtils.h"
-#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEDataUtils.h"
+
 
 // ROOT includes
 #include "TTree.h"
@@ -58,19 +58,19 @@
 const int NMAXCOSMICPARTICLES = 100;
 
 namespace protoana {
-  class ProtoDUNEAnalCosmicTree;
+  class ProtoDUNEDPAnalCosmicTree;
 }
 
 
-class protoana::ProtoDUNEAnalCosmicTree : public art::EDAnalyzer {
+class protoana::ProtoDUNEDPAnalCosmicTree : public art::EDAnalyzer {
 public:
 
-  explicit ProtoDUNEAnalCosmicTree(fhicl::ParameterSet const & p);
+  explicit ProtoDUNEDPAnalCosmicTree(fhicl::ParameterSet const & p);
 
-  ProtoDUNEAnalCosmicTree(ProtoDUNEAnalCosmicTree const &) = delete;
-  ProtoDUNEAnalCosmicTree(ProtoDUNEAnalCosmicTree &&) = delete;
-  ProtoDUNEAnalCosmicTree & operator = (ProtoDUNEAnalCosmicTree const &) = delete;
-  ProtoDUNEAnalCosmicTree & operator = (ProtoDUNEAnalCosmicTree &&) = delete;
+  ProtoDUNEDPAnalCosmicTree(ProtoDUNEDPAnalCosmicTree const &) = delete;
+  ProtoDUNEDPAnalCosmicTree(ProtoDUNEDPAnalCosmicTree &&) = delete;
+  ProtoDUNEDPAnalCosmicTree & operator = (ProtoDUNEDPAnalCosmicTree const &) = delete;
+  ProtoDUNEDPAnalCosmicTree & operator = (ProtoDUNEDPAnalCosmicTree &&) = delete;
 
   virtual void beginJob() override;
   virtual void endJob() override;
@@ -81,7 +81,6 @@ public:
 private:
 
   // Helper utility functions
-  //protoana::ProtoDUNEDataUtils dataUtil;
   protoana::ProtoDUNEPFParticleUtils pfpUtil;
   protoana::ProtoDUNETrackUtils trackUtil;
   protoana::ProtoDUNETruthUtils truthUtil;
@@ -157,7 +156,7 @@ private:
 };
 
 
-protoana::ProtoDUNEAnalCosmicTree::ProtoDUNEAnalCosmicTree(fhicl::ParameterSet const & p)
+protoana::ProtoDUNEDPAnalCosmicTree::ProtoDUNEDPAnalCosmicTree(fhicl::ParameterSet const & p)
   :
   EDAnalyzer(p),
   //dataUtil(p.get<fhicl::ParameterSet>("DataUtils")),
@@ -173,7 +172,7 @@ protoana::ProtoDUNEAnalCosmicTree::ProtoDUNEAnalCosmicTree(fhicl::ParameterSet c
 
 }
 
-void protoana::ProtoDUNEAnalCosmicTree::beginJob(){
+void protoana::ProtoDUNEDPAnalCosmicTree::beginJob(){
 
   art::ServiceHandle<art::TFileService> tfs;
 
@@ -222,7 +221,7 @@ void protoana::ProtoDUNEAnalCosmicTree::beginJob(){
 
 }
 
-void protoana::ProtoDUNEAnalCosmicTree::analyze(art::Event const & evt){
+void protoana::ProtoDUNEDPAnalCosmicTree::analyze(art::Event const & evt){
 
   // Initialise tree parameters
   Initialise();
@@ -239,35 +238,16 @@ void protoana::ProtoDUNEAnalCosmicTree::analyze(art::Event const & evt){
     TTimeStamp ts2(ts.timeHigh(), ts.timeLow());
     fTimeStamp = ts2.AsDouble();
   }
-  /*
-  // Get number of active fembs
-  int allactivefembs = 0;
-  if(!evt.isRealData()){
-    allactivefembs = 120;
-    for(int k=0; k < 6; k++)
-      fNactivefembs[0] = 20;
-  }
-  else{
-    for(int k=0; k < 6; k++){
-     fNactivefembs[k] = dataUtil.GetNActiveFembsForAPA(evt, k);
-     allactivefembs += fNactivefembs[k];
-    }
-  }
 
-  //trmom.SetMinLength(100);
-  
-  // For cosmics only save events if the all fembs are active
-  if(allactivefembs != 120) return;
-  */
   FillCosmicsTree(evt);
 
 }
 
-void protoana::ProtoDUNEAnalCosmicTree::endJob(){
+void protoana::ProtoDUNEDPAnalCosmicTree::endJob(){
 
 }
 
-void protoana::ProtoDUNEAnalCosmicTree::FillCosmicsTree(art::Event const & evt){
+void protoana::ProtoDUNEDPAnalCosmicTree::FillCosmicsTree(art::Event const & evt){
 
   unsigned int npfParticles = pfpUtil.GetNumberPrimaryPFParticle(evt,fPFParticleTag);
 
@@ -406,7 +386,7 @@ void protoana::ProtoDUNEAnalCosmicTree::FillCosmicsTree(art::Event const & evt){
 
 }
 
-void protoana::ProtoDUNEAnalCosmicTree::Initialise(){
+void protoana::ProtoDUNEDPAnalCosmicTree::Initialise(){
   
   fRun = -999;
   fSubRun = -999;
@@ -460,5 +440,5 @@ void protoana::ProtoDUNEAnalCosmicTree::Initialise(){
 
 }
 
-DEFINE_ART_MODULE(protoana::ProtoDUNEAnalCosmicTree)
+DEFINE_ART_MODULE(protoana::ProtoDUNEDPAnalCosmicTree)
 

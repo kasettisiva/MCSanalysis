@@ -1,5 +1,5 @@
 #include "services_dune.fcl"
-#include "ProtoDUNEAnalCosmicTree.fcl"
+#include "ProtoDUNEDPAnalCosmicTree.fcl"
 #include "pddp_sam.fcl"
 #include "channelstatus_pddp.fcl"
 #include "tools_dune.fcl"
@@ -41,7 +41,7 @@ physics:
 {
  analyzers:
  {
-  pdAnalCosmicTree:          @local::proto_AnalCosmicTree
+  pdAnalCosmicTree:          @local::protodp_AnalCosmicTree
  }
  
  ana:  [ pdAnalCosmicTree ]
