@@ -75,17 +75,24 @@ namespace pionana {
   }
 
 
-  std::map< int, std::vector< const sim::IDE* > > slice_IDEs( std::vector< const sim::IDE* > ides, double the_z0, double the_pitch, double true_endZ){
+  std::map<int, std::vector<const sim::IDE*>> slice_IDEs(
+      std::vector<const sim::IDE*> ides, double the_z0, double the_pitch,
+      double true_endZ){
 
     std::map< int, std::vector< const sim::IDE* > > results;
 
-    for( size_t i = 0; i < ides.size(); ++i ){
+    for (size_t i = 0; i < ides.size(); ++i) {
+      int slice_num = std::floor(
+          (ides[i]->z - (the_z0 - the_pitch/2.)) / the_pitch);
 
-      //if( ides[i]->z > true_endZ )break;
+      /*
+      std::cout << "IDE: " << i << " ID: " << ides[i]->trackID << " Edep: "
+                << ides[i]->energy << " (X,Y,Z): " << "(" << ides[i]->x << ","
+                << ides[i]->y<<","<<ides[i]->z << ") Z0: " << the_z0
+                << " Slice: " << slice_num << std::endl;
+      */
 
-      int slice_num = std::floor( ( ides[i]->z - the_z0 ) / the_pitch );
-      //std::cout << "IDE: " << i << " ID: " << ides[i]->trackID << " Edep: " << ides[i]->energy << " (X,Y,Z): " << "("<<ides[i]->x<<","<<ides[i]->y<<","<<ides[i]->z << ") Z0: " << the_z0 << " Slice: " << slice_num << std::endl;
-      results[slice_num].push_back( ides[i] );
+      results[slice_num].push_back(ides[i]);
     }
 
     return results;

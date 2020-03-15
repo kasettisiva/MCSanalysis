@@ -76,6 +76,7 @@ namespace protoana{
     std::vector< TGraphAsymmErrors * > _interactingEfficiencies;
  
     bool _AddIncidentToMeasurement, _DoNegativeReco;
+    double _EndZCut;
   };
 }
 
