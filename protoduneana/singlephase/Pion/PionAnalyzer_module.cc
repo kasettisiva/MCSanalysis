@@ -3385,13 +3385,13 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("cosmic_has_beam_IDE", &cosmic_has_beam_IDE);
   fTree->Branch("n_cosmics_with_beam_IDE", &n_cosmics_with_beam_IDE);
 
+  fTree->Branch("reco_daughter_allTrack_momByRange_proton", &reco_daughter_allTrack_momByRange_proton);
+  fTree->Branch("reco_daughter_allTrack_momByRange_muon", &reco_daughter_allTrack_momByRange_muon);
   /*
   fTree->Branch("reco_daughter_Chi2_proton", &reco_daughter_Chi2_proton);
   fTree->Branch("reco_daughter_Chi2_ndof", &reco_daughter_Chi2_ndof);
   fTree->Branch("reco_daughter_momByRange_proton", &reco_daughter_momByRange_proton);
   fTree->Branch("reco_daughter_momByRange_muon", &reco_daughter_momByRange_muon);
-  fTree->Branch("reco_daughter_allTrack_momByRange_proton", &reco_daughter_allTrack_momByRange_proton);
-  fTree->Branch("reco_daughter_allTrack_momByRange_muon", &reco_daughter_allTrack_momByRange_muon);
 
   fTree->Branch("reco_daughter_shower_Chi2_proton", &reco_daughter_shower_Chi2_proton);
   fTree->Branch("reco_daughter_shower_Chi2_ndof", &reco_daughter_shower_Chi2_ndof);
@@ -3630,13 +3630,13 @@ void pionana::PionAnalyzer::reset()
 
   reco_beam_Chi2_ndof = -1;
 
+  reco_daughter_allTrack_momByRange_proton.clear();
+  reco_daughter_allTrack_momByRange_muon.clear();
   /*
   reco_daughter_Chi2_proton.clear();
   reco_daughter_Chi2_ndof.clear();
   reco_daughter_momByRange_proton.clear();
   reco_daughter_momByRange_muon.clear();
-  reco_daughter_allTrack_momByRange_proton.clear();
-  reco_daughter_allTrack_momByRange_muon.clear();
 
   reco_daughter_shower_Chi2_proton.clear();
   reco_daughter_shower_Chi2_ndof.clear();
