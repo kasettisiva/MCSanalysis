@@ -63,7 +63,7 @@ product          version
 dunetpc          v08_45_00
 hep_hpc          v0_12_01       -       optional
 cetbuildtools	 v7_15_01	-	only_for_build
-geant4reweight   v01_00_04
+geant4reweight   v01_00_05
 end_product_list
 
 

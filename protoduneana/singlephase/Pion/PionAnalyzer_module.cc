@@ -904,7 +904,7 @@ pionana::PionAnalyzer::PionAnalyzer(fhicl::ParameterSet const& p)
   calibration = protoana::ProtoDUNECalibration( CalibrationPars );
   beam_cuts = protoana::ProtoDUNEBeamCuts( BeamCuts );
 
-  theRW = RWFactory.BuildReweighter( 211, &XSecFile, &FracsFile, ParMaker.GetFSHists(), ParMaker.GetElasticHist() );
+  theRW = RWFactory.BuildReweighter( 211, &XSecFile, &FracsFile, ParMaker.GetFSHists(), ParMaker.GetElasticHist()/*, true*/ );
 
   // Call appropriate consumes<>() for any products to be retrieved by this module.
 }
