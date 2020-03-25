@@ -57,6 +57,7 @@
 #include "geant4reweight/src/ReweightBase/G4ReweightTraj.hh"
 #include "geant4reweight/src/ReweightBase/G4ReweightStep.hh"
 #include "geant4reweight/src/PropBase/G4ReweightParameterMaker.hh"
+#include "geant4reweight/src/ReweightBase/G4MultiReweighter.hh"
 
 
 
@@ -862,7 +863,9 @@ private:
   bool fTrueToReco;
   //Geant4Reweight stuff
   TFile FracsFile, XSecFile;
+  std::vector<fhicl::ParameterSet> ParSet;
   G4ReweightParameterMaker ParMaker;
+  G4MultiReweighter MultiRW;
   G4ReweighterFactory RWFactory;
   G4Reweighter * theRW;
 };
@@ -893,7 +896,10 @@ pionana::PionAnalyzer::PionAnalyzer(fhicl::ParameterSet const& p)
 
   FracsFile( (p.get< std::string >( "FracsFile" )).c_str(), "OPEN" ),
   XSecFile( (p.get< std::string >( "XSecFile" )).c_str(), "OPEN"),
-  ParMaker( p.get< std::vector< fhicl::ParameterSet> >("ParameterSet"))
+  ParSet(p.get<std::vector<fhicl::ParameterSet>>("ParameterSet")),
+  ParMaker(ParSet),
+  MultiRW(211, XSecFile, FracsFile, ParSet/*, 100, 0*/)
+
 {
 
   templates[ 211 ]  = (TProfile*)dEdX_template_file.Get( "dedx_range_pi"  );
@@ -2941,8 +2947,20 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       G4ReweightTraj theTraj(true_beam_ID, true_beam_PDG, 0, event, {0,0});
       bool created = CreateRWTraj(*true_beam_particle, plist,
                                   fGeometryService, event, &theTraj);
-      if (created)
+      if (created) {
         g4rw_primary_weights.push_back(theRW->GetWeight(&theTraj));
+        g4rw_primary_weights.push_back(MultiRW.GetWeightFromNominal(theTraj));
+        
+        std::vector<double> weights_vec = MultiRW.GetWeightFromAll1DThrows(
+            theTraj);
+        g4rw_primary_weights.insert(g4rw_primary_weights.end(),
+                                    weights_vec.begin(), weights_vec.end());
+        std::pair<double, double> pm_weights =
+            MultiRW.GetPlusMinusSigmaParWeight(theTraj, 0);
+
+        g4rw_primary_weights.push_back(pm_weights.first);
+        g4rw_primary_weights.push_back(pm_weights.second);
+      }
     }
   }
 

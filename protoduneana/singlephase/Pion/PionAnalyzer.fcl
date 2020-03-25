@@ -43,7 +43,8 @@ pionanalysis:
       Cut:    "reac"
       Name: "fReac"
       Range: [000., 1200.]
-      Nominal: 1.5 
+      Nominal: 1.0 
+      Sigma: .5
     }
   ]
 
