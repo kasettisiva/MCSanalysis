@@ -86,12 +86,12 @@ private:
   unsigned int fsubrun;
   unsigned int fevent;
   std::vector<int>  fprimary_Shower_wire_w;
-  std::vector<float>  fprimary_Shower_wire_ch;
+  std::vector<float>  fprimary_Shower_wire_ch; //charge 
   std::vector<float>fprimary_Shower_wire_X;  
   std::vector<float>fprimary_Shower_wire_Z;  
   std::vector<float>fprimary_Shower_wire_Y;  
 
-  std::vector<float>  fprimary_Shower_MCwire_ch;
+  std::vector<float>  fprimary_Shower_MCwire_E;  //energy in MeV
   std::vector<int>  fprimary_Shower_MCwire_w;
   float fprimaryStartPosition[3];
 };
@@ -112,7 +112,7 @@ void ProtoDUNEelectronWireAna::beginJob()
   fTree->Branch("primary_Shower_wire_Z",&fprimary_Shower_wire_Z);
   fTree->Branch("primary_Shower_wire_Y",&fprimary_Shower_wire_Y);
   fTree->Branch("primary_Shower_MCwire_w",&fprimary_Shower_MCwire_w);
-  fTree->Branch("primary_Shower_MCwire_ch",&fprimary_Shower_MCwire_ch);
+  fTree->Branch("primary_Shower_MCwire_E",&fprimary_Shower_MCwire_E);
  
 }
 
@@ -252,7 +252,7 @@ void ProtoDUNEelectronWireAna::analyze(art::Event const& evt)
                } 
                if( EperCh== 0 ) continue;//save only channeles with ID
                fprimary_Shower_MCwire_w.push_back(simchannel.Channel());
-               fprimary_Shower_MCwire_ch.push_back(EperCh);
+               fprimary_Shower_MCwire_E.push_back(EperCh);
             }
           }
         }//do analysis of MC
@@ -273,7 +273,7 @@ void ProtoDUNEelectronWireAna::Initialize(){
   fprimary_Shower_wire_Z.clear();
   fprimary_Shower_wire_ch.clear();
   fprimary_Shower_MCwire_w.clear();
-  fprimary_Shower_MCwire_ch.clear();
+  fprimary_Shower_MCwire_E.clear();
   for(int k=0; k < 3; k++){
     fprimaryStartPosition[k] = -999.0;
   }
