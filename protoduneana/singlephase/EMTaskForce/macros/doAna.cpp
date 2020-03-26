@@ -1,3 +1,9 @@
+//README
+//This macro is an example of how to loop over the 
+//PandoraBeam TTree that was create by the LArsoft model ProtoDUNEelectronAnaTree_module.cc
+//It would make a selection sample based on the tech note 
+//to run do $make -f Makefile, then execute the binary ./doAna mydatasample.root myoutputfile.root 
+
 #include <iostream>
 #include "include.h"
 #include "AnalysisTree.h"
