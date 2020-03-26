@@ -11,7 +11,6 @@ proto_AnaTree:
    TrackerTag:              "pandoraTrack"
    ShowerTag:               "pandoraShower"
    HitTag:	            "hitpdune"
-   doExtrahits:             false
    ShowerCalorimetryTag:    "pandoraShowercalo"
    PFParticleTag:           "pandora"
    GeneratorTag:            "generator"

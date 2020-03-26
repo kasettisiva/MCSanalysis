@@ -1,8 +1,13 @@
-# Path to MC files. Each entry corresponds to a different channel and has to much exactly with the DataFileNames.
-MCFileNames:             ["pionana_mc_1GeV_1_7_20.root"]
+# Path to MC files. Each entry corresponds to a different channel and has to match with the DataFileNames.
+#MCFileNames:             ["eventSelection_mc_ABS.root","eventSelection_mc_CEX.root"]
+MCFileNames:             ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_ABS.root", "/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_CEX.root"]
 
-# Path to data file. Each entry corresponds to a different channel and has to much exactly with the MCFileNames.
-DataFileNames:           ["pionana_mc_1GeV_1_7_20.root"]
+# Path to data file. Each entry corresponds to a different channel and has to match with the MCFileNames.
+#DataFileNames:           ["eventSelection_mc_ABS.root","eventSelection_mc_CEX.root"]
+DataFileNames:             ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_ABS.root", "/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_CEX.root"]
+
+# Channel names. Follow the order of the MC/Data File Names
+ChannelNames:            ["ABS","CEX"]
 
 # Path to MC control samples.
 MCControlSampleFiles:    []
@@ -10,25 +15,43 @@ MCControlSampleFiles:    []
 # Path to Data control samples.
 DataControlSampleFiles:  []
 
-# Number of toys to generate for MC studies. Any number above 0 will enable toy mc and won't fit the data.
+# Path to file to get the number of incident pions
+IncidentMCFileNames:     ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_PRIMARYPION.root"]
+
+# Number of toys to generate for MC studies. Any number above 0 will enable toy mc generation and won't fit the data.
 NToys:                   0	
 
 # Name of the tree with reconstructed events.
 RecoTreeName:            "pionana/beamana"
 
 # Signal topologies. Change as appropriate.
-SignalTopology:          [1]
+SignalTopology:          [1,2]
+SignalTopologyName:      ["ABS","CEX"]
 
 # Background topologies. Change as appropriate.
-BackgroundTopology:      [2,3,4,5,6]
-BackgroundTopologyName:  ["Cosmics","Sec. protons","Muons","Other pion bkg","Other bkg"]
+#BackgroundTopology:      [3,4,5,6]
+#BackgroundTopologyName:  ["Pion Inel. Bkg","Protons","Muons","Other Bkg"]
+#BackgroundTopology:      [3,4,5,6,7,8,9]
+#BackgroundTopologyName:  ["Pion Inel. Bkg","Upstream Int","Muons","Decay Product","Extra Beam", "Cosmic", "Other Bkg"]
+BackgroundTopology:      [3,4,5,6,7]
+BackgroundTopologyName:  ["Pion Inel. Bkg","Upstream Int","Muons","TrueUnmatched", "Other Bkg"]
+
+
+# Incident particle topologies. First is assumed to be signal
+#IncidentTopology:        [3,4,5,6]
+#IncidentTopologyName:    ["Pions","Protons","Muons","Other"]
+IncidentTopology:        [3, 4, 5, 6, 7, 8]
+IncidentTopologyName:    ["Pions", "Muons", "Cosmic", "TrueUnmatched", "Downstream", "Other"]
 
 # Name of the tree with the truth signal events.
 TruthTreeName:           "pionana/beamana"
 
 # Define binning in truth/reco. It doesn't have to be symmetric.
-TruthBinning:            [0.0,200.0,400.0,500.0,600.0,700.0,800.0,900.0,1500.0]
-RecoBinning:             [0.0,200.0,400.0,500.0,600.0,700.0,800.0,900.0,2000.0]
+TruthBinning:            [0.0,400.0,600.0,700.0,800.0,1200.0]
+RecoBinning:             [0.0,400.0,600.0,700.0,800.0,1200.0]
+
+# Option to fit in reco. If enabled will ignore the truth binning and introduce one free parameter per reco bin
+FitInReco:               false
 
 # Fit set up.
 DoAsimovFit:             false       # Will do asimov fit only
@@ -47,3 +70,7 @@ SystFileNames:           ["/path/to/file.root"]
 SystToConsider:          ["Systematic1","Systematic2"]
 SystType:                ["NormShape"  ,"NormShape"]   # For each systematic the type should be defined, options are: NormOnly, ShapeOnly, NormShape
 IgnoreSystematicErrorBelow: 0.01                     # Sytematic error will be ignored if below this value
+
+AddIncidentToMeasurement: true
+DoNegativeReco:           true 
+EndZCut:                  225.

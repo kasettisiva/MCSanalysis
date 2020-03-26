@@ -172,44 +172,52 @@ void Xcalo_r5387::Loop()
 
     int x_bin;
     for(int i=0; i<cross_trks; ++i){
-
+      bool testneg=0;
+      bool testpos=0;
+      if(trkstartx[i]*trkendx[i]>0) continue;
+      if(trkstartx[i]<-350 or trkendx[i]<-350) testneg=1;      
+      if(trkstartx[i]>350 or trkendx[i]>350) testpos=1;      
       //plane 2
-      for(int j=0; j<TMath::Min(ntrkhits[i][2],3000); ++j){
-	if((trkhity[i][2][j]<600)&&(trkhity[i][2][j]>0)){
-	  if((trkhitz[i][2][j]<695)&&(trkhitz[i][2][j]>0)){
-	    if(trkhitx[i][2][j]<0 && trkhitx[i][2][j]>-360){//negative drift
-	      if(!(((TMath::Abs(trackthetaxz[i])>1.13) && (TMath::Abs(trackthetaxz[i])<2.0))||(TMath::Abs(trackthetayz[i])>1.22 && TMath::Abs(trackthetayz[i])<1.92))){
+      if(!((TMath::Abs(trkstartx[i])>350||trkstarty[i]<50||trkstarty[i]>550||trkstartz[i]<50||trkstartz[i]>645)&&(TMath::Abs(trkendx[i])>350||trkendy[i]<50||trkendy[i]>550||trkendz[i]<50||trkendz[i]>645))) continue;
+      //  if(!(((TMath::Abs(trackthetaxz[i])>1.13) && (TMath::Abs(trackthetaxz[i])<2.0))||(TMath::Abs(trackthetayz[i])>1.22 && TMath::Abs(trackthetayz[i])<1.92))){
+      if(!((abs(180/3.14*trackthetaxz[i])>60 && abs(180/3.14*trackthetaxz[i])<120)||abs(180/3.14*trackthetaxz[i])<10||(abs(180/3.14*trackthetayz[i])>80 && abs(180/3.14*trackthetayz[i])<100))){
+	for(int j=1; j<TMath::Min(ntrkhits[i][2]-1,3000); ++j){
+	  if((trkhity[i][2][j]<600)&&(trkhity[i][2][j]>0)){
+	    if((trkhitz[i][2][j]<695)&&(trkhitz[i][2][j]>0)){
+	      if(trkhitx[i][2][j]<0 && trkhitx[i][2][j]>-360 && testneg){//negative drift
+		if(trkhitx[i][2][j]<0 && trkhitx[i][2][j+1]>0) continue;
+		if(trkhitx[i][2][j]<0 && trkhitx[i][2][j-1]>0) continue;
 		x_bin=dqdx_X_hist_2->FindBin(trkhitx[i][2][j]);
 		float YZ_correction_factor_negativeX_2=YZ_negativeX_hist_2->GetBinContent(YZ_negativeX_hist_2->FindBin(trkhitz[i][2][j],trkhity[i][2][j]));
 		float recom_correction=recom_factor(tot_Ef(trkhitx[i][2][j],trkhity[i][2][j],trkhitz[i][2][j]));
 		float corrected_dqdx_2=trkdqdx[i][2][j]*YZ_correction_factor_negativeX_2*recom_correction;
 		dqdx_value_2[x_bin-1].push_back(corrected_dqdx_2);
 	      }//X containment
-	    }//angular cut
-	    if(trkhitx[i][2][j]>0 && trkhitx[i][2][j]<360){//positive drift
-	      if(!(((TMath::Abs(trackthetaxz[i])>1.13) && (TMath::Abs(trackthetaxz[i])<2.0))||(TMath::Abs(trackthetayz[i])>1.22 && TMath::Abs(trackthetayz[i])<1.92))){
+	      if(trkhitx[i][2][j]>0 && trkhitx[i][2][j]<360 && testpos){//positive drift
+		if(trkhitx[i][2][j]>0 && trkhitx[i][2][j+1]<0) continue;
+		if(trkhitx[i][2][j]>0 && trkhitx[i][2][j-1]<0) continue;
 		x_bin=dqdx_X_hist_2->FindBin(trkhitx[i][2][j]);
 		float YZ_correction_factor_positiveX_2=YZ_positiveX_hist_2->GetBinContent(YZ_positiveX_hist_2->FindBin(trkhitz[i][2][j],trkhity[i][2][j]));
 		float recom_correction=recom_factor(tot_Ef(trkhitx[i][2][j],trkhity[i][2][j],trkhitz[i][2][j]));
 		float corrected_dqdx_2=trkdqdx[i][2][j]*YZ_correction_factor_positiveX_2*recom_correction;
 		dqdx_value_2[x_bin-1].push_back(corrected_dqdx_2);
 	      }//X containment
-	    }//angular cut
-	  } // Z containment
-	} // Y containment
-      } // loop over hits of the track in the given plane
-
-
+	    } // Z containment
+	  } // Y containment
+	} // loop over hits of the track in the given plane
+      }//angular cut
     
 
 
       ////plane_1
 
-      for(int j=0; j<TMath::Min(ntrkhits[i][1],3000); ++j){
+      for(int j=1; j<TMath::Min(ntrkhits[i][1]-1,3000); ++j){
 	if((trkhity[i][1][j]<600)&&(trkhity[i][1][j]>0)){
 	  if((trkhitz[i][1][j]<695)&&(trkhitz[i][1][j]>0)){
-	    if(trkhitx[i][1][j]<0 && trkhitx[i][1][j]>-360){
-	      if(!((trackthetayz[i]>-1.22 && trackthetayz[i]<-0.349)||(trackthetayz[i]>2*trackthetaxz[i]+108 && trackthetayz[i]<2*trackthetaxz[i]+28)||(trackthetayz[i]>-2*trackthetaxz[i]+108 && trackthetayz[i]<-2*trackthetaxz[i]+28))){   
+	    if(trkhitx[i][1][j]<0 && trkhitx[i][1][j]>-360 && testneg){
+	      if(abs(180/3.14*trackthetaxz[i])>130 && !(abs(180/3.14*trackthetayz[i])>80 && abs(180/3.14*trackthetayz[i])<100)){
+	    	if(trkhitx[i][1][j]<0 && trkhitx[i][1][j+1]>0) continue;
+		if(trkhitx[i][1][j]<0 && trkhitx[i][1][j-1]>0) continue;
 		x_bin=dqdx_X_hist_1->FindBin(trkhitx[i][1][j]);
 		float recom_correction=recom_factor(tot_Ef(trkhitx[i][1][j],trkhity[i][1][j],trkhitz[i][1][j]));
 	     	float YZ_correction_factor_negativeX_1=YZ_negativeX_hist_1->GetBinContent(YZ_negativeX_hist_1->FindBin(trkhitz[i][1][j],trkhity[i][1][j]));
@@ -217,8 +225,10 @@ void Xcalo_r5387::Loop()
 		dqdx_value_1[x_bin-1].push_back(corrected_dqdx_1);
 	      }
 	    }
-	    if(trkhitx[i][1][j]>0 && trkhitx[i][1][j]<360){
-	      if(!((trackthetayz[i]<-1.92 && trackthetayz[i]>-2.616)||(trackthetayz[i]>2*trackthetaxz[i]+80 && trackthetayz[i]<2*trackthetaxz[i]+132)||(trackthetayz[i]>-2*trackthetaxz[i]+80 && trackthetayz[i]<-2*trackthetaxz[i]+132))){ 
+	    if(trkhitx[i][1][j]>0 && trkhitx[i][1][j]<360 && testpos){
+	      if(trkhitx[i][1][j]>0 && trkhitx[i][1][j+1]<0) continue;
+	      if(trkhitx[i][1][j]>0 && trkhitx[i][1][j-1]<0) continue;
+	      if(abs(180/3.14*trackthetaxz[i])<40 && !(abs(180/3.14*trackthetayz[i])>80 && abs(180/3.14*trackthetayz[i])<100)){
 		x_bin=dqdx_X_hist_1->FindBin(trkhitx[i][1][j]);
 		float recom_correction=recom_factor(tot_Ef(trkhitx[i][1][j],trkhity[i][1][j],trkhitz[i][1][j]));
 		float YZ_correction_factor_positiveX_1=YZ_positiveX_hist_1->GetBinContent(YZ_positiveX_hist_1->FindBin(trkhitz[i][1][j],trkhity[i][1][j]));
@@ -231,11 +241,13 @@ void Xcalo_r5387::Loop()
       } // loop over hits of the track in the given plane
    
       /////plane_0
-      for(int j=0; j<TMath::Min(ntrkhits[i][0],3000); ++j){
+      for(int j=1; j<TMath::Min(ntrkhits[i][0]-1,3000); ++j){
 	if((trkhity[i][0][j]<600)&&(trkhity[i][0][j]>0)){
 	  if((trkhitz[i][0][j]<695)&&(trkhitz[i][0][j]>0)){
-	    if(trkhitx[i][0][j]<0 && trkhitx[i][0][j]>-360){
-	      if(!((trackthetayz[i]<-1.92 && trackthetayz[i]>-2.616)||(trackthetayz[i]>2*trackthetaxz[i]+80 && trackthetayz[i]<2*trackthetaxz[i]+132)||(trackthetayz[i]>-2*trackthetaxz[i]+80 && trackthetayz[i]<-2*trackthetaxz[i]+132))){
+	    if(trkhitx[i][0][j]<0 && trkhitx[i][0][j]>-360 && testneg){
+	      if(abs(180/3.14*trackthetaxz[i])<40 && !(abs(180/3.14*trackthetayz[i])>80 && abs(180/3.14*trackthetayz[i])<100)){
+		if(trkhitx[i][0][j]<0 && trkhitx[i][0][j+1]>0) continue;
+		if(trkhitx[i][0][j]<0 && trkhitx[i][0][j-1]>0) continue;
 		x_bin=dqdx_X_hist_0->FindBin(trkhitx[i][0][j]);
 		float recom_correction=recom_factor(tot_Ef(trkhitx[i][0][j],trkhity[i][0][j],trkhitz[i][0][j]));
 		float YZ_correction_factor_negativeX_0=YZ_negativeX_hist_0->GetBinContent(YZ_negativeX_hist_0->FindBin(trkhitz[i][0][j],trkhity[i][0][j]));
@@ -243,8 +255,10 @@ void Xcalo_r5387::Loop()
 		dqdx_value_0[x_bin-1].push_back(corrected_dqdx_0);
 	      }
 	    }
-	    if(trkhitx[i][0][j]>0 && trkhitx[i][0][j]<360){
-	      if(!((trackthetayz[i]>-1.22 && trackthetayz[i]<-0.349)||(trackthetayz[i]>2*trackthetaxz[i]+108 && trackthetayz[i]<2*trackthetaxz[i]+28)||(trackthetayz[i]>-2*trackthetaxz[i]+108 && trackthetayz[i]<-2*trackthetaxz[i]+28))){ 
+	    if(trkhitx[i][0][j]>0 && trkhitx[i][0][j]<360 && testpos){
+	      if(abs(180/3.14*trackthetaxz[i])>130 && !(abs(180/3.14*trackthetayz[i])>80 && abs(180/3.14*trackthetayz[i])<100)){
+		if(trkhitx[i][0][j]>0 && trkhitx[i][0][j+1]<0) continue;
+		if(trkhitx[i][0][j]>0 && trkhitx[i][0][j-1]<0) continue;
 		x_bin=dqdx_X_hist_0->FindBin(trkhitx[i][0][j]);
 		float recom_correction=recom_factor(tot_Ef(trkhitx[i][0][j],trkhity[i][0][j],trkhitz[i][0][j]));
 		float YZ_correction_factor_positiveX_0=YZ_positiveX_hist_0->GetBinContent(YZ_positiveX_hist_0->FindBin(trkhitz[i][0][j],trkhity[i][0][j]));
@@ -408,7 +422,7 @@ void Xcalo_r5387::Loop()
 
   file->Close(); 
   dqdx_X_hist_2->Draw();
-  TFile treefile(Form("globalmedians%d.root",run),"RECREATE");
+  TFile treefile(Form("globalmedians_cathanode%d.root",run),"RECREATE");
   t1.Write();
 
 

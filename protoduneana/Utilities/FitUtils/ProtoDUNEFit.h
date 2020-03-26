@@ -48,23 +48,35 @@ namespace protoana{
     void AddIncidentSamplesAndChannelsToMeasurement(RooStats::HistFactory::Measurement& meas);
     void AddSidebandSamplesAndChannelsToMeasurement(RooStats::HistFactory::Measurement& meas);
 
+    void DecorateEfficiency( TGraphAsymmErrors * eff );
+
     std::string _RecoTreeName, _Minimizer, _TruthTreeName;
 
     std::vector<double> _RecoBinning, _TruthBinning;
 
-    std::vector<int> _SignalTopology, _BackgroundTopology;
+    std::vector<int> _SignalTopology, _BackgroundTopology, _IncidentTopology;
 
-    std::vector<std::string> _DataFileNames, _MCFileNames, _DataControlSampleFiles, _MCControlSampleFiles, _SystFileNames, _SystToConsider, _SystType, _BackgroundTopologyName;
+    std::vector<std::string> _DataFileNames, _MCFileNames, _DataControlSampleFiles, _MCControlSampleFiles, _SystFileNames, _SystToConsider, _SystType, _BackgroundTopologyName, _SignalTopologyName, _ChannelNames, _IncidentMCFileNames, _IncidentTopologyName;
 
     int _FitStrategy, _NToys;
     double _IgnoreStatisticalErrorBelow, _IgnoreSystematicErrorBelow;
-    bool _EnableMinosError, _DoAsimovFit, _EnableStatisticalError, _EnableSystematicError, _NormalisedSystematic;
+    bool _EnableMinosError, _DoAsimovFit, _EnableStatisticalError, _EnableSystematicError, _NormalisedSystematic, _FitInReco;
 
     std::vector<TH1*> _bkghistos, _sighistos, _truthsighistos, _datahistos;
     std::vector<TH1*> _incbkghistos, _incsighistos, _incdatahistos;
     std::vector<TH1*> _sidhistos, _siddatahistos;
 
     std::vector<TGraphAsymmErrors*> _efficiencyGraphs;
+
+    TGraphAsymmErrors * _incidentEfficiency;
+    TH1 * _incidentEfficiencyNum;
+    TH1 * _incidentEfficiencyDenom;
+    std::vector< TH1 * > _interactingEfficiencyDenoms;
+    std::vector< TH1 * > _interactingEfficiencyNums;
+    std::vector< TGraphAsymmErrors * > _interactingEfficiencies;
+ 
+    bool _AddIncidentToMeasurement, _DoNegativeReco;
+    double _EndZCut;
   };
 }
 

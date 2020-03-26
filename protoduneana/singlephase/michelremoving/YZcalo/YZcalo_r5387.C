@@ -152,10 +152,10 @@ void YZcalo_r5387::Loop()
     nb = fChain->GetEntry(jentry);   nbytes += nb;
     if(jentry%100==0) cout<<jentry<<"/"<<nentries<<endl;
     for(int i=0; i<cross_trks; i++){
-      if(!((TMath::Abs(trkstartx[i])>350||trkstarty[i]<40||trkstarty[i]>560||trkstartz[i]<40||trkstartz[i]>655)&&(TMath::Abs(trkendx[i])>350||trkendy[i]<40||trkendy[i]>560||trkendz[i]<40||trkendz[i]>655))) continue;
+      if(!((TMath::Abs(trkstartx[i])>350||trkstarty[i]<50||trkstarty[i]>550||trkstartz[i]<50||trkstartz[i]>645)&&(TMath::Abs(trkendx[i])>350||trkendy[i]<50||trkendy[i]>550||trkendz[i]<50||trkendz[i]>645))) continue;
       filtered_tracks++;
       ///filling histograms for plane_2
-      if(!(((TMath::Abs(trackthetaxz[i])>1.13) && (TMath::Abs(trackthetaxz[i])<2.0))||(TMath::Abs(trackthetayz[i])>1.22 && TMath::Abs(trackthetayz[i])<1.92))){
+      if(!((abs(180/3.14*trackthetaxz[i])>60 && abs(180/3.14*trackthetaxz[i])<120)||abs(180/3.14*trackthetaxz[i])<10||(abs(180/3.14*trackthetayz[i])>80 && abs(180/3.14*trackthetayz[i])<100))){
 	for(int j=0; j<TMath::Min(ntrkhits[i][2],3000); ++j){
 	  if((trkhitx[i][2][j]<0)&&(trkhitx[i][2][j]>-360)){
 	    if((trkhity[i][2][j]<ymax)&&(trkhity[i][2][j]>0)){
@@ -169,7 +169,7 @@ void YZcalo_r5387::Loop()
 	} // loop over hits of the track in the given plane
       } // theta xz and yz angle cut
       
-      if(!(((TMath::Abs(trackthetaxz[i])>1.13) && (TMath::Abs(trackthetaxz[i])<2.0))||(TMath::Abs(trackthetayz[i])>1.22 && TMath::Abs(trackthetayz[i])<1.92))){
+      if(!((abs(180/3.14*trackthetaxz[i])>60 && abs(180/3.14*trackthetaxz[i])<120)||abs(180/3.14*trackthetaxz[i])<10||(abs(180/3.14*trackthetayz[i])>80 && abs(180/3.14*trackthetayz[i])<100))){
 	for(int j=0; j<TMath::Min(ntrkhits[i][2],3000); ++j){
 	  if((trkhitx[i][2][j]>0)&&(trkhitx[i][2][j]<360)){
 	    if((trkhity[i][2][j]<ymax)&&(trkhity[i][2][j]>0)){
@@ -184,7 +184,7 @@ void YZcalo_r5387::Loop()
       } // theta xz and yz angle cut
 
       ////for plane_1
-      if(!((trackthetayz[i]>-1.22 && trackthetayz[i]<-0.349)||(trackthetayz[i]>2*trackthetaxz[i]+108 && trackthetayz[i]<2*trackthetaxz[i]+28)||(trackthetayz[i]>-2*trackthetaxz[i]+108 && trackthetayz[i]<-2*trackthetaxz[i]+28))){    
+      if(abs(180/3.14*trackthetaxz[i])>130 && !(abs(180/3.14*trackthetayz[i])>80 && abs(180/3.14*trackthetayz[i])<100)){   
 	for(int j=0; j<TMath::Min(ntrkhits[i][1],3000); ++j){
 	  if((trkhitx[i][1][j]<0)&&(trkhitx[i][1][j]>-360)){
 	    if((trkhity[i][1][j]<ymax)&&(trkhity[i][1][j]>0)){
@@ -197,7 +197,7 @@ void YZcalo_r5387::Loop()
 	  } // X containiment
 	} // loop over hits of the track in the given plane
       } // theta xz and yz angle cut
-      if(!((trackthetayz[i]<-1.92 && trackthetayz[i]>-2.616)||(trackthetayz[i]>2*trackthetaxz[i]+80 && trackthetayz[i]<2*trackthetaxz[i]+132)||(trackthetayz[i]>-2*trackthetaxz[i]+80 && trackthetayz[i]<-2*trackthetaxz[i]+132))){ 
+      if(abs(180/3.14*trackthetaxz[i])<40 && !(abs(180/3.14*trackthetayz[i])>80 && abs(180/3.14*trackthetayz[i])<100)){ 
 	for(int j=0; j<TMath::Min(ntrkhits[i][1],3000); ++j){
 	  if((trkhitx[i][1][j]>0)&&(trkhitx[i][1][j]<360)){
 	    if((trkhity[i][1][j]<ymax)&&(trkhity[i][1][j]>0)){
@@ -212,7 +212,7 @@ void YZcalo_r5387::Loop()
       } // theta xz and yz angle cut
     
       ///filling histograms for plane_0
-      if(!((trackthetayz[i]<-1.92 && trackthetayz[i]>-2.616)||(trackthetayz[i]>2*trackthetaxz[i]+80 && trackthetayz[i]<2*trackthetaxz[i]+132)||(trackthetayz[i]>-2*trackthetaxz[i]+80 && trackthetayz[i]<-2*trackthetaxz[i]+132))){
+      if(abs(180/3.14*trackthetaxz[i])<40 && !(abs(180/3.14*trackthetayz[i])>80 && abs(180/3.14*trackthetayz[i])<100)){
 	  for(int j=0; j<TMath::Min(ntrkhits[i][0],3000); ++j){
 	    if((trkhitx[i][0][j]<0)&&(trkhitx[i][0][j]>-360)){
 	      if((trkhity[i][0][j]<ymax)&&(trkhity[i][0][j]>0)){
@@ -225,7 +225,7 @@ void YZcalo_r5387::Loop()
 	    } // X containiment
 	  } // loop over hits of the track in the given plane
 	} // theta xz and yz angle cut
-	if(!((trackthetayz[i]>-1.22 && trackthetayz[i]<-0.349)||(trackthetayz[i]>2*trackthetaxz[i]+108 && trackthetayz[i]<2*trackthetaxz[i]+28)||(trackthetayz[i]>-2*trackthetaxz[i]+108 && trackthetayz[i]<-2*trackthetaxz[i]+28))){ 
+      if(abs(180/3.14*trackthetaxz[i])>130 && !(abs(180/3.14*trackthetayz[i])>80 && abs(180/3.14*trackthetayz[i])<100)){
 	  for(int j=0; j<TMath::Min(ntrkhits[i][0],3000); ++j){
 	    if((trkhitx[i][0][j]>0)&&(trkhitx[i][0][j]<360)){
 	      if((trkhity[i][0][j]<ymax)&&(trkhity[i][0][j]>0)){
@@ -237,9 +237,9 @@ void YZcalo_r5387::Loop()
 	      }// Y containment
 	    } // X containiment
 	  } // loop over hits of the track in the given plane
-	}// theta xz and yz angle cut
+      }// theta xz and yz angle cut
 
-	}// loop over crossing tracks in the event
+    }// loop over crossing tracks in the event
     } // loop over jentries
 
     std::cout << "*************** Calculating the local median dQ/dx values for each Y-Z cell ******************" << std::endl;

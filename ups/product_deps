@@ -3,7 +3,7 @@
 # The *parent* line must the first non-commented line and defines this product and version
 # The version must be of the form vxx_yy_zz (e.g. v01_02_03).
 
-parent protoduneana v08_39_00
+parent protoduneana v08_45_00
 
 defaultqual e19
 
@@ -60,37 +60,37 @@ table_fragment_end
 # Add the dependent product and version
 
 product          version
-dunetpc          v08_40_00
-hep_hpc          v0_11_00       -       optional
-cetbuildtools	 v7_14_00	-	only_for_build
+dunetpc          v08_47_00
+hep_hpc          v0_12_01       -       optional
+cetbuildtools	 v7_15_01	-	only_for_build
+geant4reweight   v01_00_06
 end_product_list
 
-#geant4reweight   v01_00_02
+
+
+
 
 # We now define allowed qualifiers and the corresponding qualifiers for the depdencies.
 # Make a table by adding columns before "notes".
 # e15  - with gcc 6.4.0 and -std=c++14
-#qualifier	dunetpc         hep_hpc         geant4reweight          notes
-#c7:py3:debug	c7:py3:debug	c7:py3:debug    c7:py3:debug:s93        -nq-
-#c7:py3:prof	c7:py3:prof	c7:py3:prof     c7:py3:prof:s93         -nq-
-#e19:py3:debug	e19:py3:debug	e19:py3:debug   e19:py3debug:s93        -nq-
-#e19:py3:prof	e19:py3:prof    e19:py3:prof    e19:py3prof:s93         -nq-
-#c7:debug	c7:debug	c7:debug        c7:debug:s93            -nq-
-#c7:prof		c7:prof         c7:prof         c7:prof:s93             -nq-
-#e19:debug	e19:debug       e19:debug       e19:debug:s93           -nq-
-#e19:prof	e19:prof        e19:prof        e19:prof:s93            -nq-
-#end_qualifier_list
-
-qualifier	dunetpc         hep_hpc         notes
-c7:py3:debug	c7:py3:debug	c7:py3:debug    -nq-
-c7:py3:prof	c7:py3:prof	c7:py3:prof     -nq-
-e19:py3:debug	e19:py3:debug	e19:py3:debug   -nq-
-e19:py3:prof	e19:py3:prof    e19:py3:prof    -nq-
-c7:debug	c7:debug	c7:debug        -nq-
-c7:prof		c7:prof         c7:prof         -nq-
-e19:debug	e19:debug       e19:debug       -nq-
-e19:prof	e19:prof        e19:prof        -nq-
+qualifier	dunetpc         hep_hpc         geant4reweight          notes
+c7:debug	c7:debug	c7              c7:debug:s96            -nq-
+c7:prof		c7:prof         c7              c7:prof:s96             -nq-
+e19:debug	e19:debug       e19             debug:e19:s96           -nq-
+e19:prof	e19:prof        e19             e19:prof:s96            -nq-
 end_qualifier_list
+
+### Below: something weird was going on with py2 builds so I removed those in above
+#qualifier	dunetpc         hep_hpc         geant4reweight          notes
+#c7:py2:debug	c7:debug:py2	c7              c7:debug:py2:s96        -nq-
+#c7:py2:prof	c7:prof:py2     c7              c7:prof:py2:s96         -nq-
+#e19:py2:debug	e19:debug:py2	e19             debug:e19:py2:s96       -nq-
+#e19:py2:prof	e19:prof:py2    e19             e19:prof:py2:s96        -nq-
+#c7:debug	c7:debug	c7              c7:debug:s96            -nq-
+#c7:prof		c7:prof         c7              c7:prof:s96             -nq-
+#e19:debug	e19:debug       e19             debug:e19:s96           -nq-
+#e19:prof	e19:prof        e19             e19:prof:s96            -nq-
+#end_qualifier_list
 
 # Preserve tabs and formatting in emacs and vi / vim:
 

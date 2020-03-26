@@ -1,4 +1,5 @@
 #include "ProtoDUNEBeamlineUtils.fcl"
+#include "ProtoDUNEBeamCuts.fcl"
 
 BEGIN_PROLOG
 
@@ -6,9 +7,9 @@ pion_primary_filter: {
   module_type: "PrimaryPionSelection"
   TrackerTag: "pandoraTrack"
   PFParticleTag: "pandora"
-  ShowerTag: "pandoraShower"
-  CalorimetryTag: "pandoracalo"
-  CalorimetryParameters: {
+  ShowerTag: "pandoraShower" #Remove
+  CalorimetryTag: "pandoracalo" #Remove
+  CalorimetryParameters: { #Remove
     PlaneID:      2
     betap:        0.212
     Rho:          1.383
@@ -19,25 +20,28 @@ pion_primary_filter: {
     calib_factor: 6.155e-3
     X_correction: "/dune/app/users/apaudel/v071100/run5387_new/run_5387_Xcalibration.root"
   }
-  GeneratorTag:           "generator"
-  BeamlineUtils: @local::standard_protodunebeamlineutils
+  GeneratorTag:           "generator" #Remove
+  BeamlineUtils: @local::standard_protodunebeamlineutils 
 
-  UseMVA: "false"
+  UseMVA: "false" #Remove
 
   #Cuts in cm
-  TrackStartXCut: [-3., 7.]
-  TrackStartYCut: [-8., 7.]
-  TrackStartZCut: [27.5, 32.5]
+  TrackStartXCut: [-3., 7.] #Remove
+  TrackStartYCut: [-8., 7.] #Remove
+  TrackStartZCut: [27.5, 32.5] #Remove
 
   TrackEndZCut: 226.
 
-  TrackDirCut: .93
+  TrackDirCut: .93 #Remove
 
-  StrictNTracks: false
+  StrictNTracks: false #Remove
 
-  DaughterCNNCut: 0.1
-  Chi2PIDCut: 50.
-  dEdX_template_name:     "/dune/data/users/calcuttj/dEdxrestemplates.root"
+  DaughterCNNCut: 0.1 #Remove
+  Chi2PIDCut: 50. #Remove
+  dEdX_template_name:     "/dune/data/users/calcuttj/dEdxrestemplates.root" #Remove
+
+  BeamCuts: @local::Prod2BeamCuts 
+  NominalMomentum: "1" 
 }
 
 END_PROLOG
