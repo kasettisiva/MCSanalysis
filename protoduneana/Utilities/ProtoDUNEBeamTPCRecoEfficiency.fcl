@@ -1,0 +1,11 @@
+#include "ProtoDUNEDataUtils.fcl"
+
+BEGIN_PROLOG
+
+protodune_beam_tpcreco: {
+  module_type: "ProtoDUNEBeamTPCRecoEfficiency"
+  ParticleLabel: "pandora"
+  DataUtils: @local::standard_protodunedatautils
+}
+
+END_PROLOG

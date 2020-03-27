@@ -1,0 +1,49 @@
+#include "services_dune.fcl"
+#include "protodune_tools_dune.fcl"
+
+process_name: pdWireAnaTree
+
+services:
+{
+  # Load the service that manages root files for histograms.
+  TFileService: { fileName: "WireAnaTree.root" }
+  TimeTracker:       {}
+  MemoryTracker:     {}
+  RandomNumberGenerator: {} #ART native random number generator
+  message:                      @local::dune_message_services_prod_debug
+  FileCatalogMetadata:          @local::art_file_catalog_mc
+				@table::protodune_data_reco_services
+  PdspChannelMapService:        @local::pdspchannelmap
+  ChannelStatusService:         @local::pdsp_channel_status
+  Geometry:                     @local::protodune_geo
+  LArG4Parameters:              @local::protodune_largeantparameters
+  IFDH :{}
+}
+services.message.destinations.LogStandardOut.threshold: "INFO"
+
+source:
+{
+  module_type: RootInput
+  maxEvents: -1
+  fileNames: ["input_file.root"]
+}
+
+physics:
+{
+ analyzers:
+ {
+   pdWireAnaTree:
+   {
+     module_type: "ProtoDUNEelectronWireAna"
+   }
+ }
+ ana:  [ pdWireAnaTree ]
+ 
+ end_paths:     [ ana ]
+
+}
+
+outputs: {}
+physics.analyzers.pdWireAnaTree.ShowerTag: "pandoraShower"
+physics.analyzers.pdWireAnaTree.PFParticleTag: "pandora"
+physics.analyzers.pdWireAnaTree.WireTag: "digitwire"

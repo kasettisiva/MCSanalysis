@@ -1,0 +1,57 @@
+#include "filters.fcl"
+#include "triggeralgo_service.fcl"
+#include "ProtoDUNEBeamCuts.fcl"
+#include "ProtoDUNECalibration.fcl"
+#include "ProtoDUNEBeamlineUtils.fcl"
+
+BEGIN_PROLOG
+
+pionanalysis:
+{
+  module_type: "PionAnalyzer"
+  SpacePointModuleLabel:  "reco3d"
+  TrackModuleLabel:       "pandoraTrack"
+  TimeDecoderModuleLabel: "timingrawdecoder:daq"
+
+  CalorimetryTag:         "pandoracalo"
+  TrackerTag:             "pandoraTrack"
+  HitTag:                 "gaushit"
+  ShowerTag:              "pandoraShower"
+  PFParticleTag:          "pandora"
+  GeneratorTag:           "generator"
+  dEdX_template_name:     "/dune/data/users/calcuttj/dEdxrestemplates.root"
+  BeamModuleLabel:        "beamevent"
+  BeamlineUtils: @local::standard_protodunebeamlineutils
+  Verbose:                true
+  NSliceCheck:            1
+
+  SelectEvents: []
+
+  BeamPars: @local::BeamCuts_MCC11
+  BeamCuts: @local::Prod2BeamCuts 
+
+  CalibrationPars: @local::CalorimetryParameters_SPProd2_MC_SCE
+  SaveHits: false
+  CheckCosmics: false
+  TrueToReco: false
+
+  FracsFile: "/dune/data2/users/calcuttj/GeantReweight/FlatTree/LAr_PiPlus_cascade.root"
+  XSecFile: "/dune/data2/users/calcuttj/GeantReweight/FlatTree/LAr_cross_section.root"
+
+  ParameterSet: [
+    { 
+      Cut:    "reac"
+      Name: "fReac"
+      Range: [000., 1200.]
+      Nominal: 1.0 
+      Sigma: .5
+    }
+  ]
+
+
+}
+
+END_PROLOG
+
+
+

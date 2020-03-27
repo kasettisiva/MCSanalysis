@@ -1,0 +1,64 @@
+#include "trackfinderalgorithms.fcl"
+#include "calorimetry_dune35t.fcl"
+
+BEGIN_PROLOG
+
+proto_ecalibration:
+{
+   module_type:             "ECalibration"
+		SimulationLabel:				"largeant"	
+   	HitsModuleLabel:        "linecluster"
+   	TrackModuleLabel:       "pmtrack"
+	ShowerModuleLabel:      "emshower"
+   	ClusterModuleLabel:	"linecluster"
+   	VertexModuleLabel:      "linecluster"
+   	CalorimetryModuleLabel: "calo"
+   	CalorimetryAlg:          @local::dune35t_calorimetryalgmc
+
+	BeamPosX:		8.0757		# starting position of the beam window 
+	BeamPosY:		461.06
+	BeamPosZ:		-196.11
+	ThXZ:			-11.844		# beam window angle
+	ThYZ:			-11.107
+
+	Stopping:		false
+	Decaying:		false
+
+	MaxRange:		30
+	Pdg:			[13]
+	Bestview:		2
+}
+
+proto_edepcal:
+{
+	module_type: "EdepCal"
+	SimulationLabel: "largeant"
+	HitsModuleLabel: "linecluster"
+	ClusterModuleLabel: "emtrackid"
+	CalorimetryAlg: @local::dune35t_calorimetryalgmc
+	Bestview: 2
+}
+
+proto_hadcal:
+{
+	module_type: "HadCal"
+	SimulationLabel: "largeant"
+	HitModuleLabel: "linecluster"
+	ClusterModuleLabel: "emtrackid"
+	TrackModuleLabel: "pmtrack"
+	NNetModuleLabel: "emtrackid:emtrack"
+	CalorimetryAlg: @local::dune35t_calorimetryalgmc
+	CalorimetryModuleLabel: "pmtrackcalo"
+}
+
+proto_dedx:
+{
+	module_type: "DEdx"
+	ChosenView: 2
+	Cosmics: true
+	CalorimetryAlg: @local::dune35t_calorimetryalgmc
+	HitModuleLabel: "linecluster"
+	TrackModuleLabel: "pmtrack"
+}
+
+END_PROLOG

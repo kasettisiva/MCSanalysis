@@ -3,9 +3,9 @@
 # The *parent* line must the first non-commented line and defines this product and version
 # The version must be of the form vxx_yy_zz (e.g. v01_02_03).
 
-parent protoduneana v08_32_01
+parent protoduneana v08_48_00
 
-defaultqual e17
+defaultqual e19
 
 # These optional lines define where headers, libraries, and executables go and should
 # be used only if your product does not conform to the defaults.
@@ -60,23 +60,37 @@ table_fragment_end
 # Add the dependent product and version
 
 product          version
-dunetpc          v08_32_01
+dunetpc          v08_48_00
+hep_hpc          v0_12_01       -       optional
+cetbuildtools	 v7_15_01	-	only_for_build
+geant4reweight   v01_00_06
 end_product_list
+
+
+
 
 
 # We now define allowed qualifiers and the corresponding qualifiers for the depdencies.
 # Make a table by adding columns before "notes".
 # e15  - with gcc 6.4.0 and -std=c++14
-qualifier	dunetpc         notes
-c2:py3:debug	c2:py3:debug	-nq-
-c2:py3:prof	c2:py3:prof	-nq-
-e17:py3:debug	e17:py3:debug	-nq-
-e17:py3:prof	e17:py3:prof	-nq-
-c2:debug	c2:debug	-nq-
-c2:prof		c2:prof		-nq-
-e17:debug	e17:debug	-nq-
-e17:prof	e17:prof	-nq-
+qualifier	dunetpc         hep_hpc         geant4reweight          notes
+c7:debug	c7:debug	c7              c7:debug:s96            -nq-
+c7:prof		c7:prof         c7              c7:prof:s96             -nq-
+e19:debug	e19:debug       e19             debug:e19:s96           -nq-
+e19:prof	e19:prof        e19             e19:prof:s96            -nq-
 end_qualifier_list
+
+### Below: something weird was going on with py2 builds so I removed those in above
+#qualifier	dunetpc         hep_hpc         geant4reweight          notes
+#c7:py2:debug	c7:debug:py2	c7              c7:debug:py2:s96        -nq-
+#c7:py2:prof	c7:prof:py2     c7              c7:prof:py2:s96         -nq-
+#e19:py2:debug	e19:debug:py2	e19             debug:e19:py2:s96       -nq-
+#e19:py2:prof	e19:prof:py2    e19             e19:prof:py2:s96        -nq-
+#c7:debug	c7:debug	c7              c7:debug:s96            -nq-
+#c7:prof		c7:prof         c7              c7:prof:s96             -nq-
+#e19:debug	e19:debug       e19             debug:e19:s96           -nq-
+#e19:prof	e19:prof        e19             e19:prof:s96            -nq-
+#end_qualifier_list
 
 # Preserve tabs and formatting in emacs and vi / vim:
 

@@ -1,0 +1,71 @@
+#include "PionCrossSectionAnalyzer.fcl"
+#include "services_dune.fcl"
+#include "ProtoDUNETruthBeamFilter.fcl"
+
+
+process_name: PionCrossSectionAna
+
+services:
+{
+  # Load the service that manages root files for histograms.
+  TFileService: { fileName: "pionxsec.root" }
+  TimeTracker:       {}
+  MemoryTracker:     {}
+  RandomNumberGenerator: {} #ART native random number generator
+  message:                      @local::dune_message_services_prod_debug
+  FileCatalogMetadata:          @local::art_file_catalog_mc
+                                @table::protodune_services
+  PdspChannelMapService:        @local::pdspchannelmap
+  ChannelStatusService:         @local::pdsp_channel_status
+}
+services.message.destinations.LogStandardOut.threshold: "INFO"
+
+source:
+{
+  module_type: RootInput
+  maxEvents: -1
+  fileNames: ["input_file.root"]
+}
+
+#outputs:
+#{
+# out1:
+# {
+#   module_type: RootOutput
+#   fileName:    "Beam.root"    #default file name, can override from command line with -o or --output
+#   dataTier: "reconstructed"
+#   fastCloning: false
+# } 
+#}
+
+physics:
+{
+
+ producers: { 
+ 
+ }
+
+# filters: { 
+#   f1: @local::beam_filter
+# }
+#
+# fpath: [f1]
+
+ analyzers:
+ {
+  pionana:          @local::pionanalysis
+ }
+ 
+ ana:  [ pionana ]
+
+ #stream1: [ out1 ]
+ 
+ end_paths:     [ ana ]
+
+}
+
+outputs: {}
+
+#physics.analyzers.pionana.SelectEvents: []
+#physics.filters.f1.PDG: [211]
+#physics.filters.f1.IsVerbose: true

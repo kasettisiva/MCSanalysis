@@ -1,0 +1,33 @@
+#include "SaveSpacePoints.fcl"
+
+process_name: SPS
+services:
+{
+    TFileService: { fileName: "eventtree.root" }
+    TimeTracker:       {}
+}
+
+#Look at the input files
+source:
+{
+  module_type: RootInput
+  fileNames:  [ "single_gen.root" ]
+  maxEvents:   -1       # Number of events to create
+}
+
+physics:
+{
+
+ analyzers:
+ {
+  sps: @local::proto_savesps
+ }
+ 
+ #list the modules for this path, order matters, filters reject all following items
+ ana: [ sps ] 
+
+ #end_path are things that do not modify art::Event, includes analyzers 
+ #and output modules. all items here can be run simultaneously
+ end_paths: [ana]  
+}
+

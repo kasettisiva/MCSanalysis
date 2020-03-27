@@ -1,0 +1,16 @@
+#include "opticaldetectormodules.fcl"
+
+BEGIN_PROLOG
+
+standard_protoflashana:
+{
+   module_type:          "ProtoFlash"
+   OpFlashModuleLabel:   "opflash"  
+   OpHitModuleLabel:     "ophit"  
+   SignalLabel:          "generator"
+   CosmicLabel:          "cosmicgenerator"
+   GeantLabel:           "largeant"
+   ParticleLabel:        "pandora"
+}
+
+END_PROLOG

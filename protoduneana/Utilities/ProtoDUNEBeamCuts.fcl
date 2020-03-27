@@ -1,0 +1,112 @@
+BEGIN_PROLOG
+
+BeamCuts_SPProd2_MC_sce: 
+{
+  TrackStartXCut: [-3., 0.]
+  TrackStartYCut: [-1., 2.]
+  TrackStartZCut: [28., 32.]
+  TrackDirCut:    .93
+}
+
+BeamCuts_MCC11: 
+{
+  TrackStartXCut: [-3., 5.]
+  TrackStartYCut: [-7., 8.]
+  TrackStartZCut: [15., 21.]
+  TrackDirCut:    .93
+}
+
+
+
+# Note: 
+#       these are just the same as the Prod2 MC SCE values above
+#       and won't be reflective of the behavior in data. Will need to be 
+#       updated        
+BeamCuts_SPProd2_Data:
+{
+  TrackStartXCut: [-3., 0.]
+  TrackStartYCut: [-1., 2.]
+  TrackStartZCut: [28., 32.]
+  TrackDirCut:    .93
+}
+
+
+##New:
+# From Owen's talk: https://indico.fnal.gov/event/22356/session/6/contribution/28/material/slides/0.pdf
+SPProd2_MC_sce_p5GeV:{
+  TrackStartXCut: [-3., 7.]
+  TrackStartYCut: [-8., 7.]
+  TrackStartZCut: [27.5, 32.5]
+  TrackDirCut:    .93
+
+  Momentum: ".5"
+}
+
+###MC Cuts
+SPProd2_MC_sce_p3GeV: @local::SPProd2_MC_sce_p5GeV
+SPProd2_MC_sce_p3GeV.Momentum: ".3"
+
+SPProd2_MC_sce_1GeV: @local::SPProd2_MC_sce_p5GeV
+SPProd2_MC_sce_1GeV.Momentum: "1"
+
+SPProd2_MC_sce_2GeV: @local::SPProd2_MC_sce_p5GeV
+SPProd2_MC_sce_2GeV.Momentum: "2"
+
+SPProd2_MC_sce_3GeV: @local::SPProd2_MC_sce_p5GeV
+SPProd2_MC_sce_3GeV.Momentum: "3"
+
+SPProd2_MC_sce_6GeV: @local::SPProd2_MC_sce_p5GeV
+SPProd2_MC_sce_6GeV.Momentum: "6"
+
+SPProd2_MC_sce_7GeV: @local::SPProd2_MC_sce_p5GeV
+SPProd2_MC_sce_7GeV.Momentum: "7"
+###############
+
+
+###Data Cuts
+SPProd2_Data_sce_p3GeV: @local::SPProd2_MC_sce_p3GeV
+SPProd2_Data_sce_p5GeV: @local::SPProd2_MC_sce_p5GeV
+SPProd2_Data_sce_1GeV:  @local::SPProd2_MC_sce_1GeV
+#From Owen's talk: https://indico.fnal.gov/event/22356/session/6/contribution/28/material/slides/0.pdf
+SPProd2_Data_sce_1GeV.TrackStartXCut: [0, 10.]
+SPProd2_Data_sce_1GeV.TrackStartYCut: [-5., 10.]
+SPProd2_Data_sce_1GeV.TrackStartZCut: [30., 35.]
+SPProd2_Data_sce_2GeV:  @local::SPProd2_MC_sce_2GeV
+SPProd2_Data_sce_3GeV:  @local::SPProd2_MC_sce_3GeV
+SPProd2_Data_sce_6GeV:  @local::SPProd2_MC_sce_6GeV
+SPProd2_Data_sce_7GeV:  @local::SPProd2_MC_sce_7GeV
+###############
+
+
+MCCuts_List: [
+  
+  @local::SPProd2_MC_sce_p3GeV,
+  @local::SPProd2_MC_sce_p5GeV,
+
+  @local::SPProd2_MC_sce_1GeV,
+  @local::SPProd2_MC_sce_2GeV,
+  @local::SPProd2_MC_sce_3GeV,
+    
+  @local::SPProd2_MC_sce_6GeV,
+  @local::SPProd2_MC_sce_7GeV
+]
+
+DataCuts_List: [
+  
+  @local::SPProd2_Data_sce_p3GeV,
+  @local::SPProd2_Data_sce_p5GeV,
+
+  @local::SPProd2_Data_sce_1GeV,
+  @local::SPProd2_Data_sce_2GeV,
+  @local::SPProd2_Data_sce_3GeV,
+    
+  @local::SPProd2_Data_sce_6GeV,
+  @local::SPProd2_Data_sce_7GeV
+]
+
+Prod2BeamCuts: {
+  MCCuts:   @local::MCCuts_List
+  DataCuts: @local::DataCuts_List
+}
+
+END_PROLOG

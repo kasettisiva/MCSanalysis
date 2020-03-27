@@ -1,0 +1,12 @@
+#include "trackfinderalgorithms.fcl"
+
+BEGIN_PROLOG
+
+MichelHitCounter:
+{
+  module_type: "MichelHitCounter"
+
+  NNetModuleLabel: "emtrkmichelid:emtrkmichel"
+  
+}
+END_PROLOG

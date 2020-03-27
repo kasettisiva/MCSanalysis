@@ -1,0 +1,13 @@
+#include "ProtoDUNEBeamlineUtils.fcl"
+
+BEGIN_PROLOG
+
+beamline_reco:
+{
+   module_type:          "ProtoDUNEBeamlineReco"
+   BeamlineUtils:        @local::standard_protodunebeamlineutils
+   DoGlitches:           true
+   ReferenceMomentum:    1
+}
+
+END_PROLOG

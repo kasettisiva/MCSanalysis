@@ -1,0 +1,13 @@
+#include "calorimetry.fcl"
+
+BEGIN_PROLOG
+
+standard_pdune_recostats:
+{
+	module_type:      "RecoStats"
+
+	EmTrkModuleLabel: "largeant"                          # tag of simulation producer
+	CalorimetryAlg:   @local::standard_calorimetryalgmc   # use appropriate calo config
+}
+
+END_PROLOG
