@@ -1,0 +1,37 @@
+# Path to MC files. Each entry corresponds to a different channel and has to match with the DataFileNames.
+#MCFileNames:             ["eventSelection_mc_ABS.root","eventSelection_mc_CEX.root"]
+MCFileNames:             ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_ABS.root", "/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_CEX.root"]
+
+
+# Channel names. Follow the order of the MC/Data File Names
+ChannelNames:            ["ABS","CEX"]
+
+# Path to file to get the number of incident pions
+IncidentMCFileNames:     ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_PRIMARYPION.root"]
+
+# Name of the tree with reconstructed events.
+RecoTreeName:            "pionana/beamana"
+
+# Signal topologies. Change as appropriate.
+SignalTopology:          [1,2]
+SignalTopologyName:      ["ABS","CEX"]
+
+# Background topologies. Change as appropriate.
+BackgroundTopology:      [3,4,5,6,7]
+BackgroundTopologyName:  ["Pion Inel. Bkg","Upstream Int","Muons","TrueUnmatched", "Other Bkg"]
+
+# Incident particle topologies. First is assumed to be signal
+IncidentTopology:        [3, 4, 5, 6, 7, 8]
+IncidentTopologyName:    ["Pions", "Muons", "Cosmic", "TrueUnmatched", "Downstream", "Other"]
+
+# Name of the tree with the truth signal events.
+TruthTreeName:           "pionana/beamana"
+
+# Define binning in truth/reco. It doesn't have to be symmetric.
+TruthBinning:            [0.0,400.0,600.0,700.0,800.0,1200.0]
+RecoBinning:             [0.0,400.0,600.0,700.0,800.0,1200.0]
+
+
+# Define systematics to consider
+SystToConsider:         "Reac"
+EndZCut:                  225.

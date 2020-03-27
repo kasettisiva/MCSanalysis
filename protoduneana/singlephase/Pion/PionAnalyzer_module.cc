@@ -553,6 +553,7 @@ private:
   //GeantReweight stuff
   // -- Maybe think of new naming scheme?
   std::vector<double> g4rw_primary_weights;
+  double g4rw_primary_plus_sigma_weight, g4rw_primary_minus_sigma_weight;
   
 
   //EDIT: STANDARDIZE
@@ -2948,18 +2949,22 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       bool created = CreateRWTraj(*true_beam_particle, plist,
                                   fGeometryService, event, &theTraj);
       if (created) {
-        g4rw_primary_weights.push_back(theRW->GetWeight(&theTraj));
         g4rw_primary_weights.push_back(MultiRW.GetWeightFromNominal(theTraj));
         
         std::vector<double> weights_vec = MultiRW.GetWeightFromAll1DThrows(
             theTraj);
         g4rw_primary_weights.insert(g4rw_primary_weights.end(),
                                     weights_vec.begin(), weights_vec.end());
+
         std::pair<double, double> pm_weights =
             MultiRW.GetPlusMinusSigmaParWeight(theTraj, 0);
 
-        g4rw_primary_weights.push_back(pm_weights.first);
-        g4rw_primary_weights.push_back(pm_weights.second);
+        g4rw_primary_plus_sigma_weight = pm_weights.first;
+        g4rw_primary_minus_sigma_weight = pm_weights.second;
+
+        //g4rw_primary_plus_sigma_var = 
+        //g4rw_primary_minus_sigma_var = 
+
       }
     }
   }
@@ -3460,6 +3465,8 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("new_true_beam_interactingEnergy", &new_true_beam_interactingEnergy);
 
   fTree->Branch("g4rw_primary_weights", &g4rw_primary_weights);
+  fTree->Branch("g4rw_primary_plus_sigma_weight", &g4rw_primary_plus_sigma_weight);
+  fTree->Branch("g4rw_primary_minus_sigma_weight", &g4rw_primary_minus_sigma_weight);
 
   if( fSaveHits ){
     fTree->Branch( "reco_beam_spacePts_X", &reco_beam_spacePts_X );
@@ -3985,6 +3992,8 @@ void pionana::PionAnalyzer::reset()
   //
 
   g4rw_primary_weights.clear();
+  g4rw_primary_plus_sigma_weight = 1.;
+  g4rw_primary_minus_sigma_weight = 1.;
 }
 
 bool pionana::PionAnalyzer::CreateRWTraj(
