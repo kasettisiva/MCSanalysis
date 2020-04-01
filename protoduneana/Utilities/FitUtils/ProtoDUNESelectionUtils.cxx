@@ -212,14 +212,8 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
       }
 
       if (doSyst == 1 || doSyst == -1) { //Do +1 sigma
-        //syst_weight = g4rw_primary_plus_sigma_weight;
         syst_weight = weights[systName];
       }
-      /*else if (doSyst == -1) { //Do -1 sigma
-        //syst_weight = g4rw_primary_minus_sigma_weight;
-        syst_weight = weights[systName];
-      }*/
-      //else syst weight = 1. from above 
     }
     else if ( true_beam_PDG == -13 ){
       //First check that if the last hit is from a cosmic
@@ -434,12 +428,8 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
       if (true_beam_endZ < 0. || true_beam_endZ > endZ_cut) continue;
 
       if (doSyst == 1 || doSyst == -1 ) {
-        //syst_weight = g4rw_primary_plus_sigma_weight;
         syst_weight = weights[systName];
       }
-      /*else if (doSyst == -1) {
-        syst_weight = g4rw_primary_minus_sigma_weight;
-      }*/
 
       // Absorption
       if ( true_daughter_nPi0 == 0 ) 
