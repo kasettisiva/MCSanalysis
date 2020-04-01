@@ -44,7 +44,28 @@ pionanalysis:
       Name: "fReac"
       Range: [000., 1200.]
       Nominal: 1.0 
-      Sigma: .5
+      Sigma: .2
+    },
+    {
+      Cut:  "abs"
+      Name: "fAbs1"
+      Range: [000., 300.]
+      Nominal: 1.0
+      Sigma: .2
+    },
+    {
+      Cut:  "abs"
+      Name: "fAbs2"
+      Range: [300., 1200.]
+      Nominal: 1.0
+      Sigma: .2
+    },
+    {
+      Cut:  "cex"
+      Name: "fCex"
+      Range: [000., 1200.]
+      Nominal: 1.0
+      Sigma: .2
     }
   ]
 

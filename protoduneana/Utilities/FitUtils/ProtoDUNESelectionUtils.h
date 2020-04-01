@@ -16,12 +16,13 @@ namespace protoana{
         std::string treename, std::vector<double> recoBins, std::string channel,
         std::string topo, int toponum, double endZ_cut, double minval=0.0,
         double maxval=100000.0, bool doNegativeReco=false, int doSyst=0,
-        double weight=1.0);
+        std::string systName="", double weight=1.0);
 
     TH1* FillMCSignalHistogram_Pions(std::string filename, std::string treename,
         std::vector<double> recoBins, std::string channel, std::string topo,
         int toponum, double minval, double maxval, double endZ_cut,
-        bool doNegativeReco=false, int doSyst=0, double weight=1.0);
+        bool doNegativeReco=false, int doSyst=0, std::string systName="",
+        double weight=1.0);
 
     // Fill incident pions
     TH1* FillMCIncidentHistogram_Pions(std::string filename, std::string treename,

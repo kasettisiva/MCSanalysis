@@ -449,8 +449,11 @@ void protoana::ProtoDUNEFit::AddSamplesAndChannelsToMeasurement(RooStats::HistFa
     
     // Get histograms with the systematics 
     std::vector<TH1*> systvec;
-    if(_EnableSystematicError)
+    if (_EnableSystematicError) {
+      std::cout << "Attempting to get systs from " <<  _SystFileNames[i] << std::endl; 
       systvec = protoana::ProtoDUNEFitUtils::GetSystHistograms(_SystFileNames[i]); 
+      std::cout << "Got " << systvec.size() << " systematic histograms" << std::endl;
+    }
     
     // Add bkg samples to channel
     for(unsigned int j=0; j < _bkghistos.size(); j++){
@@ -989,17 +992,21 @@ bool protoana::ProtoDUNEFit::ApplySystematicToSample(RooStats::HistFactory::Samp
     return false;
   }
   
-  for(unsigned int j=0; j<_SystToConsider.size(); j++){
-    TString systname(_SystToConsider[j].c_str());
-    TString systtype(_SystType[j].c_str());
+  for (size_t i = 0; i < _SystToConsider.size(); ++i) {
+    TString systname(_SystToConsider[i].c_str());
+    TString systtype(_SystType[i].c_str());
     
     TH1* highhist = NULL; TH1* lowhist = NULL;
-    for(unsigned int i = 0; i < systvec.size(); i++){
-      TH1* systhisto = (TH1*)systvec[i];
+    for (size_t j = 0; j < systvec.size(); ++j) {
+      TH1* systhisto = (TH1*)systvec[j];
       TString systhistoname(systhisto->GetName());
       
-      if(!systhistoname.Contains(hname.Data())) continue;
-      if(!systhistoname.Contains(systname.Data())) continue;
+      if (!systhistoname.Contains(hname.Data())) {
+        continue;
+      }
+      if (!systhistoname.Contains(systname.Data())) {
+        continue;
+      }
       
       if(systhistoname.Contains("LOW") || systhistoname.Contains("Low") || systhistoname.Contains("low")){ 
 	lowhist = systhisto;
@@ -1010,15 +1017,22 @@ bool protoana::ProtoDUNEFit::ApplySystematicToSample(RooStats::HistFactory::Samp
     }
     
     if(!highhist || !lowhist){
-      std::cerr << "ERROR::Stage1: Systematic histograms not found! Will not apply systematic " << systname.Data() << " to histogram " << histo->GetName() << ". Will skip!" << std::endl;
+      std::cerr << "ERROR::Stage1: Systematic histograms not found! " <<
+                   "Will not apply systematic " << systname.Data() <<
+                   " to histogram " << histo->GetName() << ". Will skip!" <<
+                   std::endl;
       continue;
     } 
 
-    TH1* highsyst = protoana::ProtoDUNEFitUtils::GetSystematicHistoFromNominal(histo, highhist, "UP");
-    TH1* lowsyst  = protoana::ProtoDUNEFitUtils::GetSystematicHistoFromNominal(histo, lowhist, "DOWN");
+    TH1* highsyst = protoana::ProtoDUNEFitUtils::GetSystematicHistoFromNominal(
+        histo, highhist, "UP");
+    TH1* lowsyst  = protoana::ProtoDUNEFitUtils::GetSystematicHistoFromNominal(
+        histo, lowhist, "DOWN");
 
     if(!highsyst || !lowsyst){
-      std::cerr << "ERROR::Stage2: Systematic histograms not found! Will not apply systematic " << systname.Data() << " to histogram " << histo->GetName() << ". Will skip!" << std::endl;
+      std::cerr << "ERROR::Stage2: Systematic histograms not found! " <<
+      "Will not apply systematic " << systname.Data() << 
+      " to histogram " << histo->GetName() << ". Will skip!" << std::endl;
       continue;
     } 
 

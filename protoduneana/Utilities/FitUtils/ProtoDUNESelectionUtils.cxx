@@ -13,7 +13,7 @@
 TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
     std::string filename, std::string treename, std::vector<double> recoBins,
     std::string channel, std::string topo, int toponum, double endZ_cut,
-    double minval, double maxval, bool doNegativeReco, int doSyst, double weight) {
+    double minval, double maxval, bool doNegativeReco, int doSyst, std::string systName, double weight) {
 //********************************************************************
 
   TFile *file = new TFile(filename.c_str(), "READ");
@@ -95,10 +95,13 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
   defaultTree->SetBranchAddress( "reco_beam_vertex_hits_slices", &reco_beam_vertex_hits_slices );
 
   //For systs
-  double g4rw_primary_plus_sigma_weight, g4rw_primary_minus_sigma_weight;
+  std::vector<double> * g4rw_primary_plus_sigma_weight = 0x0;
+  std::vector<double> * g4rw_primary_minus_sigma_weight = 0x0;
+  std::vector<std::string> * g4rw_primary_var = 0x0;
   if (doSyst != 0) {
     defaultTree->SetBranchAddress("g4rw_primary_plus_sigma_weight", &g4rw_primary_plus_sigma_weight);
     defaultTree->SetBranchAddress("g4rw_primary_minus_sigma_weight", &g4rw_primary_minus_sigma_weight);
+    defaultTree->SetBranchAddress("g4rw_primary_var", &g4rw_primary_var);
   }
 
   channel.erase(std::remove(channel.begin(), channel.end(), '.'), channel.end());
@@ -112,11 +115,11 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
                            " and topology " + topo;
   
   if (doSyst == 1) {
-    hist_name += "_high";
+    hist_name += "_high_" + systName;
     hist_title += " +1 sigma";
   }
   else if (doSyst == -1) {
-    hist_name += "_low";
+    hist_name += "_low_" + systName;
     hist_title += " -1 sigma";
   }
 
@@ -131,11 +134,36 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
       " from file " << filename.c_str() << " for channel " << 
       channel.c_str() << " with topology " << topo.c_str();
 
+  bool done_check = false;
   for(Int_t k=0; k < defaultTree->GetEntries(); k++){
-    double syst_weight = 1.;
-
 
     defaultTree->GetEntry(k);
+
+    if (!done_check && doSyst != 0) {
+      if (g4rw_primary_var->size() > 0) {
+        std::cout << "Checking" << std::endl;
+        auto syst_check = std::find(g4rw_primary_var->begin(), g4rw_primary_var->end(), systName);
+        if (syst_check == g4rw_primary_var->end()) {
+          std::cout << "Error! Could not find syst named " << systName << std::endl;
+          std::exception e;
+          throw e;
+        }
+        done_check = true;
+      }
+    }
+
+    double syst_weight = 1.;
+    std::map<std::string, double> weights;
+    if (doSyst == 1) {
+      for (size_t i = 0; i < g4rw_primary_var->size(); ++i) {
+        weights[(*g4rw_primary_var)[i]] = (*g4rw_primary_plus_sigma_weight)[i];
+      }
+    }
+    else if (doSyst == -1) {
+      for (size_t i = 0; i < g4rw_primary_var->size(); ++i) {
+        weights[(*g4rw_primary_var)[i]] = (*g4rw_primary_minus_sigma_weight)[i];
+      }
+    }
 
     // Different background topologies
     Int_t topology = -1;
@@ -183,12 +211,14 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
         topology = 7;
       }
 
-      if (doSyst == 1) { //Do +1 sigma
-        syst_weight = g4rw_primary_plus_sigma_weight;
+      if (doSyst == 1 || doSyst == -1) { //Do +1 sigma
+        //syst_weight = g4rw_primary_plus_sigma_weight;
+        syst_weight = weights[systName];
       }
-      else if (doSyst == -1) { //Do -1 sigma
-         syst_weight = g4rw_primary_minus_sigma_weight;
-      }
+      /*else if (doSyst == -1) { //Do -1 sigma
+        //syst_weight = g4rw_primary_minus_sigma_weight;
+        syst_weight = weights[systName];
+      }*/
       //else syst weight = 1. from above 
     }
     else if ( true_beam_PDG == -13 ){
@@ -247,7 +277,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
     std::string filename, std::string treename, std::vector<double> recoBins,
     std::string channel, std::string topo, int toponum, double minval,
     double maxval, double endZ_cut, bool doNegativeReco, int doSyst,
-    double weight) {
+    std::string systName, double weight) {
 //********************************************************************
 
   TFile *file = new TFile(filename.c_str(), "READ");
@@ -320,10 +350,13 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
   defaultTree->SetBranchAddress( "reco_beam_vertex_dRs", &reco_beam_vertex_dRs );
 
   //For systs
-  double g4rw_primary_plus_sigma_weight, g4rw_primary_minus_sigma_weight;
+  std::vector<double> * g4rw_primary_plus_sigma_weight = 0x0;
+  std::vector<double> * g4rw_primary_minus_sigma_weight = 0x0;
+  std::vector<std::string> * g4rw_primary_var = 0x0;
   if (doSyst != 0) {
     defaultTree->SetBranchAddress("g4rw_primary_plus_sigma_weight", &g4rw_primary_plus_sigma_weight);
     defaultTree->SetBranchAddress("g4rw_primary_minus_sigma_weight", &g4rw_primary_minus_sigma_weight);
+    defaultTree->SetBranchAddress("g4rw_primary_var", &g4rw_primary_var);
   }
 
   channel.erase(std::remove(channel.begin(), channel.end(), '.'), channel.end());
@@ -338,11 +371,11 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
                             channel.c_str(), topo.c_str(), minval, maxval);
 
   if (doSyst == 1) {
-    hist_name += "_high";
+    hist_name += "_high_" + systName;
     hist_title += " +1 sigma";
   }
   else if (doSyst == -1) {
-    hist_name += "_low";
+    hist_name += "_low_" + systName;
     hist_title += " -1 sigma";
   }
 
@@ -356,10 +389,35 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
               " for channel " << channel.c_str() << " with topology " <<
               topo.c_str() << " in the true region " << minval << "-" << maxval;
 
+  bool done_check = false;
   for (int k=0; k < defaultTree->GetEntries(); k++) {
-    double syst_weight = 1.;
 
     defaultTree->GetEntry(k);
+
+    if (!done_check && doSyst != 0) {
+      if (g4rw_primary_var->size() > 0) {
+        auto syst_check = std::find(g4rw_primary_var->begin(), g4rw_primary_var->end(), systName);
+        if (syst_check == g4rw_primary_var->end()) {
+          std::cout << "Error! Could not find syst named " << systName << std::endl;
+          std::exception e;
+          throw e;
+        }
+        done_check = true;
+      }
+    }
+
+    double syst_weight = 1.;
+    std::map<std::string, double> weights;
+    if (doSyst == 1) {
+      for (size_t i = 0; i < g4rw_primary_var->size(); ++i) {
+        weights[(*g4rw_primary_var)[i]] = (*g4rw_primary_plus_sigma_weight)[i];
+      }
+    }
+    else if (doSyst == -1) {
+      for (size_t i = 0; i < g4rw_primary_var->size(); ++i) {
+        weights[(*g4rw_primary_var)[i]] = (*g4rw_primary_minus_sigma_weight)[i];
+      }
+    }
 
     int topology = -1;
 
@@ -375,12 +433,13 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
 
       if (true_beam_endZ < 0. || true_beam_endZ > endZ_cut) continue;
 
-      if (doSyst == 1) {
-        syst_weight = g4rw_primary_plus_sigma_weight;
+      if (doSyst == 1 || doSyst == -1 ) {
+        //syst_weight = g4rw_primary_plus_sigma_weight;
+        syst_weight = weights[systName];
       }
-      else if (doSyst == -1) {
+      /*else if (doSyst == -1) {
         syst_weight = g4rw_primary_minus_sigma_weight;
-      }
+      }*/
 
       // Absorption
       if ( true_daughter_nPi0 == 0 ) 

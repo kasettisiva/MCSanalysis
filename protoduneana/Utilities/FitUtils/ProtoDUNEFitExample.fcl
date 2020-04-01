@@ -64,13 +64,14 @@ EnableStatisticalError:  true
 IgnoreStatisticalErrorBelow: 0.01 # MC stats error will be ignored if below this value
 
 # Enable systematic error - need files with the fractional error for each systematic and a list of systematics to consider. Two histograms are required for each histogram, one with +1 sigma variation and one with the -1 sigma variation. 
-EnableSystematicError:   false
+EnableSystematicError:   true 
 NormalisedSystematic:    false       # Systematics are added as 'normalised', only the effect of shape is considered.
-SystFileNames:           ["/path/to/file.root"]
-SystToConsider:          ["Systematic1","Systematic2"]
-SystType:                ["NormShape"  ,"NormShape"]   # For each systematic the type should be defined, options are: NormOnly, ShapeOnly, NormShape
+CommonSystFile:          "/dune/app/users/calcuttj/larsoft/srcs/protoduneana/protoduneana/Utilities/FitUtils/asdf.root"
+SystFileNames:           [@local::CommonSystFile, @local::CommonSystFile]
+SystToConsider:          ["fReac", "fAbs2", "fCex"] #["Systematic1","Systematic2"]
+SystType:                ["NormShape", "NormShape", "NormShape"] #["NormShape"  ,"NormShape"]   # For each systematic the type should be defined, options are: NormOnly, ShapeOnly, NormShape
 IgnoreSystematicErrorBelow: 0.01                     # Sytematic error will be ignored if below this value
 
 AddIncidentToMeasurement: true
-DoNegativeReco:           true 
+DoNegativeReco:           false #true 
 EndZCut:                  225.

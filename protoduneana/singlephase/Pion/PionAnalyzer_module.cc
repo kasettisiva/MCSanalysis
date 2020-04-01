@@ -553,7 +553,9 @@ private:
   //GeantReweight stuff
   // -- Maybe think of new naming scheme?
   std::vector<double> g4rw_primary_weights;
-  double g4rw_primary_plus_sigma_weight, g4rw_primary_minus_sigma_weight;
+  std::vector<double> g4rw_primary_plus_sigma_weight;
+  std::vector<double> g4rw_primary_minus_sigma_weight;
+  std::vector<std::string> g4rw_primary_var;
   
 
   //EDIT: STANDARDIZE
@@ -2956,14 +2958,18 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
         g4rw_primary_weights.insert(g4rw_primary_weights.end(),
                                     weights_vec.begin(), weights_vec.end());
 
-        std::pair<double, double> pm_weights =
-            MultiRW.GetPlusMinusSigmaParWeight(theTraj, 0);
 
-        g4rw_primary_plus_sigma_weight = pm_weights.first;
-        g4rw_primary_minus_sigma_weight = pm_weights.second;
+        //g4rw_primary_plus_sigma_weight = pm_weights.first;
+        //g4rw_primary_minus_sigma_weight = pm_weights.second;
 
-        //g4rw_primary_plus_sigma_var = 
-        //g4rw_primary_minus_sigma_var = 
+        for (size_t i = 0; i < ParSet.size(); ++i) {
+          std::pair<double, double> pm_weights =
+              MultiRW.GetPlusMinusSigmaParWeight(theTraj, i);
+
+          g4rw_primary_plus_sigma_weight.push_back(pm_weights.first);
+          g4rw_primary_minus_sigma_weight.push_back(pm_weights.second);
+          g4rw_primary_var.push_back(ParSet[i].get<std::string>("Name"));
+        }
 
       }
     }
@@ -3467,6 +3473,7 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("g4rw_primary_weights", &g4rw_primary_weights);
   fTree->Branch("g4rw_primary_plus_sigma_weight", &g4rw_primary_plus_sigma_weight);
   fTree->Branch("g4rw_primary_minus_sigma_weight", &g4rw_primary_minus_sigma_weight);
+  fTree->Branch("g4rw_primary_var", &g4rw_primary_var);
 
   if( fSaveHits ){
     fTree->Branch( "reco_beam_spacePts_X", &reco_beam_spacePts_X );
@@ -3992,8 +3999,9 @@ void pionana::PionAnalyzer::reset()
   //
 
   g4rw_primary_weights.clear();
-  g4rw_primary_plus_sigma_weight = 1.;
-  g4rw_primary_minus_sigma_weight = 1.;
+  g4rw_primary_plus_sigma_weight.clear();
+  g4rw_primary_minus_sigma_weight.clear();
+  g4rw_primary_var.clear();
 }
 
 bool pionana::PionAnalyzer::CreateRWTraj(

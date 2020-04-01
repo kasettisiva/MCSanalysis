@@ -20,7 +20,7 @@ std::string fcl_file_name;
 //Functions
 bool parseArgs(int argc, char ** argv);
 fhicl::ParameterSet makeParameterSet(std::string file);
-void saveHists(std::vector<TH1 *> & vec, std::string addToName);
+void saveHists(std::vector<TH1 *> & vec/*, std::string addToName*/);
 void makeFracErrorHist(TH1 * variation, TH1 * nominal);
 /////////////////////////////////////////
 
@@ -48,7 +48,7 @@ struct systConfig {
       SignalTopology(pset.get<int_v>("SignalTopology")),
       BackgroundTopology(pset.get<int_v>("BackgroundTopology")),
       IncidentTopology(pset.get<int_v>("IncidentTopology")),
-      SystToConsider(pset.get<std::string>("SystToConsider")),
+      SystToConsider(pset.get<string_v>("SystToConsider")),
       EndZCut(pset.get<double>("EndZCut")) {};
 
   string_v MCFileNames;
@@ -66,7 +66,7 @@ struct systConfig {
   int_v BackgroundTopology;
   int_v IncidentTopology;
 
-  std::string SystToConsider;
+  string_v SystToConsider;
 
   double EndZCut;
 };
@@ -101,15 +101,19 @@ int main(int argc, char ** argv) {
               cfg.EndZCut, tmin, tmax, false/*cfg.DoNegativeReco*/, 0));
 
       //Get Variations
-      for (auto const k : {-1, 1}) {
-        bg_syst_hists.push_back(
-            protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
-                cfg.MCFileNames[i], cfg.RecoTreeName, cfg.RecoBinning,
-                cfg.ChannelNames[i], cfg.BackgroundTopologyName[j], topo,
-                cfg.EndZCut, tmin, tmax, false/*cfg.DoNegativeReco*/, /*doSyst=*/k));
+      for (size_t k = 0; k < cfg.SystToConsider.size(); ++k) {
+        std::cout << "Considering " << cfg.SystToConsider[k] << std::endl;
+        for (auto const m : {-1, 1}) {
+          bg_syst_hists.push_back(
+              protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
+                  cfg.MCFileNames[i], cfg.RecoTreeName, cfg.RecoBinning,
+                  cfg.ChannelNames[i], cfg.BackgroundTopologyName[j], topo,
+                  cfg.EndZCut, tmin, tmax, false/*cfg.DoNegativeReco*/,
+                  /*doSyst=*/m, /*systName=*/cfg.SystToConsider[k]));
 
-        //Turn into frac errors
-        makeFracErrorHist(bg_syst_hists.back(), bg_nom_hists.back());
+          //Turn into frac errors
+          makeFracErrorHist(bg_syst_hists.back(), bg_nom_hists.back());
+        }
       }
     }
 
@@ -127,16 +131,20 @@ int main(int argc, char ** argv) {
                 false/*cfg.DoNegativeReco*/));
 
         //Get Variations
-        for (auto const m : {-1, 1}) {
-          sig_syst_hists.push_back(
-              protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
-                  cfg.MCFileNames[i], cfg.RecoTreeName, cfg.RecoBinning,
-                  cfg.ChannelNames[i], cfg.SignalTopologyName[j], topo,
-                  cfg.TruthBinning[k-1], cfg.TruthBinning[k], cfg.EndZCut,
-                  false/*cfg.DoNegativeReco*/, m));
+        for (size_t m = 0; m < cfg.SystToConsider.size(); ++m) {
+          for (auto const n : {-1, 1}) {
+            std::cout << "Considering " << cfg.SystToConsider[m] << std::endl;
+            sig_syst_hists.push_back(
+                protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
+                    cfg.MCFileNames[i], cfg.RecoTreeName, cfg.RecoBinning,
+                    cfg.ChannelNames[i], cfg.SignalTopologyName[j], topo,
+                    cfg.TruthBinning[k-1], cfg.TruthBinning[k], cfg.EndZCut,
+                    false/*cfg.DoNegativeReco*/,
+                    /*doSyst=*/n, /*systName=*/cfg.SystToConsider[m]));
 
-          //Turn into frac errors
-          makeFracErrorHist(sig_syst_hists.back(), sig_nom_hists.back());
+            //Turn into frac errors
+            makeFracErrorHist(sig_syst_hists.back(), sig_nom_hists.back());
+          }
         }
       }
     }
@@ -145,16 +153,17 @@ int main(int argc, char ** argv) {
 
   TFile output(output_file_name.c_str(), "RECREATE");
   output.cd();
-  saveHists(bg_syst_hists, cfg.SystToConsider);
-  saveHists(sig_syst_hists, cfg.SystToConsider);
+  saveHists(bg_syst_hists/*, cfg.SystToConsider*/);
+  saveHists(sig_syst_hists/*, cfg.SystToConsider*/);
   output.Close();
   return 0;
 }
 
-void saveHists(std::vector<TH1 *> & vec, std::string addToName) {
-  for (auto const * h : vec) {
-    std::string name = h->GetName();
-    h->Write((name + "_" + addToName).c_str());
+void saveHists(std::vector<TH1 *> & vec/*, std::string addToName*/) {
+  for (auto * h : vec) {
+    //std::string name = h->GetName();
+    //h->SetName((name + "_" + addToName).c_str());
+    h->Write(/*(name + "_" + addToName).c_str()*/);
   }
 }
 
