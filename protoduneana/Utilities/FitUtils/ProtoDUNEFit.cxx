@@ -34,6 +34,14 @@
 #include "MCToyGenerationAndFit.h"
 
 
+/*namespace protoana {
+enum HistType { 
+ kSignal,
+ kBackground,
+ kIncident
+};
+}*/
+
 //********************************************************************
 protoana::ProtoDUNEFit::ProtoDUNEFit(){
   //********************************************************************
@@ -372,6 +380,14 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
     _truthsighistos[k]->Write();
   }
 
+  if (_syst_hists.size()) {
+    TDirectory * SystDir = f->mkdir("SystematicHists");
+    SystDir->cd();
+    for (size_t i = 0; i < _syst_hists.size(); ++i) {
+      _syst_hists[i]->Write();
+    }
+    HistoDir->cd();
+  }
   // Decorate and save efficiency graphs
   for(unsigned int i=0; i < _efficiencyGraphs.size(); i++){
     TGraphAsymmErrors* effgraph = (TGraphAsymmErrors*)_efficiencyGraphs.at(i);
@@ -478,8 +494,14 @@ void protoana::ProtoDUNEFit::AddSamplesAndChannelsToMeasurement(RooStats::HistFa
 	  staterror.SetErrorHist(staterrorhisto);
 	}
 
-	if(_EnableSystematicError){
-	  ApplySystematicToSample(sample, htemp, systvec, false, false);
+	if (_EnableSystematicError){
+          if (_UseComputedSysts) {
+	    ApplySystematicToSample(sample, htemp, systvec, false, false);
+          }
+          else {
+            BuildSystThenApplyToSample(sample, htemp, false, false,
+                kSignal, _bkg_chan_index[j], _bkg_topo_index[j]);
+          }
 	}
 
 	// Set histogram for sample
@@ -527,7 +549,14 @@ void protoana::ProtoDUNEFit::AddSamplesAndChannelsToMeasurement(RooStats::HistFa
 	}
 
 	if(_EnableSystematicError){
-	  ApplySystematicToSample(sample, htemp, systvec, true, _NormalisedSystematic);
+          if (_UseComputedSysts) { //Make this a vector?
+	    ApplySystematicToSample(sample, htemp, systvec, true, _NormalisedSystematic);
+          }
+          else { 
+            BuildSystThenApplyToSample(sample, htemp, true, _NormalisedSystematic,
+                kSignal, _sig_chan_index[j], _sig_topo_index[j],
+                _sig_truth_index[j]);
+          }
 	}
 
 	// Set histogram for sample
@@ -824,6 +853,11 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
               _MCFileNames[i], _RecoTreeName, _RecoBinning, _ChannelNames[i],
               _BackgroundTopologyName[j], topo, _EndZCut, tmin, tmax,
               _DoNegativeReco));
+
+      //For systs later
+      _bkg_chan_index.push_back(i);
+      _bkg_topo_index.push_back(j);
+
       //_incbkghistos.push_back( protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(_MCFileNames[0], _RecoTreeName, _RecoBinning, i, topo, true) );
     }
 
@@ -860,6 +894,12 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
                   _ChannelNames[i], _SignalTopologyName[j], topo,
                   _TruthBinning[k-1], _TruthBinning[k], _EndZCut,
                   _DoNegativeReco));
+
+          //For systs later
+          _sig_chan_index.push_back(i);
+          _sig_topo_index.push_back(j);
+          _sig_truth_index.push_back(k);
+
 	//sigevenshisto->SetBinContent(k, (_sighistos.back())->Integral() + sigevenshisto->GetBinContent(k));
 	}
       }
@@ -1143,6 +1183,7 @@ bool protoana::ProtoDUNEFit::Configure(std::string configPath){
   _DoAsimovFit                 = pset.get<bool>("DoAsimovFit");
   _EnableStatisticalError      = pset.get<bool>("EnableStatisticalError");
   _EnableSystematicError       = pset.get<bool>("EnableSystematicError");
+  _UseComputedSysts            = pset.get<bool>("UseComputedSysts");
   _NormalisedSystematic        = pset.get<bool>("NormalisedSystematic");
 
   _RecoBinning                 = pset.get< std::vector<double> >("RecoBinning");
@@ -1180,4 +1221,141 @@ void protoana::ProtoDUNEFit::DecorateEfficiency( TGraphAsymmErrors * eff ){
   eff->GetYaxis()->SetTitle("Efficiency");
   eff->GetYaxis()->SetTitleOffset(1.25);
 
+}
+
+
+bool protoana::ProtoDUNEFit::BuildSystThenApplyToSample(
+    RooStats::HistFactory::Sample& sample, TH1* histo,
+    bool hasnormfactor, bool isnorm, protoana::HistType this_histType,
+    size_t iChan, size_t iTopo, size_t iTruthBin) {
+
+  TH1 * low_hist = 0x0;
+  TH1 * high_hist = 0x0;
+
+  for (size_t i = 0; i < _SystToConsider.size(); ++i) {
+    std::string syst_name = _SystToConsider[i];
+    std::string syst_type = _SystType[i];
+
+    switch (this_histType) {
+      case kSignal: {
+        
+        if (iTruthBin > _TruthBinning.size() - 1) {
+          std::cout << "Error! Requesting truth bin " << iTruthBin <<
+                       " from binning vector of size " << 
+                       _TruthBinning.size() << std::endl;
+          return false;
+        }
+
+        low_hist =
+            protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
+                _MCFileNames[iChan], _RecoTreeName, _RecoBinning,
+                _ChannelNames[iChan], _SignalTopologyName[iTopo],
+                _SignalTopology[iTopo], _TruthBinning[iTruthBin-1],
+                _TruthBinning[iTruthBin], _EndZCut, false, -1, syst_name);
+
+        high_hist =
+            protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
+                _MCFileNames[iChan], _RecoTreeName, _RecoBinning,
+                _ChannelNames[iChan], _SignalTopologyName[iTopo],
+                _SignalTopology[iTopo], _TruthBinning[iTruthBin-1],
+                _TruthBinning[iTruthBin], _EndZCut, false, 1, syst_name);
+
+        break;
+      }
+      case kBackground: {
+
+        double tmin = _TruthBinning[0];
+        double tmax = _TruthBinning.back();
+        if(_FitInReco){
+          tmin = 0.0;
+          tmax = 1000000.0;
+        }
+
+        low_hist =
+            protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
+                _MCFileNames[iChan], _RecoTreeName, _RecoBinning,
+                _ChannelNames[iChan], _BackgroundTopologyName[iTopo],
+                _BackgroundTopology[iTopo], _EndZCut, tmin, tmax, false, -1,
+                syst_name);
+
+        high_hist =
+            protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
+                _MCFileNames[iChan], _RecoTreeName, _RecoBinning,
+                _ChannelNames[iChan], _BackgroundTopologyName[iTopo],
+                _BackgroundTopology[iTopo], _EndZCut, tmin, tmax, false, 1,
+                syst_name);
+        break;
+      }
+      default: {
+        return false;
+      }
+    }
+
+    if (!(low_hist && high_hist)) {
+      continue;
+    }
+
+    double nominal_integral = histo->Integral();
+    double high_integral = high_hist->Integral();
+    double high_val = high_integral/nominal_integral;
+    double low_integral = low_hist->Integral();
+    double low_val = low_integral/nominal_integral;
+    std::string hname = histo->GetName();
+
+    _syst_hists.push_back(low_hist); 
+    _syst_hists.push_back(high_hist); 
+
+    if ((1. - low_val < _IgnoreSystematicErrorBelow) ||
+        (high_val - 1. < _IgnoreSystematicErrorBelow)) {
+      std::cout << "WARNING::Ignoring systematic uncertainty " << syst_name <<
+                   " for sample " << hname << " as it is below the threshold " <<
+                   _IgnoreSystematicErrorBelow <<  " , syst fraction = " <<
+                   1. - low_val << " , " << high_val - 1. << std::endl;
+      continue;
+    }
+
+    //need this above
+    if (syst_type == "NormOnly") {
+      continue;
+    }
+
+    // Mixed (norm and/or shape) systematic case
+    if(!hasnormfactor){ // Sample without normalisation parameter
+
+      // Single bin samples and without norm factor are considered as norm syst
+      if (protoana::ProtoDUNEFitUtils::IsSingleBinHisto(histo)) {
+        sample.AddOverallSys(syst_name.c_str(), low_val, high_val);//systname from above
+
+        std::cout << "INFO::Adding single bin and without norm parameter " <<
+                     "norm systematic " << syst_name << " , to sample " << hname <<
+                     " , with high value = " << high_val <<
+                     " , and low value = " << low_val <<
+                     " , with nominal integral = " << nominal_integral <<
+                     " , high histogram integral = " << high_integral <<
+                     " , low histogram integral = " << low_integral <<
+                     " , and syst fraction = " << 1. - low_val <<
+                     " , " << high_val - 1. << std::endl;
+        continue; 
+      }
+      else{ // multi-bin region and without norm parameter
+        RooStats::HistFactory::HistoSys syst;
+        syst.SetName(syst_name.c_str());
+        syst.SetHistoHigh(high_hist);
+        syst.SetHistoLow(low_hist);
+        sample.AddHistoSys(syst);
+
+        std::cout << "INFO::Adding multi-bin and without norm parameter " <<
+                     "shape+norm systematic " << syst_name <<
+                     " , to sample " << hname <<
+                     " , with nominal integral = " << nominal_integral <<
+                     " , high histogram integral = " << high_integral <<
+                     " , low histogram integral = " << low_integral <<
+                     ", and syst fraction = " << 1. - low_val <<
+                     " , " << high_val - 1. << std::endl;
+        continue; 
+      }
+    }
+  }
+
+  return true;
 }

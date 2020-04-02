@@ -23,6 +23,13 @@
 #include <map>
 
 namespace protoana{
+
+  enum HistType {
+    kSignal,
+    kBackground,
+    kIncident
+  };
+
   class ProtoDUNEFit{
   public:
 
@@ -35,6 +42,13 @@ namespace protoana{
 
     // Apply systematics to sample
     bool ApplySystematicToSample(RooStats::HistFactory::Sample& sample, TH1* histo, std::vector<TH1*> systvec, bool hasnormfactor, bool isnorm);
+
+    bool BuildSystThenApplyToSample(RooStats::HistFactory::Sample& sample,
+                                    TH1* histo, bool hasnormfactor,
+                                    bool isnorm,
+                                    protoana::HistType this_histType,
+                                    size_t iChan, size_t iTopo,
+                                    size_t iTruthBin=999);
 
   private:
     // Configure input from fcl file
@@ -60,9 +74,14 @@ namespace protoana{
 
     int _FitStrategy, _NToys;
     double _IgnoreStatisticalErrorBelow, _IgnoreSystematicErrorBelow;
-    bool _EnableMinosError, _DoAsimovFit, _EnableStatisticalError, _EnableSystematicError, _NormalisedSystematic, _FitInReco;
+    bool _EnableMinosError, _DoAsimovFit, _EnableStatisticalError;
+    bool _EnableSystematicError, _NormalisedSystematic, _FitInReco;
+    bool _UseComputedSysts;
 
     std::vector<TH1*> _bkghistos, _sighistos, _truthsighistos, _datahistos;
+    std::vector<TH1*> _syst_hists;
+    std::vector<size_t> _bkg_chan_index, _sig_chan_index;
+    std::vector<size_t> _bkg_topo_index, _sig_topo_index, _sig_truth_index;
     std::vector<TH1*> _incbkghistos, _incsighistos, _incdatahistos;
     std::vector<TH1*> _sidhistos, _siddatahistos;
 

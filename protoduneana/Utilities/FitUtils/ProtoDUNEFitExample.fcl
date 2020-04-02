@@ -67,6 +67,7 @@ IgnoreStatisticalErrorBelow: 0.01 # MC stats error will be ignored if below this
 EnableSystematicError:   true 
 NormalisedSystematic:    false       # Systematics are added as 'normalised', only the effect of shape is considered.
 CommonSystFile:          "/dune/app/users/calcuttj/larsoft/srcs/protoduneana/protoduneana/Utilities/FitUtils/asdf.root"
+UseComputedSysts:        false
 SystFileNames:           [@local::CommonSystFile, @local::CommonSystFile]
 SystToConsider:          ["fReac", "fAbs2", "fCex"] #["Systematic1","Systematic2"]
 SystType:                ["NormShape", "NormShape", "NormShape"] #["NormShape"  ,"NormShape"]   # For each systematic the type should be defined, options are: NormOnly, ShapeOnly, NormShape
