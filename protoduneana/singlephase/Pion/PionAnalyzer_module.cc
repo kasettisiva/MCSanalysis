@@ -154,13 +154,12 @@ namespace pionana {
     double prev_max = 0;
     int max_index = -999;
     for( auto it = slice_to_nElectrons.begin(); it != slice_to_nElectrons.end(); ++it ){
-      std::cout << "Checking " << it->first << std::endl;
       if( it->second > prev_max ){
         max_index = it->first;
         prev_max = it->second;
       }
       else if( it->second > 0 && it->second == prev_max ){
-        std::cout << "Found double match " << max_index << " " << it->first << std::endl;
+        MF_LOG_WARNING("PionAnalyzer")  << "Found double match " << max_index << " " << it->first << std::endl;
       }
     }
     if( max_index > -999 ) result = { max_index, prev_max };
@@ -257,13 +256,12 @@ namespace pionana {
     size_t prev_max = 0;
     int max_index = -999;
     for( auto it = slice_to_nMatched.begin(); it != slice_to_nMatched.end(); ++it ){
-      std::cout << "Checking " << it->first << std::endl;
       if( it->second > prev_max ){
         max_index = it->first;
         prev_max = it->second;
       }
       else if( it->second > 0 && it->second == prev_max ){
-        std::cout << "Found double match " << max_index << " " << it->first << std::endl;
+        MF_LOG_WARNING("PionAnalyzer")  << "Found double match " << max_index << " " << it->first << std::endl;
       }
     }
     if( max_index > -999 ) result = { max_index, prev_max };
@@ -956,7 +954,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
     auto mcTruths = evt.getValidHandle<std::vector<simb::MCTruth>>(fGeneratorTag);
     true_beam_particle = truthUtil.GetGeantGoodParticle((*mcTruths)[0],evt);
     if( !true_beam_particle ){
-      std::cout << "No true beam particle" << std::endl;
+      MF_LOG_WARNING("PionAnalyzer") << "No true beam particle" << std::endl;
       return;
     }
   }
@@ -975,19 +973,13 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
     const beam::ProtoDUNEBeamEvent & beamEvent = *(beamVec.at(0)); //Should just have one
 
     if( !fBeamlineUtils.IsGoodBeamlineTrigger( evt ) ){
-      std::cout << "Failed quality check" << std::endl;
+      MF_LOG_WARNING("PionAnalyzer") << "Failed quality check" << std::endl;
       return;
     }
 
     int nTracks = beamEvent.GetBeamTracks().size();
     std::vector< double > momenta = beamEvent.GetRecoBeamMomenta();
     int nMomenta = momenta.size();
-
-/*
-    if( !( nMomenta == 1 && nTracks == 1 ) ){
-      std::cout << "Malformed tracks and momenta" << std::endl;
-      return;
-    }*/
     
     if( nMomenta > 0 )
       data_BI_P = momenta[0];
@@ -1023,17 +1015,20 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
 
       const beam::ProtoDUNEBeamEvent & beamEvent = *(beamVec.at(0)); //Should just have one
 
-      std::cout << "Got beam event" << std::endl;
 
       int nTracks = beamEvent.GetBeamTracks().size();
-      std::cout << "Got " << nTracks << " Tracks" << std::endl;
       std::vector< double > momenta = beamEvent.GetRecoBeamMomenta();
       int nMomenta = momenta.size();
-      std::cout << "Got " << nMomenta << " Momenta" << std::endl;
+
+      if (fVerbose) {
+        std::cout << "Got beam event" << std::endl;
+        std::cout << "Got " << nTracks << " Tracks" << std::endl;
+        std::cout << "Got " << nMomenta << " Momenta" << std::endl;
+      }
 
       if( nMomenta > 0 ){
         data_BI_P = momenta[0];
-        std::cout << "reco P " << data_BI_P << std::endl;
+        if (fVerbose) std::cout << "reco P " << data_BI_P << std::endl;
       }
 
       if( nTracks > 0 ){
@@ -1059,7 +1054,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       data_BI_nFibersP3 = beamEvent.GetActiveFibers( "XBPF022702" ).size();
     }
     catch( const cet::exception &e ){
-      std::cout << "BeamEvent generator object not found, moving on" << std::endl;
+      MF_LOG_WARNING("PionAnalyzer") << "BeamEvent generator object not found, moving on" << std::endl;
     }
   }
   ////////////////////////////
@@ -1106,7 +1101,6 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       reco_beam_true_byHits_matched = ( beam_match.particle->TrackId() == true_beam_particle->TrackId() );
       reco_beam_true_byHits_PDG = beam_match.particle->PdgCode();
       reco_beam_true_byHits_ID = beam_match.particle->TrackId();
-      std::cout << "Truth ID: " << reco_beam_true_byHits_ID << std::endl;
 
       reco_beam_true_byHits_process = beam_match.particle->Process();
       reco_beam_true_byHits_endProcess = beam_match.particle->EndProcess();
@@ -1161,7 +1155,6 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
 
       reco_beam_true_byE_PDG = trueParticle->PdgCode();
       reco_beam_true_byE_ID = trueParticle->TrackId();
-      std::cout << "Truth ID: " << reco_beam_true_byE_ID << std::endl;
 
       reco_beam_true_byE_process = trueParticle->Process();
       reco_beam_true_byE_endProcess = trueParticle->EndProcess();
@@ -1192,7 +1185,6 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
     true_beam_endProcess = true_beam_particle->EndProcess();
     
     true_beam_PDG         = true_beam_particle->PdgCode();
-    std::cout << "True beam PDG: " << true_beam_PDG << std::endl;
     true_beam_ID          = true_beam_particle->TrackId();
     true_beam_endX = true_beam_particle->EndX();
     true_beam_endY = true_beam_particle->EndY();
@@ -1237,7 +1229,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
           pandora2Track = pfpUtil.GetPFParticleTrack( *thePFP, evt, fPFParticleTag, "pandora2Track" );
         }
         catch( const cet::exception &e ){
-          std::cout << "pandora2Track object not found, moving on" << std::endl;
+          MF_LOG_WARNING("PionAnalyzer") << "pandora2Track object not found, moving on" << std::endl;
         }
 
         if( pandora2Track ){
@@ -1253,14 +1245,11 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
     for( int i = 0; i < true_beam_particle->NumberDaughters(); ++i ){
       int daughterID = true_beam_particle->Daughter(i);
 
-      std::cout << "Daughter " << i << " ID: " << daughterID << std::endl;
+      if (fVerbose) std::cout << "Daughter " << i << " ID: " << daughterID << std::endl;
       auto part = plist[ daughterID ];
       int pid = part->PdgCode();
       true_beam_daughter_PDG.push_back(pid);
       true_beam_daughter_ID.push_back( part->TrackId() );      
-
-      std::cout << "Checking true daughter par: " << part->TrackId() << " " << pi_serv->TrackIdToMotherParticle_P( part->TrackId() )->TrackId() << std::endl;
-      std::cout << "Mother check: " << part->Mother() << " " << plist[ part->Mother() ]->TrackId() << std::endl;
 
       true_beam_daughter_len.push_back( part->Trajectory().TotalLength() );
 
@@ -1280,14 +1269,15 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       true_beam_daughter_Process.push_back( part->Process() );
       true_beam_daughter_endProcess.push_back( part->EndProcess() );
 
-      std::cout << "Proccess: " << part->Process() << std::endl; 
-      std::cout << "PID: " << pid << std::endl;
-      std::cout << "Start: " << part->Position(0).X() << " " << part->Position(0).Y() << " " << part->Position(0).Z() << std::endl;
-      std::cout << "End: " << part->EndPosition().X() << " " << part->EndPosition().Y() << " " << part->EndPosition().Z() << std::endl;
-      std::cout << "Len: " << part->Trajectory().TotalLength() << std::endl;
+      if (fVerbose) {
+        std::cout << "Proccess: " << part->Process() << std::endl; 
+        std::cout << "PID: " << pid << std::endl;
+        std::cout << "Start: " << part->Position(0).X() << " " << part->Position(0).Y() << " " << part->Position(0).Z() << std::endl;
+        std::cout << "End: " << part->EndPosition().X() << " " << part->EndPosition().Y() << " " << part->EndPosition().Z() << std::endl;
+        std::cout << "Len: " << part->Trajectory().TotalLength() << std::endl;
+      }
 
       if( part->Process().find( "Inelastic" ) != std::string::npos ){
-        std::cout << "Inelastic" << std::endl;
         if( pid == 211  ) ++true_daughter_nPiPlus;
         if( pid == -211 ) ++true_daughter_nPiMinus;
         if( pid == 111  ) ++true_daughter_nPi0;
@@ -1345,7 +1335,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
                 pandora2Track = pfpUtil.GetPFParticleTrack( *thePFP, evt, fPFParticleTag, "pandora2Track" );
               }
               catch( const cet::exception &e ){
-                std::cout << "pandora2Track object not found, moving on" << std::endl;
+                MF_LOG_WARNING("PionAnalyzer") << "pandora2Track object not found, moving on" << std::endl;
               }
 
               if( pandora2Track ){
@@ -1375,7 +1365,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
                 pandora2Shower = pfpUtil.GetPFParticleShower( *thePFP, evt, fPFParticleTag, "pandora2Shower" );
               }
               catch( const cet::exception &e ){
-                std::cout << "pandora2Shower object not found, moving on" << std::endl;
+                MF_LOG_WARNING("PionAnalyzer") << "pandora2Shower object not found, moving on" << std::endl;
               }
 
               if( pandora2Shower ){
@@ -1447,7 +1437,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
              pandora2Track = pfpUtil.GetPFParticleTrack( *thePFP, evt, fPFParticleTag, "pandora2Track" );
           }
           catch( const cet::exception &e ){
-            std::cout << "pandora2Track object not found, moving on" << std::endl;
+            MF_LOG_WARNING("PionAnalyzer") << "pandora2Track object not found, moving on" << std::endl;
           }
 
           if( pandora2Track ){
@@ -1477,7 +1467,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
             pandora2Shower = pfpUtil.GetPFParticleShower( *thePFP, evt, fPFParticleTag, "pandora2Shower" );
           }
           catch( const cet::exception &e ){
-            std::cout << "pandora2Shower object not found, moving on" << std::endl;
+            MF_LOG_WARNING("PionAnalyzer") << "pandora2Shower object not found, moving on" << std::endl;
           }
           
           if( pandora2Shower ){
@@ -1549,11 +1539,11 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
     ////////////////////////////////////////////
     
 
-    std::cout << "Beam particle is track-like " << thisTrack->ID() << std::endl;
+    if (fVerbose) std::cout << "Beam particle is track-like " << thisTrack->ID() << std::endl;
     reco_beam_type = 13;
 
     reco_beam_passes_beam_cuts = beam_cuts.IsBeamlike( *thisTrack, evt, "1" );
-    std::cout << "Beam Cuts " << reco_beam_passes_beam_cuts << std::endl;
+    if (fVerbose) std::cout << "Beam Cuts " << reco_beam_passes_beam_cuts << std::endl;
 
 
     reco_beam_trackID = thisTrack->ID();
@@ -1599,7 +1589,6 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
     reco_beam_len  = thisTrack->Length();    
     ////////////////////////////////////////////////////////////////
 
-    std::cout << "N Reco Traj Pts: " << thisTrack->NumberTrajectoryPoints() << std::endl;
     
     TVector3 start( reco_beam_startX, reco_beam_startY, reco_beam_startZ );
     TVector3 dir( reco_beam_trackDirX, reco_beam_trackDirY, reco_beam_trackDirZ );
@@ -1633,17 +1622,18 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
     art::ServiceHandle<geo::Geometry> geom;
     
     double z0 = geom->Wire( geo::WireID(0, 1, 2, 0) ).GetCenter().Z();
-    std::cout << "Z0: " << z0 << std::endl;
                                   //p, t, c 
     double pitch = geom->WirePitch( 2, 1, 0);
-    std::cout << "Pitch: " << pitch << std::endl;
-
     size_t nWires = geom->Nwires( 2, 1, 0 );
-    std::cout << "nWires: " << nWires << std::endl;
+
+    if (fVerbose) {
+      std::cout << "Z0: " << z0 << std::endl;
+      std::cout << "Pitch: " << pitch << std::endl;
+      std::cout << "nWires: " << nWires << std::endl;
+    }
 
     //Looking at the hits in the beam track
     std::map< size_t, const recob::Hit * > trajPtsToHits = trackUtil.GetRecoHitsFromTrajPoints( *thisTrack, evt, fTrackerTag );
-    std::cout << "Hits" << std::endl;
     double max_X = 0.;
     double max_Y = 0.;
     double max_Z = 0.;
@@ -1748,7 +1738,6 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
     }
 
     reco_beam_vertex_slice = slicesToHits.rbegin()->first;
-    std::cout << "Vertex slice: " << reco_beam_vertex_slice << std::endl;
 
 
     //Go through the hits in the last slice, then backtrack to the IDs
@@ -1756,13 +1745,12 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
     std::vector< const recob::Hit * > vertex_hits;
     int n_slices = 0;
     auto itHits = slicesToHits.rbegin();
-    std::cout << "SliceCheck: " << fNSliceCheck << std::endl;
 
     std::vector< int > temp_hits_slices;
 
     while( n_slices < fNSliceCheck && itHits != slicesToHits.rend() ){
       
-      std::cout << n_slices << std::endl;
+      //std::cout << n_slices << std::endl;
 
       std::vector< const recob::Hit * > temp_hits = itHits->second;
       vertex_hits.insert( vertex_hits.end(), temp_hits.begin(), temp_hits.end() );
@@ -1777,12 +1765,11 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
 
     //Primary Track Calorimetry 
     std::vector< anab::Calorimetry> calo = trackUtil.GetRecoTrackCalorimetry(*thisTrack, evt, fTrackerTag, fCalorimetryTag);
-    std::cout << "N Calos: " << calo.size() << std::endl;
     auto calo_dQdX = calo[0].dQdx();
     auto calo_dEdX = calo[0].dEdx();
     auto calo_range = calo[0].ResidualRange();
     auto TpIndices = calo[0].TpIndices();
-    std::cout << "View 2 hits " << calo_dQdX.size() << std::endl;
+    //std::cout << "View 2 hits " << calo_dQdX.size() << std::endl;
 
     std::vector< size_t > calo_hit_indices;
     for( size_t i = 0; i < calo_dQdX.size(); ++i ){
@@ -1800,7 +1787,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
 
     //New Calibration
     std::vector< float > new_dEdX = calibration.GetCalibratedCalorimetry(  *thisTrack, evt, fTrackerTag, fCalorimetryTag );
-    std::cout << "n dEdX: " << reco_beam_dEdX.size() << " " << new_dEdX.size() << std::endl;
+    //std::cout << "n dEdX: " << reco_beam_dEdX.size() << " " << new_dEdX.size() << std::endl;
     for( size_t i = 0; i < new_dEdX.size(); ++i ){ reco_beam_calibrated_dEdX.push_back( new_dEdX[i] ); }
     ////////////////////////////////////////////
 
@@ -1808,7 +1795,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
     reco_beam_Chi2_proton = pid_chi2_ndof.first; 
     reco_beam_Chi2_ndof = pid_chi2_ndof.second;
   
-    std::cout << "Proton chi2: " << reco_beam_Chi2_proton << std::endl;
+    //std::cout << "Proton chi2: " << reco_beam_Chi2_proton << std::endl;
 
     std::vector< calo_point > reco_beam_calo_points;
     //Doing thin slice
@@ -1820,7 +1807,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
         );
       }
 
-      std::cout << "N Calo points: " << reco_beam_calo_points.size() << std::endl;
+      //std::cout << "N Calo points: " << reco_beam_calo_points.size() << std::endl;
       //Sort
       std::sort( reco_beam_calo_points.begin(), reco_beam_calo_points.end(), [](calo_point a, calo_point b) {return ( a.wire < b.wire );} ); 
 
@@ -1869,12 +1856,12 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       //Go through the true processes within the MCTrajectory
       const simb::MCTrajectory & true_beam_trajectory = true_beam_particle->Trajectory();
       auto true_beam_proc_map = true_beam_trajectory.TrajectoryProcesses();
-      std::cout << "Processes: " << std::endl;
+      if (fVerbose) std::cout << "Processes: " << std::endl;
 
       for( auto itProc = true_beam_proc_map.begin(); itProc != true_beam_proc_map.end(); ++itProc ){
         int index = itProc->first;
         std::string process = true_beam_trajectory.KeyToProcess(itProc->second);
-        std::cout << index << " " << process << std::endl;
+        if (fVerbose) std::cout << index << " " << process << std::endl;
 
         true_beam_processes.push_back( process );
 
@@ -1924,7 +1911,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
         double procY = true_beam_trajectory.Y( itProc->first );
         double procZ = true_beam_trajectory.Z( itProc->first );
 
-        std::cout << std::endl << "Process: " << true_beam_trajectory.KeyToProcess(itProc->second) << procX << " " << procY << " " << procZ << std::endl; 
+        if (fVerbose) std::cout << std::endl << "Process: " << true_beam_trajectory.KeyToProcess(itProc->second) << procX << " " << procY << " " << procZ << std::endl; 
 
         std::vector< double > temp_dRs;
 
@@ -1992,7 +1979,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
         }
       }
       
-      std::cout << "Looking at IDEs" << std::endl;
+      if (fVerbose) std::cout << "Looking at IDEs" << std::endl;
 
       auto view2_IDEs = bt_serv->TrackIdToSimIDEs_Ps( true_beam_ID, geo::View_t(2) );
       /*
@@ -2000,7 +1987,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
         std::cout << ide->trackID << " " << ide->z << std::endl;
       }
       */
-      std::cout << "N view2 IDEs: " << view2_IDEs.size() << std::endl;
+      if (fVerbose) std::cout << "N view2 IDEs: " << view2_IDEs.size() << std::endl;
       std::sort( view2_IDEs.begin(), view2_IDEs.end(), sort_IDEs );
       
       size_t remove_index = 0;   
@@ -2019,7 +2006,6 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       }
 
       if( do_remove ){
-        std::cout << "Removing from view2 IDEs" << std::endl;
         view2_IDEs.erase( view2_IDEs.begin() + remove_index, view2_IDEs.end() );
       }
 
@@ -2043,7 +2029,6 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
         }
       }
       true_beam_IDE_totalDep = new_total_dE;
-      std::cout << "New total: " << new_total_dE << std::endl;
 
 
       //Do the true xsec measurement
@@ -2083,7 +2068,6 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
 
       //Find the IDEs covered by the reconstructed track
       std::vector< const sim::IDE * > true_ides_from_reco;
-      std::cout << "Getting IDEs from Reco" << std::endl;
       for( auto it = trajPtsToHits.begin(); it != trajPtsToHits.end(); ++it ){
         const recob::Hit * theHit = it->second;
         if( theHit->View() != 2 ) continue;
@@ -2098,15 +2082,13 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
           }
         }
       }
-      std::cout << "Got " << true_ides_from_reco.size() << " IDEs from reco" << std::endl;
       if( true_ides_from_reco.size() ){
         std::sort( true_ides_from_reco.begin(), true_ides_from_reco.end(), sort_IDEs );
-        std::cout << "Max IDE z: " << true_ides_from_reco.back()->z << std::endl;
+        if (fVerbose) std::cout << "Max IDE z: " << true_ides_from_reco.back()->z << std::endl;
       }
 
       //slice up the view2_IDEs up by the wire pitch
       auto sliced_ides = slice_IDEs( view2_IDEs, z0, pitch, true_beam_endZ);
-      std::cout << "N Sliced IDEs: " << sliced_ides.size() << std::endl;
       std::vector< int > found_slices;
 
 
@@ -2143,12 +2125,13 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       new_true_beam_incidentEnergies.pop_back();
       if( new_true_beam_incidentEnergies.size() ) new_true_beam_interactingEnergy = new_true_beam_incidentEnergies.back();
 
-      std::cout << "Found " << found_slices.size() << "/" << sliced_ides.size() << " slices" << std::endl;
-      std::cout << "Maximum true slice: " << (found_slices.size() ? sliced_ides.rbegin()->first : -999 ) << std::endl;
-      std::cout << "Max found: " << (found_slices.size() ? found_slices.back() : -999 ) << std::endl;
+      if (fVerbose) {
+        std::cout << "Found " << found_slices.size() << "/" << sliced_ides.size() << " slices" << std::endl;
+        std::cout << "Maximum true slice: " << (found_slices.size() ? sliced_ides.rbegin()->first : -999 ) << std::endl;
+        std::cout << "Max found: " << (found_slices.size() ? found_slices.back() : -999 ) << std::endl;
+        std::cout << "Testing hit to true slice matching" << std::endl;
+      }
 
-
-      std::cout << "Testing hit to true slice matching" << std::endl;
       std::map< int, std::vector< std::pair<int, double> > > true_slice_to_reco_electrons;
       std::map< int, int > reco_beam_hit_to_true_ID;
       std::vector< int > reco_beam_hit_index;
@@ -2241,7 +2224,6 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       }
       
 
-      std::cout << "Checking all slices" << std::endl;
       std::map< int, int > reco_beam_hit_to_true_slice;
       for( size_t i = 0; i < true_beam_slices.size(); ++i ){
 
@@ -2259,7 +2241,6 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       }
 
       int max_slice_found = -999;
-      std::cout << "Checking all hits" << std::endl;
       for( size_t i = 0; i < reco_beam_calo_points.size(); ++i ){
         calo_point thePoint = reco_beam_calo_points[i];
         //std::cout << "Reco hit: " << thePoint.hit_index << " matched to True ID " << reco_beam_hit_to_true_ID[thePoint.hit_index];
@@ -2277,11 +2258,11 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
             max_slice_found = reco_beam_hit_to_true_slice[thePoint.hit_index];
         }
       }
-      std::cout << "Max slice found: " << max_slice_found << std::endl;
+      if (fVerbose) std::cout << "Max slice found: " << max_slice_found << std::endl;
       
       
 
-      std::cout << "Comparing max slice to processes" << std::endl;
+      if (fVerbose) std::cout << "Comparing max slice to processes" << std::endl;
       //const simb::MCTrajectory & true_beam_trajectory = true_beam_particle->Trajectory();
       //auto true_beam_proc_map = true_beam_trajectory.TrajectoryProcesses();
       for( auto itProc = true_beam_proc_map.begin(); itProc != true_beam_proc_map.end(); ++itProc ){
@@ -2293,30 +2274,40 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
         double process_Z = true_beam_trajectory.Z( index );
 
         int slice_num = std::floor( ( process_Z - z0 ) / pitch );
-        std::cout << "Process " << index << ", " << process << "(" << process_X <<","<< process_Y <<","<< process_Z <<")" << " at slice " << slice_num << std::endl;
-        std::cout << "d(Slice) to max slice found: " <<  slice_num - max_slice_found << std::endl;
+        
+        if (fVerbose) {
+          std::cout << "Process " << index << ", " << process << "(" << process_X <<","<< process_Y <<","<< process_Z <<")" << " at slice " << slice_num << std::endl;
+          std::cout << "d(Slice) to max slice found: " <<  slice_num - max_slice_found << std::endl;
+        }
         true_beam_process_slice.push_back( slice_num );
         true_beam_process_dSlice.push_back( slice_num - max_slice_found );
       }
 
       if( true_beam_endProcess.find( "Inelastic" ) == std::string::npos ){
-        std::cout << "true end: " << true_beam_endZ << std::endl;
         double process_X = true_beam_endX;
         double process_Y = true_beam_endY;
         double process_Z = true_beam_endZ;
         int slice_num = std::floor( ( process_Z - z0 ) / pitch );
-        std::cout << "Process " << -1 << ", " << true_beam_endProcess << "(" << process_X <<","<< process_Y <<","<< process_Z <<")" << " at slice " << slice_num << std::endl;
-        std::cout << "d(Slice) to max slice found: " <<  slice_num - max_slice_found << std::endl;
+
+        if (fVerbose) {
+          std::cout << "Process " << -1 << ", " << true_beam_endProcess << "(" << process_X <<","<< process_Y <<","<< process_Z <<")" << " at slice " << slice_num << std::endl;
+          std::cout << "d(Slice) to max slice found: " <<  slice_num - max_slice_found << std::endl;
+        }
         true_beam_process_slice.push_back( slice_num );
         true_beam_process_dSlice.push_back( slice_num - max_slice_found );
       }
       //Check the last process as well
 
+      if (fVerbose) {
       std::cout << "N Procs, Slice, dSlice: " << true_beam_processes.size() << ", " << true_beam_process_slice.size() << ", " 
                 << true_beam_process_dSlice.size() << std::endl;
+      }
+
       for( size_t i = 0; i < true_beam_processes.size(); ++i ){
-        std::cout << "Process " << i << true_beam_processes[i] << " At slice " << true_beam_process_slice[i] << std::endl;
-        std::cout << "Is " << true_beam_process_dSlice[i] << " slices away from the max found" << std::endl;
+        if (fVerbose) {
+          std::cout << "Process " << i << true_beam_processes[i] << " At slice " << true_beam_process_slice[i] << std::endl;
+          std::cout << "Is " << true_beam_process_dSlice[i] << " slices away from the max found" << std::endl;
+        }
         
         //Everything before the last process
         if( i < true_beam_processes.size() - 1 ){
@@ -2345,7 +2336,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       reco_daughter_PFP_ID.push_back( daughterID );
 
       const std::vector< art::Ptr< recob::Hit > > daughterPFP_hits = pfpUtil.GetPFParticleHits_Ptrs( *daughterPFP, evt, fPFParticleTag );
-      std::cout << "Got " << daughterPFP_hits.size() << " hits from daughter " << daughterID << std::endl;
+      if (fVerbose) std::cout << "Got " << daughterPFP_hits.size() << " hits from daughter " << daughterID << std::endl;
 
       reco_daughter_PFP_nHits.push_back( daughterPFP_hits.size() );
 
@@ -2363,15 +2354,16 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       }
 
       cnnOutput2D theCNNResults = GetCNNOutputFromPFParticle( *daughterPFP, evt, hitResults, pfpUtil, fPFParticleTag );
+      if (fVerbose) {
+        std::cout << "Testing new CNN: " << std::endl;
+        std::cout << track_total << " " << theCNNResults.track << std::endl;
+        std::cout << em_total << " " << theCNNResults.em << std::endl;
+        std::cout << michel_total << " " << theCNNResults.michel << std::endl;
+        std::cout << none_total << " " << theCNNResults.none << std::endl;
+      }
 
-      std::cout << "Testing new CNN: " << std::endl;
-      std::cout << track_total << " " << theCNNResults.track << std::endl;
-      std::cout << em_total << " " << theCNNResults.em << std::endl;
-      std::cout << michel_total << " " << theCNNResults.michel << std::endl;
-      std::cout << none_total << " " << theCNNResults.none << std::endl;
 
       const std::vector< const recob::SpacePoint* > spVec = pfpUtil.GetPFParticleSpacePoints( *daughterPFP, evt, fPFParticleTag );
-      std::cout << "Got " << spVec.size() << " SpacePoints" << std::endl;
 
       if( daughterPFP_hits.size() > 0 ){
         reco_daughter_PFP_trackScore.push_back( track_total / daughterPFP_hits.size() );
@@ -2402,7 +2394,6 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
         protoana::MCParticleSharedHits match = truthUtil.GetMCParticleByHits( *daughterPFP, evt, fPFParticleTag, fHitTag );
 
         if( match.particle ){
-          std::cout << std::endl << "Match: " << match.particle->PdgCode() << " " << match.particle->TrackId() << std::endl;
            
           reco_daughter_PFP_true_byHits_PDG.push_back( match.particle->PdgCode() );
           reco_daughter_PFP_true_byHits_ID.push_back( match.particle->TrackId() );
@@ -2411,8 +2402,6 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
           reco_daughter_PFP_true_byHits_parPDG.push_back( 
             ( (match.particle->Mother() > 0) ? plist[ match.particle->Mother() ]->PdgCode() : 0 )
           );
-
-          std::cout << "Checking par: " << match.particle->TrackId() << " " << pi_serv->TrackIdToMotherParticle_P( match.particle->TrackId() )->TrackId() << std::endl;
 
           reco_daughter_PFP_true_byHits_process.push_back( match.particle->Process() );
           reco_daughter_PFP_true_byHits_origin.push_back( 
@@ -2486,7 +2475,6 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
 
       try{
         const recob::Track* pandora2Track = pfpUtil.GetPFParticleTrack( *daughterPFP, evt, fPFParticleTag, "pandora2Track" );
-        std::cout << "pandora2 track: " << pandora2Track << std::endl;
 
         if( pandora2Track ){
           reco_daughter_allTrack_ID.push_back( pandora2Track->ID() );
@@ -2618,14 +2606,10 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
           //size_t min_index = 0;
           if( dr_end < dr_start ){
             //min_index = min_end_index; 
-
-            std::cout << "dr between track and daughter: " << dr_end << std::endl;
             reco_daughter_allTrack_dR.push_back( dr_end );
- 
           }
           else{
             //min_index = min_start_index; 
-            std::cout << "dr between track and daughter: " << dr_start << std::endl;
             reco_daughter_allTrack_dR.push_back( dr_start );
           }
 
@@ -2663,13 +2647,13 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
         }
       }
       catch( const cet::exception &e ){
-        std::cout << "pandora2Track object not found, moving on" << std::endl;
+        MF_LOG_WARNING("PionAnalyzer") << "pandora2Track object not found, moving on" << std::endl;
       }
 
         
       try{
         const recob::Shower* pandora2Shower = pfpUtil.GetPFParticleShower( *daughterPFP, evt, fPFParticleTag, "pandora2Shower" );
-        std::cout << "pandora2 shower: " << pandora2Shower << std::endl;
+        if (fVerbose) std::cout << "pandora2 shower: " << pandora2Shower << std::endl;
 
         if( pandora2Shower ){
           reco_daughter_allShower_ID.push_back(     pandora2Shower->ID() );
@@ -2688,7 +2672,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
 
       }
       catch( const cet::exception &e ){
-        std::cout << "pandora2Shower object not found, moving on" << std::endl;
+        MF_LOG_WARNING("PionAnalyzer") << "pandora2Shower object not found, moving on" << std::endl;
       }
         
       
@@ -2734,17 +2718,9 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
           for( auto it = wire_to_avg_ticks.begin(); it != wire_to_avg_ticks.end(); ++it ){
             these_wires.push_back( it->first );
             these_ticks.push_back( it->second );
-
-            std::cout << it->first << " " << it->second << std::endl;
           }
           TGraph gr_wire_ticks( these_wires.size(), &these_wires[0], &these_ticks[0] );
 
-
-
-
-          std::cout << "Min tick: " << min_tick << " Max tick: " << max_tick << std::endl;
-          std::cout << "Min wire: " << wire_to_avg_ticks.begin()->first << " Max wire: " << wire_to_avg_ticks.rbegin()->first << std::endl;
-          
 
           //1st Get all the reco tracks -- or PFP?
           //for( size_t i = 0; i < recoTracks->size(); ++i ){
@@ -2773,8 +2749,10 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
                 if( int(theHit->WireID().Wire) > wire_to_avg_ticks.begin()->first && int(theHit->WireID().Wire) < wire_to_avg_ticks.rbegin()->first &&
                     theHit->PeakTime() > min_tick && theHit->PeakTime() < max_tick ){
 
-                  std::cout << "Checking " << theHit->WireID().Wire << " " << theHit->PeakTime() << std::endl;
-                  std::cout << "\tBeam: " << gr_wire_ticks.Eval( theHit->WireID().Wire ) << std::endl;
+                  if (fVerbose) {
+                    std::cout << "Checking " << theHit->WireID().Wire << " " << theHit->PeakTime() << std::endl;
+                    std::cout << "\tBeam: " << gr_wire_ticks.Eval( theHit->WireID().Wire ) << std::endl;
+                  }
                   
                   if( theHit->PeakTime() > gr_wire_ticks.Eval( theHit->WireID().Wire ) ){
                     ++nUpperCosmicROI; 
@@ -2805,8 +2783,10 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
 
             n_cosmics_with_beam_IDE = cosmic_has_beam_IDE.size();
             
-            std::cout << "NHits in Upper ROI: " << nUpperCosmicROI << std::endl;
-            std::cout << "NHits in Lower ROI: " << nLowerCosmicROI << std::endl;
+            if (fVerbose) {
+              std::cout << "NHits in Upper ROI: " << nUpperCosmicROI << std::endl;
+              std::cout << "NHits in Lower ROI: " << nLowerCosmicROI << std::endl;
+            }
 
             if( nLowerCosmicROI || nUpperCosmicROI ){
               reco_beam_cosmic_candidate_lower_hits.push_back( nLowerCosmicROI );
@@ -2819,7 +2799,6 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       }
 
       if( !evt.isRealData() ){
-        std::cout << "Checking beam for cosmic" << std::endl;
         auto planeHits = trackUtil.GetRecoTrackHitsFromPlane( *thisTrack, evt, fTrackerTag, 2 );
         for( size_t i = 0; i < planeHits.size(); ++i ){      
           auto theHit = planeHits[i];
@@ -2840,18 +2819,21 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
 
   }
   else if( thisShower ){
-    std::cout << "Beam particle is shower-like" << std::endl;
     reco_beam_type = 11;
     reco_beam_trackID = thisShower->ID();
-    std::cout << thisShower->ShowerStart().X() << " " << thisShower->ShowerStart().Y() << " " << thisShower->ShowerStart().Z() << std::endl;
-    std::cout << thisShower->Direction().X() << " " << thisShower->Direction().Y() << " " << thisShower->Direction().Z() << std::endl;
-    std::cout << beam_cuts.IsBeamlike( *thisShower, evt, "1" ) << std::endl;
+
+    if (fVerbose) {
+      std::cout << "Beam particle is shower-like" << std::endl;
+      std::cout << thisShower->ShowerStart().X() << " " << thisShower->ShowerStart().Y() << " " << thisShower->ShowerStart().Z() << std::endl;
+      std::cout << thisShower->Direction().X() << " " << thisShower->Direction().Y() << " " << thisShower->Direction().Z() << std::endl;
+      std::cout << beam_cuts.IsBeamlike( *thisShower, evt, "1" ) << std::endl;
+    }
   }
 
   //Forced tracking for beam particle
   try{
     const recob::Track* pandora2Track = pfpUtil.GetPFParticleTrack( *particle, evt, fPFParticleTag, "pandora2Track" );
-    std::cout << "pandora2 track: " << pandora2Track << std::endl;
+    if (fVerbose) std::cout << "pandora2 track: " << pandora2Track << std::endl;
 
 
     if( pandora2Track ){
@@ -2939,7 +2921,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
     }
   }
   catch( const cet::exception &e ){
-    std::cout << "beam pandora2Track object not found, moving on" << std::endl;
+    MF_LOG_WARNING("PionAnalyzer") << "beam pandora2Track object not found, moving on" << std::endl;
   }
 
 

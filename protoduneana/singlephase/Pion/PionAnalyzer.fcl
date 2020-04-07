@@ -22,7 +22,7 @@ pionanalysis:
   dEdX_template_name:     "/dune/data/users/calcuttj/dEdxrestemplates.root"
   BeamModuleLabel:        "beamevent"
   BeamlineUtils: @local::standard_protodunebeamlineutils
-  Verbose:                true
+  Verbose:                false 
   NSliceCheck:            1
 
   SelectEvents: []
