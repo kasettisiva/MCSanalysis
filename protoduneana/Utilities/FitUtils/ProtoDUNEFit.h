@@ -49,6 +49,24 @@ namespace protoana{
                                     protoana::HistType this_histType,
                                     size_t iChan, size_t iTopo,
                                     size_t iTruthBin=999);
+    bool BuildSignalSystThenApplyToSample(
+        RooStats::HistFactory::Sample& sample, TH1* histo,
+        bool hasnormfactor, bool isnorm,
+        size_t iChan, size_t iTopo, size_t iTruthBin);
+
+    bool BuildBackgroundSystThenApplyToSample(
+        RooStats::HistFactory::Sample& sample, TH1* histo,
+        bool hasnormfactor, bool isnorm,
+        size_t iChan, size_t iTopo);
+
+    bool BuildIncidentSystThenApplyToSample(
+        RooStats::HistFactory::Sample& sample, TH1* histo,
+        bool hasnormfactor, bool isnorm, size_t iTopo);
+
+    bool ApplyBuiltSystToSample(TH1 * histo, TH1 * high_hist, TH1 * low_hist,
+                                RooStats::HistFactory::Sample& sample,
+                                std::string syst_name, std::string syst_type,
+                                bool hasnormfactor);
 
   private:
     // Configure input from fcl file
@@ -70,7 +88,12 @@ namespace protoana{
 
     std::vector<int> _SignalTopology, _BackgroundTopology, _IncidentTopology;
 
-    std::vector<std::string> _DataFileNames, _MCFileNames, _DataControlSampleFiles, _MCControlSampleFiles, _SystFileNames, _SystToConsider, _SystType, _BackgroundTopologyName, _SignalTopologyName, _ChannelNames, _IncidentMCFileNames, _IncidentTopologyName;
+    std::vector<std::string> _DataFileNames, _MCFileNames,
+                             _DataControlSampleFiles, _MCControlSampleFiles,
+                             _SystFileNames, _SystToConsider, _SystType,
+                             _BackgroundTopologyName, _SignalTopologyName,
+                             _ChannelNames, _IncidentMCFileNames,
+                             _IncidentDataFileNames, _IncidentTopologyName;
 
     int _FitStrategy, _NToys;
     double _IgnoreStatisticalErrorBelow, _IgnoreSystematicErrorBelow;
@@ -81,7 +104,8 @@ namespace protoana{
     std::vector<TH1*> _bkghistos, _sighistos, _truthsighistos, _datahistos;
     std::vector<TH1*> _syst_hists;
     std::vector<size_t> _bkg_chan_index, _sig_chan_index;
-    std::vector<size_t> _bkg_topo_index, _sig_topo_index, _sig_truth_index;
+    std::vector<size_t> _bkg_topo_index, _sig_topo_index, _sig_truth_index,
+                        _inc_topo_index;
     std::vector<TH1*> _incbkghistos, _incsighistos, _incdatahistos;
     std::vector<TH1*> _sidhistos, _siddatahistos;
 

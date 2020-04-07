@@ -86,6 +86,8 @@ int main(int argc, char ** argv) {
   std::vector<TH1 *> bg_nom_hists;
   std::vector<TH1 *> sig_syst_hists;
   std::vector<TH1 *> sig_nom_hists;
+  std::vector<TH1 *> inc_nom_hists;
+  std::vector<TH1 *> inc_syst_hists;
 
   for (size_t i = 0; i < cfg.ChannelNames.size(); ++i) {
   
@@ -148,13 +150,61 @@ int main(int argc, char ** argv) {
         }
       }
     }
+
   }
+  
+  //Incident
+  for (size_t j = 0; j < cfg.IncidentTopology.size(); ++j) {
+    //Form nominal
+    TH1 * temp_hist =
+        protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
+            cfg.IncidentMCFileNames[0], cfg.RecoTreeName, cfg.RecoBinning,
+            /*cfg.ChannelNames[0],*/ cfg.IncidentTopologyName[j], cfg.IncidentTopology[j],
+            cfg.EndZCut);
+    for (size_t k = 1; k < cfg.IncidentMCFileNames.size(); ++k) {
+      std::cout << "Trying " << k << std::endl;
+      temp_hist->Add(
+          protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
+            cfg.IncidentMCFileNames[k], cfg.RecoTreeName, cfg.RecoBinning,
+            /*cfg.ChannelNames[k],*/ cfg.IncidentTopologyName[j], cfg.IncidentTopology[j],
+            cfg.EndZCut));
+    }
+    inc_nom_hists.push_back(temp_hist);
+
+    //GetVariations
+    for (size_t m = 0; m < cfg.SystToConsider.size(); ++m) {
+      for (auto const n : {-1, 1}) {
+        std::cout << "Considering " << cfg.SystToConsider[m] << std::endl;
+
+        TH1 * temp_hist = 
+            protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
+                cfg.IncidentMCFileNames[0], cfg.RecoTreeName, cfg.RecoBinning,
+                /*cfg.ChannelNames[0],*/ cfg.IncidentTopologyName[j], cfg.IncidentTopology[j],
+                cfg.EndZCut, n, cfg.SystToConsider[m]);
+        for (size_t k = 1; k < cfg.IncidentMCFileNames.size(); ++k) {
+          temp_hist->Add(
+              protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
+                  cfg.IncidentMCFileNames[k], cfg.RecoTreeName, cfg.RecoBinning,
+                  /*cfg.ChannelNames[k],*/ cfg.IncidentTopologyName[j], cfg.IncidentTopology[j],
+                  cfg.EndZCut, n, cfg.SystToConsider[m]));
+        }
+        inc_syst_hists.push_back(temp_hist);
+
+        //Turn into frac errors
+        makeFracErrorHist(inc_syst_hists.back(), inc_nom_hists.back());
+      }
+    }
+  }
+    
+
+
 
 
   TFile output(output_file_name.c_str(), "RECREATE");
   output.cd();
   saveHists(bg_syst_hists/*, cfg.SystToConsider*/);
   saveHists(sig_syst_hists/*, cfg.SystToConsider*/);
+  saveHists(inc_syst_hists);
   output.Close();
   return 0;
 }

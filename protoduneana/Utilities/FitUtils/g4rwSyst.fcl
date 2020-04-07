@@ -33,5 +33,5 @@ RecoBinning:             [0.0,400.0,600.0,700.0,800.0,1200.0]
 
 
 # Define systematics to consider
-SystToConsider:         ["fReac", "fAbs1", "fAbs2", "fCex"]
+SystToConsider:         ["fReac"] #["fReac", "fAbs1", "fAbs2", "fCex"]
 EndZCut:                  225.

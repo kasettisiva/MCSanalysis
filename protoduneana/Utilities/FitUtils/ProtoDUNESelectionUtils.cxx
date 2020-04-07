@@ -535,7 +535,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(std::string file
   TString hist_title = Form("Data for channel %s",channel.c_str());
   TH1D* datahisto = new TH1D(hist_name, hist_title, nrecobins-1, 0, nrecobins-1);
   if(IsIncidentHisto)
-    datahisto->SetNameTitle( Form("Data_ChannelIncident%s_Histo",channel.c_str()), Form("Incident Data for channel %s", channel.c_str()) );
+    datahisto->SetNameTitle("Data_ChannelIncident_Histo", "Incident Data");
   datahisto->SetDirectory(0);
 
   mf::LogInfo("FillDataHistogram_Pions") << "Filling data histogram " << datahisto->GetName() << " from file " << filename.c_str() << " for channel " << channel.c_str();
@@ -575,7 +575,11 @@ TH1* protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(std::string file
 }
 
 //********************************************************************
-TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(std::string filename, std::string treename, std::vector<double> recoBins, std::string channel, std::string topo, int toponum, double reco_beam_endZ_cut, int doSyst, double weight){
+TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
+    std::string filename, std::string treename, std::vector<double> recoBins,
+    std::string topo, int toponum,
+    double reco_beam_endZ_cut, int doSyst, std::string systName,
+    double weight){
   //********************************************************************
 
   TFile *file = new TFile(filename.c_str(), "READ");
@@ -646,54 +650,82 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(std::strin
   defaultTree->SetBranchAddress( "true_beam_grand_daughter_ID", &true_beam_grand_daughter_ID );
 
   //For systs
-  double g4rw_primary_plus_sigma_weight, g4rw_primary_minus_sigma_weight;
+  std::vector<double> * g4rw_primary_plus_sigma_weight = 0x0;
+  std::vector<double> * g4rw_primary_minus_sigma_weight = 0x0;
+  std::vector<std::string> * g4rw_primary_var = 0x0;
   if (doSyst != 0) {
     defaultTree->SetBranchAddress("g4rw_primary_plus_sigma_weight", &g4rw_primary_plus_sigma_weight);
     defaultTree->SetBranchAddress("g4rw_primary_minus_sigma_weight", &g4rw_primary_minus_sigma_weight);
+    defaultTree->SetBranchAddress("g4rw_primary_var", &g4rw_primary_var);
   }
 
   //std::replace(channel.begin(), channel.end(), ' ', '-');
-  channel.erase(std::remove(channel.begin(), channel.end(), '.'), channel.end());
-  channel.erase(std::remove(channel.begin(), channel.end(), ' '), channel.end());
+  //channel.erase(std::remove(channel.begin(), channel.end(), '.'), channel.end());
+  //channel.erase(std::remove(channel.begin(), channel.end(), ' '), channel.end());
   //std::replace(topo.begin(), topo.end(), ' ', '-');
   topo.erase(std::remove(topo.begin(), topo.end(), '.'), topo.end());
   topo.erase(std::remove(topo.begin(), topo.end(), ' '), topo.end());
 
   size_t nrecobins = recoBins.size();
 
-  std::string hist_add = "";
-  if (doSyst == 1) {
-    hist_add += "_high";
-  }
-  else if (doSyst == -1) {
-    hist_add += "_low";
-  }
-
-  TString hist_name = Form("MC_ChannelIncident%s_%s_Histo",channel.c_str(),topo.c_str());
-  TString hist_title = Form("Incident MC for channel %s and topology %s", channel.c_str(),topo.c_str());
+  TString hist_name = Form("MC_ChannelIncident_%s_Histo", topo.c_str());
+                      //Form("MC_ChannelIncident%s_%s_Histo",
+                      //     channel.c_str(),topo.c_str());
+  TString hist_title = Form("Incident MC for topology %s", topo.c_str());
+                       //Form("Incident MC for channel %s and topology %s",
+                       //     channel.c_str(),topo.c_str());
   
   if (doSyst == 1) {
-    hist_name += "_high";
+    hist_name += "_high_" + systName;
     hist_title += " +1 sigma";
   }
   else if (doSyst == -1) {
-    hist_name += "_low";
+    hist_name += "_low_" + systName;
     hist_title += " -1 sigma";
   }
 
   TH1D* mchisto = new TH1D(hist_name, hist_title, nrecobins-1, 0, nrecobins-1);
   mchisto->SetDirectory(0);
 
-  mf::LogInfo("FillMCBackgroundHistogram_Pions") << "Filling MC background histogram " << mchisto->GetName() << " from file " << filename.c_str() << " for channel " << channel.c_str() << " with topology " << topo.c_str();
+  mf::LogInfo("FillMCIncidentHistogram_Pions") <<
+      "Filling MC incident histogram " << mchisto->GetName() <<
+      " from file " << filename.c_str() << /*" for channel " <<
+      channel.c_str() <<*/ " with topology " << topo.c_str();
 
   double pitch = 0.4792;
   double z0 = 0.56035;
   int slice_cut = std::floor((reco_beam_endZ_cut - (z0 - pitch/2.)) / pitch);
 
+  bool done_check = false;
   for(Int_t k=0; k < defaultTree->GetEntries(); k++){
-    double syst_weight = 1.;
 
     defaultTree->GetEntry(k);
+
+    if (!done_check && doSyst != 0) {
+      if (g4rw_primary_var->size() > 0) {
+        std::cout << "Checking" << std::endl;
+        auto syst_check = std::find(g4rw_primary_var->begin(), g4rw_primary_var->end(), systName);
+        if (syst_check == g4rw_primary_var->end()) {
+          std::cout << "Error! Could not find syst named " << systName << std::endl;
+          std::exception e;
+          throw e;
+        }
+        done_check = true;
+      }
+    }
+
+    double syst_weight = 1.;
+    std::map<std::string, double> weights;
+    if (doSyst == 1) {
+      for (size_t i = 0; i < g4rw_primary_var->size(); ++i) {
+        weights[(*g4rw_primary_var)[i]] = (*g4rw_primary_plus_sigma_weight)[i];
+      }
+    }
+    else if (doSyst == -1) {
+      for (size_t i = 0; i < g4rw_primary_var->size(); ++i) {
+        weights[(*g4rw_primary_var)[i]] = (*g4rw_primary_minus_sigma_weight)[i];
+      }
+    }
 
     // Different background topologies
     Int_t topology = -1;
@@ -772,11 +804,16 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(std::strin
               topology = 4; // Is muon
             }
 
+            /*
             if (doSyst == 1) {
               syst_weight = g4rw_primary_plus_sigma_weight;
             }
             else if (doSyst == -1) {
               syst_weight = g4rw_primary_minus_sigma_weight;
+            }
+            */
+            if (doSyst == 1 || doSyst == -1) { //Do +1 sigma
+              syst_weight = weights[systName];
             }
           }
         }
