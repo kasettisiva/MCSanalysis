@@ -14,8 +14,10 @@
 #include "TFile.h"
 #include "TString.h"
 #include "TGraphAsymmErrors.h"
+#include "TCanvas.h"
 
 #include "RooStats/HistFactory/Measurement.h"
+#include <RooFitResult.h>
 
 // C/C++ standard libraries
 #include <string>
@@ -67,6 +69,8 @@ namespace protoana{
                                 RooStats::HistFactory::Sample& sample,
                                 std::string syst_name, std::string syst_type,
                                 bool hasnormfactor);
+    std::vector<TH1 *> DrawXSecs(RooFitResult *fitresult);
+
 
   private:
     // Configure input from fcl file

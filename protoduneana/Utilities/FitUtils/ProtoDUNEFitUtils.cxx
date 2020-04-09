@@ -367,6 +367,105 @@ double protoana::ProtoDUNEFitUtils::GetDataMCChi2(RooWorkspace *work, TString ch
 
 }
 
+std::vector<TH1 *> protoana::ProtoDUNEFitUtils::PlotXSecs(
+        RooWorkspace * work, std::string name, /*std::string error,*/
+        std::vector<TString> binnames, std::vector<double> recobins,
+        std::vector<TString> incidentBinNames, RooAbsData * data,
+        RooFitResult * result) {
+
+  std::vector<TH1 *> xsecs;
+
+  if (!work) {
+    std::cerr << "ERROR:NULL dir. Will return empty canvas" << std::endl;
+    return xsecs;
+  }
+
+  // Silence output
+  RooMsgService::instance().getStream(1).removeTopic(RooFit::NumIntegration);
+  RooMsgService::instance().getStream(1).removeTopic(RooFit::Plotting);
+
+  // Get pdf from workspace
+  RooSimultaneous* pdf = (RooSimultaneous*)work->pdf("simPdf");
+  if(!pdf){
+    std::cerr << "ERROR::No pdf found in workspace. Will return empty vector!"
+              << std::endl;
+    std::cerr << "ERROR::No pdf found in workspace. Will return empty vector!"
+              << std::endl;
+    std::cerr << "ERROR::No pdf found in workspace. Will return empty vector!"
+              << std::endl;
+    return xsecs;
+  }
+
+
+
+  // Get category components
+  // i.e. Incident, Abs, Cex
+  RooCategory* categories = work->cat("channelCat");
+
+  std::vector<TString> categoriesName;  
+  TIterator* iter = categories->typeIterator();
+  RooCatType* catType;
+  while( (catType = (RooCatType*) iter->Next())) {
+    TString catname = catType->GetName();
+    categoriesName.push_back(catname);
+    std::cout << catname << std::endl;
+  }
+
+  for (size_t i = 0; i < categoriesName.size(); ++i) {
+
+    TString catname = categoriesName[i];
+
+    RooAbsPdf* subpdf = (RooAbsPdf*)pdf->getPdf(catname.Data());
+    if(!subpdf){
+      std::cout << "WARNING::Can't find sub-pdf for region " << catname.Data()
+                << ". Will skip." << std::endl;
+      continue;
+    }
+
+    TString RRSumPdfName = Form("%s_model",catname.Data()); 
+    RooRealSumPdf* RRSumPdf =
+        (RooRealSumPdf*)subpdf->getComponents()->find(RRSumPdfName);
+    RooArgList RRSumComponentsList =  RRSumPdf->funcList();
+    RooLinkedListIter iter = RRSumComponentsList.iterator();
+    RooProduct* component;
+
+    std::vector<TString> compNameVec;
+    while( (component = (RooProduct*) iter.Next()) ){
+      TString componentName = component->GetName();
+      std::cout << componentName << std::endl;
+    }
+  }
+
+  /*
+  TH1 * incident_signal = 0x0;
+  std::vector<TH1 *> incident_backgrounds;
+
+  for (const auto  && key : *keys) {
+    std::string name = key->GetName();
+
+    auto find_Incident = name.find("MC_ChannelIncident_Pions");
+    if (find_Incident != std::string::npos) {
+      incident_signal = (TH1*)key->Clone();
+    }
+    else {
+      incident_backgrounds.push_back((TH1*)key->Clone());
+    }
+  }
+  std::cout << incident_signal << " " << incident_backgrounds.size() << std::endl;
+
+  for (const std::string & main_channel : {"ABS", "CEX"}) {
+    std::cout << main_channel << std::endl;
+
+    for (const auto  && key : *keys) {
+       std::string name = key->GetName();
+       std::cout << name << std::endl;
+    }
+  }
+  */
+
+  return xsecs;
+}
+
 //********************************************************************
 std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorkspace *work, TString name, TString error, TString plottodraw, std::vector<TString> binnames, std::vector<double> recobins, std::vector<TString> incidentBinNames, TString measurement, bool doNegativeReco, RooAbsData* data, RooFitResult* result){
   //********************************************************************
@@ -385,6 +484,8 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorksp
   // Get pdf from workspace
   RooSimultaneous* pdf = (RooSimultaneous*)work->pdf("simPdf");
   if(!pdf){
+    std::cerr << "ERROR::No pdf found in workspace. Will return empty vector!" << std::endl;
+    std::cerr << "ERROR::No pdf found in workspace. Will return empty vector!" << std::endl;
     std::cerr << "ERROR::No pdf found in workspace. Will return empty vector!" << std::endl;
     return rooplots;
   }
@@ -516,7 +617,7 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorksp
     Int_t sigcolor[13] = {2,3,4,5,6,7,8,9,kMagenta, 1, kGreen+2, kTeal, kOrange+10};
     //Int_t sigcolor[9] = {1,1,1,1,1,1,1,1,1};
     for(int i = (compFracVec.size()-1); i > -1; i--){
-    //for(unsigned int i = 0; i < compFracVec.size(); i++){
+    //for(unsigned int i = 0; i < compFracVec.size(); i++)
       Int_t compPlotColor = i;
       if(compNameVec[i].Contains("ChannelABS_CEX") || compNameVec[i].Contains("ChannelCEX_ABS")){
 	compPlotColor = 0;
@@ -548,7 +649,7 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorksp
     
     Int_t counter2 = 0;
     bool found = false; bool found2 = false;
-    //for(int i = (compNameVec.size()-1) ; i > -1; i--){
+    //for(int i = (compNameVec.size()-1) ; i > -1; i--)
     for(unsigned int i = 0; i < compFracVec.size(); i++){
       Int_t compPlotColor = i;
       if(compNameVec[i].Contains("ChannelABS_CEX") && !found){
@@ -1934,7 +2035,6 @@ void protoana::ProtoDUNEFitUtils::ResetError(RooWorkspace* ws, const RooArgList&
       }
       else{
 	std::cout << "WARNING::Unknown constraint type " << constraintString.Data() << ". Set prefit uncertainty to 0.00001." << std::endl;
-	var->setError(0.00001);
       }
     }
 

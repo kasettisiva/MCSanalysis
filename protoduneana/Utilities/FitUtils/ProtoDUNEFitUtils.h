@@ -54,6 +54,12 @@ namespace protoana{
 
     // Vector of plots with data and pdfs
     std::vector<TCanvas*> PlotDatasetsAndPdfs(RooWorkspace *work, TString name, TString error, TString plottodraw, std::vector<TString> binnames, std::vector<double> recobins, std::vector<TString> incidentBinNames, TString measurement="PDFit", bool doNegativeReco=false,RooAbsData* data=NULL, RooFitResult* result=NULL);
+
+    std::vector<TH1 *> PlotXSecs(
+        RooWorkspace * work, std::string name, /*std::string error,*/
+        std::vector<TString> binnames, std::vector<double> recobins,
+        std::vector<TString> incidentBinNames, RooAbsData * data = 0x0,
+        RooFitResult * result = 0x0);
     
     // Vector of plots for the NLL
     std::vector<TCanvas*> PlotNLL(RooWorkspace *work, TString name, RooFitResult* result, bool plotPLL=false);
