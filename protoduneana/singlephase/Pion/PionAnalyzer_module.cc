@@ -862,11 +862,13 @@ private:
   bool fSaveHits;
   bool fCheckCosmics;
   bool fTrueToReco;
+  bool fDoReweight;
+
   //Geant4Reweight stuff
-  TFile FracsFile, XSecFile;
+  TFile * FracsFile, * XSecFile;
   std::vector<fhicl::ParameterSet> ParSet;
   G4ReweightParameterMaker ParMaker;
-  G4MultiReweighter MultiRW;
+  G4MultiReweighter * MultiRW;
   G4ReweighterFactory RWFactory;
   G4Reweighter * theRW;
 };
@@ -894,13 +896,7 @@ pionana::PionAnalyzer::PionAnalyzer(fhicl::ParameterSet const& p)
   fSaveHits( p.get<bool>( "SaveHits" ) ),
   fCheckCosmics( p.get<bool>( "CheckCosmics" ) ),
   fTrueToReco( p.get<bool>( "TrueToReco" ) ),
-
-  FracsFile( (p.get< std::string >( "FracsFile" )).c_str(), "OPEN" ),
-  XSecFile( (p.get< std::string >( "XSecFile" )).c_str(), "OPEN"),
-  ParSet(p.get<std::vector<fhicl::ParameterSet>>("ParameterSet")),
-  ParMaker(ParSet),
-  MultiRW(211, XSecFile, FracsFile, ParSet/*, 100, 0*/)
-
+  fDoReweight(p.get<bool>("DoReweight"))
 {
 
   templates[ 211 ]  = (TProfile*)dEdX_template_file.Get( "dedx_range_pi"  );
@@ -911,7 +907,22 @@ pionana::PionAnalyzer::PionAnalyzer(fhicl::ParameterSet const& p)
   calibration = protoana::ProtoDUNECalibration( CalibrationPars );
   beam_cuts = protoana::ProtoDUNEBeamCuts( BeamCuts );
 
-  theRW = RWFactory.BuildReweighter( 211, &XSecFile, &FracsFile, ParMaker.GetFSHists(), ParMaker.GetElasticHist()/*, true*/ );
+
+  //FracsFile( (p.get< std::string >( "FracsFile" )).c_str(), "OPEN" ),
+  //XSecFile( (p.get< std::string >( "XSecFile" )).c_str(), "OPEN"),
+  //ParSet(p.get<std::vector<fhicl::ParameterSet>>("ParameterSet")),
+  //ParMaker(ParSet),
+  //MultiRW(211, XSecFile, FracsFile, ParSet)
+
+  if (fDoReweight) {
+    FracsFile =  new TFile((p.get< std::string >( "FracsFile" )).c_str(), "OPEN" );
+    XSecFile = new TFile((p.get< std::string >( "XSecFile" )).c_str(), "OPEN");
+    ParSet = p.get<std::vector<fhicl::ParameterSet>>("ParameterSet");
+    ParMaker = G4ReweightParameterMaker(ParSet);
+    MultiRW = new G4MultiReweighter(211, *XSecFile, *FracsFile, ParSet/*, 100, 0*/);
+
+    theRW = RWFactory.BuildReweighter( 211, XSecFile, FracsFile, ParMaker.GetFSHists(), ParMaker.GetElasticHist()/*, true*/ );
+  }
 
   // Call appropriate consumes<>() for any products to be retrieved by this module.
 }
@@ -2927,15 +2938,16 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
 
   //New geant4reweight stuff
   
-  if (!evt.isRealData()) {
+  if (!evt.isRealData() && fDoReweight) {
+    if (fVerbose) std::cout << "Doing reweight" << std::endl;
     if (true_beam_PDG == 211) {
       G4ReweightTraj theTraj(true_beam_ID, true_beam_PDG, 0, event, {0,0});
       bool created = CreateRWTraj(*true_beam_particle, plist,
                                   fGeometryService, event, &theTraj);
       if (created) {
-        g4rw_primary_weights.push_back(MultiRW.GetWeightFromNominal(theTraj));
+        g4rw_primary_weights.push_back(MultiRW->GetWeightFromNominal(theTraj));
         
-        std::vector<double> weights_vec = MultiRW.GetWeightFromAll1DThrows(
+        std::vector<double> weights_vec = MultiRW->GetWeightFromAll1DThrows(
             theTraj);
         g4rw_primary_weights.insert(g4rw_primary_weights.end(),
                                     weights_vec.begin(), weights_vec.end());
@@ -2946,7 +2958,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
 
         for (size_t i = 0; i < ParSet.size(); ++i) {
           std::pair<double, double> pm_weights =
-              MultiRW.GetPlusMinusSigmaParWeight(theTraj, i);
+              MultiRW->GetPlusMinusSigmaParWeight(theTraj, i);
 
           g4rw_primary_plus_sigma_weight.push_back(pm_weights.first);
           g4rw_primary_minus_sigma_weight.push_back(pm_weights.second);
