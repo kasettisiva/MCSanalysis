@@ -1780,6 +1780,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
     auto calo_dEdX = calo[0].dEdx();
     auto calo_range = calo[0].ResidualRange();
     auto TpIndices = calo[0].TpIndices();
+    auto theXYZPoints = calo[0].XYZ();
     //std::cout << "View 2 hits " << calo_dQdX.size() << std::endl;
 
     std::vector< size_t > calo_hit_indices;
@@ -1793,12 +1794,15 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       reco_beam_calo_wire.push_back( theHit.WireID().Wire );
       reco_beam_calo_tick.push_back( theHit.PeakTime() );
       calo_hit_indices.push_back( TpIndices[i] );
+
+      if (fVerbose) 
+        std::cout << theXYZPoints[i].X() << " " << theXYZPoints[i].Y() << " " <<
+                     theXYZPoints[i].Z() << std::endl;
     }
     ////////////////////////////////////////////
 
     //New Calibration
-    std::vector< float > new_dEdX = calibration.GetCalibratedCalorimetry(  *thisTrack, evt, fTrackerTag, fCalorimetryTag );
-    //std::cout << "n dEdX: " << reco_beam_dEdX.size() << " " << new_dEdX.size() << std::endl;
+    std::vector< float > new_dEdX = calibration.GetCalibratedCalorimetry(  *thisTrack, evt, fTrackerTag, fCalorimetryTag, -1.);
     for( size_t i = 0; i < new_dEdX.size(); ++i ){ reco_beam_calibrated_dEdX.push_back( new_dEdX[i] ); }
     ////////////////////////////////////////////
 
@@ -1808,9 +1812,15 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
   
     //std::cout << "Proton chi2: " << reco_beam_Chi2_proton << std::endl;
 
+    if (fVerbose)
+      std::cout << "Calo check: " << reco_beam_calibrated_dEdX.size() << " " <<
+                   reco_beam_TrkPitch.size() << std::endl;
+
     std::vector< calo_point > reco_beam_calo_points;
     //Doing thin slice
-    if( reco_beam_calibrated_dEdX.size() && reco_beam_calibrated_dEdX.size() == reco_beam_TrkPitch.size() && reco_beam_calibrated_dEdX.size() == reco_beam_calo_wire.size() ){
+    if (reco_beam_calibrated_dEdX.size() &&
+        reco_beam_calibrated_dEdX.size() == reco_beam_TrkPitch.size() &&
+        reco_beam_calibrated_dEdX.size() == reco_beam_calo_wire.size()) {
 
       for( size_t i = 0; i < reco_beam_calibrated_dEdX.size(); ++i ){
         reco_beam_calo_points.push_back(

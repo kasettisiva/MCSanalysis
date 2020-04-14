@@ -43,8 +43,10 @@ protoana::ProtoDUNECalibration::ProtoDUNECalibration(const fhicl::ParameterSet &
   */
 }
 
-std::vector< float >  protoana::ProtoDUNECalibration::GetCalibratedCalorimetry(  const recob::Track &track, art::Event const &evt, const std::string trackModule, const std::string caloModule ) {
-
+std::vector<float> protoana::ProtoDUNECalibration::GetCalibratedCalorimetry(
+    const recob::Track &track, art::Event const &evt,
+    const std::string trackModule, const std::string caloModule,
+    double negativeZFix) {
 
   std::vector< float > calibrated_dEdx;
 
@@ -78,6 +80,12 @@ std::vector< float >  protoana::ProtoDUNECalibration::GetCalibratedCalorimetry( 
     return calibrated_dEdx;
   }
 
+  if (negativeZFix > 0.) {
+    return calibrated_dEdx;
+  }
+
+  double z_check = negativeZFix;
+
   //Do Ajib's correction 
   for( size_t i = 0; i < dQdX.size(); ++i ){ 
     float hit_x = theXYZPoints[i].X();
@@ -85,7 +93,13 @@ std::vector< float >  protoana::ProtoDUNECalibration::GetCalibratedCalorimetry( 
     float hit_z = theXYZPoints[i].Z();
 
     if( hit_y < 0. || hit_y > 600. ) continue;
-    if( hit_z < 0. || hit_z > 695. ) continue;
+    if( hit_z < z_check || hit_z > 695. ) continue;
+
+    //Set the z position to 0. for small (configurable) negative positions
+    if (negativeZFix < hit_z && hit_z < 0.) {
+      //std::cout << "Fixing: " << hit_z << " " << negativeZFix << std::endl;
+      hit_z = 0.;
+    }
 
 
     int X_bin = X_correction_hist->FindBin( hit_x );
