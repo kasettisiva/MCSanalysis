@@ -82,6 +82,9 @@ namespace protoana{
     // Read the input root file and create the histograms
     bool FillHistogramVectors_Pions();
 
+    // Scale MC to Data
+    void ScaleMCToData();
+
     // Build samples and channels
     void AddSamplesAndChannelsToMeasurement(RooStats::HistFactory::Measurement& meas);
     void AddIncidentSamplesAndChannelsToMeasurement(RooStats::HistFactory::Measurement& meas);
@@ -125,7 +128,7 @@ namespace protoana{
     std::vector< TH1 * > _interactingEfficiencyNums;
     std::vector< TGraphAsymmErrors * > _interactingEfficiencies;
  
-    bool _AddIncidentToMeasurement, _DoNegativeReco;
+    bool _AddIncidentToMeasurement, _DoNegativeReco, _DoScaleMCToData;
     bool _DistinguishIncidentSignal;
     double _EndZCut;
   };

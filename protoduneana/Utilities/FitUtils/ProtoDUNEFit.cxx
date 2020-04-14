@@ -74,6 +74,10 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
 
   if(!hfilled) return;
 
+  if (_DoScaleMCToData) {
+    ScaleMCToData();
+  }
+
   // Get pion flux
   //TH1* pionflux_ereco_histo  =  protoana::ProtoDUNESelectionUtils::FillMCFlux_Pions(_MCFileNames[0], _TruthTreeName, _TruthBinning, 1);
   //TH1* pionflux_etruth_histo =  protoana::ProtoDUNESelectionUtils::FillMCFlux_Pions(_MCFileNames[0], _TruthTreeName, _TruthBinning, 2);
@@ -420,14 +424,10 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
   }
 
   // Try drawing the xsecs
-  std::vector<TH1 *> plots = DrawXSecs(fitresult);
-  //std::vector<TH1 *> plots = protoana::ProtoDUNEFitUtils::PlotXSecs(
-  //    ws, "beforefit", /*"Poisson",*/ truebinsnameVec, _RecoBinning,
-  //    incidentNameVec, 0x0, 0x0);
-
-  for (size_t k = 0; k < plots.size(); ++k) {
-     plots[k]->Write();
-  }
+  //std::vector<TH1 *> plots = DrawXSecs(fitresult);
+  //for (size_t k = 0; k < plots.size(); ++k) {
+  //   plots[k]->Write();
+  //}
   std::cout << "Finished XSec" << std::endl;
 
   for(unsigned int k = 0; k < _incsighistos.size(); k++){
@@ -590,7 +590,7 @@ void protoana::ProtoDUNEFit::AddSamplesAndChannelsToMeasurement(RooStats::HistFa
                 _NormalisedSystematic, _sig_chan_index[j], _sig_topo_index[j],
                 _sig_truth_index[j]);
           }
-        }	
+        }
 
 	// Set histogram for sample
 	sample.SetHisto(htemp);
@@ -1001,7 +1001,8 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
   for(int i=0; i < ndatachannels; i++){
     _datahistos.push_back(
         protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(
-            _DataFileNames[i], _RecoTreeName, _RecoBinning, _ChannelNames[i]));
+            _DataFileNames[i], _RecoTreeName, _RecoBinning, _ChannelNames[i],
+            _DoNegativeReco));
     //_incdatahistos.push_back( protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(_DataFileNames[0], _RecoTreeName, _RecoBinning, i, true) );
   }
 
@@ -1009,14 +1010,16 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
     TH1* inchisto =
         protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
             _IncidentMCFileNames[0], _RecoTreeName, _RecoBinning,
-            _IncidentTopologyName[i], _IncidentTopology[i], _EndZCut);
+            _IncidentTopologyName[i], _IncidentTopology[i], _EndZCut,
+            _DoNegativeReco);
 
     //for(int j=1; j < nmcchannels; j++){
     for (size_t j = 1; j < _IncidentMCFileNames.size(); ++j) {
       inchisto->Add(
           protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
               _IncidentMCFileNames[j], _RecoTreeName, _RecoBinning,
-              _IncidentTopologyName[i], _IncidentTopology[i], _EndZCut));
+              _IncidentTopologyName[i], _IncidentTopology[i], _EndZCut,
+              _DoNegativeReco));
     }
 
     inchisto->SetNameTitle(Form("MC_ChannelIncident_%s_Histo",
@@ -1051,7 +1054,7 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
       protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(
           //_DataFileNames[0], _RecoTreeName, _RecoBinning, _ChannelNames[0],
           _IncidentDataFileNames[0], _RecoTreeName, _RecoBinning, ""/*_ChannelNames[0]*/,
-          true);
+          _DoNegativeReco, true);
 
   //for(int i=1; i < ndatachannels; i++){
   for (size_t i = 1; i < _IncidentDataFileNames.size(); ++i) {
@@ -1059,7 +1062,7 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
       protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(
           //_DataFileNames[i], _RecoTreeName, _RecoBinning, _ChannelNames[i],
           _IncidentDataFileNames[i], _RecoTreeName, _RecoBinning, ""/*_ChannelNames[i]*/,
-          true));
+          _DoNegativeReco, true));
   }
   _incdatahistos.push_back(incdatahisto);
 
@@ -1105,6 +1108,47 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
 
 
   return true;
+
+}
+
+void protoana::ProtoDUNEFit::ScaleMCToData() {
+  //Get the number of incident pions from MC
+  double nIncidentPionsMC = 0.;
+  for (size_t i = 0; i < _IncidentMCFileNames.size(); ++i) {
+    //Get the tree
+    TFile incidentFile(_IncidentMCFileNames[i].c_str(), "OPEN");
+    TTree * incident_tree = (TTree*)incidentFile.Get(_RecoTreeName.c_str());
+    nIncidentPionsMC += incident_tree->GetEntries();
+    incidentFile.Close();
+  }
+  std::cout << "Got " << nIncidentPionsMC << " incident MC Pions" << std::endl;
+  
+  //Get the number of incident pions from Data
+  double nIncidentPionsData = 0.;
+  for (size_t i = 0; i < _IncidentDataFileNames.size(); ++i) {
+    //Get the tree
+    TFile incidentFile(_IncidentDataFileNames[i].c_str(), "OPEN");
+    TTree * incident_tree = (TTree*)incidentFile.Get(_RecoTreeName.c_str());
+    nIncidentPionsData += incident_tree->GetEntries();
+    incidentFile.Close();
+  }
+  std::cout << "Got " << nIncidentPionsData << " incident Data Pions" << std::endl;
+
+  double scale_factor = nIncidentPionsData/nIncidentPionsMC;
+  std::cout << "Scale factor: " << scale_factor << std::endl;
+
+  for(size_t i = 0; i < _sighistos.size(); i++){
+    _sighistos[i]->Scale(scale_factor);
+  }
+  for(size_t i = 0; i < _bkghistos.size(); i++){
+    _bkghistos[i]->Scale(scale_factor);
+  }
+  for(size_t i = 0; i < _incsighistos.size(); i++){
+    _incsighistos[i]->Scale(scale_factor);
+  }
+  for(size_t i = 0; i < _incbkghistos.size(); i++){
+    _incbkghistos[i]->Scale(scale_factor);
+  }
 
 }
 
@@ -1304,6 +1348,8 @@ bool protoana::ProtoDUNEFit::Configure(std::string configPath){
   _DistinguishIncidentSignal   = pset.get<bool>("DistinguishIncidentSignal"); 
   _EndZCut                     = pset.get<double>("EndZCut");
 
+  _DoScaleMCToData             = pset.get<bool>("DoScaleMCToData");
+
   return true;
 
 }
@@ -1443,14 +1489,14 @@ bool protoana::ProtoDUNEFit::BuildIncidentSystThenApplyToSample(
         protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
             _IncidentMCFileNames[0], _RecoTreeName, _RecoBinning,
             _IncidentTopologyName[iTopo], _IncidentTopology[iTopo], _EndZCut,
-            -1, _SystToConsider[i]);
+            _DoNegativeReco, -1, _SystToConsider[i]);
 
     for (size_t j = 1; j < _IncidentMCFileNames.size(); ++j) {
       low_hist->Add(
           protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
               _IncidentMCFileNames[j], _RecoTreeName, _RecoBinning,
               _IncidentTopologyName[iTopo], _IncidentTopology[iTopo], _EndZCut,
-              -1, _SystToConsider[i]));
+              _DoNegativeReco, -1, _SystToConsider[i]));
     }
 
 
@@ -1458,14 +1504,14 @@ bool protoana::ProtoDUNEFit::BuildIncidentSystThenApplyToSample(
         protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
             _IncidentMCFileNames[0], _RecoTreeName, _RecoBinning,
             _IncidentTopologyName[iTopo], _IncidentTopology[iTopo], _EndZCut,
-            +1, _SystToConsider[i]);
+            _DoNegativeReco, +1, _SystToConsider[i]);
 
     for (size_t j = 1; j < _IncidentMCFileNames.size(); ++j) {
       high_hist->Add(
           protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
               _IncidentMCFileNames[j], _RecoTreeName, _RecoBinning,
               _IncidentTopologyName[iTopo], _IncidentTopology[iTopo], _EndZCut,
-              +1, _SystToConsider[i]));
+              _DoNegativeReco, +1, _SystToConsider[i]));
     }
 
     if (!(low_hist && high_hist)) {
@@ -1502,14 +1548,14 @@ std::vector<std::vector<std::pair<TH1*, TH1*>>>
         protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
             _IncidentMCFileNames[0], _RecoTreeName, _RecoBinning,
             _IncidentTopologyName[iTopo], _IncidentTopology[iTopo], _EndZCut,
-            -1, _SystToConsider[i]);
+            _DoNegativeReco, -1, _SystToConsider[i]);
 
     for (size_t j = 1; j < _IncidentMCFileNames.size(); ++j) {
       low_hist->Add(
           protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
               _IncidentMCFileNames[j], _RecoTreeName, _RecoBinning,
               _IncidentTopologyName[iTopo], _IncidentTopology[iTopo], _EndZCut,
-              -1, _SystToConsider[i]));
+              _DoNegativeReco, -1, _SystToConsider[i]));
     }
 
 
@@ -1517,14 +1563,14 @@ std::vector<std::vector<std::pair<TH1*, TH1*>>>
         protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
             _IncidentMCFileNames[0], _RecoTreeName, _RecoBinning,
             _IncidentTopologyName[iTopo], _IncidentTopology[iTopo], _EndZCut,
-            +1, _SystToConsider[i]);
+            _DoNegativeReco, +1, _SystToConsider[i]);
 
     for (size_t j = 1; j < _IncidentMCFileNames.size(); ++j) {
       high_hist->Add(
           protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
               _IncidentMCFileNames[j], _RecoTreeName, _RecoBinning,
               _IncidentTopologyName[iTopo], _IncidentTopology[iTopo], _EndZCut,
-              +1, _SystToConsider[i]));
+              _DoNegativeReco, +1, _SystToConsider[i]));
     }
 
     if (!(low_hist && high_hist)) {

@@ -160,14 +160,14 @@ int main(int argc, char ** argv) {
         protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
             cfg.IncidentMCFileNames[0], cfg.RecoTreeName, cfg.RecoBinning,
             /*cfg.ChannelNames[0],*/ cfg.IncidentTopologyName[j], cfg.IncidentTopology[j],
-            cfg.EndZCut);
+            cfg.EndZCut, false);
     for (size_t k = 1; k < cfg.IncidentMCFileNames.size(); ++k) {
       std::cout << "Trying " << k << std::endl;
       temp_hist->Add(
           protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
             cfg.IncidentMCFileNames[k], cfg.RecoTreeName, cfg.RecoBinning,
             /*cfg.ChannelNames[k],*/ cfg.IncidentTopologyName[j], cfg.IncidentTopology[j],
-            cfg.EndZCut));
+            cfg.EndZCut, false));
     }
     inc_nom_hists.push_back(temp_hist);
 
@@ -180,13 +180,13 @@ int main(int argc, char ** argv) {
             protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
                 cfg.IncidentMCFileNames[0], cfg.RecoTreeName, cfg.RecoBinning,
                 /*cfg.ChannelNames[0],*/ cfg.IncidentTopologyName[j], cfg.IncidentTopology[j],
-                cfg.EndZCut, n, cfg.SystToConsider[m]);
+                cfg.EndZCut, false, n, cfg.SystToConsider[m]);
         for (size_t k = 1; k < cfg.IncidentMCFileNames.size(); ++k) {
           temp_hist->Add(
               protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
                   cfg.IncidentMCFileNames[k], cfg.RecoTreeName, cfg.RecoBinning,
                   /*cfg.ChannelNames[k],*/ cfg.IncidentTopologyName[j], cfg.IncidentTopology[j],
-                  cfg.EndZCut, n, cfg.SystToConsider[m]));
+                  cfg.EndZCut, false, n, cfg.SystToConsider[m]));
         }
         inc_syst_hists.push_back(temp_hist);
 
