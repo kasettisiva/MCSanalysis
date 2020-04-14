@@ -77,4 +77,5 @@ IgnoreSystematicErrorBelow: 0.01                     # Sytematic error will be i
 
 AddIncidentToMeasurement: true
 DoNegativeReco:           false #true 
+DistinguishIncidentSignal: true 
 EndZCut:                  225.

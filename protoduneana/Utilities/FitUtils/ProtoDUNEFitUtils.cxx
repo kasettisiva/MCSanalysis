@@ -651,6 +651,7 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorksp
     bool found = false; bool found2 = false;
     //for(int i = (compNameVec.size()-1) ; i > -1; i--)
     for(unsigned int i = 0; i < compFracVec.size(); i++){
+      std::cout << "NAME: " << compNameVec[i] << std::endl;
       Int_t compPlotColor = i;
       if(compNameVec[i].Contains("ChannelABS_CEX") && !found){
 	compPlotColor = 0;

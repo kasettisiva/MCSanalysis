@@ -145,9 +145,26 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
   }
 
   std::vector< TString > incidentNameVec;
-  for( size_t l = 0; l < _IncidentTopologyName.size(); ++l ){
-    TString str = Form("%s", _IncidentTopologyName[l].c_str());
-    incidentNameVec.push_back(str); 
+
+  if (_DistinguishIncidentSignal) {
+    for (size_t l = 1; l < _IncidentTopologyName.size(); ++l) {
+      TString str = Form("%s", _IncidentTopologyName[l].c_str());
+      std::cout << "NameVec " << l << " " << str << std::endl;
+      incidentNameVec.push_back(str); 
+    }
+
+    for (int l = 1; l <= _incsighistos[0]->GetNbinsX(); ++l) {
+      incidentNameVec.push_back(Form("%s_IncBin%i",
+                                     _IncidentTopologyName[0].c_str(), l));
+      std::cout << incidentNameVec.back() << std::endl;
+    }
+  }
+  else {
+    for (size_t l = 0; l < _IncidentTopologyName.size(); ++l) {
+      TString str = Form("%s", _IncidentTopologyName[l].c_str());
+      std::cout << "NameVec " << l << " " << str << std::endl;
+      incidentNameVec.push_back(str); 
+    }
   }
 
   std::vector<TCanvas*> bfplots = protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(ws, "beforefit", "Poisson", "ratio", truebinsnameVec, _RecoBinning, incidentNameVec, "Before Fit", _DoNegativeReco);
@@ -411,6 +428,7 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
   for (size_t k = 0; k < plots.size(); ++k) {
      plots[k]->Write();
   }
+  std::cout << "Finished XSec" << std::endl;
 
   for(unsigned int k = 0; k < _incsighistos.size(); k++){
     _incsighistos[k]->Write();
@@ -571,9 +589,6 @@ void protoana::ProtoDUNEFit::AddSamplesAndChannelsToMeasurement(RooStats::HistFa
             BuildSignalSystThenApplyToSample(sample, htemp, true,
                 _NormalisedSystematic, _sig_chan_index[j], _sig_topo_index[j],
                 _sig_truth_index[j]);
-            //BuildSystThenApplyToSample(sample, htemp, true, _NormalisedSystematic,
-            //    kSignal, _sig_chan_index[j], _sig_topo_index[j],
-            //    _sig_truth_index[j]);
           }
         }	
 
@@ -660,16 +675,12 @@ void protoana::ProtoDUNEFit::AddIncidentSamplesAndChannelsToMeasurement(RooStats
     
     
     if (_EnableSystematicError) {
-    
       if (_UseComputedSysts) {
         ApplySystematicToSample(sample, htemp, systvec, false, false);
       }
       else{
         BuildIncidentSystThenApplyToSample(sample, htemp, false, false,
-            _inc_topo_index[j]);
-        //BuildSystThenApplyToSample(sample, htemp, true, _NormalisedSystematic,
-        //    kIncident, _sig_chan_index[j], _sig_topo_index[j],
-        //    _sig_truth_index[j]);
+            _inc_bkg_topo_index[j]);
       }
     }
     
@@ -692,6 +703,15 @@ void protoana::ProtoDUNEFit::AddIncidentSamplesAndChannelsToMeasurement(RooStats
     
     // Add sample to channel
     channel.AddSample(sample);
+  }
+
+  //Needed to make the systs for the bin-by-bin incident sample
+  //std::pair<std::vector<TH1 *>, std::vector<TH1 *>> inc_sig_systs;
+  std::vector<std::vector<std::pair<TH1*, TH1*>>> inc_sig_systs;
+  if (_DistinguishIncidentSignal && _EnableSystematicError && !_UseComputedSysts) {
+     std::cout << "Incident systs for topo: " << _IncidentTopology[0] << " " <<
+         _IncidentTopologyName[0] << std::endl;
+     inc_sig_systs = BuildIncidentSignalSyst(0);
   }
 
   // Add signal samples to channel
@@ -717,9 +737,25 @@ void protoana::ProtoDUNEFit::AddIncidentSamplesAndChannelsToMeasurement(RooStats
       staterror.SetErrorHist(staterrorhisto);
     }
     
-    //if(_EnableSystematicError){
-    //ApplySystematicToSample(sample, htemp, systvec, true, _NormalisedSystematic);
-    //}
+    
+    if (_EnableSystematicError) {
+      if (_UseComputedSysts) {
+        ApplySystematicToSample(sample, htemp, systvec, false, false);
+      }
+      else{ //Move this up above and create a vector -- for each inc sig bin
+        //BuildIncidentSystThenApplyToSample(sample, htemp, false, false,
+        //    _inc_sig_topo_index[j]); 
+        for (size_t k = 0; k < _SystToConsider.size(); ++k) {
+          std::cout << "Applying syst " << _SystToConsider[k] << " to " <<
+                       htemp->GetName() << " " << inc_sig_systs[k][j].first <<
+                       inc_sig_systs[k][j].second << std::endl;
+          ApplyBuiltSystToSample(htemp, inc_sig_systs[k][j].first,
+                                 inc_sig_systs[k][j].second, sample,
+                                 _SystToConsider[k], _SystType[k], false);
+        }
+      }
+    }
+    
     
     // Set histogram for sample
     sample.SetHisto(htemp);
@@ -983,9 +1019,14 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
               _IncidentTopologyName[i], _IncidentTopology[i], _EndZCut));
     }
 
-    inchisto->SetNameTitle(Form("MC_ChannelIncident_%s_Histo",_IncidentTopologyName[i].c_str()), Form("Incident MC for topology %s", _IncidentTopologyName[i].c_str()));
-    /*
-    if(i == 0){
+    inchisto->SetNameTitle(Form("MC_ChannelIncident_%s_Histo",
+                                _IncidentTopologyName[i].c_str()),
+                           Form("Incident MC for topology %s",
+                                _IncidentTopologyName[i].c_str()));
+
+
+    
+    if (i == 0 && _DistinguishIncidentSignal) {
       // Split into multiple histograms
       for(int j=1; j <= inchisto->GetNbinsX(); j++){
 	TString hname = Form("%s_IncBin%i",inchisto->GetName(),j);
@@ -997,12 +1038,13 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
 	  else inchisto_h->SetBinContent(k, 0.0);
 	}
 	_incsighistos.push_back(inchisto_h);
+        _inc_sig_topo_index.push_back(i);
       }   
     }
-    else{*/
+    else {
       _incbkghistos.push_back(inchisto);
-      _inc_topo_index.push_back(i);
-    //}
+      _inc_bkg_topo_index.push_back(i);
+    }
   }
 
   TH1* incdatahisto =
@@ -1259,6 +1301,7 @@ bool protoana::ProtoDUNEFit::Configure(std::string configPath){
 
   _AddIncidentToMeasurement    = pset.get<bool>("AddIncidentToMeasurement");
   _DoNegativeReco              = pset.get<bool>("DoNegativeReco"); 
+  _DistinguishIncidentSignal   = pset.get<bool>("DistinguishIncidentSignal"); 
   _EndZCut                     = pset.get<double>("EndZCut");
 
   return true;
@@ -1439,6 +1482,102 @@ bool protoana::ProtoDUNEFit::BuildIncidentSystThenApplyToSample(
   }
 
   return true;
+}
+
+std::vector<std::vector<std::pair<TH1*, TH1*>>>
+//std::pair<std::vector<TH1*>, std::vector<TH1*>>
+    protoana::ProtoDUNEFit::BuildIncidentSignalSyst(size_t iTopo) {
+  
+  //std::vector<TH1 *> low_hists, high_hists;
+  std::vector<std::vector<std::pair<TH1*, TH1*>>> results;
+
+  TH1 * low_hist = 0x0;
+  TH1 * high_hist = 0x0;
+
+  for (size_t i = 0; i < _SystToConsider.size(); ++i) {
+    std::string syst_name = _SystToConsider[i];
+    std::string syst_type = _SystType[i];
+
+    low_hist =
+        protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
+            _IncidentMCFileNames[0], _RecoTreeName, _RecoBinning,
+            _IncidentTopologyName[iTopo], _IncidentTopology[iTopo], _EndZCut,
+            -1, _SystToConsider[i]);
+
+    for (size_t j = 1; j < _IncidentMCFileNames.size(); ++j) {
+      low_hist->Add(
+          protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
+              _IncidentMCFileNames[j], _RecoTreeName, _RecoBinning,
+              _IncidentTopologyName[iTopo], _IncidentTopology[iTopo], _EndZCut,
+              -1, _SystToConsider[i]));
+    }
+
+
+    high_hist =
+        protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
+            _IncidentMCFileNames[0], _RecoTreeName, _RecoBinning,
+            _IncidentTopologyName[iTopo], _IncidentTopology[iTopo], _EndZCut,
+            +1, _SystToConsider[i]);
+
+    for (size_t j = 1; j < _IncidentMCFileNames.size(); ++j) {
+      high_hist->Add(
+          protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
+              _IncidentMCFileNames[j], _RecoTreeName, _RecoBinning,
+              _IncidentTopologyName[iTopo], _IncidentTopology[iTopo], _EndZCut,
+              +1, _SystToConsider[i]));
+    }
+
+    if (!(low_hist && high_hist)) {
+      return results;
+    }
+    
+    //Create a new vector for this syst
+    results.push_back(std::vector<std::pair<TH1*, TH1*>>());
+
+    //Split up the histos 
+    for (int j = 1; j <= low_hist->GetNbinsX(); j++) {
+      TString low_name = Form("%s_IncBin%i", low_hist->GetName(),j);
+      TString high_name = Form("%s_IncBin%i", high_hist->GetName(),j);
+
+      TH1* temp_low_hist = (TH1*)low_hist->Clone();
+      temp_low_hist->Reset();
+      temp_low_hist->SetName(low_name.Data());
+
+      TH1* temp_high_hist = (TH1*)high_hist->Clone();
+      temp_high_hist->Reset();
+      temp_high_hist->SetName(high_name.Data());
+
+      for (int k = 1; k <= low_hist->GetNbinsX(); k++) {
+        if (k == j) {
+          temp_low_hist->SetBinContent(k, low_hist->GetBinContent(k));
+          temp_high_hist->SetBinContent(k, high_hist->GetBinContent(k));
+        }
+        else {
+          temp_low_hist->SetBinContent(k, 0.0);
+          temp_high_hist->SetBinContent(k, 0.0);
+        }
+      }
+      results.back().push_back({temp_high_hist, temp_low_hist});
+      //low_hists.push_back(temp_low_hist);
+      //high_hists.push_back(temp_high_hist);
+      std::cout << "Adding systs: " << temp_low_hist->GetName() << " " << 
+                   temp_high_hist->GetName() << std::endl;
+      _syst_hists.push_back((TH1*)temp_low_hist->Clone()); 
+      _syst_hists.push_back((TH1*)temp_high_hist->Clone()); 
+    }
+  }
+
+  std::cout << "Systs: " << _SystToConsider.size() << " " << results.size() << std::endl;
+
+  for (size_t i = 0; i < _SystToConsider.size(); ++i) {
+    std::cout << i << " " << _SystToConsider[i] << " " << results[i].size() << std::endl;
+    for (size_t j = 0; j < results[i].size(); ++j) {
+      std::cout << results[i][j].first << " " << results[i][j].second << std::endl;
+    }
+  }
+
+  return results;
+
 }
 
 bool protoana::ProtoDUNEFit::BuildSystThenApplyToSample(
@@ -1671,6 +1810,8 @@ bool protoana::ProtoDUNEFit::ApplyBuiltSystToSample(
 
 std::vector<TH1 *> protoana::ProtoDUNEFit::DrawXSecs(RooFitResult *fitresult) {
   
+  std::cout << "Drawing XSec" << std::endl;
+  
   std::vector<TH1 *> xsecs;
   
   std::map<std::string, std::vector<double>> POI_vals;
@@ -1686,32 +1827,57 @@ std::vector<TH1 *> protoana::ProtoDUNEFit::DrawXSecs(RooFitResult *fitresult) {
     if (name.find("ABS") != std::string::npos) {
       POI_vals["ABS"].push_back(var->getVal()); 
     }
-    else {
+    else if (name.find("CEX") != std::string::npos) {
       POI_vals["CEX"].push_back(var->getVal()); 
+    }
+    else {
+      POI_vals["INC"].push_back(var->getVal()); 
     }
   }
   
   //Get the incident hists
   TH1 * inc_signal_hist = 0x0;
-  std::vector<TH1 *> inc_bkg_hists;
-  for (size_t i = 0; i < _incbkghistos.size(); ++i) {
-    std::string name = _incbkghistos[i]->GetName();
-    auto find_incident_signal = name.find("MC_ChannelIncident_Pions");
-    if (find_incident_signal != std::string::npos) {
-      inc_signal_hist = (TH1*)_incbkghistos[i]->Clone();
-      break;
+  TH1 * inc_signal_hist_prefit = 0x0;
+  
+  if (_DistinguishIncidentSignal) {
+    inc_signal_hist = (TH1*)_incsighistos[0]->Clone();
+    for (size_t i = 1; i < _incsighistos.size(); ++i) {
+      inc_signal_hist->Add(_incsighistos[i]);
+    }
+
+    inc_signal_hist_prefit = (TH1*)_incsighistos[0]->Clone();
+    for (size_t i = 1; i < _incsighistos.size(); ++i) {
+      inc_signal_hist_prefit->Add(_incsighistos[i]);
     }
   }
+  else {
+    inc_signal_hist = (TH1*)_incbkghistos[0]->Clone();
+    inc_signal_hist_prefit = (TH1*)_incbkghistos[0]->Clone();
+  }
 
-  TH1 * total_incident_hist = new TH1D("Total_Incident", "", inc_signal_hist->GetNbinsX(), 0, inc_signal_hist->GetNbinsX());
+  TH1 * total_incident_hist = new TH1D("Total_Incident", "",
+                                       inc_signal_hist->GetNbinsX(), 0,
+                                       inc_signal_hist->GetNbinsX());
+
+  TH1 * total_incident_hist_prefit = new TH1D("Total_Incident_PreFit", "",
+                                              inc_signal_hist->GetNbinsX(), 0,
+                                              inc_signal_hist->GetNbinsX());
+
   for (size_t i = 0; i < _incbkghistos.size(); ++i) {
     total_incident_hist->Add(_incbkghistos[i]);
+    total_incident_hist_prefit->Add(_incbkghistos[i]);
+  }
+  if (_DistinguishIncidentSignal) {
+    total_incident_hist->Add(inc_signal_hist);
+    total_incident_hist_prefit->Add(inc_signal_hist_prefit);
   }
 
   //Get Data incident hist
   TH1 * data_hist_inc = (TH1*)_incdatahistos[0]->Clone();
+  TH1 * data_hist_inc_prefit = (TH1*)_incdatahistos[0]->Clone();
   for (size_t i = 1; i < _incdatahistos.size(); ++i) {
     data_hist_inc->Add(_incdatahistos[i]);
+    data_hist_inc_prefit->Add(_incdatahistos[i]);
   }
 
 
@@ -1719,10 +1885,22 @@ std::vector<TH1 *> protoana::ProtoDUNEFit::DrawXSecs(RooFitResult *fitresult) {
   TH1 * correction_incident_hist = (TH1*)inc_signal_hist->Clone("CorrectionIncident");
   correction_incident_hist->Divide(total_incident_hist);
 
+  TH1 * correction_incident_hist_prefit = (TH1*)inc_signal_hist_prefit->Clone("CorrectionIncident");
+  correction_incident_hist_prefit->Divide(total_incident_hist_prefit);
+
   data_hist_inc->Multiply(correction_incident_hist);
+  data_hist_inc_prefit->Multiply(correction_incident_hist_prefit);
+
   for (int i = 0; i < _incidentEfficiency->GetN(); ++i) {
     data_hist_inc->SetBinContent(i+1,
-        data_hist_inc->GetBinContent(i+1)/_incidentEfficiency->GetY()[i]);
+        data_hist_inc->GetBinContent(i+1) / _incidentEfficiency->GetY()[i]);
+
+    data_hist_inc_prefit->SetBinContent(i+1,
+        data_hist_inc_prefit->GetBinContent(i+1) / _incidentEfficiency->GetY()[i]);
+
+    if (_DistinguishIncidentSignal)
+      data_hist_inc->SetBinContent(i+1,
+          data_hist_inc->GetBinContent(i+1) * POI_vals["INC"][i]);
   }
 
   //Get the signal hists to determine
@@ -1732,24 +1910,35 @@ std::vector<TH1 *> protoana::ProtoDUNEFit::DrawXSecs(RooFitResult *fitresult) {
     TH1 * signal_hist = new TH1D(("Signal" + chan).c_str(), "", inc_signal_hist->GetNbinsX(), 0, inc_signal_hist->GetNbinsX());
     TH1 * total_hist = new TH1D(("Total" + chan).c_str(), "", inc_signal_hist->GetNbinsX(), 0, inc_signal_hist->GetNbinsX());
 
+    TH1 * signal_hist_prefit = new TH1D(("PreFitSignal" + chan).c_str(), "", inc_signal_hist->GetNbinsX(), 0, inc_signal_hist->GetNbinsX());
+    TH1 * total_hist_prefit = new TH1D(("PreFitTotal" + chan).c_str(), "", inc_signal_hist->GetNbinsX(), 0, inc_signal_hist->GetNbinsX());
+
     for (size_t i = 0; i < _sighistos.size(); ++i ) {
       std::string name = _sighistos[i]->GetName();
 
       if (name.find("MC_Channel" + chan) == std::string::npos) continue;
       
       TH1 * temp = (TH1*)_sighistos[i]->Clone();
+      TH1 * temp_prefit = (TH1*)temp->Clone();
+
       //Scale the bin by the post fit parameter value
       temp->SetBinContent(_sig_truth_index[i],
           temp->GetBinContent(_sig_truth_index[i])*
           POI_vals[chan][_sig_truth_index[i]-1]);
 
       total_hist->Add(temp);
+      total_hist_prefit->Add(temp_prefit);
 
       auto find_signal = name.find("MC_Channel" + chan + "_" + chan);
-      std::cout << _sig_truth_index[i] << " " << _sighistos[i]->GetName() << " " << find_signal << std::endl;
+      std::cout << _sig_truth_index[i] << " " << _sighistos[i]->GetName() 
+                << " " << find_signal << std::endl;
+
       if (find_signal != std::string::npos) {
-        signal_hist->SetBinContent(_sig_truth_index[i], temp->GetBinContent(_sig_truth_index[i]));
-        std::cout << "Scaling signal by PostFit val " << POI_vals[chan][_sig_truth_index[i]-1] << std::endl;
+        signal_hist->SetBinContent(_sig_truth_index[i],
+                                   temp->GetBinContent(_sig_truth_index[i]));
+        signal_hist_prefit->SetBinContent(_sig_truth_index[i],
+                                          temp_prefit->GetBinContent(
+                                              _sig_truth_index[i]));
       }
 
     }
@@ -1759,12 +1948,15 @@ std::vector<TH1 *> protoana::ProtoDUNEFit::DrawXSecs(RooFitResult *fitresult) {
       auto find_channel = name.find("MC_Channel" + chan);
       if (find_channel != std::string::npos) {
         total_hist->Add(_bkghistos[i]);
+        total_hist_prefit->Add(_bkghistos[i]);
       }
     }
 
     //Make correction
     TH1 * correction_hist = (TH1*)signal_hist->Clone(("Correction" + chan).c_str());
+    TH1 * correction_hist_prefit = (TH1*)signal_hist_prefit->Clone(("PreFitCorrection" + chan).c_str());
     correction_hist->Divide(total_hist);
+    correction_hist_prefit->Divide(total_hist_prefit);
 
     TH1 * data_hist_chan = 0x0;
     for (size_t i = 0; i < _datahistos.size(); ++i) {
@@ -1776,6 +1968,16 @@ std::vector<TH1 *> protoana::ProtoDUNEFit::DrawXSecs(RooFitResult *fitresult) {
     }
     data_hist_chan->Multiply(correction_hist);
 
+    TH1 * data_hist_chan_prefit = 0x0;
+    for (size_t i = 0; i < _datahistos.size(); ++i) {
+      std::string name = _datahistos[i]->GetName();
+      if (name.find("Data_Channel" + chan) != std::string::npos) {
+        data_hist_chan_prefit = (TH1*)_datahistos[i]->Clone();
+        break;
+      }
+    }
+    data_hist_chan_prefit->Multiply(correction_hist_prefit);
+
     for (size_t i = 0; i < _interactingEfficiencies.size(); ++i) {
       std::string name = _interactingEfficiencies[i]->GetName();
       if (name.find(chan) != std::string::npos) {
@@ -1784,6 +1986,9 @@ std::vector<TH1 *> protoana::ProtoDUNEFit::DrawXSecs(RooFitResult *fitresult) {
         for (int j = 0; j < eff->GetN(); ++j) {
           data_hist_chan->SetBinContent(j+1,
               data_hist_chan->GetBinContent(j+1)/eff->GetY()[j]);
+
+          data_hist_chan_prefit->SetBinContent(j+1,
+              data_hist_chan_prefit->GetBinContent(j+1)/eff->GetY()[j]);
         }
         break;
       }
@@ -1794,7 +1999,7 @@ std::vector<TH1 *> protoana::ProtoDUNEFit::DrawXSecs(RooFitResult *fitresult) {
     xsec->Sumw2();
     data_hist_inc->Sumw2();
     xsec->Divide(data_hist_inc);
-    xsec->Scale(1.E24/ (.4792 * 1.390 * 6.022E23 / 39.95 ));
+    xsec->Scale(1.E27/ (.4792 * 1.390 * 6.022E23 / 39.95 ));
 
     for (size_t i = 1; i < _RecoBinning.size(); ++i) {
       TString ibinstr = Form("%.1f-%.1f",_RecoBinning[i-1],_RecoBinning[i]);
@@ -1803,9 +2008,36 @@ std::vector<TH1 *> protoana::ProtoDUNEFit::DrawXSecs(RooFitResult *fitresult) {
     
     //TCanvas * xsec_canvas = new TCanvas(("Canvas_XSec_"+chan).c_str(), "xsec", 500, 400);
     xsec->SetMinimum(0.);
-    //xsec->Draw();
-    //plots.push_back(xsec_canvas);
+    xsec->SetMarkerColor(1);
+    xsec->SetLineColor(1);
+    xsec->SetMarkerStyle(20);
+    xsec->SetMarkerSize(.75);
+    xsec->SetLineWidth(2);
     xsecs.push_back(xsec);
+ 
+    //PREFIT
+    //Now divide the interacting hist by the incident hist
+    TH1 * xsec_prefit = (TH1*)data_hist_chan_prefit->Clone(
+        ("PreFit_XSEC_"+chan).c_str());
+    xsec_prefit->Sumw2();
+    data_hist_inc_prefit->Sumw2();
+    xsec_prefit->Divide(data_hist_inc_prefit);
+    xsec_prefit->Scale(1.E27/ (.4792 * 1.390 * 6.022E23 / 39.95 ));
+
+    for (size_t i = 1; i < _RecoBinning.size(); ++i) {
+      TString ibinstr = Form("%.1f-%.1f",_RecoBinning[i-1],_RecoBinning[i]);
+      xsec_prefit->GetXaxis()->SetBinLabel(i, ibinstr);
+    }
+    
+    //TCanvas * xsec_canvas = new TCanvas(("Canvas_XSec_"+chan).c_str(), "xsec", 500, 400);
+    xsec_prefit->SetMinimum(0.);
+    xsec_prefit->SetMarkerColor(1);
+    xsec_prefit->SetLineColor(1);
+    xsec_prefit->SetMarkerStyle(20);
+    xsec_prefit->SetMarkerSize(.75);
+    xsec_prefit->SetLineWidth(2);
+    xsecs.push_back(xsec_prefit);
+
   }
 
   return xsecs;

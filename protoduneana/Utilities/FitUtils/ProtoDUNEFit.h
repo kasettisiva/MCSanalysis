@@ -65,6 +65,9 @@ namespace protoana{
         RooStats::HistFactory::Sample& sample, TH1* histo,
         bool hasnormfactor, bool isnorm, size_t iTopo);
 
+    std::vector<std::vector<std::pair<TH1*, TH1*>>>
+        BuildIncidentSignalSyst(size_t iTopo);
+
     bool ApplyBuiltSystToSample(TH1 * histo, TH1 * high_hist, TH1 * low_hist,
                                 RooStats::HistFactory::Sample& sample,
                                 std::string syst_name, std::string syst_type,
@@ -109,7 +112,7 @@ namespace protoana{
     std::vector<TH1*> _syst_hists;
     std::vector<size_t> _bkg_chan_index, _sig_chan_index;
     std::vector<size_t> _bkg_topo_index, _sig_topo_index, _sig_truth_index,
-                        _inc_topo_index;
+                        _inc_sig_topo_index, _inc_bkg_topo_index;
     std::vector<TH1*> _incbkghistos, _incsighistos, _incdatahistos;
     std::vector<TH1*> _sidhistos, _siddatahistos;
 
@@ -123,6 +126,7 @@ namespace protoana{
     std::vector< TGraphAsymmErrors * > _interactingEfficiencies;
  
     bool _AddIncidentToMeasurement, _DoNegativeReco;
+    bool _DistinguishIncidentSignal;
     double _EndZCut;
   };
 }
