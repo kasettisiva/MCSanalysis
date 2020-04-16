@@ -653,8 +653,8 @@ TH1* protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(
 TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
     std::string filename, std::string treename, std::vector<double> recoBins,
     std::string topo, int toponum,
-    double reco_beam_endZ_cut, bool doNegativeReco,
-    int doSyst, std::string systName, double weight) {
+    double reco_beam_endZ_cut, double minval, double maxval,
+    bool doNegativeReco, int doSyst, std::string systName, double weight) {
   //********************************************************************
 
   TFile *file = new TFile(filename.c_str(), "READ");
@@ -834,6 +834,8 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
         std::cout << "Notice! Beam matched to cosmic, with non-cosmic hit" 
                   << std::endl;
       }                  
+
+      double true_energy = 0.;
         
 
       // Cosmic
@@ -890,11 +892,11 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
                 //true incident energy
                 for (size_t i = 0; i < true_beam_slices->size(); ++i) {
                   int check_slice = (*true_beam_slices)[i];  
-                  double check_energy = (*new_true_beam_incidentEnergies)[i];
+                  true_energy = (*new_true_beam_incidentEnergies)[i];
                   if (true_slice == check_slice) {
                     std::cout << "Reco inc energy: " <<
                                 (*reco_beam_incidentEnergies)[l] << " " <<
-                                "True inc energy: " << check_energy <<
+                                "True inc energy: " << true_energy <<
                                 std::endl;
                     break;
                   }
@@ -922,6 +924,10 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
 
 
       if (topology != toponum) continue;
+      if (true_energy < minval || true_energy >= maxval) {
+        std::cout << "Wrong true energy bin " << minval << " " << maxval << std::endl;
+        continue;
+      }
 
 /*
       for (size_t m = 1; m < nrecobins; m++) {
@@ -1471,11 +1477,13 @@ std::pair< TH1 *, TH1 *>
     }
 
     //Abs
-    if ( true_daughter_nPi0 == 0 ) 
+    if (true_daughter_nPi0 == 0) {
       topology = 1;
+    }
     //Cex/nPi0
-    else 
+    else {
       topology = 2;
+    }
 
     if (topology != toponum){
       continue;

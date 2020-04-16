@@ -27,7 +27,8 @@ namespace protoana{
     // Fill incident pions
     TH1* FillMCIncidentHistogram_Pions(std::string filename, std::string treename,
         std::vector<double> recoBins, std::string topo,
-        int toponum, double reco_beam_endZ_cut, bool doNegativeReco = false,
+        int toponum, double reco_beam_endZ_cut, double minval = 0.,
+        double maxval = 100000., bool doNegativeReco = false,
         int doSyst = 0, std::string systName = "", double weight = 1.0);
 
     // Fill the number of truth beam pions

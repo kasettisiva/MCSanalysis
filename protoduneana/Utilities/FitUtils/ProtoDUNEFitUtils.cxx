@@ -860,12 +860,18 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorksp
     if(plottodraw == "ratio" && result) frame2->addPlotable(ratio_curve,"F");
     frame2->addPlotable(hratio,"P");
     
-    //if (doNegativeReco)
-    //  frame2->GetXaxis()->SetBinLabel(1, "< 0.");
-    for(unsigned int i = 1; i < recobins.size(); i++){
-      TString ibinstr = Form("%.1f-%.1f",recobins[i-1],recobins[i]);
-      //frame2->GetXaxis()->SetBinLabel((doNegativeReco ? i+1 : i), ibinstr.Data());
-      frame2->GetXaxis()->SetBinLabel(i, ibinstr.Data());
+    if (doNegativeReco) {
+      frame2->GetXaxis()->SetBinLabel(1, "< 0.");
+      for(size_t i = 1; i < recobins.size(); i++){
+        TString ibinstr = Form("%.1f-%.1f",recobins[i-1],recobins[i]);
+        frame2->GetXaxis()->SetBinLabel(i+1, ibinstr.Data());
+      }
+    }
+    else {
+      for(size_t i = 1; i < recobins.size(); i++){
+        TString ibinstr = Form("%.1f-%.1f",recobins[i-1],recobins[i]);
+        frame2->GetXaxis()->SetBinLabel(i, ibinstr.Data());
+      }
     }
     
     frame2->GetXaxis()->SetTitle("E_{reco} [MeV]");
