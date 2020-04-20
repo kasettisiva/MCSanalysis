@@ -81,3 +81,4 @@ DistinguishIncidentSignal: true
 EndZCut:                  225.
 
 DoScaleMCToData: false
+OnlyDrawXSecs: true 

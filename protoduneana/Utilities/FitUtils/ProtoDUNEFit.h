@@ -72,7 +72,7 @@ namespace protoana{
                                 RooStats::HistFactory::Sample& sample,
                                 std::string syst_name, std::string syst_type,
                                 bool hasnormfactor);
-    std::vector<TH1 *> DrawXSecs(RooFitResult *fitresult);
+    std::vector<TH1 *> DrawXSecs(RooFitResult *fitresult, bool doPostFit = false);
 
 
   private:
@@ -129,7 +129,7 @@ namespace protoana{
     std::vector< TGraphAsymmErrors * > _interactingEfficiencies;
  
     bool _AddIncidentToMeasurement, _DoNegativeReco, _DoScaleMCToData;
-    bool _DistinguishIncidentSignal;
+    bool _DistinguishIncidentSignal, _OnlyDrawXSecs;
     double _EndZCut;
   };
 }
