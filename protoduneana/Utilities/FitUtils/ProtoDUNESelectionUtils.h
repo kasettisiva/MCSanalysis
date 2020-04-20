@@ -48,12 +48,6 @@ namespace protoana{
     int GetNTriggers_Pions(std::string filename, std::string treename,
         bool IsMC=true);
 
-    // Old method -- should remove?
-    int GetVertexType( const std::vector< std::string > & processes,
-        const std::vector<int> & vertex_hits_slices,
-        const std::vector<std::vector<double>> & vertex_dRs,
-        double cut = 5., int max_slices = 1 );
-
     // Remove the doSysts from the following?
     std::pair<TH1 *, TH1 *> GetMCIncidentEfficiency(
         std::string fileName, std::string treeName,

@@ -672,7 +672,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
   std::string *reco_beam_true_byHits_endProcess = 0;
   std::vector<double> *reco_beam_incidentEnergies = 0;
 
-  Int_t true_chexSignal, true_absSignal, true_backGround;
+  //Int_t true_chexSignal, true_absSignal, true_backGround;
 
   defaultTree->SetBranchAddress("reco_beam_type",                   &reco_beam_type);
   defaultTree->SetBranchAddress("reco_beam_len",                    &reco_beam_len);
@@ -700,9 +700,9 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
   defaultTree->SetBranchAddress("true_beam_ID",                    &true_beam_ID);
   defaultTree->SetBranchAddress("true_beam_endProcess",             &true_beam_endProcess);
 
-  defaultTree->SetBranchAddress("true_chexSignal",                  &true_chexSignal);
-  defaultTree->SetBranchAddress("true_absSignal",                   &true_absSignal);
-  defaultTree->SetBranchAddress("true_backGround",                  &true_backGround);
+  //defaultTree->SetBranchAddress("true_chexSignal",                  &true_chexSignal);
+  //defaultTree->SetBranchAddress("true_absSignal",                   &true_absSignal);
+  //defaultTree->SetBranchAddress("true_backGround",                  &true_backGround);
 
   std::vector< int > * reco_beam_hit_true_ID = 0x0;
   std::vector< int > * reco_beam_hit_true_origin = 0x0;
@@ -1171,58 +1171,6 @@ int protoana::ProtoDUNESelectionUtils::GetNTriggers_Pions(std::string filename, 
 
   return ntriggers;
 
-}
-
-int protoana::ProtoDUNESelectionUtils::GetVertexType( const std::vector< std::string > & processes, const std::vector< int > & vertex_hits_slices, const std::vector< std::vector< double > > & vertex_dRs, double cut, int max_slices ){
-  
-  bool matched = false;
-  bool inel = false;
-  bool el = false;
-  bool other = false;
-  
-  //int matched_proc = -1;
-
-  for( size_t i = 0; i < processes.size(); ++i ){
-    std::vector< double > the_dRs;     
-    for( size_t j = 0; j < vertex_dRs[i].size(); ++j ){
-      int slice = vertex_hits_slices[j];
-      if( slice < max_slices ) 
-        the_dRs.push_back( vertex_dRs[i][j] );
-      else break;
-    }
-
-    if( !the_dRs.size() ) break;
-
-    double min_dR = 99999.;
-    for( size_t j = 0; j < the_dRs.size(); ++j ){
-      if( the_dRs[j] < min_dR ) 
-        min_dR = the_dRs[j];
-    }
-
-    if( min_dR < cut ){
-      matched = true;
-      //matched_proc = i; // Will return the last proc matched
-      if( processes[i] == "hadElastic" )     
-        el = true;
-      else if( processes[i] == "pi+Inelastic" ) 
-        inel = true;
-      else
-        other = true;
-    }
-
-  }
-
-  if( matched && inel && !other && !el ) 
-    return 1;
-  else if( matched && el && !other && !inel ) 
-    return 2;
-  else if( matched && el && inel && !other )  
-    return 3;
-  else if( matched && other ) 
-    return 4;
-  else 
-    return 0;
-  
 }
 
 std::pair< TH1 *, TH1 * > 

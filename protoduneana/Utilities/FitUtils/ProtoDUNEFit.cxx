@@ -1120,10 +1120,33 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
   _incidentEfficiencyNum = inc_eff_num_denom.first;
   _incidentEfficiencyDenom = inc_eff_num_denom.second;
 
-  _incidentEfficiency = new TGraphAsymmErrors(_incidentEfficiencyNum,
-        _incidentEfficiencyDenom);
+  //_incidentEfficiency = new TGraphAsymmErrors(_incidentEfficiencyNum,
+  //      _incidentEfficiencyDenom);
+
+  //Need to build up the hists for events the pass the selection
+  TH1D * incident_numerator = new TH1D("incident_numerator", "",
+                                       _TruthBinning.size()-1, 0,
+                                       _TruthBinning.size()-1);
+
+  for (size_t i = 0; i < _TruthBinning.size() - 1; ++i) {
+    incident_numerator->SetBinContent(i+1, _incsighistos[i]->Integral());
+  }
+  _incidentEfficiency = new TGraphAsymmErrors(incident_numerator,
+                                              _incidentEfficiencyDenom);
 
   _incidentEfficiency->SetNameTitle("MC_Incident_Efficiency", "Efficiency");
+
+  std::map<std::string, std::vector<TH1 *>> signal_hists_by_topo;
+  for (std::string topo : _SignalTopologyName) {
+    for (size_t i = 0; i < _sighistos.size(); ++i) {
+      std::string name = _sighistos[i]->GetName();
+      //std::cout << name << std::endl;
+      if (name.find("_" + topo + "_") == std::string::npos) continue;
+      if (name.find("MC_Channel" + topo) != std::string::npos) {
+        signal_hists_by_topo[topo].push_back(_sighistos[i]); 
+      }
+    }
+  }
 
   //Interacting Efficiencies
   for( int i = 0; i < nsigtopo; ++i ){
@@ -1137,8 +1160,17 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
     _interactingEfficiencyNums.push_back(eff_num_denom.first); 
     _interactingEfficiencyDenoms.push_back(eff_num_denom.second); 
 
-    TGraphAsymmErrors * eff = new TGraphAsymmErrors(eff_num_denom.first,
-        eff_num_denom.second);
+    //TGraphAsymmErrors * eff = new TGraphAsymmErrors(eff_num_denom.first,
+    //    eff_num_denom.second);
+
+    TH1D * interacting_numerator = new TH1D("incident_numerator", "",
+                                            _TruthBinning.size()-1, 0,
+                                            _TruthBinning.size()-1);
+    for (size_t j = 0; j < signal_hists_by_topo[_SignalTopologyName[i]].size(); ++j) {
+      interacting_numerator->SetBinContent(
+          j+1, signal_hists_by_topo[_SignalTopologyName[i]][j]->Integral());
+    }
+    TGraphAsymmErrors * eff = new TGraphAsymmErrors(interacting_numerator, eff_num_denom.second);
 
     std::string name = "MC_Channel_" + _ChannelNames[i] + "_" + 
         _SignalTopologyName[i] + "_Interacting_Efficiency";
@@ -1914,6 +1946,15 @@ std::vector<TH1 *> protoana::ProtoDUNEFit::DrawXSecs(RooFitResult *fitresult) {
     if (name.find("POI") == std::string::npos) continue;
     std::cout << var->GetName() << " " << var->getVal() << std::endl;
 
+    bool found = false;
+    for (size_t i = 0; i < _SignalTopologyName.size(); ++i) {
+      if (name.find(_SignalTopologyName[i]) != std::string::npos) {
+        POI_vals[_SignalTopologyName[i]].push_back(var->getVal()); 
+        found = true;
+        break;
+      }
+    }
+    /*
     if (name.find("ABS") != std::string::npos) {
       POI_vals["ABS"].push_back(var->getVal()); 
     }
@@ -1921,8 +1962,10 @@ std::vector<TH1 *> protoana::ProtoDUNEFit::DrawXSecs(RooFitResult *fitresult) {
       POI_vals["CEX"].push_back(var->getVal()); 
     }
     else {
+    */
+    if (!found)
       POI_vals["INC"].push_back(var->getVal()); 
-    }
+    //}
   }
   
   //Make the incident hists
@@ -1957,7 +2000,8 @@ std::vector<TH1 *> protoana::ProtoDUNEFit::DrawXSecs(RooFitResult *fitresult) {
 
   std::map<std::string, std::vector<TH1 *>> signal_hists_by_topo;
   std::map<std::string, std::vector<TH1 *>> mixed_hists_by_topo;
-  for (std::string topo : {"ABS", "CEX"}) {
+  //for (std::string topo : {"ABS", "CEX"}) {
+  for (std::string topo : _SignalTopologyName) {
     for (size_t i = 0; i < _sighistos.size(); ++i) {
       std::string name = _sighistos[i]->GetName();
       //std::cout << name << std::endl;
@@ -1975,7 +2019,8 @@ std::vector<TH1 *> protoana::ProtoDUNEFit::DrawXSecs(RooFitResult *fitresult) {
   }
 
   
-  for (std::string topo : {"ABS", "CEX"}) {
+  //for (std::string topo : {"ABS", "CEX"}) {
+  for (std::string topo : _SignalTopologyName) {
     TH1 * signal_hist = new TH1D(("Signal" + topo).c_str(), "",
                                  inc_signal_hist->GetNbinsX(), 0,
                                  inc_signal_hist->GetNbinsX());
