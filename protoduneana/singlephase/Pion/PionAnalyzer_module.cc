@@ -2108,10 +2108,43 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
         if (fVerbose) std::cout << "Max IDE z: " << true_ides_from_reco.back()->z << std::endl;
       }
 
+
       //slice up the view2_IDEs up by the wire pitch
       auto sliced_ides = slice_IDEs( view2_IDEs, z0, pitch, true_beam_endZ);
       std::vector< int > found_slices;
 
+      //Get the momentum at the start of the slices.
+      //
+      //Get the first slice
+
+      auto first_slice = sliced_ides.begin();
+
+      //Check it has any IDEs
+      auto theIDEs = first_slice->second; 
+      
+      if (theIDEs.size()) {
+        //Get the first ide z position
+        double ide_z = theIDEs[0]->z;
+        
+        //Go through the trajectory position
+        //and check for the position that comes immediately before the 
+        //first ide
+        for (size_t i = 1; i < true_beam_trajectory.size(); ++i) {
+          double z0 = true_beam_trajectory.Z(i-1);
+          double z1 = true_beam_trajectory.Z(i);
+
+          if (z0 < ide_z && z1 > ide_z) {
+            init_KE = 1.e3 * true_beam_trajectory.E(i-1) - mass;
+            if (fVerbose) {
+              std::cout << "Found matching position" << z0 << " " << ide_z <<
+                           " " << z1 << std::endl;
+              std::cout << "init KE: " << init_KE << std::endl;
+            }
+            break;
+          }
+        }
+      }
+      
 
       new_true_beam_incidentEnergies.push_back( init_KE );
 
