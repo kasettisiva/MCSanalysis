@@ -14,6 +14,8 @@ art_make( LIBRARY_NAME ProtoDUNEUtilities
                         larsim_Simulation 
                         lardataobj_Simulation
                         ProtoDUNEDataUtils
+                        ReweightBaseLib
+                        PropBaseLib
                         dune_DuneObj
                         dune-raw-data_Services_ChannelMap_PdspChannelMapService_service
                         larsim_MCCheater_PhotonBackTrackerService_service
