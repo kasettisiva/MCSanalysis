@@ -1514,6 +1514,7 @@ bool protoana::ProtoDUNEFit::Configure(std::string configPath){
 
   _DoScaleMCToData             = pset.get<bool>("DoScaleMCToData");
   _OnlyDrawXSecs               = pset.get<bool>("OnlyDrawXSecs");
+  _WirePitch                   = pset.get<double>("WirePitch");
 
   return true;
 
@@ -2142,10 +2143,10 @@ std::vector<TH1 *> protoana::ProtoDUNEFit::DrawXSecs(RooFitResult *fitresult, bo
     xsec->Sumw2();
     inc_signal_hist->Sumw2();
     xsec->Divide(inc_signal_hist);
-    xsec->Scale(1.E27/ (.4792 * 1.390 * 6.022E23 / 39.95 ));
+    xsec->Scale(1.E27/ (_WirePitch * 1.390 * 6.022E23 / 39.95 ));
 
-    for (size_t i = 1; i < _RecoBinning.size(); ++i) {
-      TString ibinstr = Form("%.1f-%.1f",_RecoBinning[i-1],_RecoBinning[i]);
+    for (size_t i = 1; i < _TruthBinning.size(); ++i) {
+      TString ibinstr = Form("%.1f-%.1f",_TruthBinning[i-1],_TruthBinning[i]);
       xsec->GetXaxis()->SetBinLabel(i, ibinstr);
     }
     

@@ -49,7 +49,7 @@ IncidentTopologyName:    ["Pions", "Muons", "Cosmic", "TrueUnmatched", "Downstre
 TruthTreeName:           "pionana/beamana"
 
 # Define binning in truth/reco. It doesn't have to be symmetric.
-TruthBinning:            [0., 400., 600., 700., 800., 1200.]
+TruthBinning:            [300., 400., 500., 600., 700., 800., 1200.]
 RecoBinning:             [0., 400., 600., 700., 800., 1200.]
 
 # Option to fit in reco. If enabled will ignore the truth binning and introduce one free parameter per reco bin
@@ -79,6 +79,8 @@ AddIncidentToMeasurement: true
 DoNegativeReco:           true #true 
 DistinguishIncidentSignal: true 
 EndZCut:                  225.
+
+WirePitch: .47974  #.4792
 
 DoScaleMCToData: false
 OnlyDrawXSecs: true 

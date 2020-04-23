@@ -130,7 +130,7 @@ namespace protoana{
  
     bool _AddIncidentToMeasurement, _DoNegativeReco, _DoScaleMCToData;
     bool _DistinguishIncidentSignal, _OnlyDrawXSecs;
-    double _EndZCut;
+    double _EndZCut, _WirePitch;
   };
 }
 
