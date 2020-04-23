@@ -67,6 +67,7 @@ private:
   int run, subrun, event;
   int true_beam_PDG;
   int true_beam_ID;
+  double true_beam_len;
   std::vector<double> g4rw_primary_plus_sigma_weight;
   std::vector<double> g4rw_primary_minus_sigma_weight;
   std::vector<double> g4rw_primary_weights;
@@ -124,26 +125,26 @@ void protoana::G4RWExampleAnalyzer::analyze(art::Event const& e) {
 
   true_beam_PDG = true_beam_particle->PdgCode();
   true_beam_ID = true_beam_particle->TrackId();
+  true_beam_len = true_beam_particle->Trajectory().TotalLength();
   event = e.id().event();
   run = e.run();
   subrun = e.subRun();
 
   std::cout << "Doing reweight" << std::endl;
-  if (true_beam_PDG == 211) {
+  if (true_beam_PDG == RW_PDG) {
     G4ReweightTraj theTraj(true_beam_ID, true_beam_PDG, 0, event, {0,0});
     bool created = CreateRWTraj(*true_beam_particle, plist,
                                 fGeometryService, event, &theTraj);
     if (created) {
+
+      g4rw_primary_weights.push_back(theRW->GetWeight(&theTraj));
+
       g4rw_primary_weights.push_back(MultiRW.GetWeightFromNominal(theTraj));
       
       std::vector<double> weights_vec = MultiRW.GetWeightFromAll1DThrows(
           theTraj);
       g4rw_primary_weights.insert(g4rw_primary_weights.end(),
                                   weights_vec.begin(), weights_vec.end());
-
-
-      //g4rw_primary_plus_sigma_weight = pm_weights.first;
-      //g4rw_primary_minus_sigma_weight = pm_weights.second;
 
       for (size_t i = 0; i < ParSet.size(); ++i) {
         std::pair<double, double> pm_weights =
@@ -274,13 +275,14 @@ bool protoana::G4RWExampleAnalyzer::CreateRWTraj(
 
 void protoana::G4RWExampleAnalyzer::beginJob() {
   art::ServiceHandle<art::TFileService> tfs;
-  fTree = tfs->make<TTree>("beamana","beam analysis tree");
+  fTree = tfs->make<TTree>("tree","output tree");
 
   fTree->Branch("run", &run);
   fTree->Branch("subrun", &subrun);
   fTree->Branch("event", &event);
   fTree->Branch("true_beam_ID", &true_beam_ID);
   fTree->Branch("true_beam_PDG", &true_beam_PDG);
+  fTree->Branch("true_beam_len", &true_beam_len);
 
   fTree->Branch("g4rw_primary_weights", &g4rw_primary_weights);
   fTree->Branch("g4rw_primary_plus_sigma_weight", &g4rw_primary_plus_sigma_weight);
@@ -291,6 +293,7 @@ void protoana::G4RWExampleAnalyzer::beginJob() {
 void protoana::G4RWExampleAnalyzer::reset() {
   true_beam_PDG = -1;
   true_beam_ID = -1;
+  true_beam_len = -1.;
   
   g4rw_primary_weights.clear();
   g4rw_primary_plus_sigma_weight.clear();

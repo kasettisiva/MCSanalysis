@@ -925,7 +925,6 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
 
       if (topology != toponum) continue;
       if (true_energy < minval || true_energy >= maxval) {
-        std::cout << "Wrong true energy bin " << minval << " " << maxval << std::endl;
         continue;
       }
 
@@ -1385,6 +1384,9 @@ std::pair< TH1 *, TH1 *>
   double new_true_beam_interactingEnergy, true_beam_endZ;
   bool has_noPion_daughter, has_shower_nHits_distance;
 
+  std::vector< int > * true_beam_slices = 0x0;
+  defaultTree->SetBranchAddress( "true_beam_slices", &true_beam_slices );
+
   defaultTree->SetBranchAddress( "true_beam_PDG", &true_beam_PDG );
   defaultTree->SetBranchAddress( "true_beam_endZ", &true_beam_endZ );
   defaultTree->SetBranchAddress( "true_beam_endProcess", &true_beam_endProcess );
@@ -1414,7 +1416,7 @@ std::pair< TH1 *, TH1 *>
     if ( true_beam_PDG != 211 ) 
       continue;
     
-    if ( true_beam_endZ < 0. ) 
+    if (!true_beam_slices->size())//( true_beam_endZ < 0. ) 
       continue;
 
     //Then if it ends in abs/cex/nPi0 in the FV
