@@ -23,14 +23,13 @@
 #include "geant4reweight/src/ReweightBase/G4ReweighterFactory.hh"
 #include "geant4reweight/src/ReweightBase/G4Reweighter.hh"
 #include "geant4reweight/src/ReweightBase/G4ReweightTraj.hh"
-#include "geant4reweight/src/ReweightBase/G4ReweightStep.hh"
 #include "geant4reweight/src/PropBase/G4ReweightParameterMaker.hh"
 #include "geant4reweight/src/ReweightBase/G4MultiReweighter.hh"
+#include "G4ReweightUtils.h"
 
 #include "protoduneana/Utilities/ProtoDUNETruthUtils.h"
 #include "larsim/MCCheater/ParticleInventoryService.h"
 
-#include "G4ReweightUtils.h"
 
 namespace protoana {
   class G4RWExampleAnalyzer;

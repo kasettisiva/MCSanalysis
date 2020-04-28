@@ -214,6 +214,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
         continue;
       }
 
+      //maybe no true_beam_slices
       if (true_beam_endZ < 0.) {
         topology = 4;
       }
@@ -460,6 +461,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
         continue;
       }
 
+      //Instead of true_beam_endZ < 0. --> no true_beam_slices?
       if (true_beam_endZ < 0. || true_beam_endZ > endZ_cut) continue;
 
       if (doSyst == 1 || doSyst == -1 ) {
@@ -539,6 +541,8 @@ TH1* protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(
   std::string *true_beam_endProcess = 0;
   std::string *reco_beam_true_byHits_endProcess = 0;
   std::vector<double> *reco_beam_incidentEnergies = 0;
+
+  //std::vector<int> * data_BI_PDG = 0x0;
 
   defaultTree->SetBranchAddress("reco_beam_type",                   &reco_beam_type);
   defaultTree->SetBranchAddress("reco_beam_len",                    &reco_beam_len);
@@ -847,6 +851,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
           if ( true_id == -999 ) 
             topology = 8; 
           else {
+            //maybe no true_beam_slices instead?
             if ( true_beam_endZ < 0. ) //Beam particle ends before TPC 
               topology = 7; //Just consider it downstream
             else {
@@ -894,10 +899,10 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
                   int check_slice = (*true_beam_slices)[i];  
                   true_energy = (*new_true_beam_incidentEnergies)[i];
                   if (true_slice == check_slice) {
-                    std::cout << "Reco inc energy: " <<
-                                (*reco_beam_incidentEnergies)[l] << " " <<
-                                "True inc energy: " << true_energy <<
-                                std::endl;
+                    //std::cout << "Reco inc energy: " <<
+                    //            (*reco_beam_incidentEnergies)[l] << " " <<
+                    //            "True inc energy: " << true_energy <<
+                    //            std::endl;
                     break;
                   }
                 }
@@ -1175,7 +1180,7 @@ int protoana::ProtoDUNESelectionUtils::GetNTriggers_Pions(std::string filename, 
 std::pair< TH1 *, TH1 * > 
     protoana::ProtoDUNESelectionUtils::GetMCIncidentEfficiency(
         std::string fileName, std::string treeName, 
-        std::vector< double > bins, double reco_beam_endZ_cut,
+        std::vector<double> bins, double reco_beam_endZ_cut,
         bool doNegativeReco, int doSyst, double weight) {
 
   TFile * file = new TFile(fileName.c_str(), "READ");
@@ -1261,9 +1266,9 @@ std::pair< TH1 *, TH1 * >
       syst_weight = g4rw_primary_minus_sigma_weight;
     }
 
-    if ( true_beam_endZ < 0. && true_beam_slices->size() )
-      std::cout << "NOTICE: endZ < 0. but has true slices " 
-          << true_beam_slices->size() << std::endl;
+    //if ( true_beam_endZ < 0. && true_beam_slices->size() )
+    //  std::cout << "NOTICE: endZ < 0. but has true slices " 
+    //      << true_beam_slices->size() << std::endl;
 
     //if ( true_beam_endZ > 225. ) 
     //  continue;
@@ -1326,6 +1331,14 @@ std::pair< TH1 *, TH1 * >
       }
     }
   }
+
+  for (size_t i = 1; i < bins.size(); ++i) {
+    TString label = Form("%.1f-%.1f", bins[i-1], bins[i]);
+    numerator->GetXaxis()->SetBinLabel(i, label.Data());
+    denominator->GetXaxis()->SetBinLabel(i, label.Data());
+  }
+  numerator->SetTitle(";E_{True} (MeV)");
+  denominator->SetTitle(";E_{True} (MeV)");
 
   file->Close();
 
@@ -1466,6 +1479,14 @@ std::pair< TH1 *, TH1 *>
     }
   }
 
+  for (size_t i = 1; i < bins.size(); ++i) {
+    TString label = Form("%.1f-%.1f", bins[i-1], bins[i]);
+    numerator->GetXaxis()->SetBinLabel(i, label.Data());
+    denominator->GetXaxis()->SetBinLabel(i, label.Data());
+  }
+
+  numerator->SetTitle(";E_{True} (MeV)");
+  denominator->SetTitle(";E_{True} (MeV)");
 
   file->Close();
   return {numerator, denominator};

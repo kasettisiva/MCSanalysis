@@ -72,7 +72,8 @@ namespace protoana{
                                 RooStats::HistFactory::Sample& sample,
                                 std::string syst_name, std::string syst_type,
                                 bool hasnormfactor);
-    std::vector<TH1 *> DrawXSecs(RooFitResult *fitresult, bool doPostFit = false);
+    std::vector<TH1 *> DrawXSecs(RooFitResult *fitresult = 0x0);
+    std::vector<TH2 *> DrawSmearingMatrix(RooFitResult *fitresult, bool doPostFit = false);
 
 
   private:
@@ -83,14 +84,15 @@ namespace protoana{
     bool FillHistogramVectors_Pions();
 
     // Scale MC to Data
-    void ScaleMCToData();
+    void ScaleMCToData(bool data_is_mc = false);
 
     // Build samples and channels
     void AddSamplesAndChannelsToMeasurement(RooStats::HistFactory::Measurement& meas);
     void AddIncidentSamplesAndChannelsToMeasurement(RooStats::HistFactory::Measurement& meas);
     void AddSidebandSamplesAndChannelsToMeasurement(RooStats::HistFactory::Measurement& meas);
 
-    void DecorateEfficiency( TGraphAsymmErrors * eff );
+    void DecorateEfficiency(TGraphAsymmErrors * eff,
+                            std::string x_title = "E_{true} at vertex [MeV]");
 
     std::string _RecoTreeName, _Minimizer, _TruthTreeName;
 
@@ -130,7 +132,11 @@ namespace protoana{
  
     bool _AddIncidentToMeasurement, _DoNegativeReco, _DoScaleMCToData;
     bool _DistinguishIncidentSignal, _OnlyDrawXSecs;
+    bool _DataIsMC;
     double _EndZCut, _WirePitch;
+
+    double _ScaleFactor = 1.;
+    double _IncidentScaleFactor = 1.;
   };
 }
 

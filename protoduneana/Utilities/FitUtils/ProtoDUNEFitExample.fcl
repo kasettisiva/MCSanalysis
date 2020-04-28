@@ -82,5 +82,6 @@ EndZCut:                  225.
 
 WirePitch: .47974  #.4792
 
-DoScaleMCToData: false
-OnlyDrawXSecs: true 
+DoScaleMCToData:  false 
+OnlyDrawXSecs: true
+DataIsMC: true

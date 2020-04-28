@@ -4080,6 +4080,9 @@ bool pionana::PionAnalyzer::CreateRWTraj(
     const TGeoMaterial * test_material = geo_serv->Material(test_point);
 
     if (!strcmp(test_material->GetName(), "LAr")) {
+      std::cout  << "LAr: " << test_material->GetDensity() << " " <<
+                    test_material->GetA() << " " << test_material->GetZ() <<
+                    std::endl;
       traj_X.push_back(x);
       traj_Y.push_back(y);
       traj_Z.push_back(z);
