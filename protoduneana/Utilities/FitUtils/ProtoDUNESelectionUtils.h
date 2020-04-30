@@ -52,7 +52,7 @@ namespace protoana{
     std::pair<TH1 *, TH1 *> GetMCIncidentEfficiency(
         std::string fileName, std::string treeName,
         std::vector<double> bins, double reco_beam_endZ_cut,
-        bool doNegativeReco=false, int doSyst = 0, double weight = 1.);
+        int doSyst = 0, double weight = 1.);
 
     std::pair<TH1 *, TH1 *> GetMCInteractingEfficiency(
         std::string fileName, std::string treeName,

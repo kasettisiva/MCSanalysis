@@ -1152,7 +1152,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCFlux_Pions(std::string filename, s
 
 //********************************************************************
 int protoana::ProtoDUNESelectionUtils::GetNTriggers_Pions(std::string filename, std::string treename, bool IsMC){
-  //********************************************************************
+//********************************************************************
 
   TFile *file = new TFile(filename.c_str(), "READ");
   TTree *defaultTree  = (TTree*)file->Get(treename.c_str());
@@ -1177,11 +1177,13 @@ int protoana::ProtoDUNESelectionUtils::GetNTriggers_Pions(std::string filename, 
 
 }
 
+//********************************************************************
 std::pair< TH1 *, TH1 * > 
     protoana::ProtoDUNESelectionUtils::GetMCIncidentEfficiency(
         std::string fileName, std::string treeName, 
         std::vector<double> bins, double reco_beam_endZ_cut,
-        bool doNegativeReco, int doSyst, double weight) {
+        int doSyst, double weight) {
+//********************************************************************
 
   TFile * file = new TFile(fileName.c_str(), "READ");
   TTree * defaultTree  = (TTree*)file->Get(treeName.c_str());
@@ -1255,10 +1257,6 @@ std::pair< TH1 *, TH1 * >
     if ( true_beam_PDG != 211 ) 
       continue;
 
-    // Sometimes the reco energy at vertex is mis-reconstructed
-    if (!doNegativeReco && reco_beam_interactingEnergy < 0.0) 
-      continue;
-
     if (doSyst == 1) {
       syst_weight = g4rw_primary_plus_sigma_weight;
     }
@@ -1272,6 +1270,13 @@ std::pair< TH1 *, TH1 * >
 
     //if ( true_beam_endZ > 225. ) 
     //  continue;
+
+    if ((new_true_beam_incidentEnergies->size() && !true_beam_slices->size()) ||
+        (!new_true_beam_incidentEnergies->size() && true_beam_slices->size())) {
+      std::cout << "NOTICE! Energies: " <<
+                   new_true_beam_incidentEnergies->size() << " slices: " <<
+                   true_beam_slices->size() << std::endl;
+    }
 
     double pitch = 0.4792;
     double z0 = 0.56035;
@@ -1345,12 +1350,14 @@ std::pair< TH1 *, TH1 * >
   return {numerator, denominator};
 }
 
+//********************************************************************
 std::pair< TH1 *, TH1 *>
     protoana::ProtoDUNESelectionUtils::GetMCInteractingEfficiency(
         std::string fileName, std::string treeName,
         std::vector< double > bins, std::string channel,
         std::string topo, int toponum, double endZ_cut, int doSyst,
         double weight) {
+//********************************************************************
      
   TFile * file = new TFile(fileName.c_str(), "READ");
   TTree * defaultTree  = (TTree*)file->Get(treeName.c_str());

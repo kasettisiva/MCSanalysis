@@ -1201,7 +1201,7 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
   std::pair<TH1 *, TH1 *> inc_eff_num_denom = 
         protoana::ProtoDUNESelectionUtils::GetMCIncidentEfficiency(
         _IncidentMCFileNames[0], _TruthTreeName, _TruthBinning, _EndZCut,
-        false, 0, _IncidentScaleFactor);
+        0, _IncidentScaleFactor);
 
   _incidentEfficiencyNum = inc_eff_num_denom.first;
   _incidentEfficiencyDenom = inc_eff_num_denom.second;
@@ -1331,8 +1331,9 @@ void protoana::ProtoDUNEFit::ScaleMCToData(bool data_is_mc) {
   }
   
 
-  _ScaleFactor = nPrimaryPionsData/nPrimaryPionsMC;
+  //_ScaleFactor = nPrimaryPionsData/nPrimaryPionsMC;
   _IncidentScaleFactor = nIncidentPionsData/nIncidentPionsMC;
+  _ScaleFactor = _IncidentScaleFactor;
   std::cout << "Scale factor: " << _ScaleFactor << std::endl;
   std::cout << "Incident scale factor: " << _IncidentScaleFactor << std::endl;
 
