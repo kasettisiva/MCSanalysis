@@ -927,8 +927,7 @@ pionana::PionAnalyzer::PionAnalyzer(fhicl::ParameterSet const& p)
   // Call appropriate consumes<>() for any products to be retrieved by this module.
 }
 
-void pionana::PionAnalyzer::analyze(art::Event const& evt)
-{
+void pionana::PionAnalyzer::analyze(art::Event const & evt) {
 
   //reset containers
   reset();  
@@ -958,6 +957,16 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
   ////////////////////////////////////////
   
 
+  art::ServiceHandle<geo::Geometry> geom;
+  double z0 = geom->Wire( geo::WireID(0, 1, 2, 0) ).GetCenter().Z();
+  double pitch = geom->WirePitch( 2, 1, 0);
+  size_t nWires = geom->Nwires( 2, 1, 0 );
+
+  if (fVerbose) {
+    std::cout << "Z0: " << z0 << std::endl;
+    std::cout << "Pitch: " << pitch << std::endl;
+    std::cout << "nWires: " << nWires << std::endl;
+  }
 
   // This gets the true beam particle that generated the event
   const simb::MCParticle* true_beam_particle = 0x0;
@@ -1251,6 +1260,205 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
         }
       }
     }
+
+    //Truth thin slice info
+    //Go through the true processes within the MCTrajectory
+    const simb::MCTrajectory & true_beam_trajectory = true_beam_particle->Trajectory();
+    auto true_beam_proc_map = true_beam_trajectory.TrajectoryProcesses();
+    if (fVerbose) std::cout << "Processes: " << std::endl;
+
+    for( auto itProc = true_beam_proc_map.begin(); itProc != true_beam_proc_map.end(); ++itProc ){
+      int index = itProc->first;
+      std::string process = true_beam_trajectory.KeyToProcess(itProc->second);
+      if (fVerbose) std::cout << index << " " << process << std::endl;
+
+      true_beam_processes.push_back( process );
+
+      if( process == "hadElastic" ){
+
+        ++true_beam_nElasticScatters;
+
+        double process_X = true_beam_trajectory.X( index );
+        double process_Y = true_beam_trajectory.Y( index );
+        double process_Z = true_beam_trajectory.Z( index );
+
+        double PX      = true_beam_trajectory.Px( index );
+        double next_PX = true_beam_trajectory.Px( index + 1 );
+        double PY      = true_beam_trajectory.Py( index );
+        double next_PY = true_beam_trajectory.Py( index + 1 );
+        double PZ      = true_beam_trajectory.Pz( index );
+        double next_PZ = true_beam_trajectory.Pz( index + 1 );
+
+        double total_P = sqrt( PX*PX + PY*PY + PZ*PZ );
+        double total_next_P = sqrt( next_PX*next_PX + next_PY*next_PY + next_PZ*next_PZ );
+
+        //Get the angle between the direction of this step and the next
+        true_beam_elastic_costheta.push_back(
+          ( ( PX * next_PX ) + ( PY * next_PY ) + ( PZ * next_PZ ) ) / ( total_P * total_next_P )
+        );
+
+        true_beam_elastic_X.push_back( process_X );
+        true_beam_elastic_Y.push_back( process_Y );
+        true_beam_elastic_Z.push_back( process_Z );
+
+      }
+    }
+    if( true_beam_endProcess.find( "Inelastic" ) == std::string::npos ){
+      true_beam_processes.push_back( true_beam_endProcess );
+    }
+
+    if (fVerbose) std::cout << "Looking at IDEs" << std::endl;
+
+    auto view2_IDEs = bt_serv->TrackIdToSimIDEs_Ps( true_beam_ID, geo::View_t(2) );
+
+    if (fVerbose) std::cout << "N view2 IDEs: " << view2_IDEs.size() << std::endl;
+    std::sort( view2_IDEs.begin(), view2_IDEs.end(), sort_IDEs );
+    
+    size_t remove_index = 0;   
+    bool   do_remove = false;
+    if( view2_IDEs.size() ){
+      for( size_t i = 1; i < view2_IDEs.size()-1; ++i ){
+        const sim::IDE * prev_IDE = view2_IDEs[i-1]; 
+        const sim::IDE * this_IDE = view2_IDEs[i];
+
+        if( this_IDE->trackID < 0 && ( this_IDE->z - prev_IDE->z ) > 5 ){
+          remove_index = i;
+          do_remove = true;
+          break;            
+        }
+      }
+    }
+
+    if( do_remove ){
+      view2_IDEs.erase( view2_IDEs.begin() + remove_index, view2_IDEs.end() );
+    }
+
+/*
+    double new_total_dE = 0.;
+    if( max_IDE ){
+      true_beam_IDE_found_in_recoVtx = true;
+      for( size_t i = 0; i < view2_IDEs.size(); ++i ){
+        auto theIDE = view2_IDEs[i]; 
+
+        if( theIDE->z > IDE_max_z )
+          break;
+
+        //std::cout << view2_IDEs[i]->z << " " << view2_IDEs[i]->energy << " " << view2_IDEs[i]->numElectrons << std::endl;
+        new_total_dE += view2_IDEs[i]->energy;
+      }
+    }
+    else{
+      true_beam_IDE_found_in_recoVtx = false;
+      for( size_t i = 0; i < view2_IDEs.size(); ++i ){
+        new_total_dE += view2_IDEs[i]->energy;
+      }
+    }
+    true_beam_IDE_totalDep = new_total_dE;
+    */
+
+    double mass = 139.57; 
+    if( true_beam_PDG == 2212 ) mass = 938.27;
+    else if( abs(true_beam_PDG) == 211 ) mass = 139.57;
+    else if( abs(true_beam_PDG) == 11 ) mass = .511;
+    else if( abs(true_beam_PDG) == 321 ) mass = 321;
+    else if( abs(true_beam_PDG) == 13 )  mass = 105.66;      
+
+    double init_KE = sqrt( 1.e6 * true_beam_startP*true_beam_startP + mass*mass ) - mass;
+    true_beam_incidentEnergies.push_back( init_KE );
+
+    double slice_end = pitch;
+    double slice_edep = 0.;
+    for( size_t i = 0; i < view2_IDEs.size(); ++i ){
+
+      auto theIDE = view2_IDEs[i];
+
+      if( theIDE->z < 0. ) continue;
+
+      if( theIDE->z > slice_end ){
+        true_beam_incidentEnergies.push_back( true_beam_incidentEnergies.back() - slice_edep ); 
+        slice_edep = 0.;
+        slice_end += pitch;
+      }
+
+      slice_edep += theIDE->energy; 
+    }
+
+    //Remove the last. It's not considered an 'experiment'
+    true_beam_incidentEnergies.pop_back();
+    if( true_beam_incidentEnergies.size() ) true_beam_interactingEnergy = true_beam_incidentEnergies.back();
+
+    //slice up the view2_IDEs up by the wire pitch
+    auto sliced_ides = slice_IDEs( view2_IDEs, z0, pitch, true_beam_endZ);
+    //std::vector< int > found_slices;
+
+    //Get the momentum at the start of the slices.
+    //
+    //Get the first slice
+
+    auto first_slice = sliced_ides.begin();
+
+    //Check it has any IDEs
+    auto theIDEs = first_slice->second; 
+    
+    if (theIDEs.size()) {
+      //Get the first ide z position
+      double ide_z = theIDEs[0]->z;
+      
+      //Go through the trajectory position
+      //and check for the position that comes immediately before the 
+      //first ide
+      for (size_t i = 1; i < true_beam_trajectory.size(); ++i) {
+        double z0 = true_beam_trajectory.Z(i-1);
+        double z1 = true_beam_trajectory.Z(i);
+
+        if (z0 < ide_z && z1 > ide_z) {
+          init_KE = 1.e3 * true_beam_trajectory.E(i-1) - mass;
+          if (fVerbose) {
+            std::cout << "Found matching position" << z0 << " " << ide_z <<
+                         " " << z1 << std::endl;
+            std::cout << "init KE: " << init_KE << std::endl;
+          }
+          break;
+        }
+      }
+    }
+    
+
+    new_true_beam_incidentEnergies.push_back( init_KE );
+
+    for( auto it = sliced_ides.begin(); it != sliced_ides.end(); ++it ){
+
+      auto theIDEs = it->second;
+      //std::cout << "Looking at slice " << it->first << " " << theIDEs.size() << std::endl;
+
+      true_beam_slices.push_back( it->first );
+      true_beam_slices_nIDEs.push_back( theIDEs.size() ); 
+
+      //bool slice_found = false;
+      double deltaE = 0.;
+      for( size_t i = 0; i < theIDEs.size(); ++i ){
+        deltaE += theIDEs[i]->energy;
+        //if( std::find( true_ides_from_reco.begin(), true_ides_from_reco.end(), theIDEs[i] ) != true_ides_from_reco.end() ){
+        //  slice_found = true;
+        //  //break;
+        //}
+      }
+
+      true_beam_slices_deltaE.push_back( deltaE ); 
+      new_true_beam_incidentEnergies.push_back( new_true_beam_incidentEnergies.back() - deltaE ); 
+
+      //std::cout << "Found slice in reco? " << slice_found << std::endl;
+      //if(slice_found){
+      //  found_slices.push_back( it->first );
+      //  true_beam_slices_found.push_back(1);
+      //}
+      //else true_beam_slices_found.push_back(0);
+    }
+    new_true_beam_incidentEnergies.pop_back();
+    if( new_true_beam_incidentEnergies.size() ) new_true_beam_interactingEnergy = new_true_beam_incidentEnergies.back();
+
+
+
 
 
     for( int i = 0; i < true_beam_particle->NumberDaughters(); ++i ){
@@ -1630,10 +1838,10 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
     //
     std::map< const recob::Hit *, int > hitsToSlices;
     std::map< int, std::vector< const recob::Hit * > > slicesToHits;
-    art::ServiceHandle<geo::Geometry> geom;
     
+    /*
+    art::ServiceHandle<geo::Geometry> geom;
     double z0 = geom->Wire( geo::WireID(0, 1, 2, 0) ).GetCenter().Z();
-                                  //p, t, c 
     double pitch = geom->WirePitch( 2, 1, 0);
     size_t nWires = geom->Nwires( 2, 1, 0 );
 
@@ -1642,6 +1850,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       std::cout << "Pitch: " << pitch << std::endl;
       std::cout << "nWires: " << nWires << std::endl;
     }
+    */
 
     //Looking at the hits in the beam track
     std::map< size_t, const recob::Hit * > trajPtsToHits = trackUtil.GetRecoHitsFromTrajPoints( *thisTrack, evt, fTrackerTag );
@@ -1874,6 +2083,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
 
     if( !evt.isRealData() ){
 
+/*
       //Go through the true processes within the MCTrajectory
       const simb::MCTrajectory & true_beam_trajectory = true_beam_particle->Trajectory();
       auto true_beam_proc_map = true_beam_trajectory.TrajectoryProcesses();
@@ -1915,18 +2125,23 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
 
         }
       }
+      */
 
 
 
+      //keep here
       for( size_t i = 0; i < vertex_hits.size(); ++i ){
         std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( *(vertex_hits[i]) );
         for( size_t j = 0; j < ides.size(); ++j ){
           reco_beam_vertex_hits_slices.push_back( temp_hits_slices[i] );
         }
       }
+      //////////////////
 
       //Also, get the distance between all of the IDEs in the last slice to the location of processes in the beam trajectory 
 
+      const simb::MCTrajectory & true_beam_trajectory = true_beam_particle->Trajectory();
+      auto true_beam_proc_map = true_beam_trajectory.TrajectoryProcesses();
       for( auto itProc = true_beam_proc_map.begin(); itProc != true_beam_proc_map.end(); ++itProc ){
         double procX = true_beam_trajectory.X( itProc->first );
         double procY = true_beam_trajectory.Y( itProc->first );
@@ -1934,13 +2149,11 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
 
         if (fVerbose) std::cout << std::endl << "Process: " << true_beam_trajectory.KeyToProcess(itProc->second) << procX << " " << procY << " " << procZ << std::endl; 
 
+        //keep here
         std::vector< double > temp_dRs;
-
         int nIDEs = 0;
-
         for( size_t i = 0; i < vertex_hits.size(); ++i ){
           
-
           std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( *(vertex_hits[i]) );
           //std::cout << "Hit: " << vertex_hits[i]->WireID().Wire << " " << vertex_hits[i]->WireID().TPC  << " " << vertex_hits[i]->WireID().Plane << std::endl;
           for( size_t j = 0; j < ides.size(); ++j ){
@@ -1953,11 +2166,10 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
           }
         }
         reco_beam_vertex_dRs.push_back( temp_dRs );
-
       }
 
       if( true_beam_endProcess.find( "Inelastic" ) == std::string::npos ){
-        true_beam_processes.push_back( true_beam_endProcess );
+        //true_beam_processes.push_back( true_beam_endProcess );
 
         double procX = true_beam_endX;
         double procY = true_beam_endY;
@@ -1966,7 +2178,6 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
         std::vector< double > temp_dRs;
 
         int nIDEs = 0;
-
         for( size_t i = 0; i < vertex_hits.size(); ++i ){
           std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( *(vertex_hits[i]) );
           for( size_t j = 0; j < ides.size(); ++j ){
@@ -1983,8 +2194,9 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       }
 
 
+      /*
       double IDE_max_z = 0.; 
-      const sim::IDE * max_IDE = 0x0;
+      //const sim::IDE * max_IDE = 0x0;
 
       for( size_t i = 0; i < vertex_hits.size(); ++i ){
         std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( *(vertex_hits[i]) );
@@ -1994,20 +2206,18 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
             //std::cout << "\t" << ides[j]->x << " " << ides[j]->y << " " << ides[j]->z << " " << ides[j]->energy << std::endl;
             if( ides[j]->z > IDE_max_z ){
               IDE_max_z = ides[j]->z;
-              max_IDE = ides[j];
+              //max_IDE = ides[j];
             }
           }
         }
       }
+      */
       
+      /*
       if (fVerbose) std::cout << "Looking at IDEs" << std::endl;
 
       auto view2_IDEs = bt_serv->TrackIdToSimIDEs_Ps( true_beam_ID, geo::View_t(2) );
-      /*
-      for( auto const & ide : view2_IDEs ){
-        std::cout << ide->trackID << " " << ide->z << std::endl;
-      }
-      */
+
       if (fVerbose) std::cout << "N view2 IDEs: " << view2_IDEs.size() << std::endl;
       std::sort( view2_IDEs.begin(), view2_IDEs.end(), sort_IDEs );
       
@@ -2051,8 +2261,11 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       }
       true_beam_IDE_totalDep = new_total_dE;
 
+      */
+
 
       //Do the true xsec measurement
+      /*
       double mass = 139.57; 
       if( true_beam_PDG == 2212 ) mass = 938.27;
       else if( abs(true_beam_PDG) == 211 ) mass = 139.57;
@@ -2083,6 +2296,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       //Remove the last. It's not considered an 'experiment'
       true_beam_incidentEnergies.pop_back();
       if( true_beam_incidentEnergies.size() ) true_beam_interactingEnergy = true_beam_incidentEnergies.back();
+      */
 
       //New
       auto reco_hits = trackUtil.GetRecoTrackHitsFromPlane( *thisTrack, evt, fTrackerTag, 2 );
@@ -2109,7 +2323,32 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       }
 
 
+//move
       //slice up the view2_IDEs up by the wire pitch
+      auto view2_IDEs = bt_serv->TrackIdToSimIDEs_Ps( true_beam_ID, geo::View_t(2) );
+
+      if (fVerbose) std::cout << "N view2 IDEs: " << view2_IDEs.size() << std::endl;
+      std::sort( view2_IDEs.begin(), view2_IDEs.end(), sort_IDEs );
+      
+      size_t remove_index = 0;   
+      bool   do_remove = false;
+      if( view2_IDEs.size() ){
+        for( size_t i = 1; i < view2_IDEs.size()-1; ++i ){
+          const sim::IDE * prev_IDE = view2_IDEs[i-1]; 
+          const sim::IDE * this_IDE = view2_IDEs[i];
+
+          if( this_IDE->trackID < 0 && ( this_IDE->z - prev_IDE->z ) > 5 ){
+            remove_index = i;
+            do_remove = true;
+            break;            
+          }
+        }
+      }
+
+      if( do_remove ){
+        view2_IDEs.erase( view2_IDEs.begin() + remove_index, view2_IDEs.end() );
+      }
+
       auto sliced_ides = slice_IDEs( view2_IDEs, z0, pitch, true_beam_endZ);
       std::vector< int > found_slices;
 
@@ -2117,6 +2356,7 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
       //
       //Get the first slice
 
+/*
       auto first_slice = sliced_ides.begin();
 
       //Check it has any IDEs
@@ -2145,29 +2385,30 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
         }
       }
       
+      
 
       new_true_beam_incidentEnergies.push_back( init_KE );
 
+*/
       for( auto it = sliced_ides.begin(); it != sliced_ides.end(); ++it ){
 
         auto theIDEs = it->second;
         //std::cout << "Looking at slice " << it->first << " " << theIDEs.size() << std::endl;
 
-        true_beam_slices.push_back( it->first );
-        true_beam_slices_nIDEs.push_back( theIDEs.size() ); 
+//        true_beam_slices.push_back( it->first );
+//        true_beam_slices_nIDEs.push_back( theIDEs.size() ); 
 
         bool slice_found = false;
-        double deltaE = 0.;
+        //double deltaE = 0.;
         for( size_t i = 0; i < theIDEs.size(); ++i ){
-          deltaE += theIDEs[i]->energy;
+         // deltaE += theIDEs[i]->energy;
           if( std::find( true_ides_from_reco.begin(), true_ides_from_reco.end(), theIDEs[i] ) != true_ides_from_reco.end() ){
             slice_found = true;
-            //break;
           }
         }
 
-        true_beam_slices_deltaE.push_back( deltaE ); 
-        new_true_beam_incidentEnergies.push_back( new_true_beam_incidentEnergies.back() - deltaE ); 
+        //true_beam_slices_deltaE.push_back( deltaE ); 
+        //new_true_beam_incidentEnergies.push_back( new_true_beam_incidentEnergies.back() - deltaE ); 
 
         //std::cout << "Found slice in reco? " << slice_found << std::endl;
         if(slice_found){
@@ -2176,8 +2417,8 @@ void pionana::PionAnalyzer::analyze(art::Event const& evt)
         }
         else true_beam_slices_found.push_back(0);
       }
-      new_true_beam_incidentEnergies.pop_back();
-      if( new_true_beam_incidentEnergies.size() ) new_true_beam_interactingEnergy = new_true_beam_incidentEnergies.back();
+      //new_true_beam_incidentEnergies.pop_back();
+      //if( new_true_beam_incidentEnergies.size() ) new_true_beam_interactingEnergy = new_true_beam_incidentEnergies.back();
 
       if (fVerbose) {
         std::cout << "Found " << found_slices.size() << "/" << sliced_ides.size() << " slices" << std::endl;
