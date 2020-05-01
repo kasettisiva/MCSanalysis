@@ -23,7 +23,7 @@ namespace protoana{
       std::vector<float> GetCalibratedCalorimetry(
           const recob::Track &track, art::Event const &evt,
           const std::string trackModule, const std::string caloModule,
-          double negativeZFix = 0.);
+          size_t planeID, double negativeZFix = 0.);
       double HitToEnergy(const art::Ptr<recob::Hit> hit, double X, double Y, double Z);
 
     private:
@@ -31,14 +31,19 @@ namespace protoana{
 
       double tot_Ef( double, double, double );
 
-      unsigned int planeID;
       double betap;
       double Rho;
       //double Efield;
       double Wion;
       double alpha;
-      double norm_factor;
-      double calib_factor;
+
+      //size_t planeID;
+      std::map<size_t, double> norm_factors;
+      std::map<size_t, double> calib_factors;
+      std::map<size_t, TH1F *> X_correction_hists;
+      std::map<size_t, TH2F *> YZ_neg_hists;
+      std::map<size_t, TH2F *> YZ_pos_hists;
+
       std::string X_correction_name;
       TFile * X_correction_file;
 
@@ -48,9 +53,6 @@ namespace protoana{
       std::string E_field_correction_name;
       TFile * E_field_file;
 
-      TH1F * X_correction_hist;
-      TH2F * YZ_neg;
-      TH2F * YZ_pos;
 
       TH3F * ex_neg;
       TH3F * ey_neg;

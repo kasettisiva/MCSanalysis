@@ -1,48 +1,104 @@
 BEGIN_PROLOG
 
 ##MC SCE on
+#CalorimetryParameters_SPProd2_MC_SCE_Plane2: {
 CalorimetryParameters_SPProd2_MC_SCE: {
-  PlaneID:      2
   betap:        0.212
   Rho:          1.383
   Wion:         23.6e-6
   alpha:        0.93
 
-  norm_factor: 0.9947
-  calib_factor: 4.86e-3
+  PlaneParameters: [
+    {
+      PlaneID:      2
+      norm_factor:  0.9947
+      calib_factor: 4.86e-3
+    },
+    {
+      PlaneID:      1
+      norm_factor:  1.0082
+      calib_factor: 4.81e-3
+    },
+    {
+      PlaneID:      0
+      norm_factor:  1.0078
+      calib_factor: 4.81e-3
+    }
+  ]
 
   X_correction:       "/pnfs/dune/persistent/users/apaudel/prod2_calibfactors/Xcalo_sce.root"
   YZ_correction:      "/pnfs/dune/persistent/users/apaudel/prod2_calibfactors/YZcalo_sce.root"
   E_field_correction: "/dune/app/users/apaudel/v083001/prod2_calibfactors/SCE_DataDriven_180kV_v3.root"
 }
+##########################################
 
 
 ##MC SCE off
 CalorimetryParameters_SPProd2_MC_35ms: @local::CalorimetryParameters_SPProd2_MC_SCE
-CalorimetryParameters_SPProd2_MC_35ms.norm_factor:        0.9952 
-CalorimetryParameters_SPProd2_MC_35ms.calib_factor:       4.83e-3
 CalorimetryParameters_SPProd2_MC_35ms.X_correction:       "/pnfs/dune/persistent/users/apaudel/prod2_calibfactors/Xcalo_35ms.root"
 CalorimetryParameters_SPProd2_MC_35ms.YZ_correction:      "/pnfs/dune/persistent/users/apaudel/prod2_calibfactors/YZcalo_35ms.root"
+CalorimetryParameters_SPProd2_MC_35ms.PlaneParameters: [
+  {
+    PlaneID: 2
+    norm_factor: 1.0095 #0.9952 -- old
+    calib_factor: 4.90e-3 #4.83e-3 -- old
+  },
+  {
+    PlaneID: 1
+    norm_factor: 1.0095
+    calib_factor: 4.79e-3
+  },
+  {
+    PlaneID: 0
+    norm_factor: 1.009
+    calib_factor: 4.79e-3
+  }
+]
+##########################################
 
 ##Data run 5387
 CalorimetryParameters_SPProd2_Data_r5387: @local::CalorimetryParameters_SPProd2_MC_SCE
-CalorimetryParameters_SPProd2_Data_r5387.norm_factor:        0.9946 
-CalorimetryParameters_SPProd2_Data_r5387.calib_factor:       5.23e-3
 CalorimetryParameters_SPProd2_Data_r5387.X_correction:       "/pnfs/dune/persistent/users/apaudel/prod2_calibfactors/Xcalo_r5387.root"
 CalorimetryParameters_SPProd2_Data_r5387.YZ_correction:      "/pnfs/dune/persistent/users/apaudel/prod2_calibfactors/YZcalo_r5387.root"
+CalorimetryParameters_SPProd2_Data_r5387.PlaneParameters: [
+  {
+    PlaneID: 2
+    norm_factor:  0.9946 
+    calib_factor: 5.23e-3
+  }
+]
+#CalorimetryParameters_SPProd2_Data_r5387.norm_factor:        0.9946 
+#CalorimetryParameters_SPProd2_Data_r5387.calib_factor:       5.23e-3
+##########################################
 
 ##Data run 5809
 CalorimetryParameters_SPProd2_Data_r5809: @local::CalorimetryParameters_SPProd2_MC_SCE
-CalorimetryParameters_SPProd2_Data_r5809.norm_factor:        1.0469 
-CalorimetryParameters_SPProd2_Data_r5809.calib_factor:       5.58e-3
 CalorimetryParameters_SPProd2_Data_r5809.X_correction:       "/pnfs/dune/persistent/users/apaudel/prod2_calibfactors/Xcalo_r5809.root"
 CalorimetryParameters_SPProd2_Data_r5809.YZ_correction:      "/pnfs/dune/persistent/users/apaudel/prod2_calibfactors/YZcalo_r5809.root"
+CalorimetryParameters_SPProd2_Data_r5809.PlaneParameters: [
+  {
+    PlaneID: 2
+    norm_factor:  1.0469 
+    calib_factor: 5.58e-3
+  }
+]
+#CalorimetryParameters_SPProd2_Data_r5809.norm_factor:        1.0469 
+#CalorimetryParameters_SPProd2_Data_r5809.calib_factor:       5.58e-3
+##########################################
 
 ##Data run 5770
 CalorimetryParameters_SPProd2_Data_r5770: @local::CalorimetryParameters_SPProd2_MC_SCE
-CalorimetryParameters_SPProd2_Data_r5770.norm_factor:        1.1334 
-CalorimetryParameters_SPProd2_Data_r5770.calib_factor:       5.59e-3
 CalorimetryParameters_SPProd2_Data_r5770.X_correction:       "/pnfs/dune/persistent/users/apaudel/prod2_calibfactors/Xcalo_r5770.root"
 CalorimetryParameters_SPProd2_Data_r5770.YZ_correction:      "/pnfs/dune/persistent/users/apaudel/prod2_calibfactors/YZcalo_r5770.root"
+CalorimetryParameters_SPProd2_Data_r5770.PlaneParameters: [
+  {
+    PlaneID: 2
+    norm_factor:  1.1334 
+    calib_factor: 5.59e-3
+  }
+]
+#CalorimetryParameters_SPProd2_Data_r5770.norm_factor:        1.1334 
+#CalorimetryParameters_SPProd2_Data_r5770.calib_factor:       5.59e-3
+##########################################
 
 END_PROLOG

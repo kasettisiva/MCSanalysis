@@ -1027,6 +1027,28 @@ std::map< size_t, std::vector< const sim::IDE * > > protoana::ProtoDUNETruthUtil
   return results;
 }
 
+std::vector<const sim::IDE*>
+    protoana::ProtoDUNETruthUtils::GetSimIDEsBetweenPoints(
+        const simb::MCParticle & mcpart, const TLorentzVector & p1,
+        const TLorentzVector &p2) {
+
+  art::ServiceHandle<cheat::BackTrackerService> bt_serv;
+  art::ServiceHandle<geo::Geometry> geom;
+  std::vector<const sim::IDE *> ides =
+      bt_serv->TrackIdToSimIDEs_Ps(mcpart.TrackId(), geom->View(2));
+
+  std::vector<const sim::IDE *> results;
+  for (const sim::IDE * theIDE : ides) {
+    if (theIDE->z > p1.Z() && theIDE->z < p2.Z() /*&&
+        theIDE->x > p1.X() && theIDE->x < p2.X() &&
+        theIDE->y > p1.Y() && theIDE->y < p2.Y()*/) {
+      results.push_back(theIDE);
+    }
+  }
+
+  return results;
+}
+
 std::map< int, std::vector< int > > protoana::ProtoDUNETruthUtils::GetMapMCToPFPs_ByHits( const art::Event & evt, std::string pfpTag, std::string hitTag ){
 
   std::map< int, std::vector< int > > results;

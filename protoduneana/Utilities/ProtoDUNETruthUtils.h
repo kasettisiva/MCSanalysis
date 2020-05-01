@@ -167,6 +167,11 @@ namespace protoana {
     // Get the sim::IDEs from the MCParticle, organized by the trajectory points
     std::map< size_t, std::vector< const sim::IDE * > > GetSimIDEs( const simb::MCParticle & mcpart );
 
+    // Get the sim::IDes between 2 points in space
+    std::vector<const sim::IDE *> GetSimIDEsBetweenPoints(
+        const simb::MCParticle & mcpart, const TLorentzVector & p1,
+        const TLorentzVector &p2);
+
     std::map< int, std::vector< int > > GetMapMCToPFPs_ByHits( const art::Event & evt, std::string pfpTag, std::string hitTag );
 
   private:

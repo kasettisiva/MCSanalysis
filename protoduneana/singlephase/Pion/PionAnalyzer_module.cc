@@ -445,7 +445,10 @@ private:
 
   int  true_beam_nElasticScatters;
   int  true_beam_nHits;
-  std::vector< double > true_beam_elastic_costheta, true_beam_elastic_X, true_beam_elastic_Y, true_beam_elastic_Z;
+  std::vector< double > true_beam_elastic_costheta, true_beam_elastic_X,
+                        true_beam_elastic_Y, true_beam_elastic_Z,
+                        true_beam_elastic_deltaE, true_beam_elastic_IDE_edep;
+
   double true_beam_IDE_totalDep;
   bool true_beam_IDE_found_in_recoVtx;
   std::vector< std::string > true_beam_processes;
@@ -739,6 +742,22 @@ private:
   std::vector< std::vector< double > > reco_daughter_allTrack_calibrated_dEdX, reco_daughter_allTrack_calibrated_dEdX_SCE;
   std::vector< double > reco_daughter_allTrack_Chi2_proton;
   std::vector< int >    reco_daughter_allTrack_Chi2_ndof;
+
+  //New: calorimetry + chi2 for planes 0 and 1
+  std::vector<std::vector<double>>
+      reco_daughter_allTrack_calibrated_dEdX_SCE_plane0,
+      reco_daughter_allTrack_calibrated_dEdX_SCE_plane1;
+
+  std::vector<std::vector<double>>
+      reco_daughter_allTrack_resRange_plane0,
+      reco_daughter_allTrack_resRange_plane1;
+
+  std::vector<double> reco_daughter_allTrack_Chi2_proton_plane0,
+                      reco_daughter_allTrack_Chi2_proton_plane1;
+
+  std::vector<int> reco_daughter_allTrack_Chi2_ndof_plane0,
+                   reco_daughter_allTrack_Chi2_ndof_plane1;
+  //////////////////////////////////////////////
 
   std::vector< double > reco_daughter_allTrack_startX, reco_daughter_allTrack_endX;
   std::vector< double > reco_daughter_allTrack_startY, reco_daughter_allTrack_endY;
@@ -1297,9 +1316,32 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
           ( ( PX * next_PX ) + ( PY * next_PY ) + ( PZ * next_PZ ) ) / ( total_P * total_next_P )
         );
 
+        double mass = 139.57;
+        if( true_beam_PDG == 2212 ) mass = 938.27;
+        else if( abs(true_beam_PDG) == 211 ) mass = 139.57;
+        else if( abs(true_beam_PDG) == 11 ) mass = .511;
+        else if( abs(true_beam_PDG) == 321 ) mass = 321;
+        else if( abs(true_beam_PDG) == 13 )  mass = 105.66;      
+        
+        double total_E = sqrt(total_P*total_P*1.e6 + mass*mass);
+        double total_next_E = sqrt(total_next_P*total_next_P*1.e6 + mass*mass);
+
         true_beam_elastic_X.push_back( process_X );
         true_beam_elastic_Y.push_back( process_Y );
         true_beam_elastic_Z.push_back( process_Z );
+
+        true_beam_elastic_deltaE.push_back(total_E - total_next_E);
+
+        std::vector<const sim::IDE *> ides_between_points =
+            truthUtil.GetSimIDEsBetweenPoints(
+                *true_beam_particle, true_beam_trajectory.Position(index),
+                true_beam_trajectory.Position(index +1));
+
+        double total_edep = 0.;
+        for (size_t i = 0; i < ides_between_points.size(); ++i) {
+          total_edep += ides_between_points[i]->energy;
+        }
+        true_beam_elastic_IDE_edep.push_back(total_edep);
 
       }
     }
@@ -1332,29 +1374,6 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
     if( do_remove ){
       view2_IDEs.erase( view2_IDEs.begin() + remove_index, view2_IDEs.end() );
     }
-
-/*
-    double new_total_dE = 0.;
-    if( max_IDE ){
-      true_beam_IDE_found_in_recoVtx = true;
-      for( size_t i = 0; i < view2_IDEs.size(); ++i ){
-        auto theIDE = view2_IDEs[i]; 
-
-        if( theIDE->z > IDE_max_z )
-          break;
-
-        //std::cout << view2_IDEs[i]->z << " " << view2_IDEs[i]->energy << " " << view2_IDEs[i]->numElectrons << std::endl;
-        new_total_dE += view2_IDEs[i]->energy;
-      }
-    }
-    else{
-      true_beam_IDE_found_in_recoVtx = false;
-      for( size_t i = 0; i < view2_IDEs.size(); ++i ){
-        new_total_dE += view2_IDEs[i]->energy;
-      }
-    }
-    true_beam_IDE_totalDep = new_total_dE;
-    */
 
     double mass = 139.57; 
     if( true_beam_PDG == 2212 ) mass = 938.27;
@@ -1429,37 +1448,20 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
     for( auto it = sliced_ides.begin(); it != sliced_ides.end(); ++it ){
 
       auto theIDEs = it->second;
-      //std::cout << "Looking at slice " << it->first << " " << theIDEs.size() << std::endl;
 
       true_beam_slices.push_back( it->first );
       true_beam_slices_nIDEs.push_back( theIDEs.size() ); 
 
-      //bool slice_found = false;
       double deltaE = 0.;
       for( size_t i = 0; i < theIDEs.size(); ++i ){
         deltaE += theIDEs[i]->energy;
-        //if( std::find( true_ides_from_reco.begin(), true_ides_from_reco.end(), theIDEs[i] ) != true_ides_from_reco.end() ){
-        //  slice_found = true;
-        //  //break;
-        //}
       }
 
       true_beam_slices_deltaE.push_back( deltaE ); 
       new_true_beam_incidentEnergies.push_back( new_true_beam_incidentEnergies.back() - deltaE ); 
-
-      //std::cout << "Found slice in reco? " << slice_found << std::endl;
-      //if(slice_found){
-      //  found_slices.push_back( it->first );
-      //  true_beam_slices_found.push_back(1);
-      //}
-      //else true_beam_slices_found.push_back(0);
     }
     new_true_beam_incidentEnergies.pop_back();
     if( new_true_beam_incidentEnergies.size() ) new_true_beam_interactingEnergy = new_true_beam_incidentEnergies.back();
-
-
-
-
 
     for( int i = 0; i < true_beam_particle->NumberDaughters(); ++i ){
       int daughterID = true_beam_particle->Daughter(i);
@@ -1839,19 +1841,6 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
     std::map< const recob::Hit *, int > hitsToSlices;
     std::map< int, std::vector< const recob::Hit * > > slicesToHits;
     
-    /*
-    art::ServiceHandle<geo::Geometry> geom;
-    double z0 = geom->Wire( geo::WireID(0, 1, 2, 0) ).GetCenter().Z();
-    double pitch = geom->WirePitch( 2, 1, 0);
-    size_t nWires = geom->Nwires( 2, 1, 0 );
-
-    if (fVerbose) {
-      std::cout << "Z0: " << z0 << std::endl;
-      std::cout << "Pitch: " << pitch << std::endl;
-      std::cout << "nWires: " << nWires << std::endl;
-    }
-    */
-
     //Looking at the hits in the beam track
     std::map< size_t, const recob::Hit * > trajPtsToHits = trackUtil.GetRecoHitsFromTrajPoints( *thisTrack, evt, fTrackerTag );
     double max_X = 0.;
@@ -1881,9 +1870,6 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
       int slice = std::floor( ( thisTrack->Trajectory().LocationAtPoint(i).Z() - z0 ) / pitch );
       hitsToSlices[ theHit ] = slice;
       slicesToHits[ slice ].push_back( theHit );
-      //std::cout << i << " Position: " <<  x << " " << y << " " << z << " Hit Wire: " << theHit->WireID().Wire << " " 
-      //          << theHit->PeakTime()  << " " << theHit->StartTick() << " " << theHit->EndTick() << std::endl;
-
 
       if( /*thisTrack->Trajectory().LocationAtPoint(i).Z()*/ z > max_Z ){
         max_Z = z/*thisTrack->Trajectory().LocationAtPoint(i).Z()*/;
@@ -2011,7 +1997,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
     ////////////////////////////////////////////
 
     //New Calibration
-    std::vector< float > new_dEdX = calibration.GetCalibratedCalorimetry(  *thisTrack, evt, fTrackerTag, fCalorimetryTag, -1.);
+    std::vector< float > new_dEdX = calibration.GetCalibratedCalorimetry(  *thisTrack, evt, fTrackerTag, fCalorimetryTag, 2, -1.);
     for( size_t i = 0; i < new_dEdX.size(); ++i ){ reco_beam_calibrated_dEdX.push_back( new_dEdX[i] ); }
     ////////////////////////////////////////////
 
@@ -2083,53 +2069,6 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
 
     if( !evt.isRealData() ){
 
-/*
-      //Go through the true processes within the MCTrajectory
-      const simb::MCTrajectory & true_beam_trajectory = true_beam_particle->Trajectory();
-      auto true_beam_proc_map = true_beam_trajectory.TrajectoryProcesses();
-      if (fVerbose) std::cout << "Processes: " << std::endl;
-
-      for( auto itProc = true_beam_proc_map.begin(); itProc != true_beam_proc_map.end(); ++itProc ){
-        int index = itProc->first;
-        std::string process = true_beam_trajectory.KeyToProcess(itProc->second);
-        if (fVerbose) std::cout << index << " " << process << std::endl;
-
-        true_beam_processes.push_back( process );
-
-        if( process == "hadElastic" ){
-
-          ++true_beam_nElasticScatters;
-
-          double process_X = true_beam_trajectory.X( index );
-          double process_Y = true_beam_trajectory.Y( index );
-          double process_Z = true_beam_trajectory.Z( index );
-
-          double PX      = true_beam_trajectory.Px( index );
-          double next_PX = true_beam_trajectory.Px( index + 1 );
-          double PY      = true_beam_trajectory.Py( index );
-          double next_PY = true_beam_trajectory.Py( index + 1 );
-          double PZ      = true_beam_trajectory.Pz( index );
-          double next_PZ = true_beam_trajectory.Pz( index + 1 );
-
-          double total_P = sqrt( PX*PX + PY*PY + PZ*PZ );
-          double total_next_P = sqrt( next_PX*next_PX + next_PY*next_PY + next_PZ*next_PZ );
-
-          //Get the angle between the direction of this step and the next
-          true_beam_elastic_costheta.push_back(
-            ( ( PX * next_PX ) + ( PY * next_PY ) + ( PZ * next_PZ ) ) / ( total_P * total_next_P )
-          );
-
-          true_beam_elastic_X.push_back( process_X );
-          true_beam_elastic_Y.push_back( process_Y );
-          true_beam_elastic_Z.push_back( process_Z );
-
-        }
-      }
-      */
-
-
-
-      //keep here
       for( size_t i = 0; i < vertex_hits.size(); ++i ){
         std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( *(vertex_hits[i]) );
         for( size_t j = 0; j < ides.size(); ++j ){
@@ -2193,111 +2132,6 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
 
       }
 
-
-      /*
-      double IDE_max_z = 0.; 
-      //const sim::IDE * max_IDE = 0x0;
-
-      for( size_t i = 0; i < vertex_hits.size(); ++i ){
-        std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( *(vertex_hits[i]) );
-        for( size_t j = 0; j < ides.size(); ++j ){
-          if( abs(ides[j]->trackID) == true_beam_ID ){
-            //std::cout << "Found Track: " << ides[j]->trackID << " Hit: " << i << " ide: " <<  j <<  " " << ides[j] << std::endl;
-            //std::cout << "\t" << ides[j]->x << " " << ides[j]->y << " " << ides[j]->z << " " << ides[j]->energy << std::endl;
-            if( ides[j]->z > IDE_max_z ){
-              IDE_max_z = ides[j]->z;
-              //max_IDE = ides[j];
-            }
-          }
-        }
-      }
-      */
-      
-      /*
-      if (fVerbose) std::cout << "Looking at IDEs" << std::endl;
-
-      auto view2_IDEs = bt_serv->TrackIdToSimIDEs_Ps( true_beam_ID, geo::View_t(2) );
-
-      if (fVerbose) std::cout << "N view2 IDEs: " << view2_IDEs.size() << std::endl;
-      std::sort( view2_IDEs.begin(), view2_IDEs.end(), sort_IDEs );
-      
-      size_t remove_index = 0;   
-      bool   do_remove = false;
-      if( view2_IDEs.size() ){
-        for( size_t i = 1; i < view2_IDEs.size()-1; ++i ){
-          const sim::IDE * prev_IDE = view2_IDEs[i-1]; 
-          const sim::IDE * this_IDE = view2_IDEs[i];
-
-          if( this_IDE->trackID < 0 && ( this_IDE->z - prev_IDE->z ) > 5 ){
-            remove_index = i;
-            do_remove = true;
-            break;            
-          }
-        }
-      }
-
-      if( do_remove ){
-        view2_IDEs.erase( view2_IDEs.begin() + remove_index, view2_IDEs.end() );
-      }
-
-      double new_total_dE = 0.;
-      if( max_IDE ){
-        true_beam_IDE_found_in_recoVtx = true;
-        for( size_t i = 0; i < view2_IDEs.size(); ++i ){
-          auto theIDE = view2_IDEs[i]; 
-
-          if( theIDE->z > IDE_max_z )
-            break;
-
-          //std::cout << view2_IDEs[i]->z << " " << view2_IDEs[i]->energy << " " << view2_IDEs[i]->numElectrons << std::endl;
-          new_total_dE += view2_IDEs[i]->energy;
-        }
-      }
-      else{
-        true_beam_IDE_found_in_recoVtx = false;
-        for( size_t i = 0; i < view2_IDEs.size(); ++i ){
-          new_total_dE += view2_IDEs[i]->energy;
-        }
-      }
-      true_beam_IDE_totalDep = new_total_dE;
-
-      */
-
-
-      //Do the true xsec measurement
-      /*
-      double mass = 139.57; 
-      if( true_beam_PDG == 2212 ) mass = 938.27;
-      else if( abs(true_beam_PDG) == 211 ) mass = 139.57;
-      else if( abs(true_beam_PDG) == 11 ) mass = .511;
-      else if( abs(true_beam_PDG) == 321 ) mass = 321;
-      else if( abs(true_beam_PDG) == 13 )  mass = 105.66;      
-
-      double init_KE = sqrt( 1.e6 * true_beam_startP*true_beam_startP + mass*mass ) - mass;
-      true_beam_incidentEnergies.push_back( init_KE );
-
-      double slice_end = pitch;
-      double slice_edep = 0.;
-      for( size_t i = 0; i < view2_IDEs.size(); ++i ){
-
-        auto theIDE = view2_IDEs[i];
-
-        if( theIDE->z < 0. ) continue;
-
-        if( theIDE->z > slice_end ){
-          true_beam_incidentEnergies.push_back( true_beam_incidentEnergies.back() - slice_edep ); 
-          slice_edep = 0.;
-          slice_end += pitch;
-        }
-
-        slice_edep += theIDE->energy; 
-      }
-
-      //Remove the last. It's not considered an 'experiment'
-      true_beam_incidentEnergies.pop_back();
-      if( true_beam_incidentEnergies.size() ) true_beam_interactingEnergy = true_beam_incidentEnergies.back();
-      */
-
       //New
       auto reco_hits = trackUtil.GetRecoTrackHitsFromPlane( *thisTrack, evt, fTrackerTag, 2 );
 
@@ -2352,63 +2186,17 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
       auto sliced_ides = slice_IDEs( view2_IDEs, z0, pitch, true_beam_endZ);
       std::vector< int > found_slices;
 
-      //Get the momentum at the start of the slices.
-      //
-      //Get the first slice
-
-/*
-      auto first_slice = sliced_ides.begin();
-
-      //Check it has any IDEs
-      auto theIDEs = first_slice->second; 
-      
-      if (theIDEs.size()) {
-        //Get the first ide z position
-        double ide_z = theIDEs[0]->z;
-        
-        //Go through the trajectory position
-        //and check for the position that comes immediately before the 
-        //first ide
-        for (size_t i = 1; i < true_beam_trajectory.size(); ++i) {
-          double z0 = true_beam_trajectory.Z(i-1);
-          double z1 = true_beam_trajectory.Z(i);
-
-          if (z0 < ide_z && z1 > ide_z) {
-            init_KE = 1.e3 * true_beam_trajectory.E(i-1) - mass;
-            if (fVerbose) {
-              std::cout << "Found matching position" << z0 << " " << ide_z <<
-                           " " << z1 << std::endl;
-              std::cout << "init KE: " << init_KE << std::endl;
-            }
-            break;
-          }
-        }
-      }
-      
-      
-
-      new_true_beam_incidentEnergies.push_back( init_KE );
-
-*/
       for( auto it = sliced_ides.begin(); it != sliced_ides.end(); ++it ){
 
         auto theIDEs = it->second;
         //std::cout << "Looking at slice " << it->first << " " << theIDEs.size() << std::endl;
 
-//        true_beam_slices.push_back( it->first );
-//        true_beam_slices_nIDEs.push_back( theIDEs.size() ); 
-
         bool slice_found = false;
-        //double deltaE = 0.;
         for( size_t i = 0; i < theIDEs.size(); ++i ){
-         // deltaE += theIDEs[i]->energy;
           if( std::find( true_ides_from_reco.begin(), true_ides_from_reco.end(), theIDEs[i] ) != true_ides_from_reco.end() ){
             slice_found = true;
           }
         }
-
-        //true_beam_slices_deltaE.push_back( deltaE ); 
-        //new_true_beam_incidentEnergies.push_back( new_true_beam_incidentEnergies.back() - deltaE ); 
 
         //std::cout << "Found slice in reco? " << slice_found << std::endl;
         if(slice_found){
@@ -2417,8 +2205,6 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
         }
         else true_beam_slices_found.push_back(0);
       }
-      //new_true_beam_incidentEnergies.pop_back();
-      //if( new_true_beam_incidentEnergies.size() ) new_true_beam_interactingEnergy = new_true_beam_incidentEnergies.back();
 
       if (fVerbose) {
         std::cout << "Found " << found_slices.size() << "/" << sliced_ides.size() << " slices" << std::endl;
@@ -2785,8 +2571,8 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
           auto dummy_dQdx_SCE = dummy_caloSCE[0].dQdx();
           auto dummy_Range_SCE = dummy_caloSCE[0].ResidualRange();
 
-          std::vector< float > cali_dEdX = calibration.GetCalibratedCalorimetry(  *pandora2Track, evt, "pandora2Track", "pandora2calo" );
-          std::vector< float > cali_dEdX_SCE = calibration.GetCalibratedCalorimetry(  *pandora2Track, evt, "pandora2Track", "pandora2caloSCE" );
+          std::vector<float> cali_dEdX = calibration.GetCalibratedCalorimetry(*pandora2Track, evt, "pandora2Track", "pandora2calo", 2);
+          std::vector<float> cali_dEdX_SCE = calibration.GetCalibratedCalorimetry(*pandora2Track, evt, "pandora2Track", "pandora2caloSCE", 2);
  
           reco_daughter_allTrack_resRange.push_back( std::vector<double>() );
           reco_daughter_allTrack_dEdX.push_back( std::vector<double>() );
@@ -2820,6 +2606,57 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
           std::pair< double, int > this_chi2_ndof = trackUtil.Chi2PID( reco_daughter_allTrack_calibrated_dEdX_SCE.back(), reco_daughter_allTrack_resRange.back(), templates[ 2212 ] );
           reco_daughter_allTrack_Chi2_proton.push_back( this_chi2_ndof.first );
           reco_daughter_allTrack_Chi2_ndof.push_back( this_chi2_ndof.second );
+
+          //Calorimetry + chi2 for planes 0 and 1
+          auto resRange_plane0 = dummy_caloSCE[2].ResidualRange();
+          auto resRange_plane1 = dummy_caloSCE[1].ResidualRange();
+          std::vector<float> dEdX_plane0 = calibration.GetCalibratedCalorimetry(
+              *pandora2Track, evt, "pandora2Track", "pandora2caloSCE", 0);
+          std::vector<float> dEdX_plane1 = calibration.GetCalibratedCalorimetry(
+              *pandora2Track, evt, "pandora2Track", "pandora2caloSCE", 1);
+
+          reco_daughter_allTrack_resRange_plane0.push_back(
+              std::vector<double>());
+          reco_daughter_allTrack_resRange_plane1.push_back(
+              std::vector<double>());
+          for (size_t j = 0; j < resRange_plane0.size(); ++j) {
+            reco_daughter_allTrack_resRange_plane0.back().push_back(
+                resRange_plane0[j]);
+          }
+          for (size_t j = 0; j < resRange_plane1.size(); ++j) {
+            reco_daughter_allTrack_resRange_plane1.back().push_back(
+                resRange_plane1[j]);
+          }
+
+          reco_daughter_allTrack_calibrated_dEdX_SCE_plane0.push_back(
+              std::vector<double>());
+          reco_daughter_allTrack_calibrated_dEdX_SCE_plane1.push_back(
+              std::vector<double>());
+          for (size_t j = 0; j < dEdX_plane0.size(); ++j) {
+            reco_daughter_allTrack_calibrated_dEdX_SCE_plane0.back().push_back(
+                dEdX_plane0[j]);
+          }
+          for (size_t j = 0; j < dEdX_plane1.size(); ++j) {
+            reco_daughter_allTrack_calibrated_dEdX_SCE_plane1.back().push_back(
+                dEdX_plane1[j]);
+          }
+
+          std::pair<double, int> plane0_chi2_ndof = trackUtil.Chi2PID(
+              reco_daughter_allTrack_calibrated_dEdX_SCE_plane0.back(),
+              reco_daughter_allTrack_resRange_plane0.back(), templates[2212]);
+          reco_daughter_allTrack_Chi2_proton_plane0.push_back(
+              plane0_chi2_ndof.first);
+          reco_daughter_allTrack_Chi2_ndof_plane0.push_back(
+              plane0_chi2_ndof.second);
+
+          std::pair<double, int> plane1_chi2_ndof = trackUtil.Chi2PID(
+              reco_daughter_allTrack_calibrated_dEdX_SCE_plane1.back(),
+              reco_daughter_allTrack_resRange_plane1.back(), templates[2212]);
+          reco_daughter_allTrack_Chi2_proton_plane1.push_back(
+              plane1_chi2_ndof.first);
+          reco_daughter_allTrack_Chi2_ndof_plane1.push_back(
+              plane1_chi2_ndof.second);
+          //////////////////////////////////////
           
           reco_daughter_allTrack_Theta.push_back(  pandora2Track->Theta() );
           reco_daughter_allTrack_Phi.push_back(  pandora2Track->Phi() );
@@ -2917,13 +2754,27 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
           reco_daughter_allTrack_resRange_SCE.push_back( std::vector<double>() );
           reco_daughter_allTrack_dEdX_SCE.push_back( std::vector<double>() );
           reco_daughter_allTrack_dQdX_SCE.push_back( std::vector<double>() );
-
-          reco_daughter_allTrack_calibrated_dEdX.push_back( std::vector<double>() );
-          reco_daughter_allTrack_calibrated_dEdX_SCE.push_back( std::vector<double>() );
-
-
+          reco_daughter_allTrack_calibrated_dEdX.push_back(std::vector<double>());
+          reco_daughter_allTrack_calibrated_dEdX_SCE.push_back(std::vector<double>());
           reco_daughter_allTrack_Chi2_proton.push_back( -999. );
           reco_daughter_allTrack_Chi2_ndof.push_back( 0 );
+
+          //Calorimetry + chi2 for planes 0 and 1
+          reco_daughter_allTrack_calibrated_dEdX_SCE_plane0.push_back(
+              std::vector<double>());
+          reco_daughter_allTrack_calibrated_dEdX_SCE_plane1.push_back(
+              std::vector<double>());
+          reco_daughter_allTrack_resRange_plane0.push_back(
+              std::vector<double>());
+          reco_daughter_allTrack_resRange_plane1.push_back(
+              std::vector<double>());
+
+          reco_daughter_allTrack_Chi2_proton_plane0.push_back( -999. );
+          reco_daughter_allTrack_Chi2_ndof_plane0.push_back( 0 );
+          reco_daughter_allTrack_Chi2_proton_plane1.push_back( -999. );
+          reco_daughter_allTrack_Chi2_ndof_plane1.push_back( 0 );
+          //////////////////////////////////
+
           reco_daughter_allTrack_Theta.push_back(-999. );
           reco_daughter_allTrack_Phi.push_back(-999.);
           reco_daughter_allTrack_len.push_back( -999. );
@@ -3182,7 +3033,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
         }
 
         //New Calibration
-        std::vector< float > new_dEdX = calibration.GetCalibratedCalorimetry(  *pandora2Track, evt, fTrackerTag, fCalorimetryTag );
+        std::vector< float > new_dEdX = calibration.GetCalibratedCalorimetry(*pandora2Track, evt, fTrackerTag, fCalorimetryTag, 2);
         for( size_t i = 0; i < new_dEdX.size(); ++i ){ reco_beam_allTrack_calibrated_dEdX.push_back( new_dEdX[i] ); }
         ////////////////////////////////////////////
 
@@ -3409,6 +3260,28 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("reco_daughter_allTrack_Chi2_proton", &reco_daughter_allTrack_Chi2_proton);
   fTree->Branch("reco_daughter_allTrack_Chi2_ndof", &reco_daughter_allTrack_Chi2_ndof);
 
+
+  ///Calorimetry/chi2 planes 0 and 1
+  fTree->Branch("reco_daughter_allTrack_Chi2_proton_plane0",
+                &reco_daughter_allTrack_Chi2_proton_plane0);
+  fTree->Branch("reco_daughter_allTrack_Chi2_proton_plane1",
+                &reco_daughter_allTrack_Chi2_proton_plane1);
+
+  fTree->Branch("reco_daughter_allTrack_Chi2_ndof_plane0",
+                &reco_daughter_allTrack_Chi2_ndof_plane0);
+  fTree->Branch("reco_daughter_allTrack_Chi2_ndof_plane1",
+                &reco_daughter_allTrack_Chi2_ndof_plane1);
+
+  fTree->Branch("reco_daughter_allTrack_calibrated_dEdX_SCE_plane0",
+                &reco_daughter_allTrack_calibrated_dEdX_SCE_plane0);
+  fTree->Branch("reco_daughter_allTrack_calibrated_dEdX_SCE_plane1",
+                &reco_daughter_allTrack_calibrated_dEdX_SCE_plane1);
+  fTree->Branch("reco_daughter_allTrack_resRange_plane0",
+                &reco_daughter_allTrack_resRange_plane0);
+  fTree->Branch("reco_daughter_allTrack_resRange_plane1",
+                &reco_daughter_allTrack_resRange_plane1);
+  ///////////////////////////////////
+
   fTree->Branch("reco_daughter_allTrack_Theta", &reco_daughter_allTrack_Theta);
   fTree->Branch("reco_daughter_allTrack_Phi", &reco_daughter_allTrack_Phi);
 
@@ -3532,6 +3405,8 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("true_beam_elastic_X", &true_beam_elastic_X);
   fTree->Branch("true_beam_elastic_Y", &true_beam_elastic_Y);
   fTree->Branch("true_beam_elastic_Z", &true_beam_elastic_Z);
+  fTree->Branch("true_beam_elastic_deltaE", &true_beam_elastic_deltaE);
+  fTree->Branch("true_beam_elastic_IDE_edep", &true_beam_elastic_IDE_edep);
   fTree->Branch("true_beam_IDE_totalDep",    &true_beam_IDE_totalDep);
   fTree->Branch("true_beam_IDE_found_in_recoVtx",    &true_beam_IDE_found_in_recoVtx);
 
@@ -3844,6 +3719,8 @@ void pionana::PionAnalyzer::reset()
   true_beam_elastic_X.clear();
   true_beam_elastic_Y.clear();
   true_beam_elastic_Z.clear();
+  true_beam_elastic_deltaE.clear();
+  true_beam_elastic_IDE_edep.clear();
   true_beam_IDE_totalDep = 0.;
   true_beam_IDE_found_in_recoVtx = false;
 
@@ -4198,6 +4075,22 @@ void pionana::PionAnalyzer::reset()
   reco_daughter_allTrack_dEdX_SCE.clear();
   reco_daughter_allTrack_dQdX_SCE.clear();
   reco_daughter_allTrack_resRange_SCE.clear();
+
+
+  //Calorimetry + chi2 for planes 0 and 1
+  reco_daughter_allTrack_calibrated_dEdX_SCE_plane0.clear();
+  reco_daughter_allTrack_calibrated_dEdX_SCE_plane1.clear();
+
+  reco_daughter_allTrack_resRange_plane0.clear();
+  reco_daughter_allTrack_resRange_plane1.clear();
+
+  reco_daughter_allTrack_Chi2_proton_plane0.clear();
+  reco_daughter_allTrack_Chi2_proton_plane1.clear();
+
+  reco_daughter_allTrack_Chi2_ndof_plane0.clear();
+  reco_daughter_allTrack_Chi2_ndof_plane1.clear();
+  ///////////////////////////////////////////
+
 
   reco_daughter_allTrack_calibrated_dEdX.clear();
   reco_daughter_allTrack_calibrated_dEdX_SCE.clear();
