@@ -1,7 +1,6 @@
 BEGIN_PROLOG
 
 ##MC SCE on
-#CalorimetryParameters_SPProd2_MC_SCE_Plane2: {
 CalorimetryParameters_SPProd2_MC_SCE: {
   betap:        0.212
   Rho:          1.383

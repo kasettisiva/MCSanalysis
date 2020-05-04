@@ -912,6 +912,7 @@ pionana::PionAnalyzer::PionAnalyzer(fhicl::ParameterSet const& p)
   BeamPars(p.get<fhicl::ParameterSet>("BeamPars")),
   BeamCuts(p.get<fhicl::ParameterSet>("BeamCuts")),
   CalibrationPars(p.get<fhicl::ParameterSet>("CalibrationPars")),
+  calibration(p.get<fhicl::ParameterSet>("CalibrationPars")),
   fSaveHits( p.get<bool>( "SaveHits" ) ),
   fCheckCosmics( p.get<bool>( "CheckCosmics" ) ),
   fTrueToReco( p.get<bool>( "TrueToReco" ) ),
@@ -923,7 +924,7 @@ pionana::PionAnalyzer::PionAnalyzer(fhicl::ParameterSet const& p)
   templates[ 13 ]   = (TProfile*)dEdX_template_file.Get( "dedx_range_mu"  );
   templates[ 2212 ] = (TProfile*)dEdX_template_file.Get( "dedx_range_pro" );
 
-  calibration = protoana::ProtoDUNECalibration( CalibrationPars );
+  //calibration = protoana::ProtoDUNECalibration( CalibrationPars );
   beam_cuts = protoana::ProtoDUNEBeamCuts( BeamCuts );
 
 
