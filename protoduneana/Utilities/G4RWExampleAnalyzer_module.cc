@@ -64,6 +64,7 @@ private:
   int true_beam_PDG;
   int true_beam_ID;
   double true_beam_len;
+  int true_beam_nElasticScatters;
   std::vector<double> g4rw_primary_plus_sigma_weight;
   std::vector<double> g4rw_primary_minus_sigma_weight;
   std::vector<double> g4rw_primary_weights;
@@ -123,6 +124,21 @@ void protoana::G4RWExampleAnalyzer::analyze(art::Event const& e) {
   true_beam_PDG = true_beam_particle->PdgCode();
   true_beam_ID = true_beam_particle->TrackId();
   true_beam_len = true_beam_particle->Trajectory().TotalLength();
+
+  const simb::MCTrajectory & true_beam_trajectory =
+      true_beam_particle->Trajectory();
+  auto true_beam_proc_map = true_beam_trajectory.TrajectoryProcesses();
+ 
+  for (auto itProc = true_beam_proc_map.begin();
+       itProc != true_beam_proc_map.end(); ++itProc) {
+    //int index = itProc->first;
+    std::string process = true_beam_trajectory.KeyToProcess(itProc->second);
+
+    if (process == "hadElastic") {
+      ++true_beam_nElasticScatters;
+    }
+  }
+
   event = e.id().event();
   run = e.run();
   subrun = e.subRun();
@@ -168,6 +184,7 @@ void protoana::G4RWExampleAnalyzer::beginJob() {
   fTree->Branch("true_beam_ID", &true_beam_ID);
   fTree->Branch("true_beam_PDG", &true_beam_PDG);
   fTree->Branch("true_beam_len", &true_beam_len);
+  fTree->Branch("true_beam_nElasticScatters", &true_beam_nElasticScatters);
 
   fTree->Branch("g4rw_primary_weights", &g4rw_primary_weights);
   fTree->Branch("g4rw_primary_singular_weight", &g4rw_primary_singular_weight);
@@ -180,6 +197,7 @@ void protoana::G4RWExampleAnalyzer::reset() {
   true_beam_PDG = -1;
   true_beam_ID = -1;
   true_beam_len = -1.;
+  true_beam_nElasticScatters = 0.;
   
   g4rw_primary_weights.clear();
   g4rw_primary_singular_weight = 1.;
