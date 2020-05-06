@@ -68,6 +68,7 @@ private:
   std::vector<double> g4rw_primary_minus_sigma_weight;
   std::vector<double> g4rw_primary_weights;
   std::vector<std::string> g4rw_primary_var;
+  double g4rw_primary_singular_weight;
 
   
   std::string fGeneratorTag;
@@ -91,7 +92,7 @@ protoana::G4RWExampleAnalyzer::G4RWExampleAnalyzer(
       FracsFile( (p.get< std::string >( "FracsFile" )).c_str(), "OPEN" ),
       XSecFile( (p.get< std::string >( "XSecFile" )).c_str(), "OPEN"),
       ParSet(p.get<std::vector<fhicl::ParameterSet>>("ParameterSet")),
-      ParMaker(ParSet),
+      ParMaker(ParSet, RW_PDG),
       MultiRW(RW_PDG, XSecFile, FracsFile, ParSet) {
 
   theRW = RWFactory.BuildReweighter(RW_PDG, &XSecFile, &FracsFile,
@@ -133,9 +134,9 @@ void protoana::G4RWExampleAnalyzer::analyze(art::Event const& e) {
                                 fGeometryService, event, &theTraj);
     if (created) {
 
-      g4rw_primary_weights.push_back(theRW->GetWeight(&theTraj));
-
-      g4rw_primary_weights.push_back(MultiRW.GetWeightFromNominal(theTraj));
+      g4rw_primary_singular_weight = MultiRW.GetWeightFromNominal(theTraj);
+      //the following method achieves the same result
+      //g4rw_primary_singular_weight = theRW->GetWeight(&theTraj);
       
       std::vector<double> weights_vec = MultiRW.GetWeightFromAll1DThrows(
           theTraj);
@@ -169,6 +170,7 @@ void protoana::G4RWExampleAnalyzer::beginJob() {
   fTree->Branch("true_beam_len", &true_beam_len);
 
   fTree->Branch("g4rw_primary_weights", &g4rw_primary_weights);
+  fTree->Branch("g4rw_primary_singular_weight", &g4rw_primary_singular_weight);
   fTree->Branch("g4rw_primary_plus_sigma_weight", &g4rw_primary_plus_sigma_weight);
   fTree->Branch("g4rw_primary_minus_sigma_weight", &g4rw_primary_minus_sigma_weight);
   fTree->Branch("g4rw_primary_var", &g4rw_primary_var);
@@ -180,6 +182,7 @@ void protoana::G4RWExampleAnalyzer::reset() {
   true_beam_len = -1.;
   
   g4rw_primary_weights.clear();
+  g4rw_primary_singular_weight = 1.;
   g4rw_primary_plus_sigma_weight.clear();
   g4rw_primary_minus_sigma_weight.clear();
   g4rw_primary_var.clear();
