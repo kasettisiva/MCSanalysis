@@ -148,7 +148,7 @@ void protoana::G4RWExampleAnalyzer::analyze(art::Event const& e) {
     G4ReweightTraj theTraj(true_beam_ID, true_beam_PDG, 0, event, {0,0});
     bool created = CreateRWTraj(*true_beam_particle, plist,
                                 fGeometryService, event, &theTraj);
-    if (created) {
+    if (created && theTraj.GetNSteps()) {
 
       g4rw_primary_singular_weight = MultiRW.GetWeightFromNominal(theTraj);
       //the following method achieves the same result
