@@ -70,6 +70,7 @@ private:
   std::vector<double> g4rw_primary_weights;
   std::vector<std::string> g4rw_primary_var;
   double g4rw_primary_singular_weight;
+  std::vector<double> g4rw_set_weights;
 
   
   std::string fGeneratorTag;
@@ -168,6 +169,21 @@ void protoana::G4RWExampleAnalyzer::analyze(art::Event const& e) {
         g4rw_primary_var.push_back(ParSet[i].get<std::string>("Name"));
       }
 
+      //For testing with Heng-Ye's parameters
+      if (ParSet.size() == 2) {
+        for (size_t i = 0; i < 20; ++i) {
+          for (size_t j = 0; j < 20; ++j) {
+            std::vector<double> input_values = {(.1 + i*.1), (.1 + j*.1)};
+            bool set_values = MultiRW.SetAllParameterValues(input_values);
+            if (!set_values) continue;
+
+            g4rw_set_weights.push_back(
+                MultiRW.GetWeightFromSetParameters(theTraj));
+          }
+        }
+      }
+
+
     }
   }
 
@@ -191,6 +207,7 @@ void protoana::G4RWExampleAnalyzer::beginJob() {
   fTree->Branch("g4rw_primary_plus_sigma_weight", &g4rw_primary_plus_sigma_weight);
   fTree->Branch("g4rw_primary_minus_sigma_weight", &g4rw_primary_minus_sigma_weight);
   fTree->Branch("g4rw_primary_var", &g4rw_primary_var);
+  fTree->Branch("g4rw_set_weights", &g4rw_set_weights);
 }
 
 void protoana::G4RWExampleAnalyzer::reset() {
@@ -204,5 +221,6 @@ void protoana::G4RWExampleAnalyzer::reset() {
   g4rw_primary_plus_sigma_weight.clear();
   g4rw_primary_minus_sigma_weight.clear();
   g4rw_primary_var.clear();
+  g4rw_set_weights.clear();
 }
 DEFINE_ART_MODULE(protoana::G4RWExampleAnalyzer)
