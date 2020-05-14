@@ -76,6 +76,8 @@ SystType:                ["NormShape"] #, "NormShape", "NormShape"] #["NormShape
 IgnoreSystematicErrorBelow: 0.01                     # Sytematic error will be ignored if below this value
 
 AddIncidentToMeasurement: true
+AddBackgroundFactors: true 
+AddIncidentBackgroundFactors: true 
 DoNegativeReco:           true #true 
 DistinguishIncidentSignal: true 
 EndZCut:                  225.

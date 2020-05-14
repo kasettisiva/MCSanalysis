@@ -73,6 +73,9 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
     if (_DoScaleMCToData) {
       ScaleMCToData(_DataIsMC);
     }
+    if (_DoScaleMuonContent) {
+      ScaleMuonContent();
+    }
 
     hfilled = FillHistogramVectors_Pions();
 
@@ -625,18 +628,20 @@ void protoana::ProtoDUNEFit::AddSamplesAndChannelsToMeasurement(RooStats::HistFa
 	// Set histogram for sample
 	sample.SetHisto(htemp);
 	
-	if(htemp->Integral() > 0){
-	  //TString poiname = hname;
-	  //poiname.ReplaceAll("MC","POI");
-	  //poiname.ReplaceAll("_Histo","");
-	  //poiname.ReplaceAll(".","");
-	  //poiname.ReplaceAll("-","_");
-	  //poiname.ReplaceAll(channelname.Data(),"");
-	  //poiname.ReplaceAll("__","_");
-	  //meas.SetPOI(poiname.Data());
-	  //sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 2.0);
-	  //mf::LogInfo("BuildMeasurement") << "Sample " << sample.GetName() << " has normalisation parameter " << poiname.Data();
-	}
+        if (_AddBackgroundFactors) {
+	  if (htemp->Integral() > 0) {
+	    TString poiname = hname;
+	    poiname.ReplaceAll("MC","POI");
+	    poiname.ReplaceAll("_Histo","");
+	    poiname.ReplaceAll(".","");
+	    poiname.ReplaceAll("-","_");
+	    poiname.ReplaceAll(channelname.Data(),"");
+	    poiname.ReplaceAll("__","_");
+	    meas.SetPOI(poiname.Data());
+	    sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 100./*2.0*/);
+	    mf::LogInfo("BuildMeasurement") << "Sample " << sample.GetName() << " has normalisation parameter " << poiname.Data();
+	  }
+        }
 
 	// Add sample to channel
 	channel.AddSample(sample);
@@ -773,19 +778,20 @@ void protoana::ProtoDUNEFit::AddIncidentSamplesAndChannelsToMeasurement(RooStats
     // Set histogram for sample
     sample.SetHisto(htemp);
     
-    if(htemp->Integral() > 0){
-      //TString poiname = hname;
-      //poiname.ReplaceAll("MC","POI");
-      //poiname.ReplaceAll("_Histo","");
-      //poiname.ReplaceAll(".","");
-      //poiname.ReplaceAll("-","_");
-      //poiname.ReplaceAll(channelname.Data(),"");
-      //poiname.ReplaceAll("__","_");
-      //meas.SetPOI(poiname.Data());
-      //sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 2.0);
-      //mf::LogInfo("BuildMeasurement") << "Sample " << sample.GetName() << " has normalisation parameter " << poiname.Data();
-    }
-    
+    if (_AddIncidentBackgroundFactors) {
+      if (htemp->Integral() > 0) {
+        TString poiname = hname;
+        poiname.ReplaceAll("MC","POI");
+        poiname.ReplaceAll("_Histo","");
+        poiname.ReplaceAll(".","");
+        poiname.ReplaceAll("-","_");
+        poiname.ReplaceAll(channelname.Data(),"");
+        poiname.ReplaceAll("__","_");
+        meas.SetPOI(poiname.Data());
+        sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 2.0);
+        mf::LogInfo("BuildMeasurement") << "Sample " << sample.GetName() << " has normalisation parameter " << poiname.Data();
+      }
+    } 
     // Add sample to channel
     channel.AddSample(sample);
   }
@@ -1142,14 +1148,14 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
                 _IncidentMCFileNames[0], _RecoTreeName, _RecoBinning,
                 _IncidentTopologyName[i], _IncidentTopology[i],
                 _EndZCut, _TruthBinning[k-1], _TruthBinning[k],
-                _DoNegativeReco, 0, "", _IncidentScaleFactor);
+                _DoNegativeReco, 0, "", _IncidentScaleFactor*_PionScaleFactor);
         for (size_t j = 1; j < _IncidentMCFileNames.size(); ++j) {
           inchisto->Add(
               protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
                   _IncidentMCFileNames[j], _RecoTreeName, _RecoBinning,
                   _IncidentTopologyName[i], _IncidentTopology[i],
                   _EndZCut, _TruthBinning[k-1], _TruthBinning[k],
-                  _DoNegativeReco, 0, "", _IncidentScaleFactor));
+                  _DoNegativeReco, 0, "", _IncidentScaleFactor*_PionScaleFactor));
         }
         TString hname = Form("%s_TrueBin_%.1f-%.1f", inchisto->GetName(),
             _TruthBinning[k-1], _TruthBinning[k]);
@@ -1163,14 +1169,17 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
           protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
               _IncidentMCFileNames[0], _RecoTreeName, _RecoBinning,
               _IncidentTopologyName[i], _IncidentTopology[i], _EndZCut,
-              0., 10000., _DoNegativeReco, 0, "", _IncidentScaleFactor);
+              0., 10000., _DoNegativeReco, 0, "",
+              _IncidentScaleFactor*(_IncidentTopology[i] == 4 ?
+                                    _MuonScaleFactor : 1.));
 
       for (size_t j = 1; j < _IncidentMCFileNames.size(); ++j) {
         inchisto->Add(
             protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
                 _IncidentMCFileNames[j], _RecoTreeName, _RecoBinning,
                 _IncidentTopologyName[i], _IncidentTopology[i], _EndZCut,
-                0., 10000., _DoNegativeReco, 0, "", _IncidentScaleFactor));
+                0., 10000., _DoNegativeReco, 0, "",
+                _IncidentScaleFactor*(i == 4 ? _MuonScaleFactor : 1.)));
       }
 
       inchisto->SetNameTitle(Form("MC_ChannelIncident_%s_Histo",
@@ -1290,8 +1299,9 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
 
 }
 
+//********************************************************************
 void protoana::ProtoDUNEFit::ScaleMCToData(bool data_is_mc) {
-
+//********************************************************************
   //Get the number of incident pions from MC
   double nIncidentPionsMC = 0.;
   double nPrimaryPionsMC = 0.;
@@ -1355,8 +1365,51 @@ void protoana::ProtoDUNEFit::ScaleMCToData(bool data_is_mc) {
 }
 
 //********************************************************************
+void protoana::ProtoDUNEFit::ScaleMuonContent() {
+  //Get the number of incident pions from MC
+  double nRejectedMC = 0.;
+  double nSelectedMC = 0.;
+  for (size_t i = 0; i < _IncidentMCFileNames.size(); ++i) {
+    //Get the tree
+    TFile incidentFile(_IncidentMCFileNames[i].c_str(), "OPEN");
+    TTree * incident_tree = (TTree*)incidentFile.Get(_RecoTreeName.c_str());
+
+    std::string selected_cut = "(passBeamCut && primary_ends_inAPA3)";
+    std::string rejected_cut = "(passBeamCut && !primary_ends_inAPA3)";
+
+    nSelectedMC += incident_tree->GetEntries(selected_cut.c_str());
+    nRejectedMC += incident_tree->GetEntries(rejected_cut.c_str());
+    incidentFile.Close();
+  }
+  
+  //Get the number of incident pions from Data
+  double nRejectedData = 0.;
+  double nSelectedData = 0.;
+  for (size_t i = 0; i < _IncidentDataFileNames.size(); ++i) {
+    //Get the tree
+    TFile incidentFile(_IncidentDataFileNames[i].c_str(), "OPEN");
+    TTree * incident_tree = (TTree*)incidentFile.Get(_RecoTreeName.c_str());
+
+    std::string selected_cut = "(passBeamCut && primary_ends_inAPA3)";
+    std::string rejected_cut = "(passBeamCut && !primary_ends_inAPA3)";
+
+    nSelectedData += incident_tree->GetEntries(selected_cut.c_str());
+    nRejectedData += incident_tree->GetEntries(rejected_cut.c_str());
+    incidentFile.Close();
+  }
+  
+  _PionScaleFactor = (nRejectedMC/nSelectedMC + 1.) /
+                     (nRejectedData/nSelectedData + 1.);
+  _MuonScaleFactor = (nRejectedData/nSelectedData) * (nSelectedMC/nRejectedMC) *
+                     _PionScaleFactor;
+  std::cout << "Muon & Pion Scale: " << _MuonScaleFactor << " " <<
+               _PionScaleFactor << std::endl;
+}
+//********************************************************************
+
+//********************************************************************
 bool protoana::ProtoDUNEFit::ApplySystematicToSample(RooStats::HistFactory::Sample& sample, TH1* histo, std::vector<TH1*> systvec, bool hasnormfactor, bool isnorm){
-  //********************************************************************
+//********************************************************************
   
   if(!histo){
     std::cerr << "ERROR::No input histogram found! Will not apply systematics!" << std::endl;
@@ -1549,8 +1602,11 @@ bool protoana::ProtoDUNEFit::Configure(std::string configPath){
   _DoNegativeReco              = pset.get<bool>("DoNegativeReco"); 
   _DistinguishIncidentSignal   = pset.get<bool>("DistinguishIncidentSignal"); 
   _EndZCut                     = pset.get<double>("EndZCut");
+  _AddBackgroundFactors        = pset.get<bool>("AddBackgroundFactors");
+  _AddIncidentBackgroundFactors        = pset.get<bool>("AddIncidentBackgroundFactors");
 
   _DoScaleMCToData             = pset.get<bool>("DoScaleMCToData");
+  _DoScaleMuonContent          = pset.get<bool>("DoScaleMuonContent");
   _DataIsMC                    = pset.get<bool>("DataIsMC");
   _OnlyDrawXSecs               = pset.get<bool>("OnlyDrawXSecs");
   _WirePitch                   = pset.get<double>("WirePitch");

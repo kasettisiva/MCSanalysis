@@ -824,7 +824,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
 
     if (reco_beam_interactingEnergy  == -999.) continue;
 
-    bool check_cosmics = ( reco_beam_true_byHits_origin == 2 );
+    //bool check_cosmics = ( reco_beam_true_byHits_origin == 2 );
 
     // Go through the incident energies from the beam particle 
     for(size_t l = 0; l < reco_beam_incidentEnergies->size(); ++l){
@@ -834,11 +834,12 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
       int true_origin = (*reco_beam_hit_true_origin)[l]; 
       int true_slice = (*reco_beam_hit_true_slice)[l]; 
 
+/*
       if ( check_cosmics && true_origin != 2 ) {
-        std::cout << "Notice! Beam matched to cosmic, with non-cosmic hit" 
+        std::cout << "Notice! Beam matched to cosmic, with non-cosmic hit"
                   << std::endl;
-      }                  
-
+      }
+*/
       double true_energy = 0.;
         
 

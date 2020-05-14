@@ -86,6 +86,9 @@ namespace protoana{
     // Scale MC to Data
     void ScaleMCToData(bool data_is_mc = false);
 
+    // Fix Muon content
+    void ScaleMuonContent();
+
     // Build samples and channels
     void AddSamplesAndChannelsToMeasurement(RooStats::HistFactory::Measurement& meas);
     void AddIncidentSamplesAndChannelsToMeasurement(RooStats::HistFactory::Measurement& meas);
@@ -131,12 +134,16 @@ namespace protoana{
     std::vector< TGraphAsymmErrors * > _interactingEfficiencies;
  
     bool _AddIncidentToMeasurement, _DoNegativeReco, _DoScaleMCToData;
+    bool _DoScaleMuonContent;
+    bool _AddBackgroundFactors, _AddIncidentBackgroundFactors;
     bool _DistinguishIncidentSignal, _OnlyDrawXSecs;
     bool _DataIsMC;
     double _EndZCut, _WirePitch;
 
     double _ScaleFactor = 1.;
     double _IncidentScaleFactor = 1.;
+
+    double _MuonScaleFactor = 1., _PionScaleFactor = 1.;
   };
 }
 
