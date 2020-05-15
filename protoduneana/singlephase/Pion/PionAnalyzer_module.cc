@@ -325,13 +325,14 @@ namespace pionana {
   struct calo_point{
 
     calo_point();
-    calo_point( size_t w, double p, double dedx, size_t index ) :
-      wire(w), pitch(p), dEdX(dedx), hit_index(index) {};
+    calo_point(size_t w, double p, double dedx, size_t index, double input_z)
+        : wire(w), pitch(p), dEdX(dedx), hit_index(index), z(input_z) {};
 
     size_t wire;
     double pitch;
     double dEdX;
     size_t hit_index; 
+    double z;
   };
 
   cnnOutput2D GetCNNOutputFromPFParticle( const recob::PFParticle & part, const art::Event & evt, const anab::MVAReader<recob::Hit,4> & CNN_results,  protoana::ProtoDUNEPFParticleUtils & pfpUtil, std::string fPFParticleTag ){
@@ -528,7 +529,7 @@ private:
   double reco_beam_trackDirX, reco_beam_trackDirY, reco_beam_trackDirZ;
   double reco_beam_trackEndDirX, reco_beam_trackEndDirY, reco_beam_trackEndDirZ;
   std::vector< double > reco_beam_dEdX, reco_beam_dQdX, reco_beam_resRange, reco_beam_TrkPitch;
-  std::vector< double > reco_beam_calo_wire, reco_beam_calo_tick;
+  std::vector< double > reco_beam_calo_wire, reco_beam_calo_tick, reco_beam_calo_wire_z;
   std::vector< double > reco_beam_calibrated_dEdX;
   std::vector< int >    reco_beam_hit_true_ID, reco_beam_hit_true_origin, reco_beam_hit_true_slice; 
   int reco_beam_trackID;
@@ -986,6 +987,9 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
     std::cout << "Z0: " << z0 << std::endl;
     std::cout << "Pitch: " << pitch << std::endl;
     std::cout << "nWires: " << nWires << std::endl;
+
+    double z0_APA2 = geom->Wire(geo::WireID(0, 5, 2, 0)).GetCenter().Z();
+    std::cout << "APA 2 Z0: " << z0_APA2 << std::endl;
   }
 
   // This gets the true beam particle that generated the event
@@ -1987,13 +1991,26 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
       reco_beam_TrkPitch.push_back( calo[0].TrkPitchVec()[i] );
 
       const recob::Hit & theHit = (*allHits)[ TpIndices[i] ];
-      reco_beam_calo_wire.push_back( theHit.WireID().Wire );
+      if (theHit.WireID().TPC == 1) {
+        reco_beam_calo_wire.push_back( theHit.WireID().Wire );
+      }
+      else if (theHit.WireID().TPC == 5) {
+        reco_beam_calo_wire.push_back( theHit.WireID().Wire + 479);
+      }
+      else {
+        reco_beam_calo_wire.push_back(theHit.WireID().Wire );
+      }
       reco_beam_calo_tick.push_back( theHit.PeakTime() );
       calo_hit_indices.push_back( TpIndices[i] );
 
+      reco_beam_calo_wire_z.push_back(
+          geom->Wire(theHit.WireID()).GetCenter().Z());
+
       if (fVerbose) 
         std::cout << theXYZPoints[i].X() << " " << theXYZPoints[i].Y() << " " <<
-                     theXYZPoints[i].Z() << std::endl;
+                     theXYZPoints[i].Z() << " " << theHit.WireID().Wire << " " <<
+                     geom->Wire(theHit.WireID()).GetCenter().Z() << " " <<
+                     theHit.WireID().TPC << " " << std::endl;
     }
     ////////////////////////////////////////////
 
@@ -2020,13 +2037,15 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
 
       for( size_t i = 0; i < reco_beam_calibrated_dEdX.size(); ++i ){
         reco_beam_calo_points.push_back(
-          calo_point( reco_beam_calo_wire[i], reco_beam_TrkPitch[i], reco_beam_calibrated_dEdX[i], calo_hit_indices[i] )
-        );
+          calo_point(reco_beam_calo_wire[i], reco_beam_TrkPitch[i],
+                     reco_beam_calibrated_dEdX[i], calo_hit_indices[i],
+                     reco_beam_calo_wire_z[i]));
       }
 
       //std::cout << "N Calo points: " << reco_beam_calo_points.size() << std::endl;
       //Sort
-      std::sort( reco_beam_calo_points.begin(), reco_beam_calo_points.end(), [](calo_point a, calo_point b) {return ( a.wire < b.wire );} ); 
+      //std::sort( reco_beam_calo_points.begin(), reco_beam_calo_points.end(), [](calo_point a, calo_point b) {return ( a.wire < b.wire );} ); 
+      std::sort( reco_beam_calo_points.begin(), reco_beam_calo_points.end(), [](calo_point a, calo_point b) {return ( a.z < b.z );} ); 
 
       //And also put these in the right order
       for( size_t i = 0; i < reco_beam_calo_points.size(); ++i ){
@@ -2035,6 +2054,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
         reco_beam_calibrated_dEdX[i] = thePoint.dEdX;
         reco_beam_TrkPitch[i] = thePoint.pitch;
         calo_hit_indices[i] = thePoint.hit_index;
+        reco_beam_calo_wire_z[i] = thePoint.z;
       }
 
 
@@ -3145,6 +3165,7 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("reco_beam_resRange", &reco_beam_resRange);
   fTree->Branch("reco_beam_TrkPitch", &reco_beam_TrkPitch);
   fTree->Branch("reco_beam_calo_wire", &reco_beam_calo_wire);
+  fTree->Branch("reco_beam_calo_wire_z", &reco_beam_calo_wire_z);
   fTree->Branch("reco_beam_calo_tick", &reco_beam_calo_tick);
   fTree->Branch("reco_beam_hit_true_ID", &reco_beam_hit_true_ID);
   fTree->Branch("reco_beam_hit_true_slice", &reco_beam_hit_true_slice);
@@ -3981,6 +4002,7 @@ void pionana::PionAnalyzer::reset()
   reco_beam_resRange.clear();
   reco_beam_TrkPitch.clear();
   reco_beam_calo_wire.clear();
+  reco_beam_calo_wire_z.clear();
   reco_beam_calo_tick.clear();
   reco_beam_hit_true_ID.clear();
   reco_beam_hit_true_origin.clear();
