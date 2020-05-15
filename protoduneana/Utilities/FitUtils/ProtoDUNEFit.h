@@ -82,6 +82,7 @@ namespace protoana{
 
     // Read the input root file and create the histograms
     bool FillHistogramVectors_Pions();
+    bool FillSidebandHistograms_Pions();
 
     // Scale MC to Data
     void ScaleMCToData(bool data_is_mc = false);
@@ -105,6 +106,7 @@ namespace protoana{
 
     std::vector<std::string> _DataFileNames, _MCFileNames,
                              _DataControlSampleFiles, _MCControlSampleFiles,
+                             _SidebandTopologyName,
                              _SystFileNames, _SystToConsider, _SystType,
                              _BackgroundTopologyName, _SignalTopologyName,
                              _ChannelNames, _IncidentMCFileNames,
@@ -122,7 +124,7 @@ namespace protoana{
     std::vector<size_t> _bkg_topo_index, _sig_topo_index, _sig_truth_index,
                         _inc_sig_topo_index, _inc_bkg_topo_index;
     std::vector<TH1*> _incbkghistos, _incsighistos, _incdatahistos;
-    std::vector<TH1*> _sidhistos, _siddatahistos;
+    std::vector<TH1*> _sideband_hists_mc, _sideband_hists_data;
 
     std::vector<TGraphAsymmErrors*> _efficiencyGraphs;
 
@@ -134,9 +136,12 @@ namespace protoana{
     std::vector< TGraphAsymmErrors * > _interactingEfficiencies;
  
     bool _AddIncidentToMeasurement, _DoNegativeReco, _DoScaleMCToData;
+    bool _AddSidebandsToMeasurement;
     bool _DoScaleMuonContent;
-    bool _AddBackgroundFactors, _AddIncidentBackgroundFactors;
-    bool _DistinguishIncidentSignal, _OnlyDrawXSecs;
+    //bool _AddIncidentBackgroundFactors;
+    std::vector<int> _AddBackgroundFactors, _AddIncidentBackgroundFactors,
+                     _enable_bkg_factor, _enable_inc_bkg_factor;
+    bool _OnlyDrawXSecs;
     bool _DataIsMC;
     double _EndZCut, _WirePitch;
 

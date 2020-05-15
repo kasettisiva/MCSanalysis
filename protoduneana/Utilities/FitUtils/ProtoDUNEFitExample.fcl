@@ -10,15 +10,18 @@ DataFileNames:             ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eve
 ChannelNames:            ["ABS","CEX"]
 
 # Path to MC control samples.
-MCControlSampleFiles:    []
+MCControlSampleFiles:    ["asdf"]
 
 # Path to Data control samples.
-DataControlSampleFiles:  []
+DataControlSampleFiles:  ["asdf"]
+
+# Name of sideband topologies. Must match the background samples 
+SidebandTopologyName: ["Muons"]
 
 # Path to file to get the number of incident pions
-IncidentMCFileNames:     ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_all.root"]  #["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_PRIMARYPION.root"]
-                                                                                                                 
-IncidentDataFileNames:  ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_all.root"]  #["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_PRIMARYPION.root"]
+IncidentMCFileNames:     ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_all.root"]
+                                                                                                       
+IncidentDataFileNames:   ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_all.root"] 
 
 # Number of toys to generate for MC studies. Any number above 0 will enable toy mc generation and won't fit the data.
 NToys:                   0	
@@ -31,17 +34,11 @@ SignalTopology:          [1,2]
 SignalTopologyName:      ["ABS","CEX"]
 
 # Background topologies. Change as appropriate.
-#BackgroundTopology:      [3,4,5,6]
-#BackgroundTopologyName:  ["Pion Inel. Bkg","Protons","Muons","Other Bkg"]
-#BackgroundTopology:      [3,4,5,6,7,8,9]
-#BackgroundTopologyName:  ["Pion Inel. Bkg","Upstream Int","Muons","Decay Product","Extra Beam", "Cosmic", "Other Bkg"]
 BackgroundTopology:      [3,4,5,6,7]
 BackgroundTopologyName:  ["Pion Inel. Bkg","Upstream Int","Muons","TrueUnmatched", "Other Bkg"]
 
 
 # Incident particle topologies. First is assumed to be signal
-#IncidentTopology:        [3,4,5,6]
-#IncidentTopologyName:    ["Pions","Protons","Muons","Other"]
 IncidentTopology:        [3, 4, 5, 6, 7, 8]
 IncidentTopologyName:    ["Pions", "Muons", "Cosmic", "TrueUnmatched", "Downstream", "Other"]
 
@@ -49,7 +46,7 @@ IncidentTopologyName:    ["Pions", "Muons", "Cosmic", "TrueUnmatched", "Downstre
 TruthTreeName:           "pionana/beamana"
 
 # Define binning in truth/reco. It doesn't have to be symmetric.
-TruthBinning:            [0., 400., 500., 600., 700., 800., 1200.]
+TruthBinning:            [0., 400., 600., 700., 800., 1200.]
 RecoBinning:             [0., 400., 600., 700., 800., 1200.]
 
 # Option to fit in reco. If enabled will ignore the truth binning and introduce one free parameter per reco bin
@@ -76,14 +73,14 @@ SystType:                ["NormShape"] #, "NormShape", "NormShape"] #["NormShape
 IgnoreSystematicErrorBelow: 0.01                     # Sytematic error will be ignored if below this value
 
 AddIncidentToMeasurement: true
-AddBackgroundFactors: true 
-AddIncidentBackgroundFactors: true 
+AddBackgroundFactors: [0, 0, 0, 0, 0]
+AddIncidentBackgroundFactors: [0, 0, 0, 0, 0]
+AddSidebandsToMeasurement: false 
 DoNegativeReco:           true #true 
-DistinguishIncidentSignal: true 
 EndZCut:                  225.
 
 WirePitch: .47974  #.4792
-
 DoScaleMCToData:  false 
 OnlyDrawXSecs: false 
 DataIsMC: true
+DoScaleMuonContent: false 

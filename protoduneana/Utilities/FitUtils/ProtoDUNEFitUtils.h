@@ -53,7 +53,13 @@ namespace protoana{
     double GetDataMCChi2(RooWorkspace *work, TString channelname, RooAbsData* data=NULL);
 
     // Vector of plots with data and pdfs
-    std::vector<TCanvas*> PlotDatasetsAndPdfs(RooWorkspace *work, TString name, TString error, TString plottodraw, std::vector<TString> binnames, std::vector<double> recobins, std::vector<TString> incidentBinNames, TString measurement="PDFit", bool doNegativeReco=false,RooAbsData* data=NULL, RooFitResult* result=NULL);
+    std::vector<TCanvas*> PlotDatasetsAndPdfs(
+        RooWorkspace *work, TString name, TString error, TString plottodraw,
+        std::vector<TString> binnames, std::vector<double> recobins,
+        std::vector<TString> incidentBinNames,
+        std::vector<TString> sidebandBinNames, TString measurement="PDFit",
+        bool doNegativeReco=false,RooAbsData* data=NULL,
+        RooFitResult* result=NULL);
 
     std::vector<TH1 *> PlotXSecs(
         RooWorkspace * work, std::string name, /*std::string error,*/

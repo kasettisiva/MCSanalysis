@@ -67,7 +67,7 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
   //********************************************************************
 
   bool hfilled = false;
-
+  bool hfilled_sidebands = false;
   // Pion analysis
   if(analysis == 1) {
     if (_DoScaleMCToData) {
@@ -78,10 +78,14 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
     }
 
     hfilled = FillHistogramVectors_Pions();
-
+    if (_AddSidebandsToMeasurement) {
+      hfilled_sidebands =
+          FillSidebandHistograms_Pions();
+      if (!hfilled_sidebands) return;
+    }
   }
 
-  if(!hfilled) return;
+  if (!hfilled) return;
 
   if (_OnlyDrawXSecs) {
     mf::LogInfo("BuildWorkspace") << "Only drawing XSecs. Exiting";
@@ -183,7 +187,11 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
   AddSamplesAndChannelsToMeasurement(meas);
   if (_AddIncidentToMeasurement)
     AddIncidentSamplesAndChannelsToMeasurement(meas);
-  // AddSidebandSamplesAndChannelsToMeasurement(meas);
+
+  // Sidebands
+  if (_AddSidebandsToMeasurement) {
+    AddSidebandSamplesAndChannelsToMeasurement(meas);
+  }
 
 
   // Print info about meas
@@ -214,46 +222,47 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
 
   // Plots before fit
   std::vector<TString> truebinsnameVec;
+  std::vector<TString> sidebandNames;
   
-  for(unsigned int l = 0; l < _BackgroundTopologyName.size(); l++){
+  for(size_t l = 0; l < _BackgroundTopologyName.size(); l++){
     TString str = Form("%s", _BackgroundTopologyName[l].c_str());
     truebinsnameVec.push_back(str);
   }
 
   if(!_FitInReco){
-    for(unsigned int l = 1; l < _TruthBinning.size(); l++){
+    for(size_t l = 1; l < _TruthBinning.size(); l++){
       TString str = Form("Signal %.1f-%.1f", _TruthBinning[l-1], _TruthBinning[l]);
       truebinsnameVec.push_back(str);
     }
   }
 
+  for (size_t l = 0; l < _SidebandTopologyName.size(); ++l) {
+    TString str = Form("%s", _SidebandTopologyName[l].c_str());
+    sidebandNames.push_back(str);
+  }
+
   std::vector< TString > incidentNameVec;
-
-  if (_DistinguishIncidentSignal) {
-    for (size_t l = 1; l < _IncidentTopologyName.size(); ++l) {
-      TString str = Form("%s", _IncidentTopologyName[l].c_str());
-      std::cout << "NameVec " << l << " " << str << std::endl;
-      incidentNameVec.push_back(str); 
-    }
-
-    for (size_t l = 1; l < _TruthBinning.size(); ++l) {
-      incidentNameVec.push_back(Form("%s_%.1f-%.1f",
-                                     _IncidentTopologyName[0].c_str(), _TruthBinning[l-1], _TruthBinning[l]));
-      std::cout << incidentNameVec.back() << std::endl;
-    }
+  for (size_t l = 1; l < _IncidentTopologyName.size(); ++l) {
+    TString str = Form("%s", _IncidentTopologyName[l].c_str());
+    std::cout << "NameVec " << l << " " << str << std::endl;
+    incidentNameVec.push_back(str); 
   }
-  else {
-    for (size_t l = 0; l < _IncidentTopologyName.size(); ++l) {
-      TString str = Form("%s", _IncidentTopologyName[l].c_str());
-      std::cout << "NameVec " << l << " " << str << std::endl;
-      incidentNameVec.push_back(str); 
-    }
+  for (size_t l = 1; l < _TruthBinning.size(); ++l) {
+    incidentNameVec.push_back(Form("%s_%.1f-%.1f",
+                                   _IncidentTopologyName[0].c_str(), _TruthBinning[l-1], _TruthBinning[l]));
+    std::cout << incidentNameVec.back() << std::endl;
   }
 
-  std::vector<TCanvas*> bfplots = protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(ws, "beforefit", "Poisson", "ratio", truebinsnameVec, _RecoBinning, incidentNameVec, "Before Fit", _DoNegativeReco);
+  std::vector<TCanvas*> bfplots =
+      protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(
+          ws, "beforefit", "Poisson", "ratio", truebinsnameVec, _RecoBinning,
+          incidentNameVec, sidebandNames, "Before Fit", _DoNegativeReco);
 
   RooAbsData *asimovdata = ws->data("asimovData");
-  std::vector<TCanvas*> bfAsimovplots = protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(ws, "asimov", "Poisson", "ratio", truebinsnameVec, _RecoBinning, incidentNameVec, "Asimov Dataset", _DoNegativeReco, asimovdata);
+  std::vector<TCanvas*> bfAsimovplots =
+      protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(
+          ws, "asimov", "Poisson", "ratio", truebinsnameVec, _RecoBinning,
+          incidentNameVec, sidebandNames, "Asimov Dataset", _DoNegativeReco, asimovdata);
 
   // ----------------------------------------------------------------------------------------------------
   // Check if this is MC toys case
@@ -324,8 +333,8 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
       //Double_t x2 = ax->GetBinUpEdge(ax->GetNbins());
       effgraph->GetHistogram()->GetXaxis()->Set(_TruthBinning.size(),x1,_TruthBinning.size());
       for(unsigned int i = 1; i < _TruthBinning.size(); i++){
-	TString ibinstr = Form("%.1f-%.1f",_TruthBinning[i-1],_TruthBinning[i]);
-	effgraph->GetHistogram()->GetXaxis()->SetBinLabel(i, ibinstr.Data());
+        TString ibinstr = Form("%.1f-%.1f",_TruthBinning[i-1],_TruthBinning[i]);
+        effgraph->GetHistogram()->GetXaxis()->SetBinLabel(i, ibinstr.Data());
       }
 
       effgraph->Draw("*a");
@@ -398,7 +407,11 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
   // Print fit results on the screen
   //fitresult->Print();
 
-  std::vector<TCanvas*> afplots = protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(ws, "afterfit", "Poisson", "ratio", truebinsnameVec, _RecoBinning, incidentNameVec, "After fit", _DoNegativeReco, NULL, fitresult);
+  std::vector<TCanvas*> afplots =
+      protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(
+          ws, "afterfit", "Poisson", "ratio", truebinsnameVec, _RecoBinning,
+          incidentNameVec, sidebandNames, "After fit", _DoNegativeReco,
+          NULL, fitresult);
 
   // Save post-fit workspace snapshot
   protoana::ProtoDUNEFitUtils::SaveSnapshot(ws, Form("%s_postfit_snapshot",ws->GetName()));
@@ -572,12 +585,12 @@ void protoana::ProtoDUNEFit::AddSamplesAndChannelsToMeasurement(RooStats::HistFa
 
       TString hname(htemp->GetName());
       if(hname.Contains(channelname.Data()) && hname.Contains("Data")){
-	mf::LogInfo("AddSamplesAndChannelsToMeasurement") << "Adding dataset " <<
+        mf::LogInfo("AddSamplesAndChannelsToMeasurement") << "Adding dataset " <<
             hname.Data() << " to channel " << channelname.Data() << " with " <<
             htemp->Integral() << " events";
 
-	data.SetHisto(htemp);
-	channel.SetData(data);
+        data.SetHisto(htemp);
+        channel.SetData(data);
       }
     }
     
@@ -598,24 +611,24 @@ void protoana::ProtoDUNEFit::AddSamplesAndChannelsToMeasurement(RooStats::HistFa
       TString hname(htemp->GetName());
       //if(htemp->GetEntries() == 0 || htemp->Integral() == 0) continue;
       if(hname.Contains(channelname.Data()) && hname.Contains("MC")){
-	mf::LogInfo("AddSamplesAndChannelsToMeasurement") << "Adding MC sample " << hname.Data() << " to channel " << channelname.Data() << " with " << htemp->Integral() << " events";
-	TString samplename = hname + TString("_sample");
-	RooStats::HistFactory::Sample sample(samplename.Data());
-	sample.SetNormalizeByTheory(true);
-	
-	// Check to enable statistical uncertainty
-	if(_EnableStatisticalError){
-	  //mf::LogInfo("AddSamplesAndChannelsToMeasurement") << "Enable statistical uncertainty";
-	  sample.ActivateStatError();
-	  TH1* staterrorhisto = protoana::ProtoDUNEFitUtils::GetStatsSystHistogram(htemp);
-	  RooStats::HistFactory::StatError& staterror = sample.GetStatError();
-	  staterror.SetUseHisto();
-	  staterror.SetErrorHist(staterrorhisto);
-	}
+        mf::LogInfo("AddSamplesAndChannelsToMeasurement") << "Adding MC sample " << hname.Data() << " to channel " << channelname.Data() << " with " << htemp->Integral() << " events";
+        TString samplename = hname + TString("_sample");
+        RooStats::HistFactory::Sample sample(samplename.Data());
+        sample.SetNormalizeByTheory(true);
+        
+        // Check to enable statistical uncertainty
+        if(_EnableStatisticalError){
+          //mf::LogInfo("AddSamplesAndChannelsToMeasurement") << "Enable statistical uncertainty";
+          sample.ActivateStatError();
+          TH1* staterrorhisto = protoana::ProtoDUNEFitUtils::GetStatsSystHistogram(htemp);
+          RooStats::HistFactory::StatError& staterror = sample.GetStatError();
+          staterror.SetUseHisto();
+          staterror.SetErrorHist(staterrorhisto);
+        }
 
-	if (_EnableSystematicError){
+        if (_EnableSystematicError){
           if (_UseComputedSysts) {
-	    ApplySystematicToSample(sample, htemp, systvec, false, false);
+            ApplySystematicToSample(sample, htemp, systvec, false, false);
           }
           else {
             BuildBackgroundSystThenApplyToSample(sample, htemp, false, false,
@@ -623,28 +636,28 @@ void protoana::ProtoDUNEFit::AddSamplesAndChannelsToMeasurement(RooStats::HistFa
             //BuildSystThenApplyToSample(sample, htemp, false, false,
             //    kBackground, _bkg_chan_index[j], _bkg_topo_index[j]);
           }
-	}
-
-	// Set histogram for sample
-	sample.SetHisto(htemp);
-	
-        if (_AddBackgroundFactors) {
-	  if (htemp->Integral() > 0) {
-	    TString poiname = hname;
-	    poiname.ReplaceAll("MC","POI");
-	    poiname.ReplaceAll("_Histo","");
-	    poiname.ReplaceAll(".","");
-	    poiname.ReplaceAll("-","_");
-	    poiname.ReplaceAll(channelname.Data(),"");
-	    poiname.ReplaceAll("__","_");
-	    meas.SetPOI(poiname.Data());
-	    sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 100./*2.0*/);
-	    mf::LogInfo("BuildMeasurement") << "Sample " << sample.GetName() << " has normalisation parameter " << poiname.Data();
-	  }
         }
 
-	// Add sample to channel
-	channel.AddSample(sample);
+        // Set histogram for sample
+        sample.SetHisto(htemp);
+        
+        if (_enable_bkg_factor[j]) {
+          if (htemp->Integral() > 0) {
+            TString poiname = hname;
+            poiname.ReplaceAll("MC","POI");
+            poiname.ReplaceAll("_Histo","");
+            poiname.ReplaceAll(".","");
+            poiname.ReplaceAll("-","_");
+            poiname.ReplaceAll(channelname.Data(),"");
+            poiname.ReplaceAll("__","_");
+            meas.SetPOI(poiname.Data());
+            sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 100./*2.0*/);
+            mf::LogInfo("BuildMeasurement") << "Sample " << sample.GetName() << " has normalisation parameter " << poiname.Data();
+          }
+        }
+
+        // Add sample to channel
+        channel.AddSample(sample);
       }
     }
 
@@ -656,24 +669,24 @@ void protoana::ProtoDUNEFit::AddSamplesAndChannelsToMeasurement(RooStats::HistFa
       TString hname(htemp->GetName());
       //if(htemp->GetEntries() == 0 || htemp->Integral() == 0) continue;
       if(hname.Contains(channelname.Data()) && hname.Contains("MC")){
-	mf::LogInfo("AddSamplesAndChannelsToMeasurement") << "Adding MC sample" << hname.Data() << " to channel " << channelname.Data() << " with " << htemp->Integral() << " events";
-	TString samplename = hname + TString("_sample");
-	RooStats::HistFactory::Sample sample(samplename.Data());
-	sample.SetNormalizeByTheory(true);
-	
-	// Check to enable statistical uncertainty
-	if(_EnableStatisticalError){
-	  //mf::LogInfo("AddSamplesAndChannelsToMeasurement") << "Enable statistical uncertainty";
-	  sample.ActivateStatError();
-	  TH1* staterrorhisto = protoana::ProtoDUNEFitUtils::GetStatsSystHistogram(htemp);
-	  RooStats::HistFactory::StatError& staterror = sample.GetStatError();
-	  staterror.SetUseHisto();
-	  staterror.SetErrorHist(staterrorhisto);
-	}
+        mf::LogInfo("AddSamplesAndChannelsToMeasurement") << "Adding MC sample" << hname.Data() << " to channel " << channelname.Data() << " with " << htemp->Integral() << " events";
+        TString samplename = hname + TString("_sample");
+        RooStats::HistFactory::Sample sample(samplename.Data());
+        sample.SetNormalizeByTheory(true);
+        
+        // Check to enable statistical uncertainty
+        if(_EnableStatisticalError){
+          //mf::LogInfo("AddSamplesAndChannelsToMeasurement") << "Enable statistical uncertainty";
+          sample.ActivateStatError();
+          TH1* staterrorhisto = protoana::ProtoDUNEFitUtils::GetStatsSystHistogram(htemp);
+          RooStats::HistFactory::StatError& staterror = sample.GetStatError();
+          staterror.SetUseHisto();
+          staterror.SetErrorHist(staterrorhisto);
+        }
 
-	if (_EnableSystematicError){
+        if (_EnableSystematicError){
           if (_UseComputedSysts) { //Make this a vector?
-	    ApplySystematicToSample(sample, htemp, systvec, true, _NormalisedSystematic);
+            ApplySystematicToSample(sample, htemp, systvec, true, _NormalisedSystematic);
           }
           else { 
             BuildSignalSystThenApplyToSample(sample, htemp, true,
@@ -682,24 +695,24 @@ void protoana::ProtoDUNEFit::AddSamplesAndChannelsToMeasurement(RooStats::HistFa
           }
         }
 
-	// Set histogram for sample
-	sample.SetHisto(htemp);
+        // Set histogram for sample
+        sample.SetHisto(htemp);
 
-	// Add POI to this sample
-	TString poiname = hname;
-	poiname.ReplaceAll("MC","POI");
-	poiname.ReplaceAll("_Histo","");
-	poiname.ReplaceAll(".0","");
-	poiname.ReplaceAll("-","_");
-	poiname.ReplaceAll(channelname.Data(),"");
-	poiname.ReplaceAll("__","_");
-	poiname.ReplaceAll("_0_1000000","");
-	meas.SetPOI(poiname.Data()); // AddPOI would also work
-	sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 100.0);
-	mf::LogInfo("AddSamplesAndChannelsToMeasurement") << "Sample " << sample.GetName() << " has normalisation parameter " << poiname.Data();
+        // Add POI to this sample
+        TString poiname = hname;
+        poiname.ReplaceAll("MC","POI");
+        poiname.ReplaceAll("_Histo","");
+        poiname.ReplaceAll(".0","");
+        poiname.ReplaceAll("-","_");
+        poiname.ReplaceAll(channelname.Data(),"");
+        poiname.ReplaceAll("__","_");
+        poiname.ReplaceAll("_0_1000000","");
+        meas.SetPOI(poiname.Data()); // AddPOI would also work
+        sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 100.0);
+        mf::LogInfo("AddSamplesAndChannelsToMeasurement") << "Sample " << sample.GetName() << " has normalisation parameter " << poiname.Data();
 
-	// Add sample to channel
-	channel.AddSample(sample);
+        // Add sample to channel
+        channel.AddSample(sample);
       }
     }
 
@@ -778,7 +791,9 @@ void protoana::ProtoDUNEFit::AddIncidentSamplesAndChannelsToMeasurement(RooStats
     // Set histogram for sample
     sample.SetHisto(htemp);
     
-    if (_AddIncidentBackgroundFactors) {
+    std::cout << "Check: " << j << " " << hname << " " <<
+                 _enable_inc_bkg_factor[j] << std::endl;
+    if (_enable_inc_bkg_factor[j]) {
       if (htemp->Integral() > 0) {
         TString poiname = hname;
         poiname.ReplaceAll("MC","POI");
@@ -797,9 +812,8 @@ void protoana::ProtoDUNEFit::AddIncidentSamplesAndChannelsToMeasurement(RooStats
   }
 
   //Needed to make the systs for the bin-by-bin incident sample
-  //std::pair<std::vector<TH1 *>, std::vector<TH1 *>> inc_sig_systs;
   std::vector<std::vector<std::pair<TH1*, TH1*>>> inc_sig_systs;
-  if (_DistinguishIncidentSignal && _EnableSystematicError && !_UseComputedSysts) {
+  if (_EnableSystematicError && !_UseComputedSysts) {
      std::cout << "Incident systs for topo: " << _IncidentTopology[0] << " " <<
          _IncidentTopologyName[0] << std::endl;
      inc_sig_systs = BuildIncidentSignalSyst(0);
@@ -833,9 +847,7 @@ void protoana::ProtoDUNEFit::AddIncidentSamplesAndChannelsToMeasurement(RooStats
       if (_UseComputedSysts) {
         ApplySystematicToSample(sample, htemp, systvec, false, false);
       }
-      else{ //Move this up above and create a vector -- for each inc sig bin
-        //BuildIncidentSystThenApplyToSample(sample, htemp, false, false,
-        //    _inc_sig_topo_index[j]); 
+      else{
         for (size_t k = 0; k < _SystToConsider.size(); ++k) {
           std::cout << "Applying syst " << _SystToConsider[k] << " to " <<
                        htemp->GetName() << " " << inc_sig_systs[k][j].first <<
@@ -875,80 +887,95 @@ void protoana::ProtoDUNEFit::AddIncidentSamplesAndChannelsToMeasurement(RooStats
 }
 
 //********************************************************************
-void protoana::ProtoDUNEFit::AddSidebandSamplesAndChannelsToMeasurement(RooStats::HistFactory::Measurement& meas){
-  //********************************************************************
+void protoana::ProtoDUNEFit::AddSidebandSamplesAndChannelsToMeasurement(
+    RooStats::HistFactory::Measurement& meas){
+//********************************************************************
 
-  const int nsidmcchannels = _MCControlSampleFiles.size();
+  std::string message_source = "AddSidebandSamplesAndChannelsToMeasurement";
 
-  for(int i=0; i < nsidmcchannels; i++){
-    TString toponame = Form("Topo%i",_BackgroundTopology[i]);
-    TString channelname = Form("SidebandChannel%i", i);
+  for (size_t i = 0; i < _MCControlSampleFiles.size(); ++i) {
+    TString toponame = Form("Topo%s", _SidebandTopologyName[i].c_str());
+    TString channelname = Form("SidebandChannel%s",
+                               _SidebandTopologyName[i].c_str());
     RooStats::HistFactory::Channel channel(channelname.Data());
+
     // Add data to channel
     RooStats::HistFactory::Data data;
-    for(unsigned int j=0; j < _siddatahistos.size(); j++){
-      TH1D* htemp = (TH1D*)(_siddatahistos.at(j)->Clone());
+    for (size_t j = 0; j < _sideband_hists_data.size(); ++j) {
+      TH1D* htemp = (TH1D*)_sideband_hists_data[j]->Clone();
       TString hname(htemp->GetName());
+
       if(hname.Contains(channelname.Data()) && hname.Contains("Data")){
-	mf::LogInfo("AddSidebandSamplesAndChannelsToMeasurement") << "Adding sideband dataset " << hname.Data() << " to channel " << channelname.Data() << " with " << htemp->Integral() << " events";
-	data.SetHisto(htemp);
-	channel.SetData(data);
+        mf::LogInfo(message_source) <<
+            "Adding sideband dataset " << hname.Data() << " to channel " <<
+            channelname.Data() << " with " << htemp->Integral() << " events";
+        data.SetHisto(htemp);
+        channel.SetData(data);
       }
     }
 
     // Add bkg samples to channel
-    for(unsigned int j=0; j < _sidhistos.size(); j++){
-      TH1D* htemp = (TH1D*)(_sidhistos.at(j)->Clone());
+    for (size_t j = 0; j < _sideband_hists_mc.size(); ++j) {
+      TH1D* htemp = (TH1D*)_sideband_hists_mc[j]->Clone();
 
       TString hname(htemp->GetName());
       if(htemp->GetEntries() == 0 || htemp->Integral() == 0) continue;
       if(hname.Contains(channelname.Data()) && hname.Contains("MC")){
-	mf::LogInfo("AddSidebandSamplesAndChannelsToMeasurement") << "Adding MC sideband sample " << hname.Data() << " to channel " << channelname.Data() << " with " <<  htemp->Integral() << " events";
-	TString samplename = hname + TString("_sample");
-	RooStats::HistFactory::Sample sample(samplename.Data());
-	sample.SetNormalizeByTheory(true);
-	
-	// Check to enable statistical uncertainty
-	if(_EnableStatisticalError){
-	  //mf::LogInfo("AddSidebandSamplesAndChannelsToMeasurement") << "Enable statistical uncertainty";
-	  sample.ActivateStatError();
-	  TH1* staterrorhisto = protoana::ProtoDUNEFitUtils::GetStatsSystHistogram(htemp);
-	  RooStats::HistFactory::StatError& staterror = sample.GetStatError();
-	  staterror.SetUseHisto();
-	  staterror.SetErrorHist(staterrorhisto);
-	}
+        mf::LogInfo(message_source) << "Adding MC sideband sample " <<
+            hname.Data() << " to channel " << channelname.Data() <<
+            " with " <<  htemp->Integral() << " events";
 
-	//if(_EnableSystematicError){
-	//ApplySystematicToSample(sample, htemp, systvec, false, false);
-	//}
+        TString samplename = hname + TString("_sample");
+        RooStats::HistFactory::Sample sample(samplename.Data());
+        sample.SetNormalizeByTheory(true);
+        
+        // Check to enable statistical uncertainty
+        if(_EnableStatisticalError){
+          //mf::LogInfo(message_source) << "Enable statistical uncertainty";
+          sample.ActivateStatError();
+          TH1* staterrorhisto =
+              protoana::ProtoDUNEFitUtils::GetStatsSystHistogram(htemp);
+          RooStats::HistFactory::StatError& staterror = sample.GetStatError();
+          staterror.SetUseHisto();
+          staterror.SetErrorHist(staterrorhisto);
+        }
 
-	// Set histogram for sample
-	sample.SetHisto(htemp);
+        //if(_EnableSystematicError){
+        //ApplySystematicToSample(sample, htemp, systvec, false, false);
+        //}
 
-	// Add bkg normalisation parameter to this sample
-	if(hname.Contains(toponame.Data())){
-	  TString poiname = hname;
-	  poiname.ReplaceAll("MC","POI");
-	  poiname.ReplaceAll("_Histo","");
-	  poiname.ReplaceAll(".","");
-	  poiname.ReplaceAll("-","_");
-	  poiname.ReplaceAll(channelname.Data(),"");
-	  poiname.ReplaceAll("__","_");
-	  meas.SetPOI(poiname.Data());
-	  sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 100.0);
-	  mf::LogInfo("AddSidebandSamplesAndChannelsToMeasurement") << "Sample " << sample.GetName() << " has normalisation parameter " << poiname.Data();
-	}
+        // Set histogram for sample
+        sample.SetHisto(htemp);
 
-	// Add sample to channel
-	channel.AddSample(sample);
+        // Add bkg normalisation parameter to this sample
+        //if(hname.Contains(toponame.Data())){
+          TString poiname = hname;
+          poiname.ReplaceAll("MC","POI");
+          poiname.ReplaceAll("_Histo","");
+          poiname.ReplaceAll("_Hist","");
+          poiname.ReplaceAll("SidebandChannel","");
+          poiname.ReplaceAll(".","");
+          poiname.ReplaceAll("-","_");
+          poiname.ReplaceAll(channelname.Data(),"");
+          poiname.ReplaceAll("__","_");
+          meas.SetPOI(poiname.Data());
+          sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 100.0);
+          mf::LogInfo(message_source) << "Sample " << sample.GetName() <<
+              " has normalisation parameter " << poiname.Data();
+        //}
+
+        // Add sample to channel
+        channel.AddSample(sample);
       }
     }
 
     // Statistical uncertainty less than 1% is ignored
-    channel.SetStatErrorConfig(_IgnoreStatisticalErrorBelow,"Poisson"); // Poisson or Gaussian
+    // Poisson or Gaussian
+    channel.SetStatErrorConfig(_IgnoreStatisticalErrorBelow,"Poisson");
 
     // Add channel to measurement
-    mf::LogInfo("AddSidebandSamplesAndChannelsToMeasurement") <<  "Adding sideband channel " << channel.GetName() << " to measurement " << meas.GetName();
+    mf::LogInfo(message_source) <<  "Adding sideband channel " <<
+        channel.GetName() << " to measurement " << meas.GetName();
     meas.AddChannel(channel);
   }
 
@@ -956,7 +983,7 @@ void protoana::ProtoDUNEFit::AddSidebandSamplesAndChannelsToMeasurement(RooStats
 
 //********************************************************************
 bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
-  //********************************************************************
+//********************************************************************
 
   const int nmcchannels   = _MCFileNames.size();
   const int ndatachannels = _DataFileNames.size();
@@ -1015,6 +1042,7 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
               _MCFileNames[i], _RecoTreeName, _RecoBinning, _ChannelNames[i],
               _BackgroundTopologyName[j], topo, _EndZCut, tmin, tmax,
               _DoNegativeReco, 0, "", _ScaleFactor));
+      _enable_bkg_factor.push_back(_AddBackgroundFactors[j]);
 
       //For systs later
       _bkg_chan_index.push_back(i);
@@ -1029,27 +1057,27 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
     for(int j=0; j < nsigtopo; j++){
       int topo = _SignalTopology[j];
       for(unsigned int k=1; k < _TruthBinning.size(); k++){
-	if(_FitInReco){
+        if(_FitInReco){
           TH1* hsignal =
               protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
                   _MCFileNames[i], _RecoTreeName, _RecoBinning,
                   _ChannelNames[i], _SignalTopologyName[j], topo, tmin, tmax,
                   _EndZCut);
 
-	  // Make one histogram per bin
-	  for(int k=1; k <= hsignal->GetNbinsX(); k++){
-	    TString hname = Form("%s_RecoBin%i",hsignal->GetName(), k);
-	    TH1 *hsignal_clone = (TH1*)hsignal->Clone();
-	    hsignal_clone->SetName(hname.Data());
-	    hsignal_clone->SetBinContent(k, hsignal->GetBinContent(k));
-	    for(int kk=1; kk <= hsignal_clone->GetNbinsX(); kk++){
-	      if(kk == k) continue;
-	      hsignal_clone->SetBinContent(kk, 0.0);
-	    }
-	    _sighistos.push_back(hsignal_clone);
-	  }
-	}
-	else{
+          // Make one histogram per bin
+          for(int k=1; k <= hsignal->GetNbinsX(); k++){
+            TString hname = Form("%s_RecoBin%i",hsignal->GetName(), k);
+            TH1 *hsignal_clone = (TH1*)hsignal->Clone();
+            hsignal_clone->SetName(hname.Data());
+            hsignal_clone->SetBinContent(k, hsignal->GetBinContent(k));
+            for(int kk=1; kk <= hsignal_clone->GetNbinsX(); kk++){
+              if(kk == k) continue;
+              hsignal_clone->SetBinContent(kk, 0.0);
+            }
+            _sighistos.push_back(hsignal_clone);
+          }
+        }
+        else{
           _sighistos.push_back(
               protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
                   _MCFileNames[i], _RecoTreeName, _RecoBinning,
@@ -1062,8 +1090,8 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
           _sig_topo_index.push_back(j);
           _sig_truth_index.push_back(k);
 
-	//sigevenshisto->SetBinContent(k, (_sighistos.back())->Integral() + sigevenshisto->GetBinContent(k));
-	}
+        //sigevenshisto->SetBinContent(k, (_sighistos.back())->Integral() + sigevenshisto->GetBinContent(k));
+        }
       }
        //_incsighistos.push_back( protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(_MCFileNames[0], _RecoTreeName, _RecoBinning, i, topo, 0, 0, true) );
       //TH1* inchistoall = protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(_MCFileNames[0], _RecoTreeName, _RecoBinning, i, topo, 0, 0, true);
@@ -1086,7 +1114,7 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
     //TGraphAsymmErrors* effgraph = new TGraphAsymmErrors(sigevenshisto,truevenshisto);
     //effgraph->SetNameTitle(Form("Efficiency_channel%i",i), Form("Efficiency for channel %i",i));
     //_efficiencyGraphs.push_back(effgraph); 
-			       
+                               
   }
 
   for(int i=0; i < ndatachannels; i++){
@@ -1094,53 +1122,9 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
         protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(
             _DataFileNames[i], _RecoTreeName, _RecoBinning, _ChannelNames[i],
             _DoNegativeReco));
-    //_incdatahistos.push_back( protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(_DataFileNames[0], _RecoTreeName, _RecoBinning, i, true) );
   }
 
   for(int i=0; i < ninctopo; i++){
-    /*
-    TH1* inchisto =
-        protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
-            _IncidentMCFileNames[0], _RecoTreeName, _RecoBinning,
-            _IncidentTopologyName[i], _IncidentTopology[i], _EndZCut,
-            _DoNegativeReco);
-
-    for (size_t j = 1; j < _IncidentMCFileNames.size(); ++j) {
-      inchisto->Add(
-          protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
-              _IncidentMCFileNames[j], _RecoTreeName, _RecoBinning,
-              _IncidentTopologyName[i], _IncidentTopology[i], _EndZCut,
-              _DoNegativeReco));
-    }
-
-    inchisto->SetNameTitle(Form("MC_ChannelIncident_%s_Histo",
-                                _IncidentTopologyName[i].c_str()),
-                           Form("Incident MC for topology %s",
-                                _IncidentTopologyName[i].c_str()));
-
-
-    
-    if (i == 0 && _DistinguishIncidentSignal) {
-      // Split into multiple histograms
-      for(int j=1; j <= inchisto->GetNbinsX(); j++){
-        TString hname = Form("%s_IncBin%i",inchisto->GetName(),j);
-        TH1* inchisto_h = (TH1*)inchisto->Clone();
-        inchisto_h->Reset();
-        inchisto_h->SetName(hname.Data());
-        for(int k=1; k <= inchisto->GetNbinsX(); k++){
-          if(k == j) inchisto_h->SetBinContent(k, inchisto->GetBinContent(k));
-          else inchisto_h->SetBinContent(k, 0.0);
-        }
-        _incsighistos.push_back(inchisto_h);
-        _inc_sig_topo_index.push_back(i);
-      }   
-    }
-    else {
-      _incbkghistos.push_back(inchisto);
-      _inc_bkg_topo_index.push_back(i);
-    }
-  }
-*/
     if (i == 0) {
       for (size_t k = 1; k < _TruthBinning.size(); ++k) {
         TH1 * inchisto =
@@ -1188,6 +1172,7 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
                                   _IncidentTopologyName[i].c_str()));
 
       _incbkghistos.push_back(inchisto);
+      _enable_inc_bkg_factor.push_back(_AddIncidentBackgroundFactors[i-1]);
       _inc_bkg_topo_index.push_back(i);
     }
   }
@@ -1297,6 +1282,38 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
 
   return true;
 
+}
+
+//********************************************************************
+bool protoana::ProtoDUNEFit::FillSidebandHistograms_Pions() {
+//********************************************************************
+
+  std::string message_source = "FillSidebandHistograms_Pions";
+
+  if (_MCControlSampleFiles.size() != _DataControlSampleFiles.size()) {
+    mf::LogError(message_source) << "The number of data and MC control " <<
+        "samples is not the same. Check MCControlSampleFiles and " <<
+        "DataControlSampleFiles in the fcl file.";
+    return false;
+  }
+  if (_SidebandTopologyName.size() != _DataControlSampleFiles.size() ||
+      _SidebandTopologyName.size() != _MCControlSampleFiles.size() ) {
+    mf::LogError(message_source) << "The number of Sideband topologies " <<
+        "does not match the number of control sample files. Check " << 
+        "SidebandTopologyName in the fcl file.";
+    return false;
+  }
+
+  for (size_t i = 0; i < _SidebandTopologyName.size(); ++i) {
+    _sideband_hists_mc.push_back(protoana::ProtoDUNESelectionUtils::FillMCSidebandHistogram_Pions(
+        _MCControlSampleFiles[i], _RecoTreeName, "", _SidebandTopologyName[i],
+        0, _EndZCut, 0., 1000000.));
+  }
+
+  _sideband_hists_data.push_back(new TH1D("Data_SidebandChannelMuons_Hist", "", 1, 0, 1));
+  _sideband_hists_data[0]->Fill(.5, 5.);
+
+  return true;
 }
 
 //********************************************************************
@@ -1446,10 +1463,10 @@ bool protoana::ProtoDUNEFit::ApplySystematicToSample(RooStats::HistFactory::Samp
       }
       
       if(systhistoname.Contains("LOW") || systhistoname.Contains("Low") || systhistoname.Contains("low")){ 
-	lowhist = systhisto;
+        lowhist = systhisto;
       }
       if(systhistoname.Contains("HIGH") || systhistoname.Contains("High") || systhistoname.Contains("high")){ 
-	highhist = systhisto;
+        highhist = systhisto;
       }
     }
     
@@ -1490,11 +1507,11 @@ bool protoana::ProtoDUNEFit::ApplySystematicToSample(RooStats::HistFactory::Samp
     // Case for normalisation systematic only
     if(systtype == "NormOnly"){
       if(isnorm && hname.Contains("Signal")){
-	if(highval > 0. && lowval > 0.){
-	  std::cout << "INFO::Normalised systematic " << systname.Data() << " is considered." << std::endl;
-	  highsyst->Scale(1./highval);
-	  lowsyst->Scale(1./lowval);
-	}
+        if(highval > 0. && lowval > 0.){
+          std::cout << "INFO::Normalised systematic " << systname.Data() << " is considered." << std::endl;
+          highsyst->Scale(1./highval);
+          lowsyst->Scale(1./lowval);
+        }
       }
       sample.AddOverallSys(systname.Data(), lowval, highval);
       std::cout << "INFO::Adding norm systematic by default with name " << systname << " , to sample " << hname << " , with high value = " << highval << " , and low value = " << lowval << " , with nominal integral = " << histo->Integral() << " , high histogram integral = " << highsyst->Integral() << " , low histogram integral = " << lowsyst->Integral() << " , and syst fraction = " << 1.-lowsyst->Integral()/histo->Integral() << " , " << highsyst->Integral()/histo->Integral()-1. << std::endl;
@@ -1504,39 +1521,39 @@ bool protoana::ProtoDUNEFit::ApplySystematicToSample(RooStats::HistFactory::Samp
     // Mixed (norm and/or shape) systematic case
     if(!hasnormfactor){ // Sample without normalisation parameter
       if(protoana::ProtoDUNEFitUtils::IsSingleBinHisto(histo)){ // Single bin samples and without norm factor are considered as norm syst
-	sample.AddOverallSys(systname.Data(), lowval, highval);
-	std::cout << "INFO::Adding single bin and without norm parameter norm systematic " << systname << " , to sample " << hname << " , with high value = " << highval << " , and low value = " << lowval << " , with nominal integral = " << histo->Integral() << " , high histogram integral = " << highsyst->Integral() << " , low histogram integral = " << lowsyst->Integral() << " , and syst fraction = " << 1.-lowsyst->Integral()/histo->Integral() << " , " << highsyst->Integral()/histo->Integral()-1. << std::endl;
+        sample.AddOverallSys(systname.Data(), lowval, highval);
+        std::cout << "INFO::Adding single bin and without norm parameter norm systematic " << systname << " , to sample " << hname << " , with high value = " << highval << " , and low value = " << lowval << " , with nominal integral = " << histo->Integral() << " , high histogram integral = " << highsyst->Integral() << " , low histogram integral = " << lowsyst->Integral() << " , and syst fraction = " << 1.-lowsyst->Integral()/histo->Integral() << " , " << highsyst->Integral()/histo->Integral()-1. << std::endl;
       }
       else{ // multi-bin region and without norm parameter
-	RooStats::HistFactory::HistoSys syst;
-	syst.SetName(systname.Data());
-	syst.SetHistoHigh(highsyst);
-	syst.SetHistoLow(lowsyst);
-	sample.AddHistoSys(syst);
-	std::cout << "INFO::Adding multi-bin and without norm parameter shape+norm systematic " << systname << " , to sample " << hname << " , with nominal integral = " << histo->Integral() << " , high histogram integral = " << highsyst->Integral() << " , low histogram integral = " << lowsyst->Integral() <<  ", and syst fraction = " << 1.-lowsyst->Integral()/histo->Integral() << " , " << highsyst->Integral()/histo->Integral()-1. << std::endl;
+        RooStats::HistFactory::HistoSys syst;
+        syst.SetName(systname.Data());
+        syst.SetHistoHigh(highsyst);
+        syst.SetHistoLow(lowsyst);
+        sample.AddHistoSys(syst);
+        std::cout << "INFO::Adding multi-bin and without norm parameter shape+norm systematic " << systname << " , to sample " << hname << " , with nominal integral = " << histo->Integral() << " , high histogram integral = " << highsyst->Integral() << " , low histogram integral = " << lowsyst->Integral() <<  ", and syst fraction = " << 1.-lowsyst->Integral()/histo->Integral() << " , " << highsyst->Integral()/histo->Integral()-1. << std::endl;
       }
     }
     else{ // Sample with normalisation parameter
       // Apply normalised systematic uncertainty
       if(isnorm && hname.Contains("Signal")){
-	if(highval > 0. && lowval > 0.){
-	  std::cout << "INFO::Normalised systematic " << systname.Data() << " is considered." << std::endl;
-	  highsyst->Scale(1./highval);
-	  lowsyst->Scale(1./lowval);
-	}
+        if(highval > 0. && lowval > 0.){
+          std::cout << "INFO::Normalised systematic " << systname.Data() << " is considered." << std::endl;
+          highsyst->Scale(1./highval);
+          lowsyst->Scale(1./lowval);
+        }
       }
       
       if(protoana::ProtoDUNEFitUtils::IsSingleBinHisto(histo)){ // Single bin samples and with norm factor are considered as norm syst
-	sample.AddOverallSys(systname.Data(), lowval, highval);
-	std::cout << "INFO::Adding norm systematic " << systname << " , to sample " << hname << " , with high value = " << highval << " , and low value = " << lowval << " , with nominal integral = " << histo->Integral() << " , high histogram integral = " << highsyst->Integral() << " , low histogram integral = " << lowsyst->Integral() << " , and syst fraction = " << 1.-lowsyst->Integral()/histo->Integral() << " , " << highsyst->Integral()/histo->Integral()-1. << std::endl;
+        sample.AddOverallSys(systname.Data(), lowval, highval);
+        std::cout << "INFO::Adding norm systematic " << systname << " , to sample " << hname << " , with high value = " << highval << " , and low value = " << lowval << " , with nominal integral = " << histo->Integral() << " , high histogram integral = " << highsyst->Integral() << " , low histogram integral = " << lowsyst->Integral() << " , and syst fraction = " << 1.-lowsyst->Integral()/histo->Integral() << " , " << highsyst->Integral()/histo->Integral()-1. << std::endl;
       }
       else{ // multi-bin region and with norm parameter
-	RooStats::HistFactory::HistoSys syst;
-	syst.SetName(systname.Data());
-	syst.SetHistoHigh(highsyst);
-	syst.SetHistoLow(lowsyst);
-	sample.AddHistoSys(syst);
-	std::cout << "INFO::Adding shape+norm systematic " << systname << " , to sample " << hname << " , with nominal integral = " << histo->Integral() << " , high histogram integral = " << highsyst->Integral() << " , low histogram integral = " << lowsyst->Integral() <<  ", and syst fraction = " << 1.-lowsyst->Integral()/histo->Integral() << " , " << highsyst->Integral()/histo->Integral()-1. << std::endl;
+        RooStats::HistFactory::HistoSys syst;
+        syst.SetName(systname.Data());
+        syst.SetHistoHigh(highsyst);
+        syst.SetHistoLow(lowsyst);
+        sample.AddHistoSys(syst);
+        std::cout << "INFO::Adding shape+norm systematic " << systname << " , to sample " << hname << " , with nominal integral = " << histo->Integral() << " , high histogram integral = " << highsyst->Integral() << " , low histogram integral = " << lowsyst->Integral() <<  ", and syst fraction = " << 1.-lowsyst->Integral()/histo->Integral() << " , " << highsyst->Integral()/histo->Integral()-1. << std::endl;
       }
     }
   }
@@ -1563,19 +1580,20 @@ bool protoana::ProtoDUNEFit::Configure(std::string configPath){
   _Minimizer                   = pset.get<std::string>("Minimizer");
   _TruthTreeName               = pset.get<std::string>("TruthTreeName");
 
-  _DataFileNames               = pset.get< std::vector<std::string> >("DataFileNames");
-  _MCFileNames                 = pset.get< std::vector<std::string> >("MCFileNames");
-  _MCControlSampleFiles        = pset.get< std::vector<std::string> >("MCControlSampleFiles");
-  _DataControlSampleFiles      = pset.get< std::vector<std::string> >("DataControlSampleFiles");
-  _IncidentMCFileNames         = pset.get< std::vector<std::string> >("IncidentMCFileNames");
-  _IncidentDataFileNames       = pset.get< std::vector<std::string> >("IncidentDataFileNames");
-  _SystFileNames               = pset.get< std::vector<std::string> >("SystFileNames");
-  _SystToConsider              = pset.get< std::vector<std::string> >("SystToConsider");
-  _SystType                    = pset.get< std::vector<std::string> >("SystType");
-  _BackgroundTopologyName      = pset.get< std::vector<std::string> >("BackgroundTopologyName");
-  _SignalTopologyName          = pset.get< std::vector<std::string> >("SignalTopologyName");
-  _IncidentTopologyName        = pset.get< std::vector<std::string> >("IncidentTopologyName");
-  _ChannelNames                = pset.get< std::vector<std::string> >("ChannelNames");
+  _DataFileNames               = pset.get< std::vector<std::string>>("DataFileNames");
+  _MCFileNames                 = pset.get< std::vector<std::string>>("MCFileNames");
+  _MCControlSampleFiles        = pset.get< std::vector<std::string>>("MCControlSampleFiles");
+  _SidebandTopologyName        = pset.get< std::vector<std::string>>("SidebandTopologyName");
+  _DataControlSampleFiles      = pset.get< std::vector<std::string>>("DataControlSampleFiles");
+  _IncidentMCFileNames         = pset.get< std::vector<std::string>>("IncidentMCFileNames");
+  _IncidentDataFileNames       = pset.get< std::vector<std::string>>("IncidentDataFileNames");
+  _SystFileNames               = pset.get< std::vector<std::string>>("SystFileNames");
+  _SystToConsider              = pset.get< std::vector<std::string>>("SystToConsider");
+  _SystType                    = pset.get< std::vector<std::string>>("SystType");
+  _BackgroundTopologyName      = pset.get< std::vector<std::string>>("BackgroundTopologyName");
+  _SignalTopologyName          = pset.get< std::vector<std::string>>("SignalTopologyName");
+  _IncidentTopologyName        = pset.get< std::vector<std::string>>("IncidentTopologyName");
+  _ChannelNames                = pset.get< std::vector<std::string>>("ChannelNames");
   
   _FitStrategy                 = pset.get<int>("FitStrategy");
   _NToys                       = pset.get<int>("NToys");
@@ -1599,11 +1617,12 @@ bool protoana::ProtoDUNEFit::Configure(std::string configPath){
   _IncidentTopology            = pset.get< std::vector<int> >("IncidentTopology");
 
   _AddIncidentToMeasurement    = pset.get<bool>("AddIncidentToMeasurement");
+  _AddSidebandsToMeasurement   = pset.get<bool>("AddSidebandsToMeasurement");
   _DoNegativeReco              = pset.get<bool>("DoNegativeReco"); 
-  _DistinguishIncidentSignal   = pset.get<bool>("DistinguishIncidentSignal"); 
   _EndZCut                     = pset.get<double>("EndZCut");
-  _AddBackgroundFactors        = pset.get<bool>("AddBackgroundFactors");
-  _AddIncidentBackgroundFactors        = pset.get<bool>("AddIncidentBackgroundFactors");
+  _AddBackgroundFactors        = pset.get<std::vector<int>>("AddBackgroundFactors");
+  _AddIncidentBackgroundFactors = pset.get<std::vector<int>>("AddIncidentBackgroundFactors");
+  //_AddIncidentBackgroundFactors        = pset.get<bool>("AddIncidentBackgroundFactors");
 
   _DoScaleMCToData             = pset.get<bool>("DoScaleMCToData");
   _DoScaleMuonContent          = pset.get<bool>("DoScaleMuonContent");

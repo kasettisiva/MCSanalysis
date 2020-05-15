@@ -40,6 +40,16 @@ namespace protoana{
         std::vector<double> recoBins, std::string channel,
         bool doNegativeReco = false, bool IsIncidentHisto = false);
 
+    TH1* FillMCSidebandHistogram_Pions(
+        std::string filename, std::string treename,
+        std::string channel, std::string topo, int toponum, double endZ_cut,
+        double minval, double maxval/*, int doSyst, std::string systName*/,
+        double weight = 1.);
+
+    //TH1* FillDataSidebandHistogram_Pions(
+    //    std::string filename, std::string treename,
+    //    std::string channel, std::string topo, double endZ_cut);
+
     // Pion flux
     TH1* FillMCFlux_Pions(std::string filename, std::string treename,
         std::vector<double> Bins, int mode = 1, double weight=1.0);

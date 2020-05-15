@@ -370,7 +370,8 @@ double protoana::ProtoDUNEFitUtils::GetDataMCChi2(RooWorkspace *work, TString ch
 std::vector<TH1 *> protoana::ProtoDUNEFitUtils::PlotXSecs(
         RooWorkspace * work, std::string name, /*std::string error,*/
         std::vector<TString> binnames, std::vector<double> recobins,
-        std::vector<TString> incidentBinNames, RooAbsData * data,
+        std::vector<TString> incidentBinNames,
+        RooAbsData * data,
         RooFitResult * result) {
 
   std::vector<TH1 *> xsecs;
@@ -467,8 +468,13 @@ std::vector<TH1 *> protoana::ProtoDUNEFitUtils::PlotXSecs(
 }
 
 //********************************************************************
-std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorkspace *work, TString name, TString error, TString plottodraw, std::vector<TString> binnames, std::vector<double> recobins, std::vector<TString> incidentBinNames, TString measurement, bool doNegativeReco, RooAbsData* data, RooFitResult* result){
-  //********************************************************************
+std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(
+    RooWorkspace *work, TString name, TString error, TString plottodraw,
+    std::vector<TString> binnames, std::vector<double> recobins,
+    std::vector<TString> incidentBinNames,
+    std::vector<TString> sidebandBinNames, TString measurement,
+    bool doNegativeReco, RooAbsData* data, RooFitResult* result) {
+//********************************************************************
 
   std::vector<TCanvas*> rooplots;
 
@@ -615,9 +621,7 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorksp
 
     Int_t counter = 0;
     Int_t sigcolor[13] = {2,3,4,5,6,7,8,9,kMagenta, 1, kGreen+2, kTeal, kOrange+10};
-    //Int_t sigcolor[9] = {1,1,1,1,1,1,1,1,1};
     for(int i = (compFracVec.size()-1); i > -1; i--){
-    //for(unsigned int i = 0; i < compFracVec.size(); i++)
       Int_t compPlotColor = i;
       if(compNameVec[i].Contains("ChannelABS_CEX") || compNameVec[i].Contains("ChannelCEX_ABS")){
 	compPlotColor = 0;
@@ -687,7 +691,10 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorksp
 
       if(counter2 < (int)binnames.size()){
 	TString legName = binnames[counter2];
-	if(compNameVec[i].Contains("Incident")) legName = incidentBinNames[counter2];
+	if (compNameVec[i].Contains("Incident"))
+          legName = incidentBinNames[counter2];
+        if (compNameVec[i].Contains("Sideband"))
+          legName = sidebandBinNames[counter2];
 	
 	entry=legend->AddEntry("",legName.Data(),"f");
 	entry->SetLineColor(compPlotColor);
@@ -860,22 +867,27 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorksp
     if(plottodraw == "ratio" && result) frame2->addPlotable(ratio_curve,"F");
     frame2->addPlotable(hratio,"P");
     
-    if (doNegativeReco) {
-      frame2->GetXaxis()->SetBinLabel(1, "< 0.");
-      for(size_t i = 1; i < recobins.size(); i++){
-        TString ibinstr = Form("%.1f-%.1f",recobins[i-1],recobins[i]);
-        frame2->GetXaxis()->SetBinLabel(i+1, ibinstr.Data());
-      }
+    if (catname.Contains("Sideband")) {
+      frame2->GetXaxis()->SetBinLabel(1, "Generic Label");
+      frame2->GetXaxis()->SetTitle("Generic Label");
     }
     else {
-      for(size_t i = 1; i < recobins.size(); i++){
-        TString ibinstr = Form("%.1f-%.1f",recobins[i-1],recobins[i]);
-        frame2->GetXaxis()->SetBinLabel(i, ibinstr.Data());
+      if (doNegativeReco) {
+        frame2->GetXaxis()->SetBinLabel(1, "< 0.");
+        for(size_t i = 1; i < recobins.size(); i++){
+          TString ibinstr = Form("%.1f-%.1f",recobins[i-1],recobins[i]);
+          frame2->GetXaxis()->SetBinLabel(i+1, ibinstr.Data());
+        }
       }
+      else {
+        for(size_t i = 1; i < recobins.size(); i++){
+          TString ibinstr = Form("%.1f-%.1f",recobins[i-1],recobins[i]);
+          frame2->GetXaxis()->SetBinLabel(i, ibinstr.Data());
+        }
+      }
+      frame2->GetXaxis()->SetTitle("E_{reco} [MeV]");
     }
-    
-    frame2->GetXaxis()->SetTitle("E_{reco} [MeV]");
-    
+
     // Cosmetics
     int firstbin = frame_dummy->GetXaxis()->GetFirst();
     int lastbin = frame_dummy->GetXaxis()->GetLast();

@@ -675,6 +675,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
   std::string *true_beam_endProcess = 0;
   std::string *reco_beam_true_byHits_endProcess = 0;
   std::vector<double> *reco_beam_incidentEnergies = 0;
+  std::vector<double> *reco_beam_calo_wire = 0;
 
   //Int_t true_chexSignal, true_absSignal, true_backGround;
 
@@ -692,6 +693,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
   defaultTree->SetBranchAddress("reco_beam_interactingEnergy",      &reco_beam_interactingEnergy);
   defaultTree->SetBranchAddress("reco_beam_Chi2_proton",            &reco_beam_Chi2_proton);
   defaultTree->SetBranchAddress("reco_beam_incidentEnergies",       &reco_beam_incidentEnergies);
+  defaultTree->SetBranchAddress("reco_beam_calo_wire",       &reco_beam_calo_wire);
 
   defaultTree->SetBranchAddress("reco_beam_true_byHits_matched",    &reco_beam_true_byHits_matched);
   defaultTree->SetBranchAddress("reco_beam_true_byHits_origin",     &reco_beam_true_byHits_origin);
@@ -1499,3 +1501,140 @@ std::pair< TH1 *, TH1 *>
   file->Close();
   return {numerator, denominator};
 }
+
+
+//********************************************************************
+TH1* protoana::ProtoDUNESelectionUtils::FillMCSidebandHistogram_Pions(
+    std::string filename, std::string treename,
+    std::string channel, std::string topo, int toponum, double endZ_cut,
+    double minval, double maxval/*, int doSyst, std::string systName*/,
+    double weight) {
+//********************************************************************
+
+  TFile *file = new TFile(filename.c_str(), "READ");
+  TTree *defaultTree  = (TTree*)file->Get(treename.c_str());
+
+  int reco_beam_type; // 13 -> track-like, 11 -> shower-like
+  int reco_beam_nTrackDaughters, reco_beam_nShowerDaughters;
+  double reco_beam_len, reco_beam_vtxX, reco_beam_vtxY, reco_beam_vtxZ,
+      reco_beam_startX, reco_beam_startY, reco_beam_startZ, reco_beam_trackDirZ,
+      reco_beam_interactingEnergy, reco_beam_Chi2_proton;
+
+  // Does the true particle contributing most to the reconstructed beam track 
+  // coincide with the actual beam particle that generated the event
+  bool reco_beam_true_byHits_matched; 
+
+  // Origin and PDG of the reconstructed beam track
+  int reco_beam_true_byHits_origin, reco_beam_true_byHits_PDG;
+  int true_beam_PDG;
+  double true_beam_endZ;
+  double true_beam_interactingEnergy;
+  std::string *true_beam_endProcess = 0;
+  std::string *reco_beam_true_byHits_endProcess = 0;
+  std::vector<double> *reco_beam_incidentEnergies = 0;
+
+  int true_chexSignal, true_absSignal, true_backGround, true_nPi0Signal;
+
+  defaultTree->SetBranchAddress("reco_beam_type",                   &reco_beam_type);
+  defaultTree->SetBranchAddress("reco_beam_len",                    &reco_beam_len);
+  defaultTree->SetBranchAddress("reco_beam_vtxX",                   &reco_beam_vtxX);
+  defaultTree->SetBranchAddress("reco_beam_vtxY",                   &reco_beam_vtxY);
+  defaultTree->SetBranchAddress("reco_beam_vtxZ",                   &reco_beam_vtxZ);
+  defaultTree->SetBranchAddress("reco_beam_startX",                 &reco_beam_startX);
+  defaultTree->SetBranchAddress("reco_beam_startY",                 &reco_beam_startY);
+  defaultTree->SetBranchAddress("reco_beam_startZ",                 &reco_beam_startZ);
+  defaultTree->SetBranchAddress("reco_beam_trackDirZ",              &reco_beam_trackDirZ);
+  defaultTree->SetBranchAddress("reco_beam_nTrackDaughters",        &reco_beam_nTrackDaughters);
+  defaultTree->SetBranchAddress("reco_beam_nShowerDaughters",       &reco_beam_nShowerDaughters);
+  defaultTree->SetBranchAddress("reco_beam_interactingEnergy",      &reco_beam_interactingEnergy);
+  defaultTree->SetBranchAddress("reco_beam_Chi2_proton",            &reco_beam_Chi2_proton);
+  defaultTree->SetBranchAddress("reco_beam_incidentEnergies",       &reco_beam_incidentEnergies);
+
+  defaultTree->SetBranchAddress("reco_beam_true_byHits_matched",    &reco_beam_true_byHits_matched);
+  defaultTree->SetBranchAddress("reco_beam_true_byHits_origin",     &reco_beam_true_byHits_origin);
+  defaultTree->SetBranchAddress("reco_beam_true_byHits_PDG",        &reco_beam_true_byHits_PDG);
+  defaultTree->SetBranchAddress("reco_beam_true_byHits_endProcess", &reco_beam_true_byHits_endProcess);
+
+  defaultTree->SetBranchAddress("true_beam_interactingEnergy",      &true_beam_interactingEnergy);
+  defaultTree->SetBranchAddress("true_beam_PDG",                    &true_beam_PDG);
+  defaultTree->SetBranchAddress("true_beam_endZ",                    &true_beam_endZ);
+  defaultTree->SetBranchAddress("true_beam_endProcess",             &true_beam_endProcess);
+
+  defaultTree->SetBranchAddress("true_chexSignal",                  &true_chexSignal);
+  defaultTree->SetBranchAddress("true_nPi0Signal",                  &true_nPi0Signal);
+  defaultTree->SetBranchAddress("true_absSignal",                   &true_absSignal);
+  defaultTree->SetBranchAddress("true_backGround",                  &true_backGround);
+
+
+  TH1 * hist = new TH1D("MC_SidebandChannelMuons_Hist", "", 1, 0, 1);
+  hist->Fill(.5);
+  return hist;
+}
+
+//********************************************************************
+//TH1* protoana::ProtoDUNESelectionUtils::FillDataSidebandHistogram_Pions(
+//    std::string filename, std::string treename,
+//    std::string channel, std::string topo, int toponum, double endZ_cut,
+//    double minval, double maxval/*, int doSyst, std::string systName*/,
+//    double weight) {
+////********************************************************************
+//
+//  TFile *file = new TFile(filename.c_str(), "READ");
+//  TTree *defaultTree  = (TTree*)file->Get(treename.c_str());
+//
+//  int reco_beam_type; // 13 -> track-like, 11 -> shower-like
+//  int reco_beam_nTrackDaughters, reco_beam_nShowerDaughters;
+//  double reco_beam_len, reco_beam_vtxX, reco_beam_vtxY, reco_beam_vtxZ,
+//      reco_beam_startX, reco_beam_startY, reco_beam_startZ, reco_beam_trackDirZ,
+//      reco_beam_interactingEnergy, reco_beam_Chi2_proton;
+//
+//  // Does the true particle contributing most to the reconstructed beam track 
+//  // coincide with the actual beam particle that generated the event
+//  bool reco_beam_true_byHits_matched; 
+//
+//  // Origin and PDG of the reconstructed beam track
+//  int reco_beam_true_byHits_origin, reco_beam_true_byHits_PDG;
+//  int true_beam_PDG;
+//  double true_beam_endZ;
+//  double true_beam_interactingEnergy;
+//  std::string *true_beam_endProcess = 0;
+//  std::string *reco_beam_true_byHits_endProcess = 0;
+//  std::vector<double> *reco_beam_incidentEnergies = 0;
+//
+//  int true_chexSignal, true_absSignal, true_backGround, true_nPi0Signal;
+//
+//  defaultTree->SetBranchAddress("reco_beam_type",                   &reco_beam_type);
+//  defaultTree->SetBranchAddress("reco_beam_len",                    &reco_beam_len);
+//  defaultTree->SetBranchAddress("reco_beam_vtxX",                   &reco_beam_vtxX);
+//  defaultTree->SetBranchAddress("reco_beam_vtxY",                   &reco_beam_vtxY);
+//  defaultTree->SetBranchAddress("reco_beam_vtxZ",                   &reco_beam_vtxZ);
+//  defaultTree->SetBranchAddress("reco_beam_startX",                 &reco_beam_startX);
+//  defaultTree->SetBranchAddress("reco_beam_startY",                 &reco_beam_startY);
+//  defaultTree->SetBranchAddress("reco_beam_startZ",                 &reco_beam_startZ);
+//  defaultTree->SetBranchAddress("reco_beam_trackDirZ",              &reco_beam_trackDirZ);
+//  defaultTree->SetBranchAddress("reco_beam_nTrackDaughters",        &reco_beam_nTrackDaughters);
+//  defaultTree->SetBranchAddress("reco_beam_nShowerDaughters",       &reco_beam_nShowerDaughters);
+//  defaultTree->SetBranchAddress("reco_beam_interactingEnergy",      &reco_beam_interactingEnergy);
+//  defaultTree->SetBranchAddress("reco_beam_Chi2_proton",            &reco_beam_Chi2_proton);
+//  defaultTree->SetBranchAddress("reco_beam_incidentEnergies",       &reco_beam_incidentEnergies);
+//
+//  defaultTree->SetBranchAddress("reco_beam_true_byHits_matched",    &reco_beam_true_byHits_matched);
+//  defaultTree->SetBranchAddress("reco_beam_true_byHits_origin",     &reco_beam_true_byHits_origin);
+//  defaultTree->SetBranchAddress("reco_beam_true_byHits_PDG",        &reco_beam_true_byHits_PDG);
+//  defaultTree->SetBranchAddress("reco_beam_true_byHits_endProcess", &reco_beam_true_byHits_endProcess);
+//
+//  defaultTree->SetBranchAddress("true_beam_interactingEnergy",      &true_beam_interactingEnergy);
+//  defaultTree->SetBranchAddress("true_beam_PDG",                    &true_beam_PDG);
+//  defaultTree->SetBranchAddress("true_beam_endZ",                    &true_beam_endZ);
+//  defaultTree->SetBranchAddress("true_beam_endProcess",             &true_beam_endProcess);
+//
+//  defaultTree->SetBranchAddress("true_chexSignal",                  &true_chexSignal);
+//  defaultTree->SetBranchAddress("true_nPi0Signal",                  &true_nPi0Signal);
+//  defaultTree->SetBranchAddress("true_absSignal",                   &true_absSignal);
+//  defaultTree->SetBranchAddress("true_backGround",                  &true_backGround);
+//
+//
+//  TH1 * hist = new TH1D("MC_SidebandChannelMuons_Hist", "", 1, 0, 1);
+//  hist->Fill(.5);
+//  return hist;
+//}
