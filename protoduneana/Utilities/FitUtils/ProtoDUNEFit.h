@@ -111,6 +111,7 @@ namespace protoana{
                              _BackgroundTopologyName, _SignalTopologyName,
                              _ChannelNames, _IncidentMCFileNames,
                              _IncidentDataFileNames, _IncidentTopologyName;
+    std::vector<int> _SidebandTopology; 
 
     int _FitStrategy, _NToys;
     double _IgnoreStatisticalErrorBelow, _IgnoreSystematicErrorBelow;

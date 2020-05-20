@@ -94,7 +94,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
   int true_daughter_nPiPlus, true_daughter_nPiMinus, true_daughter_nPi0;
   defaultTree->SetBranchAddress( "reco_beam_hit_true_origin", &reco_beam_hit_true_origin );
   defaultTree->SetBranchAddress( "reco_beam_hit_true_ID", &reco_beam_hit_true_ID );
-    defaultTree->SetBranchAddress( "true_beam_ID", &true_beam_ID );
+  defaultTree->SetBranchAddress( "true_beam_ID", &true_beam_ID );
   defaultTree->SetBranchAddress( "true_daughter_nPiPlus", &true_daughter_nPiPlus );
   defaultTree->SetBranchAddress( "true_daughter_nPiMinus", &true_daughter_nPiMinus );
   defaultTree->SetBranchAddress( "true_daughter_nPi0", &true_daughter_nPi0 );
@@ -525,7 +525,8 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
 //********************************************************************
 TH1* protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(
     std::string filename, std::string treename, std::vector<double> recoBins,
-    std::string channel, bool doNegativeReco, bool IsIncidentHisto) {
+    std::string channel, double reco_beam_endZ_cut,
+    bool doNegativeReco, bool IsIncidentHisto) {
   //********************************************************************
 
   TFile *file = new TFile(filename.c_str(), "READ");
@@ -567,6 +568,8 @@ TH1* protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(
   defaultTree->SetBranchAddress("true_beam_interactingEnergy",      &true_beam_interactingEnergy);
   defaultTree->SetBranchAddress("true_beam_PDG",                    &true_beam_PDG);
   defaultTree->SetBranchAddress("true_beam_endProcess",             &true_beam_endProcess);
+  std::vector<double> *reco_beam_calo_wire = 0;
+  defaultTree->SetBranchAddress("reco_beam_calo_wire",       &reco_beam_calo_wire);
 
   channel.erase(std::remove(channel.begin(), channel.end(), '.'), channel.end());
   channel.erase(std::remove(channel.begin(), channel.end(), ' '), channel.end());
@@ -584,6 +587,9 @@ TH1* protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(
 
   mf::LogInfo("FillDataHistogram_Pions") << "Filling data histogram " << datahisto->GetName() << " from file " << filename.c_str() << " for channel " << channel.c_str();
 
+  double pitch = 0.4792;
+  double z0 = 0.56035;
+  int slice_cut = std::floor((reco_beam_endZ_cut - (z0 - pitch/2.)) / pitch);
   for(Int_t k=0; k < defaultTree->GetEntries(); k++){
     defaultTree->GetEntry(k);
 
@@ -594,6 +600,13 @@ TH1* protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(
 
     if (IsIncidentHisto) {
       for (size_t l = 0; l < reco_beam_incidentEnergies->size(); l++) {
+
+        //Here -- need to add in a check for the reconstructed slice.
+        //Previously, was using an input file that already had these removed,
+        //but now I need to add this in.
+        if ((*reco_beam_calo_wire)[l] > slice_cut)
+          continue;
+
         double energy = (*reco_beam_incidentEnergies)[l];
         if (doNegativeReco) {
           if (energy < 0.) {
@@ -830,6 +843,12 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
 
     // Go through the incident energies from the beam particle 
     for(size_t l = 0; l < reco_beam_incidentEnergies->size(); ++l){
+
+      //Here -- need to add in a check for the reconstructed slice.
+      //Previously, was using an input file that already had these removed,
+      //but now I need to add this in.
+      if ((*reco_beam_calo_wire)[l] > slice_cut)
+        continue;
 
       // Check the ID, origin, true_slice
       int true_id = (*reco_beam_hit_true_ID)[l]; 
@@ -1506,7 +1525,7 @@ std::pair< TH1 *, TH1 *>
 //********************************************************************
 TH1* protoana::ProtoDUNESelectionUtils::FillMCSidebandHistogram_Pions(
     std::string filename, std::string treename,
-    std::string channel, std::string topo, int toponum, double endZ_cut,
+    std::string topo, int toponum, double endZ_cut,
     double minval, double maxval/*, int doSyst, std::string systName*/,
     double weight) {
 //********************************************************************
@@ -1520,20 +1539,12 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSidebandHistogram_Pions(
       reco_beam_startX, reco_beam_startY, reco_beam_startZ, reco_beam_trackDirZ,
       reco_beam_interactingEnergy, reco_beam_Chi2_proton;
 
-  // Does the true particle contributing most to the reconstructed beam track 
-  // coincide with the actual beam particle that generated the event
-  bool reco_beam_true_byHits_matched; 
-
   // Origin and PDG of the reconstructed beam track
-  int reco_beam_true_byHits_origin, reco_beam_true_byHits_PDG;
   int true_beam_PDG;
   double true_beam_endZ;
   double true_beam_interactingEnergy;
   std::string *true_beam_endProcess = 0;
-  std::string *reco_beam_true_byHits_endProcess = 0;
   std::vector<double> *reco_beam_incidentEnergies = 0;
-
-  int true_chexSignal, true_absSignal, true_backGround, true_nPi0Signal;
 
   defaultTree->SetBranchAddress("reco_beam_type",                   &reco_beam_type);
   defaultTree->SetBranchAddress("reco_beam_len",                    &reco_beam_len);
@@ -1550,91 +1561,110 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSidebandHistogram_Pions(
   defaultTree->SetBranchAddress("reco_beam_Chi2_proton",            &reco_beam_Chi2_proton);
   defaultTree->SetBranchAddress("reco_beam_incidentEnergies",       &reco_beam_incidentEnergies);
 
-  defaultTree->SetBranchAddress("reco_beam_true_byHits_matched",    &reco_beam_true_byHits_matched);
-  defaultTree->SetBranchAddress("reco_beam_true_byHits_origin",     &reco_beam_true_byHits_origin);
-  defaultTree->SetBranchAddress("reco_beam_true_byHits_PDG",        &reco_beam_true_byHits_PDG);
-  defaultTree->SetBranchAddress("reco_beam_true_byHits_endProcess", &reco_beam_true_byHits_endProcess);
-
   defaultTree->SetBranchAddress("true_beam_interactingEnergy",      &true_beam_interactingEnergy);
   defaultTree->SetBranchAddress("true_beam_PDG",                    &true_beam_PDG);
   defaultTree->SetBranchAddress("true_beam_endZ",                    &true_beam_endZ);
   defaultTree->SetBranchAddress("true_beam_endProcess",             &true_beam_endProcess);
 
-  defaultTree->SetBranchAddress("true_chexSignal",                  &true_chexSignal);
-  defaultTree->SetBranchAddress("true_nPi0Signal",                  &true_nPi0Signal);
-  defaultTree->SetBranchAddress("true_absSignal",                   &true_absSignal);
-  defaultTree->SetBranchAddress("true_backGround",                  &true_backGround);
+  std::vector<int> * reco_beam_hit_true_origin = 0x0;
+  std::vector<int> * reco_beam_hit_true_ID = 0x0;
+  int true_beam_ID;
+  defaultTree->SetBranchAddress( "true_beam_ID", &true_beam_ID );
+  defaultTree->SetBranchAddress( "reco_beam_hit_true_origin", &reco_beam_hit_true_origin );
+  defaultTree->SetBranchAddress( "reco_beam_hit_true_ID", &reco_beam_hit_true_ID );
+
+  std::vector<double> *reco_beam_calo_wire = 0;
+  defaultTree->SetBranchAddress("reco_beam_calo_wire",       &reco_beam_calo_wire);
+  
+
+  std::string hist_name = "MC_SidebandChannel" + topo + "_Histo";
+  std::string hist_title = "MC Sideband topology " + topo;
+  
+  TH1D* hist = new TH1D(hist_name.c_str(), hist_title.c_str(), 1, 0, 1);
+  hist->SetDirectory(0);
+  
+  //TH1 * hist = new TH1D("MC_SidebandChannelMuons_Hist", "", 1, 0, 1);
+ 
+  //hist->SetDirectory(0);
 
 
-  TH1 * hist = new TH1D("MC_SidebandChannelMuons_Hist", "", 1, 0, 1);
-  hist->Fill(.5);
+  double pitch = 0.4792;
+  double z0 = 0.56035;
+  int slice_cut = std::floor((endZ_cut - (z0 - pitch/2.)) / pitch);
+  
+  for (int i = 0; i < defaultTree->GetEntries(); ++i) {
+    
+    defaultTree->GetEntry(i);
+    if (reco_beam_interactingEnergy  == -999.) continue;
+
+    for (size_t j = 0; j < reco_beam_incidentEnergies->size(); ++j) {
+
+      if ((*reco_beam_calo_wire)[j] <= slice_cut)
+        continue;
+  
+      int topology = -1;
+
+      // Check the ID, origin
+      int true_id = (*reco_beam_hit_true_ID)[j];
+      //int true_origin = (*reco_beam_hit_true_origin)[j];
+      if (true_id == true_beam_ID && abs(true_beam_PDG) == 13) {
+        topology = 1;
+      }
+      else {
+        topology = 2;
+      }
+
+      if (topology == toponum) {
+        hist->Fill(.5);
+      }
+    }
+  }
+
+  file->Close();
   return hist;
 }
 
 //********************************************************************
-//TH1* protoana::ProtoDUNESelectionUtils::FillDataSidebandHistogram_Pions(
-//    std::string filename, std::string treename,
-//    std::string channel, std::string topo, int toponum, double endZ_cut,
-//    double minval, double maxval/*, int doSyst, std::string systName*/,
-//    double weight) {
-////********************************************************************
-//
-//  TFile *file = new TFile(filename.c_str(), "READ");
-//  TTree *defaultTree  = (TTree*)file->Get(treename.c_str());
-//
-//  int reco_beam_type; // 13 -> track-like, 11 -> shower-like
-//  int reco_beam_nTrackDaughters, reco_beam_nShowerDaughters;
-//  double reco_beam_len, reco_beam_vtxX, reco_beam_vtxY, reco_beam_vtxZ,
-//      reco_beam_startX, reco_beam_startY, reco_beam_startZ, reco_beam_trackDirZ,
-//      reco_beam_interactingEnergy, reco_beam_Chi2_proton;
-//
-//  // Does the true particle contributing most to the reconstructed beam track 
-//  // coincide with the actual beam particle that generated the event
-//  bool reco_beam_true_byHits_matched; 
-//
-//  // Origin and PDG of the reconstructed beam track
-//  int reco_beam_true_byHits_origin, reco_beam_true_byHits_PDG;
-//  int true_beam_PDG;
-//  double true_beam_endZ;
-//  double true_beam_interactingEnergy;
-//  std::string *true_beam_endProcess = 0;
-//  std::string *reco_beam_true_byHits_endProcess = 0;
-//  std::vector<double> *reco_beam_incidentEnergies = 0;
-//
-//  int true_chexSignal, true_absSignal, true_backGround, true_nPi0Signal;
-//
-//  defaultTree->SetBranchAddress("reco_beam_type",                   &reco_beam_type);
-//  defaultTree->SetBranchAddress("reco_beam_len",                    &reco_beam_len);
-//  defaultTree->SetBranchAddress("reco_beam_vtxX",                   &reco_beam_vtxX);
-//  defaultTree->SetBranchAddress("reco_beam_vtxY",                   &reco_beam_vtxY);
-//  defaultTree->SetBranchAddress("reco_beam_vtxZ",                   &reco_beam_vtxZ);
-//  defaultTree->SetBranchAddress("reco_beam_startX",                 &reco_beam_startX);
-//  defaultTree->SetBranchAddress("reco_beam_startY",                 &reco_beam_startY);
-//  defaultTree->SetBranchAddress("reco_beam_startZ",                 &reco_beam_startZ);
-//  defaultTree->SetBranchAddress("reco_beam_trackDirZ",              &reco_beam_trackDirZ);
-//  defaultTree->SetBranchAddress("reco_beam_nTrackDaughters",        &reco_beam_nTrackDaughters);
-//  defaultTree->SetBranchAddress("reco_beam_nShowerDaughters",       &reco_beam_nShowerDaughters);
-//  defaultTree->SetBranchAddress("reco_beam_interactingEnergy",      &reco_beam_interactingEnergy);
-//  defaultTree->SetBranchAddress("reco_beam_Chi2_proton",            &reco_beam_Chi2_proton);
-//  defaultTree->SetBranchAddress("reco_beam_incidentEnergies",       &reco_beam_incidentEnergies);
-//
-//  defaultTree->SetBranchAddress("reco_beam_true_byHits_matched",    &reco_beam_true_byHits_matched);
-//  defaultTree->SetBranchAddress("reco_beam_true_byHits_origin",     &reco_beam_true_byHits_origin);
-//  defaultTree->SetBranchAddress("reco_beam_true_byHits_PDG",        &reco_beam_true_byHits_PDG);
-//  defaultTree->SetBranchAddress("reco_beam_true_byHits_endProcess", &reco_beam_true_byHits_endProcess);
-//
-//  defaultTree->SetBranchAddress("true_beam_interactingEnergy",      &true_beam_interactingEnergy);
-//  defaultTree->SetBranchAddress("true_beam_PDG",                    &true_beam_PDG);
-//  defaultTree->SetBranchAddress("true_beam_endZ",                    &true_beam_endZ);
-//  defaultTree->SetBranchAddress("true_beam_endProcess",             &true_beam_endProcess);
-//
-//  defaultTree->SetBranchAddress("true_chexSignal",                  &true_chexSignal);
-//  defaultTree->SetBranchAddress("true_nPi0Signal",                  &true_nPi0Signal);
-//  defaultTree->SetBranchAddress("true_absSignal",                   &true_absSignal);
-//  defaultTree->SetBranchAddress("true_backGround",                  &true_backGround);
-//
-//
-//  TH1 * hist = new TH1D("MC_SidebandChannelMuons_Hist", "", 1, 0, 1);
-//  hist->Fill(.5);
-//  return hist;
-//}
+TH1* protoana::ProtoDUNESelectionUtils::FillDataSidebandHistogram_Pions(
+    std::string filename, std::string treename,
+    std::string topo, double endZ_cut,
+    double minval, double maxval/*, int doSyst, std::string systName*/,
+    double weight) {
+//********************************************************************
+
+  TFile *file = new TFile(filename.c_str(), "READ");
+  TTree *defaultTree  = (TTree*)file->Get(treename.c_str());
+
+  std::vector<double> *reco_beam_calo_wire = 0, *reco_beam_incidentEnergies = 0;
+  double reco_beam_interactingEnergy;
+  defaultTree->SetBranchAddress("reco_beam_calo_wire", &reco_beam_calo_wire);
+  defaultTree->SetBranchAddress("reco_beam_interactingEnergy", &reco_beam_interactingEnergy); 
+  defaultTree->SetBranchAddress("reco_beam_incidentEnergies", &reco_beam_incidentEnergies);
+
+  std::string hist_name = "Data_SidebandChannel" + topo + "_Histo";
+  std::string hist_title = "Data Sideband topology " + topo;
+  
+  TH1D* hist = new TH1D(hist_name.c_str(), hist_title.c_str(), 1, 0, 1);
+  hist->SetDirectory(0);
+  
+  double pitch = 0.4792;
+  double z0 = 0.56035;
+  int slice_cut = std::floor((endZ_cut - (z0 - pitch/2.)) / pitch);
+  
+  for (int i = 0; i < defaultTree->GetEntries(); ++i) {
+    
+    defaultTree->GetEntry(i);
+    if (reco_beam_interactingEnergy  == -999.) continue;
+
+    for (size_t j = 0; j < reco_beam_incidentEnergies->size(); ++j) {
+
+      if ((*reco_beam_calo_wire)[j] <= slice_cut)
+        continue;
+  
+      hist->Fill(.5);
+    }
+  }
+
+  file->Close();
+  return hist;
+}

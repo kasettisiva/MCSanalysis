@@ -413,6 +413,7 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
           incidentNameVec, sidebandNames, "After fit", _DoNegativeReco,
           NULL, fitresult);
 
+
   // Save post-fit workspace snapshot
   protoana::ProtoDUNEFitUtils::SaveSnapshot(ws, Form("%s_postfit_snapshot",ws->GetName()));
   protoana::ProtoDUNEFitUtils::SaveSnapshot(ws, Form("%s_postfitForPlots_snapshot",ws->GetName()));
@@ -538,6 +539,8 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
     _incdatahistos[k]->Write();
   }
 
+  std::cout << "Wrote incident" << std::endl;
+
   //Incident efficiency
   TCanvas* ceffgraph = new TCanvas( "ceffgraph", "Efficiency" );
 
@@ -563,7 +566,9 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
 
   HistoDir->cd("..");
 
+  std::cout << "Closing" << std::endl;
   f->Close();
+  std::cout << "Closed" << std::endl;
   
   return;
 
@@ -893,6 +898,7 @@ void protoana::ProtoDUNEFit::AddSidebandSamplesAndChannelsToMeasurement(
 
   std::string message_source = "AddSidebandSamplesAndChannelsToMeasurement";
 
+  //Fix this
   for (size_t i = 0; i < _MCControlSampleFiles.size(); ++i) {
     TString toponame = Form("Topo%s", _SidebandTopologyName[i].c_str());
     TString channelname = Form("SidebandChannel%s",
@@ -917,7 +923,7 @@ void protoana::ProtoDUNEFit::AddSidebandSamplesAndChannelsToMeasurement(
     // Add bkg samples to channel
     for (size_t j = 0; j < _sideband_hists_mc.size(); ++j) {
       TH1D* htemp = (TH1D*)_sideband_hists_mc[j]->Clone();
-
+      mf::LogInfo(message_source) << "sideband " << j << " " << htemp->GetName(); 
       TString hname(htemp->GetName());
       if(htemp->GetEntries() == 0 || htemp->Integral() == 0) continue;
       if(hname.Contains(channelname.Data()) && hname.Contains("MC")){
@@ -1121,7 +1127,7 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
     _datahistos.push_back(
         protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(
             _DataFileNames[i], _RecoTreeName, _RecoBinning, _ChannelNames[i],
-            _DoNegativeReco));
+            _EndZCut, _DoNegativeReco));
   }
 
   for(int i=0; i < ninctopo; i++){
@@ -1181,14 +1187,14 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
       protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(
           //_DataFileNames[0], _RecoTreeName, _RecoBinning, _ChannelNames[0],
           _IncidentDataFileNames[0], _RecoTreeName, _RecoBinning, ""/*_ChannelNames[0]*/,
-          _DoNegativeReco, true);
+          _EndZCut, _DoNegativeReco, true);
 
   for (size_t i = 1; i < _IncidentDataFileNames.size(); ++i) {
     incdatahisto->Add(
       protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(
           //_DataFileNames[i], _RecoTreeName, _RecoBinning, _ChannelNames[i],
           _IncidentDataFileNames[i], _RecoTreeName, _RecoBinning, ""/*_ChannelNames[i]*/,
-          _DoNegativeReco, true));
+          _EndZCut, _DoNegativeReco, true));
   }
   _incdatahistos.push_back(incdatahisto);
 
@@ -1296,22 +1302,32 @@ bool protoana::ProtoDUNEFit::FillSidebandHistograms_Pions() {
         "DataControlSampleFiles in the fcl file.";
     return false;
   }
+  /*
   if (_SidebandTopologyName.size() != _DataControlSampleFiles.size() ||
       _SidebandTopologyName.size() != _MCControlSampleFiles.size() ) {
     mf::LogError(message_source) << "The number of Sideband topologies " <<
         "does not match the number of control sample files. Check " << 
         "SidebandTopologyName in the fcl file.";
     return false;
-  }
+  }*/
 
   for (size_t i = 0; i < _SidebandTopologyName.size(); ++i) {
-    _sideband_hists_mc.push_back(protoana::ProtoDUNESelectionUtils::FillMCSidebandHistogram_Pions(
-        _MCControlSampleFiles[i], _RecoTreeName, "", _SidebandTopologyName[i],
-        0, _EndZCut, 0., 1000000.));
+    _sideband_hists_mc.push_back(
+        protoana::ProtoDUNESelectionUtils::FillMCSidebandHistogram_Pions(
+            _MCControlSampleFiles[0], _RecoTreeName, _SidebandTopologyName[i],
+            _SidebandTopology[i], _EndZCut, 0., 1000000.));
   }
 
-  _sideband_hists_data.push_back(new TH1D("Data_SidebandChannelMuons_Hist", "", 1, 0, 1));
-  _sideband_hists_data[0]->Fill(.5, 5.);
+  std::cout << "GOT " << _sideband_hists_mc.size() << " SIDEBAND HISTS" <<
+               std::endl;
+
+  //_sideband_hists_data.push_back(new TH1D("Data_SidebandChannelMuons_Hist", "", 1, 0, 1));
+  //_sideband_hists_data[0]->Fill(.5, 5.);
+  //_sideband_hists_data[0]->SetDirectory(0);
+  _sideband_hists_data.push_back(
+      protoana::ProtoDUNESelectionUtils::FillDataSidebandHistogram_Pions(
+          _DataControlSampleFiles[0], _RecoTreeName, _SidebandTopologyName[0],
+          _EndZCut, 0., 1000000.));
 
   return true;
 }
@@ -1584,6 +1600,7 @@ bool protoana::ProtoDUNEFit::Configure(std::string configPath){
   _MCFileNames                 = pset.get< std::vector<std::string>>("MCFileNames");
   _MCControlSampleFiles        = pset.get< std::vector<std::string>>("MCControlSampleFiles");
   _SidebandTopologyName        = pset.get< std::vector<std::string>>("SidebandTopologyName");
+  _SidebandTopology            = pset.get< std::vector<int>>("SidebandTopology");
   _DataControlSampleFiles      = pset.get< std::vector<std::string>>("DataControlSampleFiles");
   _IncidentMCFileNames         = pset.get< std::vector<std::string>>("IncidentMCFileNames");
   _IncidentDataFileNames       = pset.get< std::vector<std::string>>("IncidentDataFileNames");

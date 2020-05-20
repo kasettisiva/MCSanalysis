@@ -10,13 +10,14 @@ DataFileNames:             ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eve
 ChannelNames:            ["ABS","CEX"]
 
 # Path to MC control samples.
-MCControlSampleFiles:    ["asdf"]
+MCControlSampleFiles:    ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_all.root"]
 
 # Path to Data control samples.
-DataControlSampleFiles:  ["asdf"]
+DataControlSampleFiles:  ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_all.root"]
 
 # Name of sideband topologies. Must match the background samples 
-SidebandTopologyName: ["Muons"]
+SidebandTopologyName: ["Muons", "OtherSB"]
+SidebandTopology:     [1, 2]
 
 # Path to file to get the number of incident pions
 IncidentMCFileNames:     ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_all.root"]
@@ -74,8 +75,8 @@ IgnoreSystematicErrorBelow: 0.01                     # Sytematic error will be i
 
 AddIncidentToMeasurement: true
 AddBackgroundFactors: [0, 0, 0, 0, 0]
-AddIncidentBackgroundFactors: [0, 0, 0, 0, 0]
-AddSidebandsToMeasurement: false 
+AddIncidentBackgroundFactors: [0, 1, 0, 0, 0]
+AddSidebandsToMeasurement: true 
 DoNegativeReco:           true #true 
 EndZCut:                  225.
 
