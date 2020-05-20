@@ -828,9 +828,10 @@ private:
   std::vector< double > reco_daughter_momByRange_proton;
   std::vector< double > reco_daughter_momByRange_muon;
   */
-  std::vector< double > reco_daughter_allTrack_momByRange_proton;
-  std::vector< double > reco_daughter_allTrack_momByRange_muon;
-
+  std::vector<double> reco_daughter_allTrack_momByRange_proton;
+  std::vector<double> reco_daughter_allTrack_momByRange_muon;
+  double reco_beam_momByRange_proton;
+  double reco_beam_momByRange_muon;
 
 
   ///Reconstructed Daughter Info
@@ -1356,10 +1357,12 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
 
     if (fVerbose) std::cout << "Looking at IDEs" << std::endl;
 
+    std::cout << "end: " << true_beam_endZ << std::endl;
     auto view2_IDEs = bt_serv->TrackIdToSimIDEs_Ps( true_beam_ID, geo::View_t(2) );
 
     if (fVerbose) std::cout << "N view2 IDEs: " << view2_IDEs.size() << std::endl;
     std::sort( view2_IDEs.begin(), view2_IDEs.end(), sort_IDEs );
+    std::cout << "Sorted" << std::endl;
     
     size_t remove_index = 0;   
     bool   do_remove = false;
@@ -1419,36 +1422,42 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
     //
     //Get the first slice
 
-    auto first_slice = sliced_ides.begin();
+    std::cout << "size: " << sliced_ides.size() << std::endl;
+    if (sliced_ides.size()) {
+      auto first_slice = sliced_ides.begin();
+      std::cout << "Got first slice" << std::endl;
 
-    //Check it has any IDEs
-    auto theIDEs = first_slice->second; 
-    
-    if (theIDEs.size()) {
-      //Get the first ide z position
-      double ide_z = theIDEs[0]->z;
-      
-      //Go through the trajectory position
-      //and check for the position that comes immediately before the 
-      //first ide
-      for (size_t i = 1; i < true_beam_trajectory.size(); ++i) {
-        double z0 = true_beam_trajectory.Z(i-1);
-        double z1 = true_beam_trajectory.Z(i);
+      //Check it has any IDEs
+      auto theIDEs = first_slice->second; 
+      std::cout << "Got ides" << std::endl;
+      if (theIDEs.size()) {
+        //Get the first ide z position
+        double ide_z = theIDEs[0]->z;
+        
+        //Go through the trajectory position
+        //and check for the position that comes immediately before the 
+        //first ide
+        for (size_t i = 1; i < true_beam_trajectory.size(); ++i) {
+          double z0 = true_beam_trajectory.Z(i-1);
+          double z1 = true_beam_trajectory.Z(i);
 
-        if (z0 < ide_z && z1 > ide_z) {
-          init_KE = 1.e3 * true_beam_trajectory.E(i-1) - mass;
-          if (fVerbose) {
-            std::cout << "Found matching position" << z0 << " " << ide_z <<
-                         " " << z1 << std::endl;
-            std::cout << "init KE: " << init_KE << std::endl;
+          if (z0 < ide_z && z1 > ide_z) {
+            init_KE = 1.e3 * true_beam_trajectory.E(i-1) - mass;
+            if (fVerbose) {
+              std::cout << "Found matching position" << z0 << " " << ide_z <<
+                           " " << z1 << std::endl;
+              std::cout << "init KE: " << init_KE << std::endl;
+            }
+            break;
           }
-          break;
         }
       }
     }
     
 
+    std::cout << "putting ke" << std::endl;
     new_true_beam_incidentEnergies.push_back( init_KE );
+    std::cout << "put ke" << std::endl;
 
     for( auto it = sliced_ides.begin(); it != sliced_ides.end(); ++it ){
 
@@ -1813,6 +1822,10 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
     }
 
     reco_beam_len  = thisTrack->Length();    
+    reco_beam_momByRange_proton = track_p_calc.GetTrackMomentum(
+        thisTrack->Length(), 2212);
+    reco_beam_momByRange_muon = track_p_calc.GetTrackMomentum(
+        thisTrack->Length(), 13);
     ////////////////////////////////////////////////////////////////
 
     
@@ -3591,6 +3604,8 @@ void pionana::PionAnalyzer::beginJob()
 
   fTree->Branch("reco_daughter_allTrack_momByRange_proton", &reco_daughter_allTrack_momByRange_proton);
   fTree->Branch("reco_daughter_allTrack_momByRange_muon", &reco_daughter_allTrack_momByRange_muon);
+  fTree->Branch("reco_beam_momByRange_proton", &reco_beam_momByRange_proton);
+  fTree->Branch("reco_beam_momByRange_muon", &reco_beam_momByRange_muon);
   /*
   fTree->Branch("reco_daughter_Chi2_proton", &reco_daughter_Chi2_proton);
   fTree->Branch("reco_daughter_Chi2_ndof", &reco_daughter_Chi2_ndof);
@@ -3841,6 +3856,8 @@ void pionana::PionAnalyzer::reset()
 
   reco_daughter_allTrack_momByRange_proton.clear();
   reco_daughter_allTrack_momByRange_muon.clear();
+  reco_beam_momByRange_proton = -999.;
+  reco_beam_momByRange_muon = -999.;
   /*
   reco_daughter_Chi2_proton.clear();
   reco_daughter_Chi2_ndof.clear();
@@ -4237,9 +4254,11 @@ bool pionana::PionAnalyzer::CreateRWTraj(
     const TGeoMaterial * test_material = geo_serv->Material(test_point);
 
     if (!strcmp(test_material->GetName(), "LAr")) {
-      std::cout  << "LAr: " << test_material->GetDensity() << " " <<
-                    test_material->GetA() << " " << test_material->GetZ() <<
-                    std::endl;
+      if (fVerbose) {
+        std::cout  << "LAr: " << test_material->GetDensity() << " " <<
+                      test_material->GetA() << " " << test_material->GetZ() <<
+                      std::endl;
+      }
       traj_X.push_back(x);
       traj_Y.push_back(y);
       traj_Z.push_back(z);
