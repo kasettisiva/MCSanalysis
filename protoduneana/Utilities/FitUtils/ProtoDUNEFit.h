@@ -101,6 +101,8 @@ namespace protoana{
     std::string _RecoTreeName, _Minimizer, _TruthTreeName;
 
     std::vector<double> _RecoBinning, _TruthBinning;
+    std::pair<double, double> _SidebandBinning;
+    int _SidebandNbins;
 
     std::vector<int> _SignalTopology, _BackgroundTopology, _IncidentTopology;
 

@@ -899,10 +899,12 @@ void protoana::ProtoDUNEFit::AddSidebandSamplesAndChannelsToMeasurement(
   std::string message_source = "AddSidebandSamplesAndChannelsToMeasurement";
 
   //Fix this
-  for (size_t i = 0; i < _MCControlSampleFiles.size(); ++i) {
+  for (size_t i = 0; i < _MCControlSampleFiles.size(); ++i) { // remove this loop -- not needed
     TString toponame = Form("Topo%s", _SidebandTopologyName[i].c_str());
-    TString channelname = Form("SidebandChannel%s",
-                               _SidebandTopologyName[i].c_str());
+    //Replace Topology Name here with 'Sideband Name'? maybe APA2
+    TString channelname = Form("SidebandChannelAPA2");
+    //TString channelname = Form("SidebandChannel%s", 
+    //                           _SidebandTopologyName[i].c_str());
     RooStats::HistFactory::Channel channel(channelname.Data());
 
     // Add data to channel
@@ -959,10 +961,10 @@ void protoana::ProtoDUNEFit::AddSidebandSamplesAndChannelsToMeasurement(
           poiname.ReplaceAll("MC","POI");
           poiname.ReplaceAll("_Histo","");
           poiname.ReplaceAll("_Hist","");
+          poiname.ReplaceAll(channelname.Data(),"");
           poiname.ReplaceAll("SidebandChannel","");
           poiname.ReplaceAll(".","");
           poiname.ReplaceAll("-","_");
-          poiname.ReplaceAll(channelname.Data(),"");
           poiname.ReplaceAll("__","_");
           meas.SetPOI(poiname.Data());
           sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 100.0);
@@ -1302,32 +1304,29 @@ bool protoana::ProtoDUNEFit::FillSidebandHistograms_Pions() {
         "DataControlSampleFiles in the fcl file.";
     return false;
   }
-  /*
-  if (_SidebandTopologyName.size() != _DataControlSampleFiles.size() ||
-      _SidebandTopologyName.size() != _MCControlSampleFiles.size() ) {
+  
+  if (_SidebandTopologyName.size() != _SidebandTopology.size()) {
     mf::LogError(message_source) << "The number of Sideband topologies " <<
-        "does not match the number of control sample files. Check " << 
-        "SidebandTopologyName in the fcl file.";
+        "does not match the number of sideband topology names. Check " << 
+        "SidebandTopologyName and SidebandTopology in the fcl file.";
     return false;
-  }*/
+  }
 
   for (size_t i = 0; i < _SidebandTopologyName.size(); ++i) {
     _sideband_hists_mc.push_back(
         protoana::ProtoDUNESelectionUtils::FillMCSidebandHistogram_Pions(
-            _MCControlSampleFiles[0], _RecoTreeName, _SidebandTopologyName[i],
-            _SidebandTopology[i], _EndZCut, 0., 1000000.));
+            _MCControlSampleFiles[0], _RecoTreeName, "APA2",
+            _SidebandTopologyName[i], _SidebandTopology[i], _EndZCut,
+            _SidebandNbins, _SidebandBinning));
   }
 
   std::cout << "GOT " << _sideband_hists_mc.size() << " SIDEBAND HISTS" <<
                std::endl;
 
-  //_sideband_hists_data.push_back(new TH1D("Data_SidebandChannelMuons_Hist", "", 1, 0, 1));
-  //_sideband_hists_data[0]->Fill(.5, 5.);
-  //_sideband_hists_data[0]->SetDirectory(0);
   _sideband_hists_data.push_back(
       protoana::ProtoDUNESelectionUtils::FillDataSidebandHistogram_Pions(
-          _DataControlSampleFiles[0], _RecoTreeName, _SidebandTopologyName[0],
-          _EndZCut, 0., 1000000.));
+          _DataControlSampleFiles[0], _RecoTreeName, "APA2",
+          _EndZCut, _SidebandNbins, _SidebandBinning));
 
   return true;
 }
@@ -1596,21 +1595,23 @@ bool protoana::ProtoDUNEFit::Configure(std::string configPath){
   _Minimizer                   = pset.get<std::string>("Minimizer");
   _TruthTreeName               = pset.get<std::string>("TruthTreeName");
 
-  _DataFileNames               = pset.get< std::vector<std::string>>("DataFileNames");
-  _MCFileNames                 = pset.get< std::vector<std::string>>("MCFileNames");
-  _MCControlSampleFiles        = pset.get< std::vector<std::string>>("MCControlSampleFiles");
-  _SidebandTopologyName        = pset.get< std::vector<std::string>>("SidebandTopologyName");
-  _SidebandTopology            = pset.get< std::vector<int>>("SidebandTopology");
-  _DataControlSampleFiles      = pset.get< std::vector<std::string>>("DataControlSampleFiles");
-  _IncidentMCFileNames         = pset.get< std::vector<std::string>>("IncidentMCFileNames");
-  _IncidentDataFileNames       = pset.get< std::vector<std::string>>("IncidentDataFileNames");
-  _SystFileNames               = pset.get< std::vector<std::string>>("SystFileNames");
-  _SystToConsider              = pset.get< std::vector<std::string>>("SystToConsider");
-  _SystType                    = pset.get< std::vector<std::string>>("SystType");
-  _BackgroundTopologyName      = pset.get< std::vector<std::string>>("BackgroundTopologyName");
-  _SignalTopologyName          = pset.get< std::vector<std::string>>("SignalTopologyName");
-  _IncidentTopologyName        = pset.get< std::vector<std::string>>("IncidentTopologyName");
-  _ChannelNames                = pset.get< std::vector<std::string>>("ChannelNames");
+  _DataFileNames               = pset.get<std::vector<std::string>>("DataFileNames");
+  _MCFileNames                 = pset.get<std::vector<std::string>>("MCFileNames");
+  _MCControlSampleFiles        = pset.get<std::vector<std::string>>("MCControlSampleFiles");
+  _SidebandTopologyName        = pset.get<std::vector<std::string>>("SidebandTopologyName");
+  _SidebandTopology            = pset.get<std::vector<int>>("SidebandTopology");
+  _SidebandBinning             = pset.get<std::pair<double,double>>("SidebandBinning");
+  _SidebandNbins               = pset.get<int>("SidebandNbins");
+  _DataControlSampleFiles      = pset.get<std::vector<std::string>>("DataControlSampleFiles");
+  _IncidentMCFileNames         = pset.get<std::vector<std::string>>("IncidentMCFileNames");
+  _IncidentDataFileNames       = pset.get<std::vector<std::string>>("IncidentDataFileNames");
+  _SystFileNames               = pset.get<std::vector<std::string>>("SystFileNames");
+  _SystToConsider              = pset.get<std::vector<std::string>>("SystToConsider");
+  _SystType                    = pset.get<std::vector<std::string>>("SystType");
+  _BackgroundTopologyName      = pset.get<std::vector<std::string>>("BackgroundTopologyName");
+  _SignalTopologyName          = pset.get<std::vector<std::string>>("SignalTopologyName");
+  _IncidentTopologyName        = pset.get<std::vector<std::string>>("IncidentTopologyName");
+  _ChannelNames                = pset.get<std::vector<std::string>>("ChannelNames");
   
   _FitStrategy                 = pset.get<int>("FitStrategy");
   _NToys                       = pset.get<int>("NToys");

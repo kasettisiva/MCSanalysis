@@ -1525,9 +1525,8 @@ std::pair< TH1 *, TH1 *>
 //********************************************************************
 TH1* protoana::ProtoDUNESelectionUtils::FillMCSidebandHistogram_Pions(
     std::string filename, std::string treename,
-    std::string topo, int toponum, double endZ_cut,
-    double minval, double maxval/*, int doSyst, std::string systName*/,
-    double weight) {
+    std::string channel, std::string topo, int toponum, double endZ_cut,
+    int nBins, std::pair<double, double> binning, double weight) {
 //********************************************************************
 
   TFile *file = new TFile(filename.c_str(), "READ");
@@ -1573,14 +1572,19 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSidebandHistogram_Pions(
   defaultTree->SetBranchAddress( "reco_beam_hit_true_origin", &reco_beam_hit_true_origin );
   defaultTree->SetBranchAddress( "reco_beam_hit_true_ID", &reco_beam_hit_true_ID );
 
-  std::vector<double> *reco_beam_calo_wire = 0;
+  std::vector<double> *reco_beam_calo_wire = 0, *reco_beam_calo_wire_z = 0;
   defaultTree->SetBranchAddress("reco_beam_calo_wire",       &reco_beam_calo_wire);
+  defaultTree->SetBranchAddress("reco_beam_calo_wire_z",       &reco_beam_calo_wire_z);
   
 
-  std::string hist_name = "MC_SidebandChannel" + topo + "_Histo";
-  std::string hist_title = "MC Sideband topology " + topo;
+  std::string hist_name = "MC_SidebandChannel" + channel + "_" + topo + "_Histo";
+  std::string hist_title = "MC Sideband Channel " + channel +
+                           " topology " + topo;
   
-  TH1D* hist = new TH1D(hist_name.c_str(), hist_title.c_str(), 1, 0, 1);
+  //TH1D* hist = new TH1D(hist_name.c_str(), hist_title.c_str(), 1, 0, 1);
+  //TH1D* hist = new TH1D(hist_name.c_str(), hist_title.c_str(), 100, endZ_cut, 610.);
+  TH1D* hist = new TH1D(hist_name.c_str(), hist_title.c_str(), nBins, binning.first, binning.second);
+  //TH1D* hist = new TH1D(hist_name.c_str(), hist_title.c_str(), binning.size() - 1, &binning[0]);
   hist->SetDirectory(0);
   
   //TH1 * hist = new TH1D("MC_SidebandChannelMuons_Hist", "", 1, 0, 1);
@@ -1615,7 +1619,8 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSidebandHistogram_Pions(
       }
 
       if (topology == toponum) {
-        hist->Fill(.5);
+        //hist->Fill(.5);
+        hist->Fill((*reco_beam_calo_wire_z)[j]);
       }
     }
   }
@@ -1627,24 +1632,27 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSidebandHistogram_Pions(
 //********************************************************************
 TH1* protoana::ProtoDUNESelectionUtils::FillDataSidebandHistogram_Pions(
     std::string filename, std::string treename,
-    std::string topo, double endZ_cut,
-    double minval, double maxval/*, int doSyst, std::string systName*/,
-    double weight) {
+    std::string channel, double endZ_cut,
+    int nBins, std::pair<double, double> binning, double weight) {
 //********************************************************************
 
   TFile *file = new TFile(filename.c_str(), "READ");
   TTree *defaultTree  = (TTree*)file->Get(treename.c_str());
 
-  std::vector<double> *reco_beam_calo_wire = 0, *reco_beam_incidentEnergies = 0;
+  std::vector<double> *reco_beam_calo_wire = 0, *reco_beam_calo_wire_z = 0, *reco_beam_incidentEnergies = 0;
   double reco_beam_interactingEnergy;
   defaultTree->SetBranchAddress("reco_beam_calo_wire", &reco_beam_calo_wire);
+  defaultTree->SetBranchAddress("reco_beam_calo_wire_z", &reco_beam_calo_wire_z);
   defaultTree->SetBranchAddress("reco_beam_interactingEnergy", &reco_beam_interactingEnergy); 
   defaultTree->SetBranchAddress("reco_beam_incidentEnergies", &reco_beam_incidentEnergies);
 
-  std::string hist_name = "Data_SidebandChannel" + topo + "_Histo";
-  std::string hist_title = "Data Sideband topology " + topo;
+  std::string hist_name = "Data_SidebandChannel" + channel + "_Histo";
+  std::string hist_title = "Data Sideband topology " + channel;
   
-  TH1D* hist = new TH1D(hist_name.c_str(), hist_title.c_str(), 1, 0, 1);
+  //TH1D* hist = new TH1D(hist_name.c_str(), hist_title.c_str(), 1, 0, 1);
+  //TH1D* hist = new TH1D(hist_name.c_str(), hist_title.c_str(), 100, endZ_cut, 610.);
+  TH1D* hist = new TH1D(hist_name.c_str(), hist_title.c_str(), nBins, binning.first, binning.second);
+  //TH1D* hist = new TH1D(hist_name.c_str(), hist_title.c_str(), binning.size() - 1, &binning[0]);
   hist->SetDirectory(0);
   
   double pitch = 0.4792;
@@ -1661,7 +1669,8 @@ TH1* protoana::ProtoDUNESelectionUtils::FillDataSidebandHistogram_Pions(
       if ((*reco_beam_calo_wire)[j] <= slice_cut)
         continue;
   
-      hist->Fill(.5);
+      //hist->Fill(.5);
+      hist->Fill((*reco_beam_calo_wire_z)[j]);
     }
   }
 

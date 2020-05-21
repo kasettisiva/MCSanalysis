@@ -868,7 +868,7 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(
     frame2->addPlotable(hratio,"P");
     
     if (catname.Contains("Sideband")) {
-      frame2->GetXaxis()->SetBinLabel(1, "Generic Label");
+      //frame2->GetXaxis()->SetBinLabel(1, "Generic Label");
       frame2->GetXaxis()->SetTitle("Generic Label");
     }
     else {
