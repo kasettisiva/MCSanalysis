@@ -16,8 +16,8 @@ MCControlSampleFiles:    ["/dune/app/users/calcuttj/PionStudies/rDataFrame/event
 DataControlSampleFiles:  ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_all.root"]
 
 # Name of sideband topologies. Must match the background samples 
-SidebandTopologyName: ["Muons", "OtherSB"]
-SidebandTopology:     [1, 2]
+SidebandTopologyName: ["Muons", "PionsSB", "DecaySB", "DownstreamSB", "OtherSB"]
+SidebandTopology:     [1, 2, 3, 4, 5]
 
 # Path to file to get the number of incident pions
 IncidentMCFileNames:     ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_all.root"]

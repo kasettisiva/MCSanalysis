@@ -86,10 +86,10 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
   defaultTree->SetBranchAddress("run", &run);
   /////////////////////////////////
 
-  std::vector< int > * reco_beam_hit_true_origin = 0x0;
-  std::vector< int > * reco_beam_hit_true_ID = 0x0;
-  std::vector< int > * true_beam_daughter_ID = 0x0;
-  std::vector< int > * true_beam_grand_daughter_ID = 0x0;
+  std::vector<int> * reco_beam_hit_true_origin = 0x0;
+  std::vector<int> * reco_beam_hit_true_ID = 0x0;
+  std::vector<int> * true_beam_daughter_ID = 0x0;
+  std::vector<int> * true_beam_grand_daughter_ID = 0x0;
   int true_beam_ID;
   int true_daughter_nPiPlus, true_daughter_nPiMinus, true_daughter_nPi0;
   defaultTree->SetBranchAddress( "reco_beam_hit_true_origin", &reco_beam_hit_true_origin );
@@ -1572,9 +1572,18 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSidebandHistogram_Pions(
   defaultTree->SetBranchAddress( "reco_beam_hit_true_origin", &reco_beam_hit_true_origin );
   defaultTree->SetBranchAddress( "reco_beam_hit_true_ID", &reco_beam_hit_true_ID );
 
+  std::vector<int> * true_beam_daughter_ID = 0, * true_beam_daughter_PDG = 0;
+  std::vector<int> * true_beam_grand_daughter_ID = 0x0;
   std::vector<double> *reco_beam_calo_wire = 0, *reco_beam_calo_wire_z = 0;
-  defaultTree->SetBranchAddress("reco_beam_calo_wire",       &reco_beam_calo_wire);
-  defaultTree->SetBranchAddress("reco_beam_calo_wire_z",       &reco_beam_calo_wire_z);
+  defaultTree->SetBranchAddress("reco_beam_calo_wire", &reco_beam_calo_wire);
+  defaultTree->SetBranchAddress("true_beam_daughter_ID",
+                                &true_beam_daughter_ID);
+  defaultTree->SetBranchAddress("true_beam_daughter_PDG",
+                                &true_beam_daughter_PDG);
+  defaultTree->SetBranchAddress("true_beam_grand_daughter_ID",
+                                &true_beam_grand_daughter_ID);
+  defaultTree->SetBranchAddress("reco_beam_calo_wire_z",
+                                &reco_beam_calo_wire_z);
   
 
   std::string hist_name = "MC_SidebandChannel" + channel + "_" + topo + "_Histo";
@@ -1611,11 +1620,32 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSidebandHistogram_Pions(
       // Check the ID, origin
       int true_id = (*reco_beam_hit_true_ID)[j];
       //int true_origin = (*reco_beam_hit_true_origin)[j];
+
+      auto daughter_find = std::find(true_beam_daughter_ID->begin(),
+                                     true_beam_daughter_ID->end(), true_id);
+      int daughter_index = daughter_find - true_beam_daughter_ID->begin();
       if (true_id == true_beam_ID && abs(true_beam_PDG) == 13) {
         topology = 1;
       }
-      else {
+      else if (true_id == true_beam_ID && abs(true_beam_PDG) == 211) {
         topology = 2;
+      }
+      else if (daughter_find != true_beam_daughter_ID->end()) {
+        int daughter_PDG = (*true_beam_daughter_PDG)[daughter_index];
+        if (abs(daughter_PDG) == 13) {
+          topology = 3;
+        }
+        else {
+          topology = 4;
+        }
+      }
+      else if (std::find(true_beam_grand_daughter_ID->begin(),
+                         true_beam_grand_daughter_ID->end(), true_id) !=
+               true_beam_grand_daughter_ID->end()) {
+        topology = 4;
+      }
+      else {
+        topology = 5;
       }
 
       if (topology == toponum) {
