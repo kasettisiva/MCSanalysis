@@ -472,7 +472,8 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(
     RooWorkspace *work, TString name, TString error, TString plottodraw,
     std::vector<TString> binnames, std::vector<double> recobins,
     std::vector<TString> incidentBinNames,
-    std::vector<TString> sidebandBinNames, TString measurement,
+    std::vector<TString> sidebandBinNames, std::vector<double> sidebandBins,
+    TString measurement,
     bool doNegativeReco, RooAbsData* data, RooFitResult* result) {
 //********************************************************************
 
@@ -870,6 +871,10 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(
     if (catname.Contains("Sideband")) {
       //frame2->GetXaxis()->SetBinLabel(1, "Generic Label");
       frame2->GetXaxis()->SetTitle("Generic Label");
+      for(size_t i = 1; i < sidebandBins.size(); i++){
+        TString ibinstr = Form("%.1f-%.1f",sidebandBins[i-1],sidebandBins[i]);
+        frame2->GetXaxis()->SetBinLabel(i, ibinstr.Data());
+      }
     }
     else {
       if (doNegativeReco) {

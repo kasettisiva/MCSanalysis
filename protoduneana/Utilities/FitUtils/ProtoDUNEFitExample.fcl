@@ -79,8 +79,7 @@ AddIncidentBackgroundFactors: [0, 1, 0, 0, 0]
 AddSidebandsToMeasurement: true 
 DoNegativeReco:           true #true 
 EndZCut:                  225.
-SidebandBinning:      [@local::EndZCut, 480.]
-SidebandNbins: 10 
+SidebandBinning:      [@local::EndZCut, 300., 350., 375., 400, 450., 480.]
 
 WirePitch: .47974  #.4792
 DoScaleMCToData:  false 

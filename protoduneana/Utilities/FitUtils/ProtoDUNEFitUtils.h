@@ -57,7 +57,8 @@ namespace protoana{
         RooWorkspace *work, TString name, TString error, TString plottodraw,
         std::vector<TString> binnames, std::vector<double> recobins,
         std::vector<TString> incidentBinNames,
-        std::vector<TString> sidebandBinNames, TString measurement="PDFit",
+        std::vector<TString> sidebandBinNames, std::vector<double> sidebandBins,
+        TString measurement="PDFit",
         bool doNegativeReco=false,RooAbsData* data=NULL,
         RooFitResult* result=NULL);
 

@@ -256,13 +256,13 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
   std::vector<TCanvas*> bfplots =
       protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(
           ws, "beforefit", "Poisson", "ratio", truebinsnameVec, _RecoBinning,
-          incidentNameVec, sidebandNames, "Before Fit", _DoNegativeReco);
+          incidentNameVec, sidebandNames, _SidebandBinning, "Before Fit", _DoNegativeReco);
 
   RooAbsData *asimovdata = ws->data("asimovData");
   std::vector<TCanvas*> bfAsimovplots =
       protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(
           ws, "asimov", "Poisson", "ratio", truebinsnameVec, _RecoBinning,
-          incidentNameVec, sidebandNames, "Asimov Dataset", _DoNegativeReco, asimovdata);
+          incidentNameVec, sidebandNames, _SidebandBinning, "Asimov Dataset", _DoNegativeReco, asimovdata);
 
   // ----------------------------------------------------------------------------------------------------
   // Check if this is MC toys case
@@ -410,7 +410,7 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
   std::vector<TCanvas*> afplots =
       protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(
           ws, "afterfit", "Poisson", "ratio", truebinsnameVec, _RecoBinning,
-          incidentNameVec, sidebandNames, "After fit", _DoNegativeReco,
+          incidentNameVec, sidebandNames, _SidebandBinning, "After fit", _DoNegativeReco,
           NULL, fitresult);
 
 
@@ -616,7 +616,11 @@ void protoana::ProtoDUNEFit::AddSamplesAndChannelsToMeasurement(RooStats::HistFa
       TString hname(htemp->GetName());
       //if(htemp->GetEntries() == 0 || htemp->Integral() == 0) continue;
       if(hname.Contains(channelname.Data()) && hname.Contains("MC")){
-        mf::LogInfo("AddSamplesAndChannelsToMeasurement") << "Adding MC sample " << hname.Data() << " to channel " << channelname.Data() << " with " << htemp->Integral() << " events";
+        mf::LogInfo("AddSamplesAndChannelsToMeasurement") <<
+            "Adding MC sample " << hname.Data() << " to channel " <<
+            channelname.Data() << " with " << htemp->Integral() << " events " <<
+            htemp->GetEntries();
+
         TString samplename = hname + TString("_sample");
         RooStats::HistFactory::Sample sample(samplename.Data());
         sample.SetNormalizeByTheory(true);
@@ -925,9 +929,12 @@ void protoana::ProtoDUNEFit::AddSidebandSamplesAndChannelsToMeasurement(
     // Add bkg samples to channel
     for (size_t j = 0; j < _sideband_hists_mc.size(); ++j) {
       TH1D* htemp = (TH1D*)_sideband_hists_mc[j]->Clone();
-      mf::LogInfo(message_source) << "sideband " << j << " " << htemp->GetName(); 
+      mf::LogInfo(message_source) << "sideband " << j << " " <<
+                                     htemp->GetName() << " " <<
+                                     htemp->GetEntries() << " " <<
+                                     htemp->Integral();
       TString hname(htemp->GetName());
-      if(htemp->GetEntries() == 0 || htemp->Integral() == 0) continue;
+      if (/*htemp->GetEntries() == 0 || */htemp->Integral() == 0) continue;
       if(hname.Contains(channelname.Data()) && hname.Contains("MC")){
         mf::LogInfo(message_source) << "Adding MC sideband sample " <<
             hname.Data() << " to channel " << channelname.Data() <<
@@ -1317,7 +1324,7 @@ bool protoana::ProtoDUNEFit::FillSidebandHistograms_Pions() {
         protoana::ProtoDUNESelectionUtils::FillMCSidebandHistogram_Pions(
             _MCControlSampleFiles[0], _RecoTreeName, "APA2",
             _SidebandTopologyName[i], _SidebandTopology[i], _EndZCut,
-            _SidebandNbins, _SidebandBinning));
+            _SidebandBinning, _IncidentScaleFactor));
   }
 
   std::cout << "GOT " << _sideband_hists_mc.size() << " SIDEBAND HISTS" <<
@@ -1326,7 +1333,7 @@ bool protoana::ProtoDUNEFit::FillSidebandHistograms_Pions() {
   _sideband_hists_data.push_back(
       protoana::ProtoDUNESelectionUtils::FillDataSidebandHistogram_Pions(
           _DataControlSampleFiles[0], _RecoTreeName, "APA2",
-          _EndZCut, _SidebandNbins, _SidebandBinning));
+          _EndZCut, _SidebandBinning));
 
   return true;
 }
@@ -1600,8 +1607,8 @@ bool protoana::ProtoDUNEFit::Configure(std::string configPath){
   _MCControlSampleFiles        = pset.get<std::vector<std::string>>("MCControlSampleFiles");
   _SidebandTopologyName        = pset.get<std::vector<std::string>>("SidebandTopologyName");
   _SidebandTopology            = pset.get<std::vector<int>>("SidebandTopology");
-  _SidebandBinning             = pset.get<std::pair<double,double>>("SidebandBinning");
-  _SidebandNbins               = pset.get<int>("SidebandNbins");
+  //_SidebandBinning             = pset.get<std::pair<double,double>>("SidebandBinning");
+  _SidebandBinning             = pset.get<std::vector<double>>("SidebandBinning");
   _DataControlSampleFiles      = pset.get<std::vector<std::string>>("DataControlSampleFiles");
   _IncidentMCFileNames         = pset.get<std::vector<std::string>>("IncidentMCFileNames");
   _IncidentDataFileNames       = pset.get<std::vector<std::string>>("IncidentDataFileNames");

@@ -44,12 +44,12 @@ namespace protoana{
     TH1* FillMCSidebandHistogram_Pions(
         std::string filename, std::string treename,
         std::string channel, std::string topo, int toponum, double endZ_cut,
-        int nBins, std::pair<double, double> binning, double weight = 1.);
+        std::vector<double> binning, double weight = 1.);
 
     TH1* FillDataSidebandHistogram_Pions(
         std::string filename, std::string treename,
         std::string channel, double endZ_cut,
-        int nBins, std::pair<double, double> binning, double weight = 1.);
+        std::vector<double> binning, double weight = 1.);
 
     // Pion flux
     TH1* FillMCFlux_Pions(std::string filename, std::string treename,
@@ -70,6 +70,9 @@ namespace protoana{
         std::vector<double> bins, std::string channel,
         std::string topo, int toponum, double endZ_cut, int doSyst = 0,
         double weight = 1.);
+    
+    //Tool to find bin quickly
+    int FindBin(double value, std::vector<double> binning);
 
   }
 }
