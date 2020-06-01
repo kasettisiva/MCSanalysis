@@ -884,6 +884,7 @@ private:
   bool fCheckCosmics;
   bool fTrueToReco;
   bool fDoReweight;
+  bool fMCHasBI;
 
   //Geant4Reweight stuff
   TFile * FracsFile, * XSecFile;
@@ -918,8 +919,8 @@ pionana::PionAnalyzer::PionAnalyzer(fhicl::ParameterSet const& p)
   fSaveHits( p.get<bool>( "SaveHits" ) ),
   fCheckCosmics( p.get<bool>( "CheckCosmics" ) ),
   fTrueToReco( p.get<bool>( "TrueToReco" ) ),
-  fDoReweight(p.get<bool>("DoReweight"))
-{
+  fDoReweight(p.get<bool>("DoReweight")),
+  fMCHasBI(p.get<bool>("MCHasBI")) {
 
   templates[ 211 ]  = (TProfile*)dEdX_template_file.Get( "dedx_range_pi"  );
   templates[ 321 ]  = (TProfile*)dEdX_template_file.Get( "dedx_range_ka"  );
@@ -2074,10 +2075,12 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
       //Get the initial Energy KE
       double mass = 0.;
       double init_KE = 0.;
-      if( evt.isRealData() ){      
+      //std::cout << "Has BI? " << fMCHasBI << " " << evt.isRealData() << std::endl;
+      if (evt.isRealData() || fMCHasBI) {
         mass = 139.57;
 
         init_KE =  sqrt( 1.e6*data_BI_P*data_BI_P + mass*mass ) - mass;
+       // std::cout << "MC has BI: " << init_KE << std::endl;
       }
       else{
         if( true_beam_PDG == 2212 ) mass = 938.27;
@@ -2087,6 +2090,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
         else if( abs(true_beam_PDG) == 13 )  mass = 105.66;      
 
         init_KE = sqrt( 1.e6 * true_beam_startP*true_beam_startP + mass*mass ) - mass;
+        //std::cout << "MC does not has BI: " << init_KE << std::endl;
       }
 
       reco_beam_incidentEnergies.push_back( init_KE );

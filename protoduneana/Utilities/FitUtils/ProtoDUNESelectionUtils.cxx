@@ -553,6 +553,8 @@ TH1* protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(
   defaultTree->SetBranchAddress("reco_beam_startX",                 &reco_beam_startX);
   defaultTree->SetBranchAddress("reco_beam_startY",                 &reco_beam_startY);
   defaultTree->SetBranchAddress("reco_beam_startZ",                 &reco_beam_startZ);
+  double reco_beam_endZ;
+  defaultTree->SetBranchAddress("reco_beam_endZ",                   &reco_beam_endZ);
   defaultTree->SetBranchAddress("reco_beam_trackDirZ",              &reco_beam_trackDirZ);
   defaultTree->SetBranchAddress("reco_beam_nTrackDaughters",        &reco_beam_nTrackDaughters);
   defaultTree->SetBranchAddress("reco_beam_nShowerDaughters",       &reco_beam_nShowerDaughters);
@@ -599,6 +601,10 @@ TH1* protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(
     if (reco_beam_interactingEnergy == -999.) continue;
 
     if (IsIncidentHisto) {
+
+      // Testing
+      //if (reco_beam_endZ > reco_beam_endZ_cut) continue;
+
       for (size_t l = 0; l < reco_beam_incidentEnergies->size(); l++) {
 
         //Here -- need to add in a check for the reconstructed slice.
@@ -700,6 +706,8 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
   defaultTree->SetBranchAddress("reco_beam_startX",                 &reco_beam_startX);
   defaultTree->SetBranchAddress("reco_beam_startY",                 &reco_beam_startY);
   defaultTree->SetBranchAddress("reco_beam_startZ",                 &reco_beam_startZ);
+  double reco_beam_endZ;
+  defaultTree->SetBranchAddress("reco_beam_endZ",                   &reco_beam_endZ);
   defaultTree->SetBranchAddress("reco_beam_trackDirZ",              &reco_beam_trackDirZ);
   defaultTree->SetBranchAddress("reco_beam_nTrackDaughters",        &reco_beam_nTrackDaughters);
   defaultTree->SetBranchAddress("reco_beam_nShowerDaughters",       &reco_beam_nShowerDaughters);
@@ -838,6 +846,8 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
     if (!doNegativeReco && reco_beam_interactingEnergy < 0.0) continue;
 
     if (reco_beam_interactingEnergy  == -999.) continue;
+
+    //if (reco_beam_endZ > reco_beam_endZ_cut) continue;
 
     //bool check_cosmics = ( reco_beam_true_byHits_origin == 2 );
 
