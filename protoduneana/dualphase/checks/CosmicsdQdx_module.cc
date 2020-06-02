@@ -231,20 +231,28 @@ void pddpana::CosmicsdQdx::analyze(art::Event const& e)
 
 	double x_pos    = pnt.X();
 	float tick      = fDetprop->ConvertXToTicks(x_pos,(int)i_plane,0,0);
-	auto tpcid      = fGeom->PositionToTPCID(pnt);
-	if( tpcid.TPC >= fGeom->NTPC() ){
+	try{
+	  auto tpcid = fGeom->PositionToTPCID(pnt);
+	  // if( tpcid.TPC >= fGeom->NTPC() ){
+	  //   if( fLogLevel>=3 ){
+	  //     cerr<<myname<<"tpc no "<<tpcid.TPC<<" is not valid \n"
+	  // 	  <<" track id "<<fTrackId<<" at ("
+	  // 	  <<pnt.X()<<", "<<pnt.Y()<<", "<<pnt.Z()<<") \n"
+	  // 	  <<" has valid point "<<track.HasValidPoint( i_trjpt )<<endl;
+	  //   }
+	  //   continue;
+	  // }
+	  geo::WireID wid = fGeom->NearestWireID(pnt, geo::PlaneID(tpcid, i_plane));
+	  //traj_points_in_plane[i_trjpt] = std::make_pair(wid, tick);
+	  traj_points_in_plane.push_back( std::make_pair(wid, tick) );
+	  traj_points_idx.push_back( i_trjpt );
+	}
+	catch(cet::exception &e){
 	  if( fLogLevel>=3 ){
-	    cerr<<myname<<"tpc no "<<tpcid.TPC<<" is not valid \n"
-		<<" track id "<<fTrackId<<" at ("
-		<<pnt.X()<<", "<<pnt.Y()<<", "<<pnt.Z()<<") \n"
-		<<" has valid point "<<track.HasValidPoint( i_trjpt )<<endl;
+	    cout<<e;
 	  }
 	  continue;
 	}
-	geo::WireID wid = fGeom->NearestWireID(pnt, geo::PlaneID(tpcid, i_plane));
-	//traj_points_in_plane[i_trjpt] = std::make_pair(wid, tick);
-	traj_points_in_plane.push_back( std::make_pair(wid, tick) );
-	traj_points_idx.push_back( i_trjpt );
       }
       
       // from calo::TrackCalorimetryAlg::AnalyzeHit
@@ -331,20 +339,30 @@ bool pddpana::CosmicsdQdx::checkCutsAndGetT0( const recob::Track& track, float &
   auto tstart = track.Vertex();
   auto tend   = track.End();
   
-  // cosmics are downward going
-  if( tstart.X() > tend.X() ){
+  // cosmics are downward going and anode is at +300cm
+  if( tstart.X() < tend.X() ){
     tstart = tend;
   }
 
   // find TPC volume
-  auto const tpc = fGeom->PositionToTPC( tstart );
+  geo::TPCGeo const* tpc = nullptr; 
+  try{
+    tpc = fGeom->PositionToTPCptr( tstart );
+  }
+  catch(cet::exception &e){
+    if( fLogLevel>=2 ){
+      cout<<e;
+    }
+    //return false;
+  }
+  if( not tpc ) return false;
 
   // find track start in local TPC coordinates
-  auto pos       = tpc.toLocalCoords( tstart );
+  auto pos = tpc->toLocalCoords( tstart );
   
   // check distance from anode 
   // assuming drift along X right now
-  T0 = tpc.HalfSizeX() - pos.X();
+  T0 = tpc->HalfSizeX() - pos.X();
   if( T0 < fTrackDriftCut ){ 
     if( fLogLevel>=3 ){
       cout<<myname<<"Failed to pass T0 cut "<<T0<<endl;
@@ -353,8 +371,8 @@ bool pddpana::CosmicsdQdx::checkCutsAndGetT0( const recob::Track& track, float &
   }
 
   // check distance from the borders
-  if( (tpc.HalfSizeY() - std::abs(pos.Y())) < fTrackWallCut || 
-      (tpc.HalfSizeZ() - std::abs(pos.Z())) < fTrackWallCut ){
+  if( (tpc->HalfSizeY() - std::abs(pos.Y())) < fTrackWallCut || 
+      (tpc->HalfSizeZ() - std::abs(pos.Z())) < fTrackWallCut ){
     
     if( fLogLevel>=3 ){
       cout<<myname<<"Failed to pass wall cut ("
