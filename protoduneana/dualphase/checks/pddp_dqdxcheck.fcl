@@ -1,0 +1,47 @@
+#include "services_dune.fcl"
+
+process_name: PDDPHitNormCheck
+
+services:
+{
+  TFileService: { fileName: "crana_sum_results.root" }
+  TimeTracker:       {}
+  RandomNumberGenerator: {} 
+  ExptGeoHelperInterface:         @local::dune_geometry_helper 
+  Geometry:                       @local::protodunedphase_geo
+  DetectorPropertiesService:      @local::protodunedphase_detproperties
+  DetectorClocksService:          @local::protodunedphase_detectorclocks
+  LArPropertiesService:           @local::dunefddphase_properties
+
+}
+
+services.DetectorPropertiesService.Efield:	[0.166, 4.0, 0.0]
+
+source:
+{
+  module_type: RootInput
+  maxEvents: -1
+  fileNames: [ "detsim.root" ]
+}
+
+outputs: {}
+
+
+physics:
+{
+  analyzers:
+  {
+    crana:
+    {
+    	module_type:  "CosmicsdQdx"
+	LogLevel:     1
+	TrackModuleLabel:  "pandoraTrack"
+	TrackMinLen: 20.0
+	TrackDriftCut: 2.0 # cut from start of drift 
+	TrackWallCut:  2.0 # cut from the CRP border
+	MaxHitMultiplicity: 2
+     }
+   }
+  analysis: [ crana ] 
+  end_paths: [ analysis ]
+}
