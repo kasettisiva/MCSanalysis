@@ -1658,7 +1658,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSidebandHistogram_Pions(
       if (topology == toponum) {
         //hist->Fill((*reco_beam_calo_wire_z)[j], weight);
         int bin = FindBin((*reco_beam_calo_wire_z)[j], binning);
-        std::cout << "Got bin: " << bin << std::endl;
+        //std::cout << "Got bin: " << bin << std::endl;
         hist->AddBinContent(bin, weight);
       }
     }
@@ -1707,7 +1707,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillDataSidebandHistogram_Pions(
   
       //hist->Fill((*reco_beam_calo_wire_z)[j], weight);
       int bin = FindBin((*reco_beam_calo_wire_z)[j], binning);
-      std::cout << "Got bin: " << bin << std::endl;
+      //std::cout << "Got bin: " << bin << std::endl;
       hist->AddBinContent(bin, weight);
     }
   }

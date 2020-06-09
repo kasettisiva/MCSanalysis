@@ -425,13 +425,30 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
   toys_tree->SetNameTitle(treename.Data(),treename.Data());
 
   // Plot NLL
-  //std::vector<TCanvas*> nllplots = protoana::ProtoDUNEFitUtils::PlotNLL(ws,"PDFit",fitresult);
+  std::vector<TCanvas*> nllplots = protoana::ProtoDUNEFitUtils::PlotNLL(ws,"PDFit",fitresult);
 
   TTree *mctoys_results1 = (TTree*)toys_tree->Clone();
   TCanvas* nuisancecanvas = protoana::ProtoDUNEFitUtils::PlotNuisanceParameters(mctoys_results1, ws);
 
   TTree *mctoys_results2 = (TTree*)toys_tree->Clone();
-  TCanvas* avresultcanvas = protoana::ProtoDUNEFitUtils::PlotAverageResultsFromToys(mctoys_results2, ws, "POI", "POI");
+
+  RooArgList prefit_POI = fitresult->floatParsInit();
+  TCanvas* avresultcanvas = protoana::ProtoDUNEFitUtils::PlotAverageResultsFromToys(mctoys_results2, ws, "POI", "POI", &prefit_POI);
+
+  //Testing 
+  /*
+  RooArgList prefit_POI = fitresult->floatParsInit();
+  TIterator* itr = prefit_POI.createIterator();
+  RooRealVar * var = 0x0;
+  std::cout << "Prefit!!" << std::endl;
+  while ( (var = (RooRealVar*)itr->Next()) ) {
+    std::string name = var->GetName();
+    if (name.find("POI") == std::string::npos) continue;
+    std::cout << var->GetName() << " " << var->getVal() << std::endl;
+
+  }
+  */
+  
 
   //TTree *mctoys_results3 = (TTree*)toys_tree->Clone();
   //TCanvas* avresultcanvas_inc = protoana::ProtoDUNEFitUtils::PlotAverageResultsFromToys(mctoys_results3, ws, "POI", "POI");
@@ -472,6 +489,13 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
   for(unsigned int i=0; i < afplots.size(); i++){
     afplots[i]->Write();
   }
+
+  TDirectory *NLLDir = f->mkdir("NLLPlots");
+  NLLDir->cd();
+  for (size_t i = 0; i < nllplots.size(); ++i) {
+    nllplots[i]->Write();
+  }
+  NLLDir->cd("..");
 
   //pionflux_etruth_histo->Write();
   //pionflux_ereco_histo->Write();
@@ -717,7 +741,13 @@ void protoana::ProtoDUNEFit::AddSamplesAndChannelsToMeasurement(RooStats::HistFa
         poiname.ReplaceAll("__","_");
         poiname.ReplaceAll("_0_1000000","");
         meas.SetPOI(poiname.Data()); // AddPOI would also work
-        sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 100.0);
+
+        if (_RandSigPriors) {
+          sample.AddNormFactor(poiname.Data(), rand.Gaus(1.0, .1), 0., 100.);
+        }
+        else {
+          sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 100.0);
+        }
         mf::LogInfo("AddSamplesAndChannelsToMeasurement") << "Sample " << sample.GetName() << " has normalisation parameter " << poiname.Data();
 
         // Add sample to channel
@@ -1651,6 +1681,7 @@ bool protoana::ProtoDUNEFit::Configure(std::string configPath){
 
   _DoScaleMCToData             = pset.get<bool>("DoScaleMCToData");
   _DoScaleMuonContent          = pset.get<bool>("DoScaleMuonContent");
+  _RandSigPriors               = pset.get<bool>("RandSigPriors");
   _DataIsMC                    = pset.get<bool>("DataIsMC");
   _OnlyDrawXSecs               = pset.get<bool>("OnlyDrawXSecs");
   _WirePitch                   = pset.get<double>("WirePitch");

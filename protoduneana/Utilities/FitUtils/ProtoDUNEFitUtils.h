@@ -84,7 +84,7 @@ namespace protoana{
     TCanvas* PlotNuisanceParameters(TTree* tree, RooWorkspace* ws);
 
     // Plot the average number of events from all toys. If fit the data the fit results will be shown
-    TCanvas* PlotAverageResultsFromToys(TTree* tree, RooWorkspace* ws, TString channelname, TString catname);
+    TCanvas* PlotAverageResultsFromToys(TTree* tree, RooWorkspace* ws, TString channelname, TString catname, RooArgList * PreFit_POI = 0x0);
 
     // Take list of poi
     RooArgList GetPostfitPOIList(RooArgList paramsfit, bool print=false);

@@ -15,6 +15,7 @@
 #include "TString.h"
 #include "TGraphAsymmErrors.h"
 #include "TCanvas.h"
+#include "TRandom3.h"
 
 #include "RooStats/HistFactory/Measurement.h"
 #include <RooFitResult.h>
@@ -140,6 +141,8 @@ namespace protoana{
     bool _AddIncidentToMeasurement, _DoNegativeReco, _DoScaleMCToData;
     bool _AddSidebandsToMeasurement;
     bool _DoScaleMuonContent;
+    bool _RandSigPriors;
+    TRandom3 rand;
     //bool _AddIncidentBackgroundFactors;
     std::vector<int> _AddBackgroundFactors, _AddIncidentBackgroundFactors,
                      _enable_bkg_factor, _enable_inc_bkg_factor;
