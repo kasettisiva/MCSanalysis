@@ -768,11 +768,15 @@ private:
   std::vector< double > reco_daughter_allTrack_to_vertex;
   //
   
-  std::vector< int >    reco_daughter_allShower_ID;
-  std::vector< double > reco_daughter_allShower_len;
-  std::vector< double > reco_daughter_allShower_startX;
-  std::vector< double > reco_daughter_allShower_startY;
-  std::vector< double > reco_daughter_allShower_startZ;
+  std::vector<int>    reco_daughter_allShower_ID;
+  std::vector<double> reco_daughter_allShower_len,
+                      reco_daughter_allShower_startX,
+                      reco_daughter_allShower_startY,
+                      reco_daughter_allShower_startZ,
+                      reco_daughter_allShower_dirX,
+                      reco_daughter_allShower_dirY,
+                      reco_daughter_allShower_dirZ,
+                      reco_daughter_allShower_energy;
 
 
   //EDIT: STANDARDIZE
@@ -2845,6 +2849,41 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
           reco_daughter_allShower_startX.push_back( pandora2Shower->ShowerStart().X() );
           reco_daughter_allShower_startY.push_back( pandora2Shower->ShowerStart().Y() );
           reco_daughter_allShower_startZ.push_back( pandora2Shower->ShowerStart().Z() );
+
+          reco_daughter_allShower_dirX.push_back( pandora2Shower->Direction().X() );
+          reco_daughter_allShower_dirY.push_back( pandora2Shower->Direction().Y() );
+          reco_daughter_allShower_dirZ.push_back( pandora2Shower->Direction().Z() );
+
+          auto recoShowers = evt.getValidHandle<std::vector<recob::Shower>>(
+              "pandora2Shower");
+          std::vector<anab::Calorimetry> shower_calos;
+          try {
+            const art::FindManyP<anab::Calorimetry> findCalorimetry(
+                recoShowers, evt, "pandora2ShowercaloSCE");
+            std::vector<art::Ptr<anab::Calorimetry>> theseCalos =
+                findCalorimetry.at(pandora2Shower->ID());
+        
+            for( auto calo : theseCalos){
+              shower_calos.push_back(*calo);
+            }
+          }
+          catch(...){
+            std::cerr << "No shower calorimetry object found..." << 
+                         " returning empty vector" << std::endl;
+          }
+
+          if (shower_calos.size()) {
+            std::vector<float> shower_dEdX = shower_calos[0].dEdx();
+            std::vector<float> shower_pitch = shower_calos[0].TrkPitchVec();
+            double total_energy = 0.;
+            for (size_t i = 0; i < shower_dEdX.size(); ++i) {
+              total_energy += shower_dEdX[i]*shower_pitch[i];
+            }
+            reco_daughter_allShower_energy.push_back(total_energy);
+          }
+          else {
+            reco_daughter_allShower_energy.push_back(-999.);
+          }
         }
         else{
           reco_daughter_allShower_ID.push_back(       -1  );
@@ -2852,6 +2891,10 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
           reco_daughter_allShower_startX.push_back( -999. );
           reco_daughter_allShower_startY.push_back( -999. );
           reco_daughter_allShower_startZ.push_back( -999. );
+          reco_daughter_allShower_dirX.push_back( -999. );
+          reco_daughter_allShower_dirY.push_back( -999. );
+          reco_daughter_allShower_dirZ.push_back( -999. );
+          reco_daughter_allShower_energy.push_back( -999. );
         }
 
       }
@@ -3340,6 +3383,10 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("reco_daughter_allShower_startX", &reco_daughter_allShower_startX);
   fTree->Branch("reco_daughter_allShower_startY", &reco_daughter_allShower_startY);
   fTree->Branch("reco_daughter_allShower_startZ", &reco_daughter_allShower_startZ);
+  fTree->Branch("reco_daughter_allShower_dirX", &reco_daughter_allShower_dirX);
+  fTree->Branch("reco_daughter_allShower_dirY", &reco_daughter_allShower_dirY);
+  fTree->Branch("reco_daughter_allShower_dirZ", &reco_daughter_allShower_dirZ);
+  fTree->Branch("reco_daughter_allShower_energy", &reco_daughter_allShower_energy);
 
 
 /*
@@ -4160,6 +4207,10 @@ void pionana::PionAnalyzer::reset()
   reco_daughter_allShower_startY.clear();
   reco_daughter_allShower_startZ.clear();
 
+  reco_daughter_allShower_dirX.clear();
+  reco_daughter_allShower_dirY.clear();
+  reco_daughter_allShower_dirZ.clear();
+  reco_daughter_allShower_energy.clear();
   ///////
   
 
