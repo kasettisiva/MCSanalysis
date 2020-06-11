@@ -1167,6 +1167,12 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
         protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(
             _DataFileNames[i], _RecoTreeName, _RecoBinning, _ChannelNames[i],
             _EndZCut, _DoNegativeReco));
+    if (_StatFluctuation) {
+      for (int j = 0; j <= _datahistos.back()->GetNbinsX(); ++j) {
+        double new_val = rand.Poisson(_datahistos.back()->GetBinContent(j));
+        _datahistos.back()->SetBinContent(j, new_val);
+      }
+    }
   }
 
   for(int i=0; i < ninctopo; i++){
@@ -1236,6 +1242,12 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
           _EndZCut, _DoNegativeReco, true));
   }
   _incdatahistos.push_back(incdatahisto);
+  if (_StatFluctuation) {
+    for (int j = 0; j <= _incdatahistos.back()->GetNbinsX(); ++j) {
+      double new_val = rand.Poisson(_incdatahistos.back()->GetBinContent(j));
+      _incdatahistos.back()->SetBinContent(j, new_val);
+    }
+  }
 
   std::pair<TH1 *, TH1 *> inc_eff_num_denom = 
         protoana::ProtoDUNESelectionUtils::GetMCIncidentEfficiency(
@@ -1364,6 +1376,13 @@ bool protoana::ProtoDUNEFit::FillSidebandHistograms_Pions() {
       protoana::ProtoDUNESelectionUtils::FillDataSidebandHistogram_Pions(
           _DataControlSampleFiles[0], _RecoTreeName, "APA2",
           _EndZCut, _SidebandBinning));
+
+  if (_StatFluctuation) {
+    for (int j = 0; j <= _sideband_hists_data.back()->GetNbinsX(); ++j) {
+      double new_val = rand.Poisson(_sideband_hists_data.back()->GetBinContent(j));
+      _sideband_hists_data.back()->SetBinContent(j, new_val);
+    }
+  }
 
   return true;
 }
@@ -1682,6 +1701,7 @@ bool protoana::ProtoDUNEFit::Configure(std::string configPath){
   _DoScaleMCToData             = pset.get<bool>("DoScaleMCToData");
   _DoScaleMuonContent          = pset.get<bool>("DoScaleMuonContent");
   _RandSigPriors               = pset.get<bool>("RandSigPriors");
+  _StatFluctuation             = pset.get<bool>("StatFluctuation");
   _DataIsMC                    = pset.get<bool>("DataIsMC");
   _OnlyDrawXSecs               = pset.get<bool>("OnlyDrawXSecs");
   _WirePitch                   = pset.get<double>("WirePitch");

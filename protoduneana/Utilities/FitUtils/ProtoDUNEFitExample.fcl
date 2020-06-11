@@ -1,30 +1,30 @@
 # Path to MC files. Each entry corresponds to a different channel and has to match with the DataFileNames.
 #MCFileNames:             ["eventSelection_mc_ABS.root","eventSelection_mc_CEX.root"]
-MCFileNames:             ["/dune/app/users/calcuttj/PionStudies/rDataFrame/5_18_NewSelection/eventSelection_mc_ABS.root",
-                          "/dune/app/users/calcuttj/PionStudies/rDataFrame/5_18_NewSelection/eventSelection_mc_CEX.root"]
+MCFileNames:             ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_ABS.root",
+                          "/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_CEX.root"]
 
 # Path to data file. Each entry corresponds to a different channel and has to match with the MCFileNames.
 #DataFileNames:           ["eventSelection_mc_ABS.root","eventSelection_mc_CEX.root"]
-DataFileNames:             ["/dune/app/users/calcuttj/PionStudies/rDataFrame/5_18_NewSelection/eventSelection_mc_ABS.root", 
-                            "/dune/app/users/calcuttj/PionStudies/rDataFrame/5_18_NewSelection/eventSelection_mc_CEX.root"]
+DataFileNames:             ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_ABS.root", 
+                            "/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_CEX.root"]
 
 # Channel names. Follow the order of the MC/Data File Names
 ChannelNames:            ["ABS","CEX"]
 
 # Path to MC control samples.
-MCControlSampleFiles:    ["/dune/app/users/calcuttj/PionStudies/rDataFrame/5_18_NewSelection/eventSelection_mc_beamType.root"]
+MCControlSampleFiles:    ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_beamType.root"]
 
 # Path to Data control samples.
-DataControlSampleFiles:  ["/dune/app/users/calcuttj/PionStudies/rDataFrame/5_18_NewSelection/eventSelection_mc_beamType.root"]
+DataControlSampleFiles:  ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_beamType.root"]
 
 # Name of sideband topologies. Must match the background samples 
 SidebandTopologyName: ["Muons", "PionsSB", "DecaySB", "DownstreamSB", "OtherSB"]
 SidebandTopology:     [1, 2, 3, 4, 5]
 
 # Path to file to get the number of incident pions
-IncidentMCFileNames:     ["/dune/app/users/calcuttj/PionStudies/rDataFrame/5_18_NewSelection/eventSelection_mc_beamType.root"]
+IncidentMCFileNames:     ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_beamType.root"]
                                                                                                        
-IncidentDataFileNames:   ["/dune/app/users/calcuttj/PionStudies/rDataFrame/5_18_NewSelection/eventSelection_mc_beamType.root"] 
+IncidentDataFileNames:   ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_beamType.root"] 
 
 # Number of toys to generate for MC studies. Any number above 0 will enable toy mc generation and won't fit the data.
 NToys:                   0 
@@ -90,3 +90,4 @@ DataIsMC: true
 DoScaleMuonContent: false 
 
 RandSigPriors: false 
+StatFluctuation: true 
