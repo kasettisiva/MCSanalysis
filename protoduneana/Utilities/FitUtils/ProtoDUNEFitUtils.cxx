@@ -727,6 +727,12 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(
     frame->Draw(); //Draw("same");
     frame->GetXaxis()->SetTitle("Reco Bin");
     frame->GetYaxis()->SetTitle("Events");
+
+
+    std::string chi2_text = "#chi^{2}: " +
+                            std::to_string(GetDataMCChi2(work, catname, data));
+    legend->AddEntry((TObject*)0x0, chi2_text.c_str(), "");
+
     legend->Draw();
 
     pad2->cd();
