@@ -1757,14 +1757,14 @@ bool protoana::ProtoDUNEFit::BuildSignalSystThenApplyToSample(
             _MCFileNames[iChan], _RecoTreeName, _RecoBinning,
             _ChannelNames[iChan], _SignalTopologyName[iTopo],
             _SignalTopology[iTopo], _TruthBinning[iTruthBin-1],
-            _TruthBinning[iTruthBin], _EndZCut, false, -1, syst_name);
+            _TruthBinning[iTruthBin], _EndZCut, _DoNegativeReco, -1, syst_name);
 
     high_hist =
         protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
             _MCFileNames[iChan], _RecoTreeName, _RecoBinning,
             _ChannelNames[iChan], _SignalTopologyName[iTopo],
             _SignalTopology[iTopo], _TruthBinning[iTruthBin-1],
-            _TruthBinning[iTruthBin], _EndZCut, false, 1, syst_name);
+            _TruthBinning[iTruthBin], _EndZCut, _DoNegativeReco, 1, syst_name);
 
     if (!(low_hist && high_hist)) {
       continue;
@@ -1805,14 +1805,14 @@ bool protoana::ProtoDUNEFit::BuildBackgroundSystThenApplyToSample(
         protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
             _MCFileNames[iChan], _RecoTreeName, _RecoBinning,
             _ChannelNames[iChan], _BackgroundTopologyName[iTopo],
-            _BackgroundTopology[iTopo], _EndZCut, tmin, tmax, false, -1,
+            _BackgroundTopology[iTopo], _EndZCut, tmin, tmax, _DoNegativeReco, -1,
             syst_name);
 
     high_hist =
         protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
             _MCFileNames[iChan], _RecoTreeName, _RecoBinning,
             _ChannelNames[iChan], _BackgroundTopologyName[iTopo],
-            _BackgroundTopology[iTopo], _EndZCut, tmin, tmax, false, 1,
+            _BackgroundTopology[iTopo], _EndZCut, tmin, tmax, _DoNegativeReco, 1,
             syst_name);
 
     if (!(low_hist && high_hist)) {
@@ -2010,14 +2010,14 @@ bool protoana::ProtoDUNEFit::BuildSystThenApplyToSample(
                 _MCFileNames[iChan], _RecoTreeName, _RecoBinning,
                 _ChannelNames[iChan], _SignalTopologyName[iTopo],
                 _SignalTopology[iTopo], _TruthBinning[iTruthBin-1],
-                _TruthBinning[iTruthBin], _EndZCut, false, -1, syst_name);
+                _TruthBinning[iTruthBin], _EndZCut, _DoNegativeReco, -1, syst_name);
 
         high_hist =
             protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
                 _MCFileNames[iChan], _RecoTreeName, _RecoBinning,
                 _ChannelNames[iChan], _SignalTopologyName[iTopo],
                 _SignalTopology[iTopo], _TruthBinning[iTruthBin-1],
-                _TruthBinning[iTruthBin], _EndZCut, false, 1, syst_name);
+                _TruthBinning[iTruthBin], _EndZCut, _DoNegativeReco, 1, syst_name);
 
         break;
       }
@@ -2034,14 +2034,14 @@ bool protoana::ProtoDUNEFit::BuildSystThenApplyToSample(
             protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
                 _MCFileNames[iChan], _RecoTreeName, _RecoBinning,
                 _ChannelNames[iChan], _BackgroundTopologyName[iTopo],
-                _BackgroundTopology[iTopo], _EndZCut, tmin, tmax, false, -1,
+                _BackgroundTopology[iTopo], _EndZCut, tmin, tmax, _DoNegativeReco, -1,
                 syst_name);
 
         high_hist =
             protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
                 _MCFileNames[iChan], _RecoTreeName, _RecoBinning,
                 _ChannelNames[iChan], _BackgroundTopologyName[iTopo],
-                _BackgroundTopology[iTopo], _EndZCut, tmin, tmax, false, 1,
+                _BackgroundTopology[iTopo], _EndZCut, tmin, tmax, _DoNegativeReco, 1,
                 syst_name);
         break;
       }

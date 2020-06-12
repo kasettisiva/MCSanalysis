@@ -1664,6 +1664,7 @@ TCanvas* protoana::ProtoDUNEFitUtils::PlotNuisanceParameters(TTree* tree, RooWor
     }
 
     nuisancehisto->SetBinError(i+1, temphisto->GetMean());
+    nuisancehisto->GetXaxis()->SetBinLabel(i+1, varName);
     delete temphisto;
   }
 
