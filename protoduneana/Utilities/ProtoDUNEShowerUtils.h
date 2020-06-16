@@ -30,6 +30,8 @@ namespace protoana {
 
     /// Get the hits from a given reco shower
     const std::vector<const recob::Hit*> GetRecoShowerHits(const recob::Shower &shower, art::Event const &evt, const std::string showerModule) const;
+    const std::vector<art::Ptr<recob::Hit>> GetRecoShowerArtHits(const recob::Shower &shower, art::Event const &evt, const std::string showerModule) const;
+
     /// Get the number of hits from a given reco shower
     unsigned int GetNumberRecoShowerHits(const recob::Shower &shower, art::Event const &evt, const std::string showerModule) const;
     /// Get the associated PCAxis object (from a principal component analysis)

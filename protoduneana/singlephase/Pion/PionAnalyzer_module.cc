@@ -28,6 +28,7 @@
 #include "nusimdata/SimulationBase/MCTruth.h"
 #include "lardataobj/AnalysisBase/CosmicTag.h"
 #include "lardataobj/AnalysisBase/T0.h"
+#include "lardata/DetectorInfoServices/DetectorPropertiesService.h"
 #include "larcore/Geometry/Geometry.h"
 #include "larreco/RecoAlg/TrackMomentumCalculator.h"
 
@@ -980,6 +981,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
 
   protoana::ProtoDUNETruthUtils                         truthUtil;
   art::ServiceHandle < geo::Geometry > fGeometryService;
+  auto const* detprop = lar::providerFrom<detinfo::DetectorPropertiesService>();
   trkf::TrackMomentumCalculator track_p_calc;
   ////////////////////////////////////////
   
@@ -2854,35 +2856,65 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
           reco_daughter_allShower_dirY.push_back( pandora2Shower->Direction().Y() );
           reco_daughter_allShower_dirZ.push_back( pandora2Shower->Direction().Z() );
 
-          auto recoShowers = evt.getValidHandle<std::vector<recob::Shower>>(
-              "pandora2Shower");
-          std::vector<anab::Calorimetry> shower_calos;
-          try {
-            const art::FindManyP<anab::Calorimetry> findCalorimetry(
-                recoShowers, evt, "pandora2ShowercaloSCE");
-            std::vector<art::Ptr<anab::Calorimetry>> theseCalos =
-                findCalorimetry.at(pandora2Shower->ID());
-        
-            for( auto calo : theseCalos){
-              shower_calos.push_back(*calo);
+
+          const std::vector<art::Ptr<recob::Hit>> hits =
+              showerUtil.GetRecoShowerArtHits(
+                  *pandora2Shower, evt, "pandora2Shower");
+
+          art::FindManyP<recob::SpacePoint> spFromHits(hits, evt, fHitTag);
+          //double total_shower_energy = 0.;
+          //need to get average y
+          std::vector<double> x_vec, y_vec, z_vec;
+          double total_y = 0.;
+          int n_good_y = 0;
+          std::vector<art::Ptr<recob::Hit>> good_hits;
+
+          for (size_t iHit = 0; iHit < hits.size(); ++iHit) {
+            auto theHit = hits[iHit];
+            if (theHit->View() != 2) continue; //skip induction planes
+
+            good_hits.push_back(theHit);
+
+            double shower_hit_x = detprop->ConvertTicksToX(
+                theHit->PeakTime(),
+                theHit->WireID().Plane,
+                theHit->WireID().TPC, 0);
+ 
+            double shower_hit_z = geom->Wire(theHit->WireID()).GetCenter().Z();
+
+            x_vec.push_back(shower_hit_x);
+            z_vec.push_back(shower_hit_z);
+
+            std::vector<art::Ptr<recob::SpacePoint>> sps = spFromHits.at(iHit);
+            //std::cout << shower_hit_x << " " << shower_hit_z << " ";
+            if (!sps.empty()) {
+              y_vec.push_back(sps[0]->XYZ()[1]);
+              total_y += y_vec.back();
+              ++n_good_y;
+              //std::cout << shower_hit_y_vec.back();
             }
-          }
-          catch(...){
-            std::cerr << "No shower calorimetry object found..." << 
-                         " returning empty vector" << std::endl;
+            else {
+             y_vec.push_back(-999.);
+            }
+            //std::cout << std::endl;
           }
 
-          if (shower_calos.size()) {
-            std::vector<float> shower_dEdX = shower_calos[0].dEdx();
-            std::vector<float> shower_pitch = shower_calos[0].TrkPitchVec();
-            double total_energy = 0.;
-            for (size_t i = 0; i < shower_dEdX.size(); ++i) {
-              total_energy += shower_dEdX[i]*shower_pitch[i];
-            }
-            reco_daughter_allShower_energy.push_back(total_energy);
+          if (n_good_y < 1) {
+            reco_daughter_allShower_energy.push_back(-999.);
           }
           else {
-            reco_daughter_allShower_energy.push_back(-999.);
+            double total_shower_energy = 0.;
+            for (size_t iHit = 0; iHit < good_hits.size(); ++iHit) {
+              auto theHit = good_hits[iHit];
+              if (theHit->View() != 2) continue; //skip induction planes
+
+              if (y_vec[iHit] < -100.)
+                y_vec[iHit] = total_y / n_good_y;
+
+              total_shower_energy += calibration.HitToEnergy(
+                  good_hits[iHit], x_vec[iHit], y_vec[iHit], z_vec[iHit]);
+            }
+            reco_daughter_allShower_energy.push_back(total_shower_energy);
           }
         }
         else{

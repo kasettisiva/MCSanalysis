@@ -175,7 +175,9 @@ double protoana::ProtoDUNECalibration::tot_Ef( double x, double y, double z ){
   else return 0.5;
 }
 
-double protoana::ProtoDUNECalibration::HitToEnergy(const art::Ptr<recob::Hit> hit, double X, double Y, double Z){
+double protoana::ProtoDUNECalibration::HitToEnergy(
+    const art::Ptr<recob::Hit> hit, double X, double Y, double Z,
+    double recomb_factor) {
 
   //Only do collection plane
   //if( hit->View() != 2 ) return 0.;
@@ -201,7 +203,7 @@ double protoana::ProtoDUNECalibration::HitToEnergy(const art::Ptr<recob::Hit> hi
   energy /= calib_factors[planeID];
   energy *= X_factor;
   energy *= YZ_factor;
-  energy /= 0.69/*recomb_factor*/;
+  energy /= recomb_factor;
   
   return energy;
 

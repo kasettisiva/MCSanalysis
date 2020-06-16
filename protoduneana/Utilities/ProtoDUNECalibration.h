@@ -24,7 +24,9 @@ namespace protoana{
           const recob::Track &track, art::Event const &evt,
           const std::string trackModule, const std::string caloModule,
           size_t planeID, double negativeZFix = 0.);
-      double HitToEnergy(const art::Ptr<recob::Hit> hit, double X, double Y, double Z);
+      double HitToEnergy(
+          const art::Ptr<recob::Hit> hit, double X, double Y, double Z,
+          double recomb_factor=.6417);
 
     private:
       float calc_dEdX(double dqdx, double betap, double Rho, double Efield, double Wion, double alpha);

@@ -35,6 +35,22 @@ const std::vector<const recob::Hit*> protoana::ProtoDUNEShowerUtils::GetRecoShow
 
 }
 
+
+// Get the hits from a given reco shower
+const std::vector<art::Ptr<recob::Hit>> protoana::ProtoDUNEShowerUtils::GetRecoShowerArtHits(
+    const recob::Shower &shower, art::Event const &evt, const std::string showerModule) const {
+
+  auto recoShowers = evt.getValidHandle<std::vector<recob::Shower> >(showerModule);
+  art::FindManyP<recob::Hit> findHits(recoShowers,evt,showerModule);
+
+  // Shower.ID is sometimes at a default value - make sure we get the correct one
+  int actualIndex = GetShowerIndex(shower,evt,showerModule);
+
+  std::vector<art::Ptr<recob::Hit>> showerHits = findHits.at(actualIndex);
+  return showerHits;  
+
+}
+
 // Get the hits from a given reco shower
 unsigned int protoana::ProtoDUNEShowerUtils::GetNumberRecoShowerHits(const recob::Shower &shower, art::Event const &evt, const std::string showerModule) const{
 
@@ -131,3 +147,27 @@ std::vector<anab::Calorimetry> protoana::ProtoDUNEShowerUtils::GetRecoShowerCalo
 
 
 }
+
+// Get the space points associated to the Shower 
+/*
+const std::vector<const recob::SpacePoint*>
+    protoana::ProtoDUNEShowerUtils::GetShowerSpacePoints(
+        const recob::Shower & shower, art::Event const & evt,
+        const std::string showerLabel) const {
+
+  // Get the particles and their associations
+  auto particles =
+      evt.getValidHandle<std::vector<recob::PFParticle>>(showerLabel);
+  const art::FindManyP<recob::SpacePoint>
+      findSpacePoints(particles, evt, showerLabel);
+  const std::vector<art::Ptr<recob::SpacePoint>> pfpSpacePoints = findSpacePoints.at(particle.Self());
+
+  // We don't want the art::Ptr so we need to get rid of it
+  std::vector<const recob::SpacePoint*> sp;
+  for(auto pointer : pfpSpacePoints){
+    sp.push_back(pointer.get());
+  }  
+
+  return sp;
+}
+*/
