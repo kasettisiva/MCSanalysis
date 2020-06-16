@@ -268,8 +268,9 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
   // Check if this is MC toys case
   // ----------------------------------------------------------------------------------------------------
 
-  if(_NToys > 0){
+  if (_NToys > 1/*0*/) {
     toys_tree = fitandgen->GenerateAndFit(ws, _NToys);
+    std::cout << "Got tree " << toys_tree << std::endl;
     toys_tree->SetNameTitle("protodUNE_mctoysresults", "protodUNE_mctoysresults");
 
     // For each set of plots need to clone the output tree to avoid ROOT crashes
@@ -283,7 +284,12 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
     TCanvas* nuispullscanvas =  protoana::ProtoDUNEFitUtils::PlotNuisanceParametersPull(mctoys_results3, ws);
 
     TTree *mctoys_results4 = (TTree*)toys_tree->Clone();
-    TCanvas* avresultcanvas = protoana::ProtoDUNEFitUtils::PlotAverageResultsFromToys(mctoys_results4, ws, "Channel0", "SigTopo");
+    //TCanvas* avresultcanvas = protoana::ProtoDUNEFitUtils::PlotAverageResultsFromToys(mctoys_results4, ws, "Channel0", "SigTopo");
+    TCanvas* avresultcanvas = protoana::ProtoDUNEFitUtils::PlotAverageResultsFromToys(mctoys_results4, ws, "POI", "POI");
+    std::cout << "plotted ave" << std::endl;
+
+    // Save workspace
+    protoana::ProtoDUNEFitUtils::SaveWorkspace(ws, Outputfile);
 
     TFile *f = new TFile(Outputfile.Data(), "UPDATE");
 
@@ -292,8 +298,10 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
 
     toys_tree->Write();
     nuisancecanvas->Write();
-    pullscanvas->Write();
-    nuispullscanvas->Write();
+    if (_NToys > 1) {
+      pullscanvas->Write();
+      nuispullscanvas->Write();
+    }
     avresultcanvas->Write();
 
     for(unsigned int i=0; i < bfAsimovplots.size(); i++){
@@ -360,8 +368,11 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
   // ----------------------------------------------------------------------------------------------------
   // Continue with either asimov or data fit
   // ----------------------------------------------------------------------------------------------------
-
-  if(_DoAsimovFit){
+ 
+  else if (_NToys == 1) {
+    fitresult = fitandgen->GenerateAndFitOneToy(ws);
+  }
+  else if (_DoAsimovFit) {
     fitresult = fitandgen->FitAsimovData(ws);
     treename = "protodUNE_asimovresults";
   }
@@ -1167,12 +1178,14 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
         protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(
             _DataFileNames[i], _RecoTreeName, _RecoBinning, _ChannelNames[i],
             _EndZCut, _DoNegativeReco));
+    /*
     if (_StatFluctuation) {
       for (int j = 0; j <= _datahistos.back()->GetNbinsX(); ++j) {
         double new_val = rand.Poisson(_datahistos.back()->GetBinContent(j));
         _datahistos.back()->SetBinContent(j, new_val);
       }
     }
+    */
   }
 
   for(int i=0; i < ninctopo; i++){
@@ -1242,12 +1255,14 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
           _EndZCut, _DoNegativeReco, true));
   }
   _incdatahistos.push_back(incdatahisto);
+  /*
   if (_StatFluctuation) {
     for (int j = 0; j <= _incdatahistos.back()->GetNbinsX(); ++j) {
       double new_val = rand.Poisson(_incdatahistos.back()->GetBinContent(j));
       _incdatahistos.back()->SetBinContent(j, new_val);
     }
   }
+  */
 
   std::pair<TH1 *, TH1 *> inc_eff_num_denom = 
         protoana::ProtoDUNESelectionUtils::GetMCIncidentEfficiency(
@@ -1377,12 +1392,14 @@ bool protoana::ProtoDUNEFit::FillSidebandHistograms_Pions() {
           _DataControlSampleFiles[0], _RecoTreeName, "APA2",
           _EndZCut, _SidebandBinning));
 
+  /*
   if (_StatFluctuation) {
     for (int j = 0; j <= _sideband_hists_data.back()->GetNbinsX(); ++j) {
       double new_val = rand.Poisson(_sideband_hists_data.back()->GetBinContent(j));
       _sideband_hists_data.back()->SetBinContent(j, new_val);
     }
   }
+  */
 
   return true;
 }
@@ -1701,7 +1718,7 @@ bool protoana::ProtoDUNEFit::Configure(std::string configPath){
   _DoScaleMCToData             = pset.get<bool>("DoScaleMCToData");
   _DoScaleMuonContent          = pset.get<bool>("DoScaleMuonContent");
   _RandSigPriors               = pset.get<bool>("RandSigPriors");
-  _StatFluctuation             = pset.get<bool>("StatFluctuation");
+  //_StatFluctuation             = pset.get<bool>("StatFluctuation");
   _DataIsMC                    = pset.get<bool>("DataIsMC");
   _OnlyDrawXSecs               = pset.get<bool>("OnlyDrawXSecs");
   _WirePitch                   = pset.get<double>("WirePitch");

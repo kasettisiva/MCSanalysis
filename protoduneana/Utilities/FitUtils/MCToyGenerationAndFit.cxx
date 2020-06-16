@@ -189,6 +189,73 @@ TTree* protoana::MCToyGenerationAndFit::GenerateAndFit(RooWorkspace* ws, int nex
 }
 
 //********************************************************************
+RooFitResult * protoana::MCToyGenerationAndFit::GenerateAndFitOneToy(
+    RooWorkspace* ws) {
+//********************************************************************
+  
+  if(!ws){
+    std::cerr << "ERROR::NULL Workspace. Return empty fit!!" << std::endl;
+    return NULL;
+  }
+
+  // Get the configuration model from workspace
+  RooStats::ModelConfig *combined_config = (RooStats::ModelConfig*)ws->obj("ModelConfig");
+  if(!combined_config){
+    std::cerr << "ERROR::No model config " << " ModelConfig " << " in workspace. Return empty fit!!" << std::endl;
+    return NULL;
+  }
+  
+  // Silence the output
+  RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR);
+
+  //RooAbsPdf* pdf = combined_config->GetPdf();
+ // const RooArgSet* obs_set = combined_config->GetObservables();
+
+  // Create mc study. Only used to store the fit result
+  //RooMCStudy* mcstudy = new RooMCStudy( *pdf, *obs_set, RooFit::FitOptions("r"));
+
+  // Create test statistics object
+  RooStats::ProfileLikelihoodTestStat ts(*combined_config->GetPdf());
+
+  // Create toy mc sampler
+  RooStats::ToyMCSampler sampler(ts, 1);
+  sampler.SetPdf(*combined_config->GetPdf());
+  sampler.SetObservables(*combined_config->GetObservables());
+  sampler.SetGlobalObservables(*combined_config->GetGlobalObservables());
+  sampler.SetParametersForTestStat(*combined_config->GetParametersOfInterest());
+  
+  RooArgSet poiAndNuisance;
+  poiAndNuisance.add(*combined_config->GetParametersOfInterest());
+  if(combined_config->GetNuisanceParameters())
+    poiAndNuisance.add(*combined_config->GetNuisanceParameters());
+  RooArgSet* nullParams = (RooArgSet*) poiAndNuisance.snapshot(); 
+  //nullParams->Print();
+
+  // Will be used as start values of fit
+  ws->saveSnapshot("paramsToFit",poiAndNuisance);
+
+//  for(int i=0; i<nexp; ++i) {
+//    if(i%10==0)
+//      std::cout << "INFO::Running on toy " << i << std::endl;
+
+    // Reset starting values of fit
+    ws->loadSnapshot("paramsToFit");
+
+    RooAbsData* toyMC = sampler.GenerateToyData( *nullParams );
+    toyMC->Print();
+
+    RooFitResult* fresult = combined_config->GetPdf()->fitTo(*toyMC, RooFit::Minimizer(_minimizer.Data(), _algorithm.Data()), RooFit::Save(), RooFit::Strategy(_fitstrategy), RooFit::Minos(_minoserror), RooFit::PrintLevel(-1), RooFit::Constrain(*combined_config->GetPdf()->getParameters(*toyMC)), RooFit::Extended(), RooFit::Offset(true));
+
+    return fresult;
+
+//    mcstudy->addFitResult(*fresult);
+//    
+//    delete toyMC;
+//  }
+
+}
+
+//********************************************************************
 RooFitResult* protoana::MCToyGenerationAndFit::FitData(RooWorkspace* ws, bool isWeighted){
   //********************************************************************
 

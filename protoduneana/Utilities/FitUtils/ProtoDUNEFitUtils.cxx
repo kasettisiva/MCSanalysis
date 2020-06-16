@@ -1502,6 +1502,7 @@ TCanvas* protoana::ProtoDUNEFitUtils::PlotNuisanceParametersPull(TTree* tree, Ro
   RooRealVar* var(0);
   TIterator* Itr = nuisanceParsList->createIterator();
   Int_t counter = 0;
+  int ngammas = 0;
   for (Int_t i=0; (var = (RooRealVar*)Itr->Next()); ++i) {
     if(var->isConstant()) continue;
     TString varName = var->GetName() + TString("pull"); 
@@ -1509,6 +1510,9 @@ TCanvas* protoana::ProtoDUNEFitUtils::PlotNuisanceParametersPull(TTree* tree, Ro
     if(!varName.Contains("alpha") && !varName.Contains("gamma_stat")) continue;
     if(varName.Contains("Lumi") || varName.Contains("binWidth") || varName.Contains("corr")) continue;
     tree->SetBranchAddress(varName.Data(), &varValsPull[i]);
+
+    if (varName.Contains("gamma_stat"))
+      ++ngammas;
 
     TH1F* nuispullhisto = new TH1F(Form("nuispullhisto%i",i),Form("nuispullhisto%i",i),100,-5,5);
     for(Int_t j=0; j < tree->GetEntries(); j++){
@@ -1574,6 +1578,8 @@ TCanvas* protoana::ProtoDUNEFitUtils::PlotNuisanceParametersPull(TTree* tree, Ro
   mline->SetLineColor(kBlue);
   TLine *sline = new TLine(0,1.0,n,1.0);
   sline->SetLineColor(kBlue);
+  TLine *vline = new TLine(n-ngammas, -3., n - ngammas, 3.);
+  vline->SetLineColor(kGreen);
 
   cpullnui->cd();
   nuispullsigmahisto->Draw("e");
@@ -1581,6 +1587,7 @@ TCanvas* protoana::ProtoDUNEFitUtils::PlotNuisanceParametersPull(TTree* tree, Ro
   mline->Draw();
   sline->Draw();
   legend->Draw();
+  vline->Draw();
   
   return cpullnui;
 
