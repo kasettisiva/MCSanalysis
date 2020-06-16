@@ -27,7 +27,7 @@ IncidentMCFileNames:     ["/dune/app/users/calcuttj/PionStudies/rDataFrame/event
 IncidentDataFileNames:   ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_beamType.root"] 
 
 # Number of toys to generate for MC studies. Any number above 0 will enable toy mc generation and won't fit the data.
-NToys:                   200 
+NToys:                   0 
 
 # Name of the tree with reconstructed events.
 RecoTreeName:            "pionana/beamana"
@@ -66,7 +66,7 @@ EnableStatisticalError:  true
 IgnoreStatisticalErrorBelow: 0.01 # MC stats error will be ignored if below this value
 
 # Enable systematic error - need files with the fractional error for each systematic and a list of systematics to consider. Two histograms are required for each histogram, one with +1 sigma variation and one with the -1 sigma variation. 
-EnableSystematicError:   true 
+EnableSystematicError:   false 
 NormalisedSystematic:    false       # Systematics are added as 'normalised', only the effect of shape is considered.
 CommonSystFile:          "/dune/app/users/calcuttj/larsoft/srcs/protoduneana/protoduneana/Utilities/FitUtils/asdf.root"
 UseComputedSysts:        false 
@@ -89,4 +89,4 @@ OnlyDrawXSecs: false
 DataIsMC: true
 DoScaleMuonContent: false 
 
-RandSigPriors: false 
+RandSigPriors: true 

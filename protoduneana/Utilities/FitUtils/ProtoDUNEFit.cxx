@@ -695,7 +695,13 @@ void protoana::ProtoDUNEFit::AddSamplesAndChannelsToMeasurement(RooStats::HistFa
             poiname.ReplaceAll(channelname.Data(),"");
             poiname.ReplaceAll("__","_");
             meas.SetPOI(poiname.Data());
-            sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 100./*2.0*/);
+            //sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 100./*2.0*/);
+            if (_RandSigPriors) {
+              sample.AddNormFactor(poiname.Data(), rand.Gaus(1.0, .1), 0., 100.);
+            }
+            else {
+              sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 100.0);
+            }
             mf::LogInfo("BuildMeasurement") << "Sample " << sample.GetName() << " has normalisation parameter " << poiname.Data();
           }
         }
@@ -853,7 +859,13 @@ void protoana::ProtoDUNEFit::AddIncidentSamplesAndChannelsToMeasurement(RooStats
         poiname.ReplaceAll(channelname.Data(),"");
         poiname.ReplaceAll("__","_");
         meas.SetPOI(poiname.Data());
-        sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 2.0);
+        //sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 2.0);
+        if (_RandSigPriors) {
+          sample.AddNormFactor(poiname.Data(), rand.Gaus(1.0, .1), 0., 2.);
+        }
+        else {
+          sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 2.0);
+        }
         mf::LogInfo("BuildMeasurement") << "Sample " << sample.GetName() << " has normalisation parameter " << poiname.Data();
       }
     } 
@@ -920,7 +932,13 @@ void protoana::ProtoDUNEFit::AddIncidentSamplesAndChannelsToMeasurement(RooStats
     poiname.ReplaceAll(".0","");
     poiname.ReplaceAll("-","_");
     meas.SetPOI(poiname.Data()); // AddPOI would also work
-    sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 100.0);
+    //sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 100.0);
+    if (_RandSigPriors) {
+      sample.AddNormFactor(poiname.Data(), rand.Gaus(1.0, .1), 0., 100.);
+    }
+    else {
+      sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 100.0);
+    }
     mf::LogInfo("AddIncidentSamplesAndChannelsToMeasurement") << "Sample " << sample.GetName() << " has normalisation parameter " << poiname.Data();
     
     // Add sample to channel
@@ -1015,7 +1033,13 @@ void protoana::ProtoDUNEFit::AddSidebandSamplesAndChannelsToMeasurement(
           poiname.ReplaceAll("-","_");
           poiname.ReplaceAll("__","_");
           meas.SetPOI(poiname.Data());
-          sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 100.0);
+          //sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 100.0);
+          if (_RandSigPriors) {
+            sample.AddNormFactor(poiname.Data(), rand.Gaus(1.0, .1), 0., 100.);
+          }
+          else {
+            sample.AddNormFactor(poiname.Data(), 1.0, 0.0, 100.0);
+          }
           mf::LogInfo(message_source) << "Sample " << sample.GetName() <<
               " has normalisation parameter " << poiname.Data();
         //}
