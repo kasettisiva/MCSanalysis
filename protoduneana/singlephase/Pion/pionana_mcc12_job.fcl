@@ -1,5 +1,6 @@
 #include "PionAnalyzer.fcl"
 #include "services_dune.fcl"
+#include "missingproductfilter.fcl"
 
 
 process_name: PionAna
@@ -34,6 +35,11 @@ physics:
  
  }
 
+ filters: {
+   fMissingProds: @local::standard_missingproductfilter
+ }
+ fpath: [fMissingProds]
+
  analyzers:
  {
   pionana:          @local::pionanalysis
@@ -48,7 +54,7 @@ physics:
 }
 
 outputs: {}
-physics.analyzers.pionana.SelectEvents: []
+physics.analyzers.pionana.SelectEvents: ["fpath"]
 physics.analyzers.pionana.NSliceCheck: 2
 physics.analyzers.pionana.CalorimetryTag: "pandoracaloSCE"
 physics.analyzers.pionana.HitTag: "hitpdune"

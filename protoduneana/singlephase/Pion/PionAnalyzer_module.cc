@@ -326,14 +326,16 @@ namespace pionana {
   struct calo_point{
 
     calo_point();
-    calo_point(size_t w, double p, double dedx, size_t index, double input_z)
-        : wire(w), pitch(p), dEdX(dedx), hit_index(index), z(input_z) {};
+    calo_point(size_t w, double p, double dedx, size_t index,
+               double input_z, int t)
+        : wire(w), pitch(p), dEdX(dedx), hit_index(index), z(input_z), tpc(t) {};
 
     size_t wire;
     double pitch;
     double dEdX;
     size_t hit_index; 
     double z;
+    int tpc;
   };
 
   cnnOutput2D GetCNNOutputFromPFParticle( const recob::PFParticle & part, const art::Event & evt, const anab::MVAReader<recob::Hit,4> & CNN_results,  protoana::ProtoDUNEPFParticleUtils & pfpUtil, std::string fPFParticleTag ){
@@ -531,7 +533,14 @@ private:
   double reco_beam_trackEndDirX, reco_beam_trackEndDirY, reco_beam_trackEndDirZ;
   std::vector< double > reco_beam_dEdX, reco_beam_dQdX, reco_beam_resRange, reco_beam_TrkPitch;
   std::vector< double > reco_beam_calo_wire, reco_beam_calo_tick, reco_beam_calo_wire_z;
+  std::vector<int> reco_beam_calo_TPC;
   std::vector< double > reco_beam_calibrated_dEdX;
+
+  std::vector<double> reco_beam_dEdX_no_SCE, reco_beam_dQdX_no_SCE, reco_beam_resRange_no_SCE, reco_beam_TrkPitch_no_SCE;
+  std::vector<double> reco_beam_calo_wire_no_SCE, reco_beam_calo_tick_no_SCE, reco_beam_calo_wire_z_no_SCE;
+  std::vector<int> reco_beam_calo_TPC_no_SCE;
+  std::vector< double > reco_beam_calibrated_dEdX_no_SCE;
+
   std::vector< int >    reco_beam_hit_true_ID, reco_beam_hit_true_origin, reco_beam_hit_true_slice; 
   int reco_beam_trackID;
   bool reco_beam_flipped;
@@ -971,7 +980,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
    
   // Get various utilities 
   protoana::ProtoDUNEPFParticleUtils                    pfpUtil;
-  auto pfpVec = evt.getValidHandle< std::vector< recob::PFParticle > >( fPFParticleTag );   
+  auto pfpVec = evt.getValidHandle< std::vector< recob::PFParticle > >( fPFParticleTag );
 
   protoana::ProtoDUNETrackUtils                         trackUtil;
   protoana::ProtoDUNEShowerUtils                        showerUtil;
@@ -1131,12 +1140,18 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
   }
   
 
+std::cout << "Getting beam particles" << std::endl;
   std::vector<const recob::PFParticle*> beamParticles = pfpUtil.GetPFParticlesFromBeamSlice(evt,fPFParticleTag);
+std::cout << "Got" << std::endl;
 
   if(beamParticles.size() == 0){
     std::cerr << "We found no beam particles for this event... moving on" << std::endl;
     return;
   }
+  else {
+    std::cout << "Found " << beamParticles.size() << " particles" << std::endl;
+  }
+   
   //////////////////////////////////////////////////////////////////
 
 
@@ -2011,6 +2026,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
       reco_beam_TrkPitch.push_back( calo[0].TrkPitchVec()[i] );
 
       const recob::Hit & theHit = (*allHits)[ TpIndices[i] ];
+      reco_beam_calo_TPC.push_back(theHit.WireID().TPC);
       if (theHit.WireID().TPC == 1) {
         reco_beam_calo_wire.push_back( theHit.WireID().Wire );
       }
@@ -2039,6 +2055,49 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
     for( size_t i = 0; i < new_dEdX.size(); ++i ){ reco_beam_calibrated_dEdX.push_back( new_dEdX[i] ); }
     ////////////////////////////////////////////
 
+    //no SCE
+    std::vector< anab::Calorimetry> calo_no_SCE = trackUtil.GetRecoTrackCalorimetry(*thisTrack, evt, fTrackerTag, "pandoracalo");
+    auto calo_dQdX_no_SCE = calo_no_SCE[0].dQdx();
+    auto calo_dEdX_no_SCE = calo_no_SCE[0].dEdx();
+    auto calo_range_no_SCE = calo_no_SCE[0].ResidualRange();
+    auto TpIndices_no_SCE = calo_no_SCE[0].TpIndices();
+    auto theXYZPoints_no_SCE = calo_no_SCE[0].XYZ();
+    //std::cout << "View 2 hits " << calo_dQdX.size() << std::endl;
+
+    //std::vector< size_t > calo_hit_indices;
+    for( size_t i = 0; i < calo_dQdX_no_SCE.size(); ++i ){
+      reco_beam_dQdX_no_SCE.push_back( calo_dQdX_no_SCE[i] );
+      reco_beam_dEdX_no_SCE.push_back( calo_dEdX_no_SCE[i] );
+      reco_beam_resRange_no_SCE.push_back( calo_range_no_SCE[i] );
+      reco_beam_TrkPitch_no_SCE.push_back( calo_no_SCE[0].TrkPitchVec()[i] );
+
+      const recob::Hit & theHit = (*allHits)[ TpIndices_no_SCE[i] ];
+      reco_beam_calo_TPC_no_SCE.push_back(theHit.WireID().TPC);
+      if (theHit.WireID().TPC == 1) {
+        reco_beam_calo_wire_no_SCE.push_back( theHit.WireID().Wire );
+      }
+      else if (theHit.WireID().TPC == 5) {
+        reco_beam_calo_wire_no_SCE.push_back( theHit.WireID().Wire + 479);
+      }
+      else {
+        reco_beam_calo_wire_no_SCE.push_back(theHit.WireID().Wire );
+      }
+      reco_beam_calo_tick_no_SCE.push_back( theHit.PeakTime() );
+      //calo_hit_indices_no_SCE.push_back( TpIndices[i] );
+
+      reco_beam_calo_wire_z_no_SCE.push_back(
+          geom->Wire(theHit.WireID()).GetCenter().Z());
+
+      if (fVerbose) 
+        std::cout << theXYZPoints_no_SCE[i].X() << " " << theXYZPoints_no_SCE[i].Y() << " " <<
+                     theXYZPoints_no_SCE[i].Z() << " " << theHit.WireID().Wire << " " <<
+                     geom->Wire(theHit.WireID()).GetCenter().Z() << " " <<
+                     theHit.WireID().TPC << " " << std::endl;
+    }
+    std::vector< float > new_dEdX_no_SCE = calibration.GetCalibratedCalorimetry(  *thisTrack, evt, fTrackerTag, "pandoracalo", 2, -1.);
+    for( size_t i = 0; i < new_dEdX_no_SCE.size(); ++i ){ reco_beam_calibrated_dEdX_no_SCE.push_back( new_dEdX_no_SCE[i] ); }
+    ///////////////////////////////////////////
+
     std::pair< double, int > pid_chi2_ndof = trackUtil.Chi2PID( reco_beam_calibrated_dEdX, reco_beam_resRange, templates[ 2212 ] );
     reco_beam_Chi2_proton = pid_chi2_ndof.first; 
     reco_beam_Chi2_ndof = pid_chi2_ndof.second;
@@ -2059,7 +2118,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
         reco_beam_calo_points.push_back(
           calo_point(reco_beam_calo_wire[i], reco_beam_TrkPitch[i],
                      reco_beam_calibrated_dEdX[i], calo_hit_indices[i],
-                     reco_beam_calo_wire_z[i]));
+                     reco_beam_calo_wire_z[i], reco_beam_calo_TPC[i]));
       }
 
       //std::cout << "N Calo points: " << reco_beam_calo_points.size() << std::endl;
@@ -2075,6 +2134,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
         reco_beam_TrkPitch[i] = thePoint.pitch;
         calo_hit_indices[i] = thePoint.hit_index;
         reco_beam_calo_wire_z[i] = thePoint.z;
+        reco_beam_calo_TPC[i] = thePoint.tpc;
       }
 
 
@@ -3259,6 +3319,21 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("reco_beam_calo_wire", &reco_beam_calo_wire);
   fTree->Branch("reco_beam_calo_wire_z", &reco_beam_calo_wire_z);
   fTree->Branch("reco_beam_calo_tick", &reco_beam_calo_tick);
+  fTree->Branch("reco_beam_calo_TPC", &reco_beam_calo_TPC);
+
+  //No SCE
+  fTree->Branch("reco_beam_dQdX_no_SCE", &reco_beam_dQdX_no_SCE);
+  fTree->Branch("reco_beam_dEdX_no_SCE", &reco_beam_dEdX_no_SCE);
+  fTree->Branch("reco_beam_calibrated_dEdX_no_SCE", &reco_beam_calibrated_dEdX_no_SCE);
+  fTree->Branch("reco_beam_resRange_no_SCE", &reco_beam_resRange_no_SCE);
+  fTree->Branch("reco_beam_TrkPitch_no_SCE", &reco_beam_TrkPitch_no_SCE);
+  fTree->Branch("reco_beam_calo_wire_no_SCE", &reco_beam_calo_wire_no_SCE);
+  fTree->Branch("reco_beam_calo_wire_z_no_SCE", &reco_beam_calo_wire_z_no_SCE);
+  fTree->Branch("reco_beam_calo_tick_no_SCE", &reco_beam_calo_tick_no_SCE);
+  fTree->Branch("reco_beam_calo_TPC_no_SCE", &reco_beam_calo_TPC_no_SCE);
+  ////////////////////////
+
+
   fTree->Branch("reco_beam_hit_true_ID", &reco_beam_hit_true_ID);
   fTree->Branch("reco_beam_hit_true_slice", &reco_beam_hit_true_slice);
   fTree->Branch("reco_beam_hit_true_origin", &reco_beam_hit_true_origin);
@@ -4104,10 +4179,21 @@ void pionana::PionAnalyzer::reset()
   reco_beam_calo_wire.clear();
   reco_beam_calo_wire_z.clear();
   reco_beam_calo_tick.clear();
+  reco_beam_calo_TPC.clear();
   reco_beam_hit_true_ID.clear();
   reco_beam_hit_true_origin.clear();
   reco_beam_hit_true_slice.clear();
 
+  //No SCE
+  reco_beam_resRange_no_SCE.clear();
+  reco_beam_TrkPitch_no_SCE.clear();
+  reco_beam_calo_wire_no_SCE.clear();
+  reco_beam_calo_wire_z_no_SCE.clear();
+  reco_beam_calo_tick_no_SCE.clear();
+  reco_beam_calo_TPC_no_SCE.clear();
+  reco_beam_dQdX_no_SCE.clear();
+  reco_beam_dEdX_no_SCE.clear();
+  reco_beam_calibrated_dEdX_no_SCE.clear();
 /*
   reco_daughter_dQdX.clear();
   reco_daughter_dEdX.clear();
