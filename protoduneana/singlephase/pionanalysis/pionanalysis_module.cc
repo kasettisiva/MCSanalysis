@@ -134,7 +134,7 @@ private:
   double high_pressure;
 
   //Beamline utils   
-protoana::ProtoDUNEBeamCuts beam_cuts; 
+  protoana::ProtoDUNEBeamCuts beam_cuts; 
   protoana::ProtoDUNEBeamlineUtils fBeamlineUtils;
   protoana::ProtoDUNEDataUtils dataUtil;
 
@@ -143,6 +143,7 @@ protoana::ProtoDUNEBeamCuts beam_cuts;
   std::string fTrackerTag;
   std::string fShowerTag;
   std::string fPFParticleTag;
+  std::string fHitTag;
   //std::string fGeneratorTag;
   
   //Beam Momentum
@@ -166,8 +167,16 @@ protoana::ProtoDUNEBeamCuts beam_cuts;
   std::vector<double> primtrklen;
   std::vector<double> primtrkID;
   std::vector<int> primtrk_trktag;
+  //hit wire and charge info
+  std::vector<std::vector<int> > wireno_2;
+  std::vector<std::vector<float> > peakTime_2;
+  std::vector<std::vector<float> > dq_2;
+  std::vector<std::vector<float> > trkhitx2;
+  std::vector<std::vector<float> > trkhity2;
+  std::vector<std::vector<float> > trkhitz2;
+
   
-  //carlo info
+  //calo info
   std::vector< std::vector<double> > primtrk_dqdx;
   std::vector< std::vector<double> > primtrk_resrange;
   std::vector< std::vector<double> > primtrk_dedx;
@@ -206,6 +215,7 @@ protoana::pionanalysis::pionanalysis(fhicl::ParameterSet const & p)
   fTrackerTag(p.get<std::string>("TrackerTag")),
   fShowerTag(p.get<std::string>("ShowerTag")),
   fPFParticleTag(p.get<std::string>("PFParticleTag")),
+  fHitTag(p.get<std::string>("HitTag")),
   //fGeneratorTag(p.get<std::string>("GeneratorTag")),
   fBeamPars(p.get<fhicl::ParameterSet>("BeamPars")),
   //fUseCERNCalibSelection(p.get<bool>("UseCERNCalibSelection")),
@@ -329,13 +339,14 @@ void protoana::pionanalysis::analyze(art::Event const & evt)
   }
   */
 
-  //HY::For Carlo info
+  //HY::For Calo info
   art::Handle< std::vector<recob::Track> > trackListHandle;
   std::vector<art::Ptr<recob::Track> > tracklist;
   if(evt.getByLabel(fTrackModuleLabel,trackListHandle)) art::fill_ptr_vector(tracklist, trackListHandle);
   else return;
   art::FindManyP<anab::Calorimetry> fmcal(trackListHandle, evt, fCalorimetryTag);
   art::FindManyP<recob::PFParticle> pfp_trk_assn(trackListHandle, evt, "pandoraTrack");
+  std::vector<art::Ptr<recob::Hit>> pfpHits;//pfpHits definition
 
   // Implementation of required member function here.
   run = evt.run();
@@ -469,11 +480,39 @@ void protoana::pionanalysis::analyze(art::Event const & evt)
 	  // of this particle might be more helpful. These return null pointers if not track-like / shower-like
 	  const recob::Track* thisTrack = pfpUtil.GetPFParticleTrack(*particle,evt,fPFParticleTag,fTrackerTag);
 	  const recob::Shower* thisShower = pfpUtil.GetPFParticleShower(*particle,evt,fPFParticleTag,fShowerTag);
+	  auto recoTracks = evt.getValidHandle<std::vector<recob::Track>>(fTrackerTag);
+	  art::FindManyP<recob::Hit> findHitsFromTracks(recoTracks,evt,fTrackerTag);
 	  if(thisTrack != 0x0) {
 	    if(!beam_cuts.IsBeamlike(*thisTrack, evt, "1")) return;
 	    std::cout << "Beam particle is track-like" << std::endl;
 	    nTrack++;
 	    primtrk_trktag.push_back(1);
+	   
+	    //Adding hit wire info using space points
+	    pfpHits = findHitsFromTracks.at(thisTrack->ID());  
+	    art::FindManyP<recob::SpacePoint> spFromHits(pfpHits, evt, fHitTag);
+
+	    std::vector<float> dqbuff, peakTbuff, xbuff, ybuff, zbuff;
+	    std::vector<int> wirebuff;
+	    dqbuff.clear(); peakTbuff.clear();wirebuff.clear();xbuff.clear();ybuff.clear();zbuff.clear();    
+	    for( unsigned i = 0; i < pfpHits.size(); ++i){
+	      std::vector<art::Ptr<recob::SpacePoint>> sps = spFromHits.at(i);
+	      if(!sps.empty()){
+		if(pfpHits[i]->WireID().Plane != 2) continue;
+		xbuff.push_back(sps[0]->XYZ()[0]);
+		ybuff.push_back(sps[0]->XYZ()[1]);
+		zbuff.push_back(sps[0]->XYZ()[2]);
+		peakTbuff.push_back(pfpHits[i]->PeakTime());
+		wirebuff.push_back(pfpHits[i]->WireID().Wire);
+		dqbuff.push_back(pfpHits[i]->Integral());
+	      }
+	    }
+	    trkhitx2.push_back(xbuff);
+	    trkhity2.push_back(ybuff);
+	    trkhitz2.push_back(zbuff);
+	    dq_2.push_back(dqbuff);
+	    wireno_2.push_back(wirebuff);
+	    peakTime_2.push_back(peakTbuff);
 
 	    //HY::Get the Calorimetry(s) from thisTrack
 	    std::vector<anab::Calorimetry> calovector = trackUtil.GetRecoTrackCalorimetry(*thisTrack, evt, fTrackerTag, fCalorimetryTag);
@@ -645,7 +684,7 @@ void protoana::pionanalysis::analyze(art::Event const & evt)
       } //if CheckIsMatched
     } //get beam timing trigger
 
-  } //if beam proton
+  } //if beam pion
 
   fTree->Fill();
 }
@@ -680,6 +719,16 @@ void protoana::pionanalysis::beginJob()
   fTree->Branch("primtrk_startx",&primtrk_startx);
   fTree->Branch("primtrk_starty",&primtrk_starty);
   fTree->Branch("primtrk_startz",&primtrk_startz);
+  //hit wire info
+  fTree->Branch("wireno_2",&wireno_2);
+  fTree->Branch("peakTime_2",&peakTime_2);
+  fTree->Branch("dq_2",&dq_2);
+  fTree->Branch("trkhitx2",&trkhitx2);
+  fTree->Branch("trkhity2",&trkhity2);
+  fTree->Branch("trkhitz2",&trkhitz2);
+  //hit wire info ends
+
+
 
   fTree->Branch("primtrk_endx",&primtrk_endx);
   fTree->Branch("primtrk_endy",&primtrk_endy);
@@ -764,6 +813,14 @@ void protoana::pionanalysis::reset()
   primtrk_hity.clear();
   primtrk_hitz.clear();
   primtrk_pitch.clear();
+  //wire info
+  wireno_2.clear();
+  peakTime_2.clear();
+  dq_2.clear();
+  trkhitx2.clear();
+  trkhity2.clear();
+  trkhitz2.clear();
+  //****************
 
   pdg_code.clear();
   n_beamparticle.clear();
