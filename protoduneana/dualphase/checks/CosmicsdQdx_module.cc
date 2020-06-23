@@ -345,15 +345,15 @@ void pddpana::CosmicsdQdx::analyze(art::Event const& e)
 
     }// end plane loop
     
-    //if( fLogLevel >= 1 ){
-    auto start = hitsTpcIdStart.begin();
-    auto end   = hitsTpcIdStart.end();
-    if( !std::equal(start + 1, end, start)) {
-      cerr<<myname<<"ERROR mismatch in TPC ID for the initial hits: ";
-      for( auto const &v: hitsTpcIdStart ){ cerr<<v<<" ";}
-      cerr<<endl;
-    } //
-
+    if( fLogLevel >= 2 ){
+      auto start = hitsTpcIdStart.begin();
+      auto end   = hitsTpcIdStart.end();
+      if( !std::equal(start + 1, end, start)) {
+	cout<<myname<<"ERROR mismatch in TPC ID for the initial hits: ";
+	for( auto const &v: hitsTpcIdStart ){ cout<<v<<" ";}
+	cout<<endl;
+      } //
+    }
   }// end track loop
     
 } // end analyze()
