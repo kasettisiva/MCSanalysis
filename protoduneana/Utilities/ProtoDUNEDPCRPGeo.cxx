@@ -69,7 +69,7 @@ crpgeoinfo protoana::ProtoDUNEDPCRPGeo::GetCRPGeoInfo( Point_t const &pnt ) cons
 
   
   double xyz[3] = {pnt.X(), pnt.Y(), pnt.Z()};
-  crp_geo_info.danode = std::abs(xyz[dcoord] - tpc->PlaneLocation(0)[dcoord]);
+  crp_geo_info.danode = tpc->PlaneLocation(0)[dcoord] - xyz[dcoord];
   
   // point coordinate in the plane
   float planeX = xyz[ tcoord2 ] - tpc->PlaneLocation(0)[ tcoord2 ];

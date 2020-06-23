@@ -38,6 +38,7 @@
 
 //
 #include "protoduneana/Utilities/ProtoDUNETrackUtils.h"
+#include "protoduneana/Utilities/ProtoDUNEDPCRPGeo.h"
 
 // ROOT
 #include "TTree.h"
@@ -106,6 +107,7 @@ private:
   float    fTrackMinLen;
   float    fTrackDriftCut;
   float    fTrackWallCut;
+  float    fTrackLemCut;
   unsigned fMaxHitMultiplicity;
 
   unsigned fDrift;
@@ -119,9 +121,20 @@ private:
   unsigned fTrajPoints;
   float    fTrackLen;
   float    fDriftOffset;
-  //float    fThetaXZ;
-  
-  //
+  float    fStartX;
+  float    fStartY;
+  float    fStartZ;
+  float    fStartNx;
+  float    fStartNy;
+  float    fStartNz;
+  float    fEndX;
+  float    fEndY;
+  float    fEndZ;
+  float    fEndNx;
+  float    fEndNy;
+  float    fEndNz;
+
+  // 
   unsigned fPlane;
   float    fHitAdcSum;
   float    fHitIntegral;
@@ -132,9 +145,12 @@ private:
   float    fX;
   float    fY;
   float    fZ;
- 
+
   // track utils
   protoana::ProtoDUNETrackUtils trackUtil;
+
+  // CRP Geo util
+  protoana::ProtoDUNEDPCRPGeo crpGeoUtil;
 
   // detector geometry
   const geo::Geometry* fGeom;
@@ -152,6 +168,7 @@ pddpana::CosmicsdQdx::CosmicsdQdx(fhicl::ParameterSet const& p)
   fTrackMinLen( p.get< float  >("TrackMinLen") ),
   fTrackDriftCut( p.get< float  >("TrackDriftCut") ),
   fTrackWallCut( p.get< float  >("TrackWallCut") ),
+  fTrackLemCut( p.get< float  >("TrackLemCut") ),
   fMaxHitMultiplicity( p.get< float  >("MaxHitMultiplicity") )
   {
     fGeom    = &*art::ServiceHandle<geo::Geometry>();
@@ -185,6 +202,24 @@ void pddpana::CosmicsdQdx::analyze(art::Event const& e)
     fTrackId     = itrk;
     fTrajPoints  = track.NumberTrajectoryPoints();
     fTrackLen    = track.Length();
+    
+    //
+    fStartX  = track.Vertex().X();
+    fStartY  = track.Vertex().Y();
+    fStartZ  = track.Vertex().Z();
+
+    fEndX    = track.End().X();
+    fEndY    = track.End().Y();
+    fEndZ    = track.End().Z();
+    
+    fStartNx = track.VertexDirection().X();
+    fStartNy = track.VertexDirection().Y();
+    fStartNz = track.VertexDirection().Z();
+
+    fEndNx   = track.EndDirection().X();
+    fEndNy   = track.EndDirection().Y();
+    fEndNz   = track.EndDirection().Z();
+
     fDriftOffset = 0;
     if( !checkCutsAndGetT0( track, fDriftOffset) ){
 	if( fLogLevel >= 3 ){
@@ -204,10 +239,12 @@ void pddpana::CosmicsdQdx::analyze(art::Event const& e)
 	  << " ; " << track.End().Y()
 	  << " ; " << track.End().Z()<<" )"<<endl;
     }
-      
-    //loop over the planes 
+
+    vector<unsigned> hitsTpcIdStart( fGeom->Nplanes() );
+    //vector<unsigned> hitsTpcIdEnd( fGeom->Nplanes() );
+    // loop over the planes 
     for(size_t i_plane=0; i_plane<fGeom->Nplanes(); i_plane++) {
-      fPlane = i_plane;
+      //fPlane = i_plane;
       
       // get hits in this plane
       auto hits = trackUtil.GetRecoTrackHitsFromPlane( track, e, fTrackModuleLabel, i_plane );
@@ -218,15 +255,23 @@ void pddpana::CosmicsdQdx::analyze(art::Event const& e)
       //project down the track into wire/tick space for this plane
       vector< unsigned > traj_points_idx;
       vector< pair<geo::WireID,float> > traj_points_in_plane; //(track.NumberTrajectoryPoints());
+      bool badpoint = false;
       for(size_t i_trjpt=0; i_trjpt<track.NumberTrajectoryPoints(); i_trjpt++){
 	auto pnt        = track.LocationAtPoint(i_trjpt);
 	if( !track.HasValidPoint( i_trjpt ) ){
+	  badpoint = true;
 	  if( fLogLevel>=3 ){
 	    cerr<<"track point "<<i_trjpt<<" has position ("
 		<<pnt.X()<<", "<<pnt.Y()<<", "<<pnt.Z()<<") \n"
 		<<" and is not a valid point "<<track.HasValidPoint( i_trjpt )<<endl;
 	  }
 	  continue;
+	}
+	if( badpoint ){
+	  badpoint = false;
+	  if( fLogLevel>=3 ){
+	    cout<<myname<<"I am valid now\n";
+	  }
 	}
 
 	double x_pos    = pnt.X();
@@ -255,10 +300,13 @@ void pddpana::CosmicsdQdx::analyze(art::Event const& e)
 	}
       }
       
+      //
       // from calo::TrackCalorimetryAlg::AnalyzeHit
+      bool checktpcid = true;
       for(auto const &hit: hits ){
 	//skip high mulitplicity hits
 	if(hit->Multiplicity() > (int)fMaxHitMultiplicity) continue;
+	
 	//
 	size_t traj_iter = std::distance( traj_points_in_plane.begin(),
 					  std::min_element( traj_points_in_plane.begin(), 
@@ -274,12 +322,20 @@ void pddpana::CosmicsdQdx::analyze(art::Event const& e)
 	  }
 	  continue;
 	}
+	// check TPC IDs for associated hits
+	if( checktpcid ){
+	  checktpcid = false;
+	  hitsTpcIdStart[i_plane] = hit->WireID().TPC;
+	}
+	//hitsTpcIdEnd[i_plane] = hit->WireID().TPC;
+	
 	fHitAdcSum   = hit->SummedADC();
 	fHitIntegral = hit->Integral();
 	fHitPeak     = hit->PeakAmplitude();
 	fHitTime     = hit->PeakTime();
 	fdQdx        = fHitAdcSum / fPitch;
-	auto pnt     = track.LocationAtPoint(traj_iter);
+
+	auto pnt = track.LocationAtPoint(traj_iter);
 	fX = pnt.X();
 	fY = pnt.Y();
 	fZ = pnt.Z();
@@ -289,8 +345,17 @@ void pddpana::CosmicsdQdx::analyze(art::Event const& e)
 
     }// end plane loop
     
-  }// end track loop
+    //if( fLogLevel >= 1 ){
+    auto start = hitsTpcIdStart.begin();
+    auto end   = hitsTpcIdStart.end();
+    if( !std::equal(start + 1, end, start)) {
+      cerr<<myname<<"ERROR mismatch in TPC ID for the initial hits: ";
+      for( auto const &v: hitsTpcIdStart ){ cerr<<v<<" ";}
+      cerr<<endl;
+    } //
 
+  }// end track loop
+    
 } // end analyze()
 
 //
@@ -304,7 +369,19 @@ void pddpana::CosmicsdQdx::beginJob()
   fTree->Branch("TrajPoints", &fTrajPoints, "TrajPoints/i");
   fTree->Branch("TrackLen",   &fTrackLen,   "TrackLen/F");
   fTree->Branch("DriftOffset",  &fDriftOffset,  "DriftOffset/F");
-  
+  fTree->Branch("StartX",  &fStartX,  "StartX/F");
+  fTree->Branch("StartY",  &fStartY,  "StartY/F");
+  fTree->Branch("StartZ",  &fStartZ,  "StartZ/F");
+  fTree->Branch("StartNx",  &fStartNx,  "StartNx/F");
+  fTree->Branch("StartNy",  &fStartNy,  "StartNy/F");
+  fTree->Branch("StartNz",  &fStartNz,  "StartNz/F");
+  fTree->Branch("EndX",  &fEndX,  "EndX/F");
+  fTree->Branch("EndY",  &fEndY,  "EndY/F");
+  fTree->Branch("EndZ",  &fEndZ,  "EndZ/F");
+  fTree->Branch("EndNx",  &fEndNx,  "EndNx/F");
+  fTree->Branch("EndNy",  &fEndNy,  "EndNy/F");
+  fTree->Branch("EndNz",  &fEndNz,  "EndNz/F");
+
   fTree->Branch("Plane", &fPlane, "Plane/i");
   fTree->Branch("HitAdcSum", &fHitAdcSum, "HitAdcSum/F");  
   fTree->Branch("HitIntegral", &fHitIntegral, "HitIntegral/F");
@@ -343,51 +420,39 @@ bool pddpana::CosmicsdQdx::checkCutsAndGetT0( const recob::Track& track, float &
   if( tstart.X() < tend.X() ){
     tstart = tend;
   }
-
-  // find TPC volume
-  geo::TPCGeo const* tpc = nullptr; 
-  try{
-    tpc = fGeom->PositionToTPCptr( tstart );
-  }
-  catch(cet::exception &e){
-    if( fLogLevel>=2 ){
-      cout<<e;
-    }
-    //return false;
-  }
-  if( not tpc ) return false;
-
-  // find track start in local TPC coordinates
-  auto pos = tpc->toLocalCoords( tstart );
   
-  // check distance from anode 
-  // assuming drift along X right now
-  T0 = tpc->HalfSizeX() - pos.X();
+  auto crp_geo_info = crpGeoUtil.GetCRPGeoInfo( tstart );
+  if( not crp_geo_info.valid ) return false;
+  
+  // drift distance to the anode
+  T0 = crp_geo_info.danode;
   if( T0 < fTrackDriftCut ){ 
     if( fLogLevel>=3 ){
       cout<<myname<<"Failed to pass T0 cut "<<T0<<endl;
     }
     return false;
   }
-
-  // check distance from the borders
-  if( (tpc->HalfSizeY() - std::abs(pos.Y())) < fTrackWallCut || 
-      (tpc->HalfSizeZ() - std::abs(pos.Z())) < fTrackWallCut ){
-    
+  
+  // distance to CRP border
+  if( crp_geo_info.dedge < fTrackWallCut ){
     if( fLogLevel>=3 ){
       cout<<myname<<"Failed to pass wall cut ("
-	  <<pos.X()<<", "<<pos.Y()<<", "<<pos.Z()<<")"<<endl;
+	  <<tstart.X()<<", "<<tstart.Y()<<", "<<tstart.Z()<<")"<<endl;
     }
     
     return false;
   }
 
-  // float x0 = track.Vertex().X();
-  // float y0 = track.Vertex().Y();
-  // float z0 = track.Vertex().Z();
-  // float x1 = track.End().X();
-  // float y1 = track.End().Y();
-  // float z1 = track.End().Z();
+  // distance to LEM border
+  if( crp_geo_info.dlem < fTrackLemCut ){
+    if( fLogLevel>=3 ){
+      cout<<myname<<"Failed to pass LEM edge cut ("
+	  <<tstart.X()<<", "<<tstart.Y()<<", "<<tstart.Z()<<")"<<endl;
+    }
+    
+    return false;
+  }
+
   return true;
 }
 
