@@ -33,12 +33,12 @@ NToys:                   0
 RecoTreeName:            "pionana/beamana"
 
 # Signal topologies. Change as appropriate.
-SignalTopology:          [1,2]
-SignalTopologyName:      ["ABS","CEX"]
+SignalTopology:          [1, 2]
+SignalTopologyName:      ["ABS", "CEX"]
 
 # Background topologies. Change as appropriate.
-BackgroundTopology:      [3,4,5,6,7]
-BackgroundTopologyName:  ["Pion Inel. Bkg","Upstream Int","Muons","TrueUnmatched", "Other Bkg"]
+BackgroundTopology:      [3, 4, 5, 6, 7]
+BackgroundTopologyName:  ["Pion Inel. Bkg", "Upstream Int", "Muons", "TrueUnmatched", "Other Bkg"]
 
 
 # Incident particle topologies. First is assumed to be signal
@@ -80,7 +80,7 @@ AddBackgroundFactors: [0, 0, 0, 0, 0]
 AddIncidentBackgroundFactors: [0, 1, 0, 0, 0]
 AddSidebandsToMeasurement: true 
 DoNegativeReco:           true
-EndZCut:                  225.
+EndZCut:                  226.
 SidebandBinning:      [@local::EndZCut, 300., 350., 375., 400, 450., 480.]
 
 WirePitch: .47974  #.4792
@@ -89,4 +89,4 @@ OnlyDrawXSecs: false
 DataIsMC: true
 DoScaleMuonContent: false 
 
-RandSigPriors: true 
+RandSigPriors: false 

@@ -40,6 +40,10 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
 
   int true_chexSignal, true_absSignal, true_backGround, true_nPi0Signal;
 
+  //new topology
+  int interaction_topology;
+  defaultTree->SetBranchAddress("interaction_topology", &interaction_topology);
+
   defaultTree->SetBranchAddress("reco_beam_type",                   &reco_beam_type);
   defaultTree->SetBranchAddress("reco_beam_len",                    &reco_beam_len);
   defaultTree->SetBranchAddress("reco_beam_vtxX",                   &reco_beam_vtxX);
@@ -157,7 +161,8 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
     if (!done_check && doSyst != 0) {
       if (g4rw_primary_var->size() > 0) {
         std::cout << "Checking" << std::endl;
-        auto syst_check = std::find(g4rw_primary_var->begin(), g4rw_primary_var->end(), systName);
+        auto syst_check = std::find(g4rw_primary_var->begin(),
+                                    g4rw_primary_var->end(), systName);
         if (syst_check == g4rw_primary_var->end()) {
           std::cout << "Error! Could not find syst named " << systName << std::endl;
           std::exception e;
@@ -181,7 +186,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
     }
 
     // Different background topologies
-    Int_t topology = -1;
+    //Int_t topology = -1;
 
     //Bin edges cases. If there are signal events that fall out the truth bins,
     //but are present in the reco bins then count them as backgrounds
@@ -200,10 +205,25 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
 
     /////////////////////
     
+    //if (!reco_beam_hit_true_ID->size()) {
+    //  continue;
+    //}
+
+
+    if (true_beam_PDG == 211) {
+      if (!reco_beam_hit_true_ID->size()) {
+        continue;
+      }
+      if (doSyst == 1 || doSyst == -1) {
+        syst_weight = weights[systName];
+      }
+    }
+    
+    /*
     if( reco_beam_true_byHits_origin == 2 ){
       topology = 7;  
     }
-    else if( true_beam_PDG == 211 ){
+    else if (true_beam_PDG == 211) {
       
       //make sure there is any hits at all
       if( !reco_beam_hit_true_ID->size() ){ 
@@ -226,6 +246,22 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
           topology = 1;
         }
         else {
+        
+         // bool has_pion_above_threshold = false;
+         // for (size_t i = 0; i < true_daughter_startP->size(); ++i) {
+         //   if (abs((*true_daughter_PDG)[i]) == 211 &&
+         //       (*true_daughter_startP)[i] > .150) {              
+         //     has_pion_above_threshold = true;
+         //     break;
+         //   }
+         // }
+
+         // if (has_pion_above_threshold) {
+         //   topology = 3;
+         // }
+         // else {
+         //   topology = 1;
+         // }
           topology = 3;
         }
       }
@@ -249,9 +285,17 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
     else{ //Shouldn't be any but w/e
       topology = 7;
     }
+    
 
     // Select only the correct topology
     if (topology != toponum) continue;
+    
+    if (topology != interaction_topology) {
+      std::cout <<  "ERROR topo mismatch " << topology << " " << interaction_topology << std::endl;
+    }
+*/
+    if (interaction_topology != toponum)
+      continue;
 
     if (doNegativeReco) {
       if (reco_beam_interactingEnergy < 0.) {
@@ -347,6 +391,9 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
   defaultTree->SetBranchAddress("event",                            &event);
   defaultTree->SetBranchAddress("run",                              &run);
 
+  int interaction_topology;
+  defaultTree->SetBranchAddress("interaction_topology", &interaction_topology);
+  
   //Testing
   std::vector<double> * reco_beam_calibrated_dEdX = 0x0;
   defaultTree->SetBranchAddress("reco_beam_calibrated_dEdX", &reco_beam_calibrated_dEdX);
@@ -444,11 +491,11 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
       }
     }
 
-    int topology = -1;
-
     if ( reco_beam_true_byHits_origin == 2 )
       continue; 
 
+/*
+    int topology = -1;
     //First determine if this is a pion ending in abs/cex/nPi0
     if ( true_beam_PDG == 211 && *true_beam_endProcess == "pi+Inelastic" &&
         true_daughter_nPiPlus == 0 && true_daughter_nPiMinus == 0 ){
@@ -476,10 +523,32 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
         topology = 2;
     }
     else continue;
+    */
+    
 
+
+    if (interaction_topology == 1 || interaction_topology ==2) {
+      //make sure there is any hits at all
+      if ( !reco_beam_hit_true_ID->size() ) {
+        //std::cout << "no true_ID for hits " << reco_beam_interactingEnergy <<
+        //             " " << reco_beam_calibrated_dEdX->size() << " " << 
+        //             reco_beam_TrkPitch->size() << std::endl;
+        continue;
+      }
+      if (doSyst == 1 || doSyst == -1 ) {
+        syst_weight = weights[systName];
+      }
+    }
+    else {
+      continue;
+    }
    
     // Remove events with the wrong topology
-    if(topology != toponum) continue;
+    //if (topology != interaction_topology) {
+    //  std::cout <<  "ERROR topo mismatch " << topology << " " << interaction_topology << std::endl;
+    //}
+    //if(topology != toponum) continue;
+    if(interaction_topology != toponum) continue;
 
     // True energy bin
     //if(true_beam_interactingEnergy < minval) continue;
