@@ -528,7 +528,7 @@ private:
   double reco_beam_startX, reco_beam_startY, reco_beam_startZ;
   double reco_beam_endX, reco_beam_endY, reco_beam_endZ;
   double reco_beam_vtxX, reco_beam_vtxY, reco_beam_vtxZ; 
-  double reco_beam_len;
+  double reco_beam_len, reco_beam_alt_len;
   double reco_beam_trackDirX, reco_beam_trackDirY, reco_beam_trackDirZ;
   double reco_beam_trackEndDirX, reco_beam_trackEndDirY, reco_beam_trackEndDirZ;
   std::vector< double > reco_beam_dEdX, reco_beam_dQdX, reco_beam_resRange, reco_beam_TrkPitch;
@@ -706,7 +706,8 @@ private:
   //Alternative Reco values
   //EDIT: track_score --> trkScore, etc.
   std::vector< int > reco_daughter_PFP_ID;
-  std::vector< int > reco_daughter_PFP_nHits;
+  std::vector<int> reco_daughter_PFP_nHits,
+                   reco_daughter_PFP_nHits_collection;
   std::vector< double > reco_daughter_PFP_trackScore;
   std::vector< double > reco_daughter_PFP_emScore;
   std::vector< double > reco_daughter_PFP_michelScore;
@@ -774,7 +775,7 @@ private:
   std::vector< double > reco_daughter_allTrack_startY, reco_daughter_allTrack_endY;
   std::vector< double > reco_daughter_allTrack_startZ, reco_daughter_allTrack_endZ;
   std::vector< double > reco_daughter_allTrack_dR;
-  std::vector< double > reco_daughter_allTrack_len;
+  std::vector< double > reco_daughter_allTrack_len, reco_daughter_allTrack_alt_len;
   std::vector< double > reco_daughter_allTrack_to_vertex;
   //
   
@@ -847,6 +848,10 @@ private:
   double reco_beam_momByRange_proton;
   double reco_beam_momByRange_muon;
 
+  std::vector<double> reco_daughter_allTrack_momByRange_alt_proton;
+  std::vector<double> reco_daughter_allTrack_momByRange_alt_muon;
+  double reco_beam_momByRange_alt_proton;
+  double reco_beam_momByRange_alt_muon;
 
   ///Reconstructed Daughter Info
   //  --- Showers
@@ -2011,6 +2016,13 @@ std::cout << "Got" << std::endl;
 
     //Primary Track Calorimetry 
     std::vector< anab::Calorimetry> calo = trackUtil.GetRecoTrackCalorimetry(*thisTrack, evt, fTrackerTag, fCalorimetryTag);
+
+    reco_beam_momByRange_alt_proton = track_p_calc.GetTrackMomentum(
+        calo[0].Range(), 2212);
+    reco_beam_momByRange_alt_muon = track_p_calc.GetTrackMomentum(
+        calo[0].Range(), 13);
+    reco_beam_alt_len = calo[0].Range();
+
     auto calo_dQdX = calo[0].dQdx();
     auto calo_dEdX = calo[0].dEdx();
     auto calo_range = calo[0].ResidualRange();
@@ -2161,6 +2173,7 @@ std::cout << "Got" << std::endl;
 
       reco_beam_incidentEnergies.push_back( init_KE );
       for( size_t i = 0; i < reco_beam_calo_points.size() - 1; ++i ){ //-1 to not count the last slice
+        //use dedx * pitch or new hit calculation?
         double this_energy = reco_beam_incidentEnergies.back() - ( reco_beam_calo_points[i].dEdX * reco_beam_calo_points[i].pitch );
         reco_beam_incidentEnergies.push_back( this_energy ); 
       }
@@ -2524,6 +2537,13 @@ std::cout << "Got" << std::endl;
       if (fVerbose) std::cout << "Got " << daughterPFP_hits.size() << " hits from daughter " << daughterID << std::endl;
 
       reco_daughter_PFP_nHits.push_back( daughterPFP_hits.size() );
+      size_t nHits_coll = 0;
+      for (size_t i = 0; i < daughterPFP_hits.size(); ++i) {
+        if (daughterPFP_hits[i]->View() == 2) {
+          ++nHits_coll;
+        }
+      }
+      reco_daughter_PFP_nHits_collection.push_back(nHits_coll);
 
       double track_total = 0.;
       double em_total = 0.;
@@ -2674,6 +2694,10 @@ std::cout << "Got" << std::endl;
           auto dummy_dEdx_SCE = dummy_caloSCE[0].dEdx();
           auto dummy_dQdx_SCE = dummy_caloSCE[0].dQdx();
           auto dummy_Range_SCE = dummy_caloSCE[0].ResidualRange();
+
+          reco_daughter_allTrack_momByRange_alt_proton.push_back( track_p_calc.GetTrackMomentum( dummy_caloSCE[0].Range(), 2212 ) );
+          reco_daughter_allTrack_momByRange_alt_muon.push_back(   track_p_calc.GetTrackMomentum( dummy_caloSCE[0].Range(), 13  ) );
+          reco_daughter_allTrack_alt_len.push_back(    dummy_caloSCE[0].Range() );
 
           std::vector<float> cali_dEdX = calibration.GetCalibratedCalorimetry(*pandora2Track, evt, "pandora2Track", "pandora2calo", 2);
           std::vector<float> cali_dEdX_SCE = calibration.GetCalibratedCalorimetry(*pandora2Track, evt, "pandora2Track", "pandora2caloSCE", 2);
@@ -2882,6 +2906,7 @@ std::cout << "Got" << std::endl;
           reco_daughter_allTrack_Theta.push_back(-999. );
           reco_daughter_allTrack_Phi.push_back(-999.);
           reco_daughter_allTrack_len.push_back( -999. );
+          reco_daughter_allTrack_alt_len.push_back(-999.);
           reco_daughter_allTrack_startX.push_back( -999. );
           reco_daughter_allTrack_startY.push_back( -999. );
           reco_daughter_allTrack_startZ.push_back( -999. );
@@ -2893,6 +2918,8 @@ std::cout << "Got" << std::endl;
           reco_daughter_allTrack_momByRange_proton.push_back(-999.);
           reco_daughter_allTrack_momByRange_muon.push_back(-999.);
 
+          reco_daughter_allTrack_momByRange_alt_proton.push_back(-999.);
+          reco_daughter_allTrack_momByRange_alt_muon.push_back(-999.);
 
         }
       }
@@ -3301,6 +3328,7 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("reco_beam_endY", &reco_beam_endY);
   fTree->Branch("reco_beam_endZ", &reco_beam_endZ);
   fTree->Branch("reco_beam_len", &reco_beam_len);
+  fTree->Branch("reco_beam_alt_len", &reco_beam_alt_len);
   fTree->Branch("reco_beam_trackDirX", &reco_beam_trackDirX);
   fTree->Branch("reco_beam_trackDirY", &reco_beam_trackDirY);
   fTree->Branch("reco_beam_trackDirZ", &reco_beam_trackDirZ);
@@ -3475,6 +3503,7 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("reco_daughter_allTrack_Phi", &reco_daughter_allTrack_Phi);
 
   fTree->Branch("reco_daughter_allTrack_len", &reco_daughter_allTrack_len);
+  fTree->Branch("reco_daughter_allTrack_alt_len", &reco_daughter_allTrack_alt_len);
   fTree->Branch("reco_daughter_allTrack_startX", &reco_daughter_allTrack_startX);
   fTree->Branch("reco_daughter_allTrack_startY", &reco_daughter_allTrack_startY);
   fTree->Branch("reco_daughter_allTrack_startZ", &reco_daughter_allTrack_startZ);
@@ -3559,6 +3588,8 @@ void pionana::PionAnalyzer::beginJob()
 
   fTree->Branch("reco_daughter_PFP_ID", &reco_daughter_PFP_ID);
   fTree->Branch("reco_daughter_PFP_nHits", &reco_daughter_PFP_nHits);
+  fTree->Branch("reco_daughter_PFP_nHits_collection",
+                &reco_daughter_PFP_nHits_collection);
   fTree->Branch("reco_daughter_PFP_trackScore", &reco_daughter_PFP_trackScore);
   fTree->Branch("reco_daughter_PFP_emScore", &reco_daughter_PFP_emScore);
   fTree->Branch("reco_daughter_PFP_michelScore", &reco_daughter_PFP_michelScore);
@@ -3764,6 +3795,11 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("reco_daughter_allTrack_momByRange_muon", &reco_daughter_allTrack_momByRange_muon);
   fTree->Branch("reco_beam_momByRange_proton", &reco_beam_momByRange_proton);
   fTree->Branch("reco_beam_momByRange_muon", &reco_beam_momByRange_muon);
+
+  fTree->Branch("reco_daughter_allTrack_momByRange_alt_proton", &reco_daughter_allTrack_momByRange_alt_proton);
+  fTree->Branch("reco_daughter_allTrack_momByRange_alt_muon", &reco_daughter_allTrack_momByRange_alt_muon);
+  fTree->Branch("reco_beam_momByRange_alt_proton", &reco_beam_momByRange_alt_proton);
+  fTree->Branch("reco_beam_momByRange_alt_muon", &reco_beam_momByRange_alt_muon);
   /*
   fTree->Branch("reco_daughter_Chi2_proton", &reco_daughter_Chi2_proton);
   fTree->Branch("reco_daughter_Chi2_ndof", &reco_daughter_Chi2_ndof);
@@ -3860,6 +3896,7 @@ void pionana::PionAnalyzer::reset()
   reco_beam_flipped = false;
 
   reco_beam_len = -1;
+  reco_beam_alt_len = -1;
   reco_beam_type = -1;
   reco_beam_passes_beam_cuts = false;
   
@@ -4016,6 +4053,11 @@ void pionana::PionAnalyzer::reset()
   reco_daughter_allTrack_momByRange_muon.clear();
   reco_beam_momByRange_proton = -999.;
   reco_beam_momByRange_muon = -999.;
+
+  reco_daughter_allTrack_momByRange_alt_proton.clear();
+  reco_daughter_allTrack_momByRange_alt_muon.clear();
+  reco_beam_momByRange_alt_proton = -999.;
+  reco_beam_momByRange_alt_muon = -999.;
   /*
   reco_daughter_Chi2_proton.clear();
   reco_daughter_Chi2_ndof.clear();
@@ -4107,6 +4149,7 @@ void pionana::PionAnalyzer::reset()
 
   reco_daughter_PFP_ID.clear();
   reco_daughter_PFP_nHits.clear();
+  reco_daughter_PFP_nHits_collection.clear();
   reco_daughter_PFP_trackScore.clear();
   reco_daughter_PFP_emScore.clear();
   reco_daughter_PFP_michelScore.clear();
@@ -4310,6 +4353,7 @@ void pionana::PionAnalyzer::reset()
   reco_daughter_allTrack_Theta.clear();
   reco_daughter_allTrack_Phi.clear();
   reco_daughter_allTrack_len.clear();
+  reco_daughter_allTrack_alt_len.clear();
   reco_daughter_allTrack_startX.clear();
   reco_daughter_allTrack_startY.clear();
   reco_daughter_allTrack_startZ.clear();
