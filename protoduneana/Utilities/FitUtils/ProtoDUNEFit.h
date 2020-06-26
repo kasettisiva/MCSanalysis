@@ -141,7 +141,7 @@ namespace protoana{
     bool _AddIncidentToMeasurement, _DoNegativeReco, _DoScaleMCToData;
     bool _AddSidebandsToMeasurement;
     bool _DoScaleMuonContent;
-    bool _RandSigPriors, _StatFluctuation;
+    bool _RandSigPriors; // unused -- comment out to make clang happy, _StatFluctuation;
     TRandom3 rand;
     //bool _AddIncidentBackgroundFactors;
     std::vector<int> _AddBackgroundFactors, _AddIncidentBackgroundFactors,
