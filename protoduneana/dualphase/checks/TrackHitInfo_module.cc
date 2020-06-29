@@ -1,14 +1,10 @@
 ////////////////////////////////////////////////////////////////////////
-// Class:       CosmicsdQdx
+// Class:       TrackHitInfo
 // Plugin Type: analyzer (art v3_05_01)
-// File:        CosmicsdQdx_module.cc
+// File:        TrackHitInfo_module.cc
 //
-// Generate simple summary tree from track dQ/dx measurements for each
-// collection view to check track calorimetry and effecit CRP gains
-// Follow the same logic as in TrackCalorimetryAlg
+// Check the TPC ID of hits associated to ProtoDUNE DP tracks
 //
-// Generated at Tue May 26 16:28:38 2020 by Vyacheslav Galymov using cetskelgen
-// from cetlib version v3_10_00.
 ////////////////////////////////////////////////////////////////////////
 #include <iostream>
 #include <vector>
@@ -78,6 +74,9 @@ private:
 
   int      fLogLevel;
   string   fTrackModuleLabel;
+  unsigned fTracksTotal;
+  unsigned fTracksRejected;
+
   // track utils
   protoana::ProtoDUNETrackUtils trackUtil;
 
@@ -112,7 +111,7 @@ void pddpana::TrackHitInfo::analyze(art::Event const& e)
 
   unsigned EventId = e.id().event();
   
-  unsigned countbad = 0;
+  fTracksTotal += Tracks->size();
 
   // loop over tracks
   for (unsigned itrk = 0; itrk < Tracks->size(); ++itrk) {
@@ -171,30 +170,38 @@ void pddpana::TrackHitInfo::analyze(art::Event const& e)
     
     if( hitsTpcId.empty() ) continue;
         
-    //if( fLogLevel >= 1 ){
     auto start = hitsTpcId.begin();
     auto end   = hitsTpcId.end();
     if( !std::equal(start + 1, end, start)) {
-      cout<<myname<<"mismatch in TPC ID for the initial hits: ";
-      cout<<" event ID "<<EventId<<"; hit TPC IDs ";
-      for( auto const &v: hitsTpcId ){ cout<<v<<" ";}
-      cout<<endl;
-      countbad++;
+      if( fLogLevel >= 2 ){
+	cout<<myname<<"mismatch in TPC ID for the initial hits: ";
+	cout<<" event ID "<<EventId<<"; hit TPC IDs ";
+	for( auto const &v: hitsTpcId ){ cout<<v<<" ";}
+	cout<<endl;
+      }
+      fTracksRejected++;
     } //
 
   }// end track loop
   
   //
-  cout<<"Found "<<countbad<<" CRP mismatched tracks in total "<<Tracks->size()<<endl;
   
 } // end analyze()
 
 //
+//
 void pddpana::TrackHitInfo::beginJob()
-{;}
+{
+  fTracksTotal    = 0;
+  fTracksRejected = 0;
+}
 
 //
+//
 void pddpana::TrackHitInfo::endJob()
-{;}
+{
+  cout<<"Tracks total    : "<<fTracksTotal<<endl;
+  cout<<"Tracks rejected : "<<fTracksRejected<<endl;
+}
 
 DEFINE_ART_MODULE(pddpana::TrackHitInfo)
