@@ -271,18 +271,19 @@ void pddpana::CosmicsdQdx::analyze(art::Event const& e)
       
       // get hits in this plane
       //auto hits = trackUtil.GetRecoTrackHitsFromPlane( track, e, fTrackModuleLabel, i_plane );
-      auto hits = fPlaneHits[ fPlane ]; // loaded in checkTrackHitInfo
+      auto hits = fPlaneHits[ i_plane ]; // loaded in checkTrackHitInfo
       if( fLogLevel >= 3 ){
 	cout<<myname<<"Hits in plane "<<i_plane<<" "<<hits.size()<<endl;
       }
-      
+      //
+
       //project down the track into wire/tick space for this plane
       vector< unsigned > traj_points_idx;
       vector< pair<geo::WireID,float> > traj_points_in_plane; //(track.NumberTrajectoryPoints());
       for(size_t i_trjpt=0; i_trjpt<track.NumberTrajectoryPoints(); i_trjpt++){
 	auto pnt        = track.LocationAtPoint(i_trjpt);
 	if( !track.HasValidPoint( i_trjpt ) ){
-	  if( fLogLevel>=3 ){
+	  if( fLogLevel>=4 ){
 	    cerr<<"track point "<<i_trjpt<<" has position ("
 		<<pnt.X()<<", "<<pnt.Y()<<", "<<pnt.Z()<<") \n"
 		<<" and is not a valid point "<<track.HasValidPoint( i_trjpt )<<endl;
@@ -309,7 +310,7 @@ void pddpana::CosmicsdQdx::analyze(art::Event const& e)
 	  traj_points_idx.push_back( i_trjpt );
 	}
 	catch(cet::exception &e){
-	  if( fLogLevel>=3 ){
+	  if( fLogLevel>=4 ){
 	    cout<<e;
 	  }
 	  continue;
@@ -329,7 +330,9 @@ void pddpana::CosmicsdQdx::analyze(art::Event const& e)
 							    dist_projected(hit, fGeom) ) );
 	size_t traj_pnt_idx = traj_points_idx[traj_iter];
 	try{
-	  fPitch = lar::util::TrackPitchInView(track, fGeom->View(hit->WireID().Plane), traj_pnt_idx);
+	  // fGeom->View(hit->WireID().Plane) always returns 3 (geo::kY) for some reason
+	  //fPitch = lar::util::TrackPitchInView(track, fGeom->View(hit->WireID().Plane), traj_pnt_idx);
+	  fPitch = lar::util::TrackPitchInView(track, hit->View(), traj_pnt_idx);
 	}
 	catch(cet::exception &e){
 	  if( fLogLevel>=3 ){
@@ -350,6 +353,12 @@ void pddpana::CosmicsdQdx::analyze(art::Event const& e)
 	fY = pnt.Y();
 	fZ = pnt.Z();
 
+	// if( fEventNum == 11540 && fTrackId == 0 ){
+	//   auto dir1 = track.DirectionAtPoint(traj_iter);
+	//   cout<<i_plane<<" "<<fPitch<<" "<<fX<<" "<<fY<<" "<<fZ<<" "
+	//       <<dir1.X()<<" "<<dir1.Y()<<" "<<dir1.Z()<<endl;
+	//}
+	
 	fTree->Fill();
       }// loop over track plane hits
 
@@ -483,15 +492,37 @@ bool pddpana::CosmicsdQdx::checkTrackHitInfo( const recob::Track& track, art::Ev
   //
   unsigned EventId = e.id().event();
   
-  //
-  vector<unsigned> hitsTpcId( fGeom->Nplanes() );
   
-  // loop over the planes 
+  // loop over the planes and get all the hits
   for(size_t i_plane = 0; i_plane<fGeom->Nplanes(); i_plane++) {
-    
     // get hits in this plane
     auto hits = trackUtil.GetRecoTrackHitsFromPlane( track, e, fTrackModuleLabel, i_plane );
     fPlaneHits[i_plane] = hits;
+  }
+  
+  //
+  // calculate charge asymmetry 
+  //
+  // charge in view 0
+  double v0 = 0;
+  for( auto const &h: fPlaneHits[0] ){
+    v0 += h->SummedADC();
+  }
+  // charge in view 1
+  double v1 = 0;
+  for( auto const &h: fPlaneHits[1] ){
+    v1 += h->SummedADC();
+  }
+  // charge asymmetry
+  fQAsym = (v0 - v1)/(v0 + v1);
+  
+  //
+  //
+  // check for TPC mismatches
+  vector<unsigned> hitsTpcId( fGeom->Nplanes() );
+  
+  for(size_t i_plane = 0; i_plane<fGeom->Nplanes(); i_plane++) {
+    auto hits = fPlaneHits[i_plane];
 
     vector<unsigned> plane_hits_tpcid( hits.size() );
     // loop over hits
@@ -532,21 +563,6 @@ bool pddpana::CosmicsdQdx::checkTrackHitInfo( const recob::Track& track, art::Ev
     }
     return false;
   } //
-
-  // charge in view 0
-  double v0 = 0;
-  for( auto const &h: fPlaneHits[0] ){
-    v0 += h->SummedADC();
-  }
-  
-  // charge in view 1
-  double v1 = 0;
-  for( auto const &h: fPlaneHits[1] ){
-    v1 += h->SummedADC();
-  }
-  
-  // charge asymmetry
-  fQAsym = (v0 - v1)/(v0 + v1);
 
   return true;
 }
