@@ -36,9 +36,10 @@ physics:
     	module_type:  "CosmicsdQdx"
 	LogLevel:     1
 	TrackModuleLabel:  "pandoraTrack"
-	TrackMinLen: 20.0
+	TrackMinLen:   20.0
 	TrackDriftCut: 2.0 # cut from start of drift 
 	TrackWallCut:  2.0 # cut from the CRP border
+	TrackLemCut:   5.0 # cut from the LEM edge
 	MaxHitMultiplicity: 2
      }
    }
