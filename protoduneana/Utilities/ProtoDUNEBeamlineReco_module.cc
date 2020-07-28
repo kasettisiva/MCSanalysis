@@ -71,6 +71,7 @@ private:
   bool perfectP;
 
   int true_PDG;
+  double true_P;
   double true_X, true_Y, true_Z;
 };
   
@@ -133,6 +134,7 @@ void protoana::ProtoDUNEBeamlineReco::beginJob() {
 
   //True info
   fOutTree->Branch("true_PDG", &true_PDG);
+  fOutTree->Branch("true_P", &true_P);
   fOutTree->Branch("true_X", &true_X);
   fOutTree->Branch("true_Y", &true_Y);
   fOutTree->Branch("true_Z", &true_Z);
@@ -157,6 +159,7 @@ void protoana::ProtoDUNEBeamlineReco::analyze(art::Event const & evt){
   chan = -1;
   GenTrigTS = 0;
   true_PDG = -1;
+  true_P = -999.;
   true_X = 0.;
   true_Y = 0.;
   true_Z = 0.;
@@ -357,6 +360,7 @@ void protoana::ProtoDUNEBeamlineReco::analyze(art::Event const & evt){
     else {
       std::cout << "True PDG: " << true_beam_particle->PdgCode() << std::endl;
       true_PDG = true_beam_particle->PdgCode();
+      true_P = true_beam_particle->P();
       size_t nPoints = true_beam_particle->NumberTrajectoryPoints();
       for (size_t i = 0; i < nPoints; ++i) {
         if (true_beam_particle->Position(i).Z() > 0. &&
