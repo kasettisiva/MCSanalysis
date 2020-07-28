@@ -1,0 +1,65 @@
+#include "services_dune.fcl"
+#include "hitfindermodules_dune.fcl"
+#include "filters.fcl"
+#include "ProtoDUNEUnstableHVFilter.fcl"
+#include "signalservices_dune.fcl"
+#include "caldata_dune.fcl"
+#include "trackfindermodules_dune.fcl"
+#include "ecalibration.fcl"
+#include "triggeralgo_service.fcl"
+#include "photpropservices_dune.fcl"
+#include "ProtoDUNEDataUtils.fcl"
+#include "ProtoDUNEFembFilter.fcl"
+
+
+process_name: hitrmsfinding
+
+services:
+{
+  #Load the service that manages root files for histograms.
+  TFileService: { fileName: "hitrmsfinding.root" }
+  RandomNumberGenerator: {}                     #ART native random number generator
+  @table::protodune_services
+  message:      @local::standard_info
+  FileCatalogMetadata: @local::art_file_catalog_mc
+}
+
+#source is now a root file
+source:
+{
+  module_type: RootInput
+  maxEvents:  -1            # Number of events to create
+}
+physics:
+{
+ producers:{
+
+  }
+filters:  
+ {
+#  filter:   @local::pdsp_fembfilter_all
+f1: @local::HVfilter
+   } 
+   fpath: [f1]
+ analyzers:{
+   hitrmsfinding:
+   {
+   module_type: "hitrmsfinding"
+   DataUtils: @local::standard_protodunedatautils
+  }	   
+ }
+ 
+
+ana:  [ hitrmsfinding ]
+ end_paths:     [  ana ] 
+}
+
+# define the list of LArSoft modules to run through the simulate path
+
+
+physics.analyzers.hitrmsfinding.TrackModuleLabel:        "pandoraTrack"
+physics.analyzers.hitrmsfinding.CalorimetryModuleLabel:  "pandoracalo"
+physics.analyzers.hitrmsfinding.HitsModuleLabel:  "hitpdune"
+physics.analyzers.hitrmsfinding.SaveTrackInfo: true
+#physics.analyzers.hitrmsfinding.SelectEvents: [fpath]
+services.PdspChannelMapService:        @local::pdspchannelmap
