@@ -611,9 +611,11 @@ namespace protoana{
 		    hit_t = itck;
 		  }
 		}//finding peak signal
+		int hitindx=0;
 		for(size_t it1=hit_t-20;it1<hit_t+30;it1++){
 		  if(it1<1||it1>5999||it1>inputsignal.size()) continue;
-		  hit_signal[ntrks][nhits-1][it1]=signal[it1];
+		  hit_signal[ntrks][nhits-1][hitindx]=signal[it1];
+		  hitindx++;
 		}//storing signal for peakT-20 to peakT+30 ticks
 		double hit_ch = 0;
 		double hit_fwhh = 0;
@@ -649,9 +651,11 @@ namespace protoana{
 		    hit_t = itck;
 		  }
 		}//itick loop
+		int hitindex=0;
 		for(size_t it1=hit_t-20;it1<hit_t+30;it1++){
-		  if(it1<=0|| it1>5999 || it1>rawadc.size()) continue;
-		  hit_signal[ntrks][nhits-1][it1]=rawadc[it1]-digitVec->GetPedestal();
+		  if(it1<1|| it1>5999 || it1>rawadc.size()) continue;
+		  hit_signal[ntrks][nhits-1][hitindex]=rawadc[it1]-digitVec->GetPedestal();
+		  hitindex++;
 		}
 	
 		double hit_ch = 0;
