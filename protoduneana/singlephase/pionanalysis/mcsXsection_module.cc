@@ -76,7 +76,7 @@
 #include "math.h"
 #include <iterator>
 #include <map>
-
+#include <tuple>
 
 // Maximum number of beam particles to save
 const int NMAXDAUGTHERS = 30;
@@ -104,6 +104,14 @@ double angle2d(double x0, double y0, double x1, double y1, double x2, double y2)
   double theta=((x1-x0)*(x2-x1)+(y1-y0)*(y2-y1))/sqrt(((x1-x0)*(x1-x0)+(y1-y0)*(y1-y0))*((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1)));
   return acos(theta);
 
+} 
+
+
+double theta12(double x1, double x2, double y1, double y2, double z1, double z2,double x1p, double x2p, double y1p, double y2p, double z1p, double z2p){
+  double numer=(x2-x1)*(x2p-x1p)+(y2-y1)*(y2p-y1p)+(z2-z1)*(z2p-z1p);
+  double den1=(x2-x1)*(x2-x1)+(y2-y1)*(y2-y1)+(z2-z1)*(z2-z1);
+  double den2=(x2p-x1p)*(x2p-x1p)+(y2p-y1p)*(y2p-y1p)+(z2p-z1p)*(z2p-z1p);
+  return 180/3.14*acos(numer/sqrt(den1*den2));
 } 
 
 
@@ -194,7 +202,8 @@ private:
   // std::vector<float> inelscore;
   //std::vector<float> elscore;
   //std::vector<float> nonescore;
-
+  
+  /////////
 
   std::vector<float> int_2;
   std::vector<float> hitz_1;
@@ -306,6 +315,29 @@ private:
   std::vector<std::vector<float> > dq_1;
   std::vector<std::vector<float> > dq_2;
 
+  ////Michel tagging info
+
+  std::vector< std::vector<int> > endhitssecondary;
+  std::vector< std::vector<double> > secondarystartx;
+  std::vector< std::vector<double> > secondaryendx;
+  std::vector< std::vector<double> > secondarystarty;
+  std::vector< std::vector<double> > secondaryendy;
+  std::vector< std::vector<double> > secondarystartz;
+  std::vector< std::vector<double> > secondaryendz;
+  std::vector< std::vector<double> > dQmichel;
+  std::vector< std::vector<double> > dQtrackend;
+  std::vector< std::vector<double> > dQtrackbegin;
+  std::vector< std::vector<double> > primsectheta;
+  std::vector< std::vector<double> > tracklengthsecondary;
+  std::vector< std::vector<int> > MtrackID;
+  ////CNN for michel tagging
+  std::vector< std::vector<double> > trackscore;
+  std::vector< std::vector<double> > emscore;
+  std::vector< std::vector<double> > michelscore;
+  std::vector< std::vector<double> > nonescore;
+
+
+ 
   // Daughters from primary
   int fNDAUGHTERS;
   int fisdaughtertrack[NMAXDAUGTHERS];
@@ -493,6 +525,27 @@ void protoana::mcsXsection::beginJob(){
   fPandoraBeam->Branch("dq_0",&dq_0);
   fPandoraBeam->Branch("dq_1",&dq_1);
   fPandoraBeam->Branch("dq_2",&dq_2);
+  //Michel tagging
+  fPandoraBeam->Branch("endhitssecondary",&endhitssecondary);
+  fPandoraBeam->Branch("secondarystartx",&secondarystartx);
+  fPandoraBeam->Branch("secondarystarty",&secondarystarty);
+  fPandoraBeam->Branch("secondarystartz",&secondarystartz);
+  fPandoraBeam->Branch("secondaryendx",&secondaryendx);
+  fPandoraBeam->Branch("secondaryendy",&secondaryendy);
+  fPandoraBeam->Branch("secondaryendz",&secondaryendz);
+  fPandoraBeam->Branch("dQmichel",&dQmichel);
+  fPandoraBeam->Branch("primsectheta",&primsectheta);
+  fPandoraBeam->Branch("dQtrackbegin",&dQtrackbegin);
+  fPandoraBeam->Branch("dQtrackend",&dQtrackend);
+  fPandoraBeam->Branch("tracklengthsecondary",&tracklengthsecondary);
+  fPandoraBeam->Branch("MtrackID",&MtrackID);
+  fPandoraBeam->Branch("trackscore",&trackscore);
+  fPandoraBeam->Branch("emscore",&emscore);
+  fPandoraBeam->Branch("michelscore",&michelscore);
+  fPandoraBeam->Branch("nonescore",&nonescore);
+  /////////
+
+
 
   fPandoraBeam->Branch("NDAUGHTERS",                    &fNDAUGHTERS,                   "NDAUGHTERS/I");
   fPandoraBeam->Branch("isdaughtertrack",               &fisdaughtertrack,              "isdaughtertrack[NDAUGHTERS]/I");
@@ -567,6 +620,7 @@ void protoana::mcsXsection::analyze(art::Event const & evt){
 
   const detinfo::DetectorProperties* detprop = lar::providerFrom<detinfo::DetectorPropertiesService>();
   // anab::MVAReader<recob::Hit,3> hitResults(evt, fNNetModuleLabel);
+  anab::MVAReader<recob::Hit,4> hitResults(evt, "emtrkmichelid:emtrkmichel" );
   art::ServiceHandle<geo::Geometry> geom;
 
 
@@ -585,7 +639,7 @@ void protoana::mcsXsection::analyze(art::Event const & evt){
     TTimeStamp ts2(ts.timeHigh(), ts.timeLow());
     fTimeStamp = ts2.AsDouble();
   }
-
+  std::cout<<"hhecking code "<<std::endl;
   bool beamTriggerEvent = false;
   // If this event is MC then we can check what the true beam particle is
   auto mcTruths = evt.getValidHandle<std::vector<simb::MCTruth>>(fGeneratorTag);
@@ -940,9 +994,10 @@ void protoana::mcsXsection::analyze(art::Event const & evt){
   art::Handle< std::vector<recob::Hit> > hitListHandle;
   std::vector<art::Ptr<recob::Hit> > hitlist;
   if(evt.getByLabel("hitpdune",hitListHandle)) art::fill_ptr_vector(hitlist, hitListHandle);
-
+  // Implementation of required member function here.
   if(evt.getByLabel("pandoraTrack",trackListHandle)) art::fill_ptr_vector(tracklist, trackListHandle);
   else return;
+  art::FindManyP<recob::Track> thass(hitListHandle, evt, "pandoraTrack"); //to associate hit just trying
   if(evt.getByLabel("pandora",PFPListHandle)) art::fill_ptr_vector(pfplist, PFPListHandle);
   
   art::Handle< std::vector<recob::Cluster> > clusterListHandle; // to get information about the hits
@@ -955,7 +1010,7 @@ void protoana::mcsXsection::analyze(art::Event const & evt){
   art::FindManyP<recob::Hit> clhit(clusterListHandle,evt,"pandora");
 
   std::cout<<"number of pfp_particles "<<pfplist.size()<<std::endl;
-  std::cout<<" size of pfParticles "<<pfParticles.size()<<std::endl;
+  std::cout<<" size of pfParticles testing size "<<pfParticles.size()<<std::endl;
   art::FindManyP<recob::Hit, recob::TrackHitMeta> fmthm(trackListHandle, evt,"pandoraTrack"); // to associate tracks and hits
 
 
@@ -972,16 +1027,247 @@ void protoana::mcsXsection::analyze(art::Event const & evt){
     /////new line added here
     // std::vector<art::Ptr<recob::Cluster>> allClusters=fmcp.at(particle);
     // std::cout<<allClusters.size();
-   
-    std::cout<<"outside this track loop"<<std::endl;
+
+    /////////////////////Michel tagging stage//////////
+
+    double beamstx=-30;
+    double beamendx=-30;
+    double beamsty=420;
+    double beamendy=420;
+    double beamstz=30;
+    double beamendz=100;    
+
+    if(thisTrack != 0x0){
+
+      beamstx=thisTrack->Start().X();
+      beamsty=thisTrack->Start().Y();
+      beamstz=thisTrack->Start().Z();
+      beamendx=thisTrack->End().X();
+      beamendy=thisTrack->End().Y();
+      beamendz=thisTrack->End().Z();
+      std::cout<<"beamstx "<<beamstx<<std::endl;
+    }
+
+
+    //////Michel tagging here
+    std::vector<double> secondarystartx1;
+    std::vector<double> secondarystarty1;
+    std::vector<double> secondarystartz1;
+    std::vector<double> secondaryendx1;
+    std::vector<double> secondaryendy1;
+    std::vector<double> secondaryendz1;
+    std::vector<double> dQmichel1;
+    std::vector<double> dQtrackbegin1;
+    std::vector<double> dQtrackend1;
+    std::vector<double> tracklengthsecondary1;
+    std::vector<double> primsectheta1; 
+    std::vector<int> endhitssecondary1;
+    std::vector<int> MtrackID1;
+    std::vector<double> trks1;
+    std::vector<double> ems1;
+    std::vector<double> michels1;
+    std::vector<double> nones1;
+    size_t NTracks = tracklist.size();
+    std::cout<<"number of tracks "<<NTracks<<std::endl;
+    for(size_t i=0;i<NTracks;i++){
+      art::Ptr<recob::Track> ptrack(trackListHandle, i);
+      const recob::Track& track = *ptrack;
+      auto pos = track.Vertex();
+      auto end = track.End();
+      int counter1=0;
+      double startx=pos.X();   
+      double starty=pos.Y();
+      double startz=pos.Z();
+      double endx=end.X();
+      double endy=end.Y();
+      double endz=end.Z();
+      std::cout<<"inside ntracks loop "<<std::endl;
+      if(track.Length()<10) continue;
+      std::cout<<"tracklength > 10 found "<<std::endl;
+      if(TMath::Max(endy,starty)>500 || TMath::Min(endy, starty)<200 || TMath::Max(startx, endx)>0||TMath::Min(startx,endx)<-200||TMath::Max(startz,endz)<230) continue;
+      //if(TMath::Max(endy,starty)>520 || TMath::Min(endy, starty)<150 || TMath::Max(startx, endx)>20||TMath::Min(startx,endx)<-300||TMath::Max(startz,endz)<230) continue;
+      
+      std::vector<int> wirenos;
+      std::vector<float> peakts,dqbuff1;
+      std::vector<float> dQstart,dQend;
+      std::vector<double> micheldq;
+      wirenos.clear();peakts.clear();dqbuff1.clear();
+      float peaktime=-1;
+      int wireno=-99999;
+      int tpcno=-1;
+      float zlast0=-99999;
+      float zlast=-99999;
+      std::vector<std::tuple<double,double,double,double,int,double>> buff_ZYXTWQ;
+      buff_ZYXTWQ.clear();
+      double thetavalue=theta12(beamstx,beamendx,beamsty,beamendy,beamstz,beamendz,startx,endx,starty,endy,startz,endz);
+      if(fmthm.isValid()){
+	auto vhit=fmthm.at(i);
+	auto vmeta=fmthm.data(i);
+	for (size_t ii = 0; ii<vhit.size(); ++ii){ //loop over all meta data hit
+	  bool fBadhit = false;
+	  if (vmeta[ii]->Index() == std::numeric_limits<int>::max()){
+	    fBadhit = true;
+	    //cout<<"fBadHit"<<fBadhit<<endl;
+	    continue;
+	  }
+	  if (vmeta[ii]->Index()>=tracklist[i]->NumberTrajectoryPoints()){
+	    throw cet::exception("Calorimetry_module.cc") << "Requested track trajectory index "<<vmeta[ii]->Index()<<" exceeds the total number of trajectory points "<<tracklist[i]->NumberTrajectoryPoints()<<" for track index "<<i<<". Something is wrong with the track reconstruction. Please contact tjyang@fnal.gov!!";
+	  }
+	  if (!tracklist[i]->HasValidPoint(vmeta[ii]->Index())){
+	    fBadhit = true;
+	    // cout<<"had valid point "<<fBadhit<<endl;
+	    continue;
+	  }
+        
+	  auto loc = tracklist[i]->LocationAtPoint(vmeta[ii]->Index());
+	  if (fBadhit) continue; //HY::If BAD hit, skip this hit and go next
+	  if (loc.Z()<-100) continue; //hit not on track
+	  if(vhit[ii]->WireID().Plane==2){
+	    buff_ZYXTWQ.push_back(std::make_tuple(loc.Z(),loc.Y(),loc.X(),vhit[ii]->PeakTime(),vhit[ii]->WireID().Wire,vhit[ii]->Integral()));
+	    wirenos.push_back(vhit[ii]->WireID().Wire);
+	    peakts.push_back(vhit[ii]->PeakTime());
+	    zlast=loc.Z();
+	    if(zlast>zlast0){
+	      zlast0=zlast;
+	      wireno=vhit[ii]->WireID().Wire;
+	      peaktime=vhit[ii]->PeakTime();
+	      tpcno=vhit[ii]->WireID().TPC;
+	    }        
+	  }//planenum 2
+	}//loop over vhit
+      }//fmthm valid
+      //save start and end point of each track
+      //taking care of flipped start and end point
+      if(endz<startz){
+	startx=end.X();   
+	starty=end.Y();
+	startz=end.Z();
+	endx=pos.X();
+	endy=pos.Y();
+	endz=pos.Z();
+      }
+      double trk_score=0.0;
+      double em_score=0;
+      double michel_score=0;
+      double none_score=0;
+      for(size_t hitl=0;hitl<hitlist.size();hitl++){
+	std::array<float,4> cnn_out=hitResults.getOutput(hitlist[hitl]);
+	auto & tracks = thass.at(hitlist[hitl].key());
+	if (!tracks.empty() && tracks[0].key()!=ptrack.key() && tracklist[tracks[0].key()]->Length()>25) continue;
+	// if (!tracks.empty() && tracks[0].key()!=ptrack.key() && tracklist[tracks[0].key()]->Length()>25) continue;
+	bool test=true;
+	float peakth1=hitlist[hitl]->PeakTime();
+	int wireh1=hitlist[hitl]->WireID().Wire;
+	for(size_t m=0;m<wirenos.size();m++){
+	  if(wireh1==wirenos[m] && peakth1==peakts[m]){
+	    test=false;
+	    break;
+	  }
+	}
+	if(!test) continue;
+	int planeid=hitlist[hitl]->WireID().Plane;
+	int tpcid=hitlist[hitl]->WireID().TPC;
+	if(abs(wireh1-wireno)<15 && abs(peakth1-peaktime)<100 && planeid==2 && tpcid==tpcno){
+	  // if(abs(wireh1-wireno)<20 && abs(peakth1-peaktime)<150 && planeid==2 && tpcid==tpcno){
+	  counter1++;
+	  // std::cout<<"wireno, counter "<<wireno<<" "<<counter1<<std::endl;
+	  micheldq.push_back(hitlist[hitl]->Integral());
+	  trk_score+=cnn_out[hitResults.getIndex("track")];
+	  em_score+=cnn_out[hitResults.getIndex("em")];
+	  michel_score+=cnn_out[hitResults.getIndex("michel")];
+	  none_score+=cnn_out[hitResults.getIndex("none")];
+	  // std::cout<<"track, em, michel  none"<<cnn_out[hitResults.getIndex("track")]<<" "<<cnn_out[hitResults.getIndex("em")]<<" "<<cnn_out[hitResults.getIndex("michel")]<<" "<<cnn_out[hitResults.getIndex("none")]<<std::endl;
+	  //std::cout<<"wire, peaktime selected hit, wires "<<wireno<<" "<<peaktime<<" "<<hitlist[hitl]->PeakTime()<<" "<<hitlist[hitl]->WireID().Wire<<std::endl;
+	}
+      }//hitlist loop
+      if(buff_ZYXTWQ.size()<15) continue;
+      sort(buff_ZYXTWQ.begin(),buff_ZYXTWQ.end());
+      dQstart.clear(); dQend.clear();
+      for(int qi=5;qi<15;qi++){
+	dQstart.push_back(std::get<5>(buff_ZYXTWQ[qi]));
+      }
+      int qi1=buff_ZYXTWQ.size();
+      for(int qi=qi1-5;qi<qi1;qi++){
+	dQend.push_back(std::get<5>(buff_ZYXTWQ[qi]));
+      }
+      secondarystartx1.push_back(startx);
+      secondarystarty1.push_back(starty);
+      secondarystartz1.push_back(startz);
+      secondaryendx1.push_back(endx);
+      secondaryendy1.push_back(endy);
+      secondaryendz1.push_back(endz);
+      endhitssecondary1.push_back(counter1);
+      tracklengthsecondary1.push_back(track.Length());
+      dQmichel1.push_back(TMath::Median(micheldq.size(),&micheldq[0]));
+      dQtrackbegin1.push_back(TMath::Median(dQstart.size(),&dQstart[0]));
+      dQtrackend1.push_back(TMath::Median(dQend.size(),&dQend[0]));
+      primsectheta1.push_back(thetavalue);
+      MtrackID1.push_back(track.ID());
+      trks1.push_back(trk_score);
+      ems1.push_back(em_score);
+      michels1.push_back(michel_score);
+      nones1.push_back(none_score);
+      std::cout<<"avg, trackscore, emscore, michelscore, nonescore "<<trk_score<<" "<<em_score<<" "<<michel_score<<" "<<none_score<<std::endl; 
+    }//Ntracks
+    secondarystartx.push_back(secondarystartx1);
+    secondarystarty.push_back(secondarystarty1);
+    secondarystartz.push_back(secondarystartz1);
+    secondaryendx.push_back(secondaryendx1);
+    secondaryendy.push_back(secondaryendy1);
+    secondaryendz.push_back(secondaryendz1);
+    endhitssecondary.push_back(endhitssecondary1);
+    tracklengthsecondary.push_back(tracklengthsecondary1);
+    dQmichel.push_back(dQmichel1);
+    dQtrackbegin.push_back(dQtrackbegin1);
+    dQtrackend.push_back(dQtrackend1);
+    primsectheta.push_back(primsectheta1);
+    MtrackID.push_back(MtrackID1);
+
+    trackscore.push_back(trks1);
+    emscore.push_back(ems1);
+    michelscore.push_back(michels1);
+    nonescore.push_back(nones1);
+      
+    endhitssecondary1.clear();
+    secondarystartx1.clear();
+    secondaryendx1.clear();
+    secondarystarty1.clear();
+    secondaryendy1.clear();
+    secondarystartz1.clear();
+    secondaryendz1.clear();
+    dQmichel1.clear();
+    primsectheta1.clear();
+    dQtrackbegin1.clear();
+    dQtrackend1.clear();
+    tracklengthsecondary1.clear();
+    MtrackID1.clear();
+    trks1.clear();
+    ems1.clear();
+    michels1.clear();
+    nones1.clear();
+    ///////////////End of Michel checking
+  
+    /////Michel tagging ends here
     if(thisTrack != 0x0){
       if(!beam_cuts.IsBeamlike(*thisTrack, evt, "1")) return;
+
+
+
+
+
+
+
+
+
+
+
+
+     
       // Get the true mc particle
       const simb::MCParticle* mcparticle = truthUtil.GetMCParticleFromRecoTrack(*thisTrack, evt, fTrackerTag);
       if(mcparticle!=0x0){
 	std::cout<<"ftruth pdg "<<mcparticle->PdgCode()<<std::endl;
 	ftruthpdg=mcparticle->PdgCode();
-     
 	truthid=mcparticle->TrackId();
 	fprimary_truth_Pdg= mcparticle->PdgCode();
 	std::cout<<"primary_truth_Pdg "<<fprimary_truth_Pdg<<std::endl;
@@ -1005,13 +1291,9 @@ void protoana::mcsXsection::analyze(art::Event const & evt){
       }//mcparticle loop
 
 
-
-
-
       fisprimarytrack               = 1;
       fisprimaryshower              = 0;
       fprimaryID                    = thisTrack->ID();
-      std::cout<<"this Track track ID "<<thisTrack->ID()<<std::endl;
       fprimaryTheta                 = thisTrack->Theta();
       fprimaryPhi                   = thisTrack->Phi();
       fprimaryLength                = thisTrack->Length();
@@ -1440,6 +1722,12 @@ void protoana::mcsXsection::analyze(art::Event const & evt){
 	
     }//this track
      
+  
+
+
+    //*********************************************//
+    //*********************************************//
+    ///////////Showere case and daughter trajectories
     else if(thisShower != 0x0){
       fisprimarytrack               = 0;
       fisprimaryshower              = 1;
@@ -1485,8 +1773,7 @@ void protoana::mcsXsection::analyze(art::Event const & evt){
     for(const int daughterID : particle->Daughters()){
       // Daughter ID is the element of the original recoParticle vector
       const recob::PFParticle *daughterParticle      = &(recoParticles->at(daughterID));
-      std::cout << "Daughter " << daughterID << " has " << daughterParticle->NumDaughters() << " daughters" << std::endl;
-      
+     
       const recob::Track* daughterTrack              = pfpUtil.GetPFParticleTrack(*daughterParticle,evt,fPFParticleTag,fTrackerTag);
       const recob::Shower* daughterShower            = pfpUtil.GetPFParticleShower(*daughterParticle,evt,fPFParticleTag,fShowerTag);
   
@@ -1796,6 +2083,24 @@ void protoana::mcsXsection::Initialise(){
   peakTime_0.clear();
   peakTime_1.clear();
   peakTime_2.clear();
+  //Michel tagging
+  endhitssecondary.clear();
+  secondarystartx.clear();
+  secondaryendx.clear();
+  secondarystarty.clear();
+  secondaryendy.clear();
+  secondarystartz.clear();
+  secondaryendz.clear();
+  dQmichel.clear();
+  primsectheta.clear();
+  dQtrackbegin.clear();
+  dQtrackend.clear();
+  tracklengthsecondary.clear();
+  MtrackID.clear();
+  trackscore.clear();
+  emscore.clear();
+  michelscore.clear();
+  nonescore.clear();
 }
 
 DEFINE_ART_MODULE(protoana::mcsXsection)
