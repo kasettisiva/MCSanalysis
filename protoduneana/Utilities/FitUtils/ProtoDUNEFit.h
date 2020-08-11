@@ -146,7 +146,7 @@ namespace protoana{
     //bool _AddIncidentBackgroundFactors;
     std::vector<int> _AddBackgroundFactors, _AddIncidentBackgroundFactors,
                      _enable_bkg_factor, _enable_inc_bkg_factor;
-    bool _OnlyDrawXSecs;
+    bool _OnlyDrawXSecs, _DoDrawXSecs;
     bool _DataIsMC;
     double _EndZCut, _WirePitch;
 

@@ -205,9 +205,9 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
 
     /////////////////////
     
-    //if (!reco_beam_hit_true_ID->size()) {
-    //  continue;
-    //}
+    if (!reco_beam_hit_true_ID->size()) {
+      continue;
+    }
 
 
     if (true_beam_PDG == 211) {
@@ -294,6 +294,9 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
       std::cout <<  "ERROR topo mismatch " << topology << " " << interaction_topology << std::endl;
     }
 */
+    if (interaction_topology == -1)
+      std::cout << "Warning: Interaction topo -1" << std::endl;
+
     if (interaction_topology != toponum)
       continue;
 
@@ -526,6 +529,8 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
     */
     
 
+    if (interaction_topology == -1)
+      std::cout << "Warning: Interaction topo -1" << std::endl;
 
     if (interaction_topology == 1 || interaction_topology ==2) {
       //make sure there is any hits at all
@@ -671,10 +676,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(
 
     if (IsIncidentHisto) {
 
-      // Testing
-      //if (reco_beam_endZ > reco_beam_endZ_cut) continue;
-
-      for (size_t l = 0; l < reco_beam_incidentEnergies->size(); l++) {
+      for (size_t l = 0; l < reco_beam_incidentEnergies->size(); ++l) {
 
         //Here -- need to add in a check for the reconstructed slice.
         //Previously, was using an input file that already had these removed,
@@ -685,12 +687,13 @@ TH1* protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(
         double energy = (*reco_beam_incidentEnergies)[l];
         if (doNegativeReco) {
           if (energy < 0.) {
-            datahisto->AddBinContent(1, 1);
+            datahisto->AddBinContent(1, 1.);
           }
           else {
 	    for (int m = 1; m < nrecobins; m++) {
-	      if (energy > recoBins[m-1] && energy <= recoBins[m]) {
-	        datahisto->AddBinContent(m+1, 1);
+	      if (energy > recoBins[m-1] &&
+                  energy <= recoBins[m]) {
+	        datahisto->AddBinContent(m+1, 1.);
 	        break;
 	      }
 	    }
@@ -705,30 +708,31 @@ TH1* protoana::ProtoDUNESelectionUtils::FillDataHistogram_Pions(
 	  }
         }
       }
-      continue;
+      //continue;
     }
-
-    // Fill histogram in reco energy
-    if (doNegativeReco) {
-      if (reco_beam_interactingEnergy < 0.) {
-        datahisto->AddBinContent(1, 1);
+    else {
+      // Fill histogram in reco energy
+      if (doNegativeReco) {
+        if (reco_beam_interactingEnergy < 0.) {
+          datahisto->AddBinContent(1, 1);
+        }
+        else {
+          for (int l = 1; l < nrecobins; l++) {
+            if (reco_beam_interactingEnergy > recoBins[l-1] &&
+                reco_beam_interactingEnergy <= recoBins[l]) {
+              datahisto->AddBinContent(l+1, 1);
+              break;
+            }
+          }
+        }
       }
       else {
         for (int l = 1; l < nrecobins; l++) {
           if (reco_beam_interactingEnergy > recoBins[l-1] &&
               reco_beam_interactingEnergy <= recoBins[l]) {
-            datahisto->AddBinContent(l+1, 1);
+            datahisto->AddBinContent(l, 1);
             break;
           }
-        }
-      }
-    }
-    else {
-      for (int l = 1; l < nrecobins; l++) {
-        if (reco_beam_interactingEnergy > recoBins[l-1] &&
-            reco_beam_interactingEnergy <= recoBins[l]) {
-          datahisto->AddBinContent(l, 1);
-          break;
         }
       }
     }
@@ -882,6 +886,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
 
     defaultTree->GetEntry(k);
 
+    ////For first attempt at g4rw systematics
     if (!done_check && doSyst != 0) {
       if (g4rw_primary_var->size() > 0) {
         std::cout << "Checking" << std::endl;
@@ -907,6 +912,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
         weights[(*g4rw_primary_var)[i]] = (*g4rw_primary_minus_sigma_weight)[i];
       }
     }
+    //////////////////////////////////////
 
     // Different background topologies
     Int_t topology = -1;
@@ -915,8 +921,6 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
     if (!doNegativeReco && reco_beam_interactingEnergy < 0.0) continue;
 
     if (reco_beam_interactingEnergy  == -999.) continue;
-
-    //if (reco_beam_endZ > reco_beam_endZ_cut) continue;
 
     //bool check_cosmics = ( reco_beam_true_byHits_origin == 2 );
 
@@ -934,14 +938,13 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
       int true_origin = (*reco_beam_hit_true_origin)[l]; 
       int true_slice = (*reco_beam_hit_true_slice)[l]; 
 
-/*
+      /*
       if ( check_cosmics && true_origin != 2 ) {
         std::cout << "Notice! Beam matched to cosmic, with non-cosmic hit"
                   << std::endl;
       }
-*/
+      */
       double true_energy = 0.;
-        
 
       // Cosmic
       if( true_origin == 2 ){
@@ -996,6 +999,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
                 
                 //Go through the true slices to find the 
                 //true incident energy
+                bool found_true_slice = false;
                 for (size_t i = 0; i < true_beam_slices->size(); ++i) {
                   int check_slice = (*true_beam_slices)[i];  
                   true_energy = (*new_true_beam_incidentEnergies)[i];
@@ -1004,8 +1008,12 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
                     //            (*reco_beam_incidentEnergies)[l] << " " <<
                     //            "True inc energy: " << true_energy <<
                     //            std::endl;
+                    found_true_slice = true;
                     break;
                   }
+                }
+                if (!found_true_slice) {
+                  std::cout << "Could not find true slice" << std::endl;
                 }
               }
             }
@@ -1013,14 +1021,6 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
               topology = 4; // Is muon
             }
 
-            /*
-            if (doSyst == 1) {
-              syst_weight = g4rw_primary_plus_sigma_weight;
-            }
-            else if (doSyst == -1) {
-              syst_weight = g4rw_primary_minus_sigma_weight;
-            }
-            */
             if (doSyst == 1 || doSyst == -1) { //Do +1 sigma
               syst_weight = weights[systName];
             }
@@ -1029,20 +1029,29 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
       }
 
 
-      if (topology != toponum) continue;
-      if (true_energy < minval || true_energy >= maxval) {
+      if (topology == -1)
+        std::cout << "Warning: incident topology == -1" <<std::endl;
+      if (topology != toponum) {
         continue;
       }
-
-/*
-      for (size_t m = 1; m < nrecobins; m++) {
-	if ((*reco_beam_incidentEnergies)[l] > recoBins[m-1] &&
-            (*reco_beam_incidentEnergies)[l] <= recoBins[m]) {
-	  mchisto->AddBinContent(m, weight*syst_weight);
-	  break;
-	}
+      //Patch
+      if (true_energy < 0.) 
+        true_energy = 10.;
+      if (true_energy < minval || true_energy >= maxval) {
+        //if (true_energy > maxval) {
+        //  std::cout << "TrueEnergy G: " << true_energy << " " << minval <<
+        //               " " << maxval << " " << (*reco_beam_incidentEnergies)[l] << std::endl;
+        //}
+        //else if (true_energy == maxval) {
+        //  std::cout << "TrueEnergy E: " << true_energy << " " << minval <<
+        //               " " << maxval << " " << (*reco_beam_incidentEnergies)[l] << std::endl;
+        //}
+        //else if (true_energy < minval) {
+        //  std::cout << "TrueEnergy L: " << true_energy << " " << minval <<
+        //               " " << maxval << " " << (*reco_beam_incidentEnergies)[l] << std::endl;
+        //}
+        continue;
       }
-      */
 
       double energy = (*reco_beam_incidentEnergies)[l];
       if (doNegativeReco) {

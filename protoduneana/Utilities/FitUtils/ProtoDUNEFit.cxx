@@ -436,7 +436,8 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
   toys_tree->SetNameTitle(treename.Data(),treename.Data());
 
   // Plot NLL
-  std::vector<TCanvas*> nllplots = protoana::ProtoDUNEFitUtils::PlotNLL(ws,"PDFit",fitresult);
+  std::vector<TCanvas*> nllplots = protoana::ProtoDUNEFitUtils::PlotNLL(
+      ws, "PDFit", fitresult);
 
   TTree *mctoys_results1 = (TTree*)toys_tree->Clone();
   TCanvas* nuisancecanvas = protoana::ProtoDUNEFitUtils::PlotNuisanceParameters(mctoys_results1, ws);
@@ -553,16 +554,18 @@ void protoana::ProtoDUNEFit::BuildWorkspace(TString Outputfile, int analysis){
   }
 
   // Try drawing the xsecs
-  std::vector<TH1 *> pre_xsecs = DrawXSecs();
-  for (size_t k = 0; k < pre_xsecs.size(); ++k) {
-     pre_xsecs[k]->Write();
-  }
+  if (_DoDrawXSecs) {
+    std::vector<TH1 *> pre_xsecs = DrawXSecs();
+    for (size_t k = 0; k < pre_xsecs.size(); ++k) {
+       pre_xsecs[k]->Write();
+    }
 
-  std::vector<TH1 *> post_xsecs = DrawXSecs(fitresult);
-  for (size_t k = 0; k < post_xsecs.size(); ++k) {
-     post_xsecs[k]->Write();
+    std::vector<TH1 *> post_xsecs = DrawXSecs(fitresult);
+    for (size_t k = 0; k < post_xsecs.size(); ++k) {
+       post_xsecs[k]->Write();
+    }
+    std::cout << "Finished XSec" << std::endl;
   }
-  std::cout << "Finished XSec" << std::endl;
 
   for(unsigned int k = 0; k < _incsighistos.size(); k++){
     _incsighistos[k]->Write();
@@ -1023,6 +1026,7 @@ void protoana::ProtoDUNEFit::AddSidebandSamplesAndChannelsToMeasurement(
 
         // Add bkg normalisation parameter to this sample
         //if(hname.Contains(toponame.Data())){
+        if(j == 0) {
           TString poiname = hname;
           poiname.ReplaceAll("MC","POI");
           poiname.ReplaceAll("_Histo","");
@@ -1042,7 +1046,7 @@ void protoana::ProtoDUNEFit::AddSidebandSamplesAndChannelsToMeasurement(
           }
           mf::LogInfo(message_source) << "Sample " << sample.GetName() <<
               " has normalisation parameter " << poiname.Data();
-        //}
+        }
 
         // Add sample to channel
         channel.AddSample(sample);
@@ -1251,7 +1255,8 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
                 _IncidentMCFileNames[j], _RecoTreeName, _RecoBinning,
                 _IncidentTopologyName[i], _IncidentTopology[i], _EndZCut,
                 0., 10000., _DoNegativeReco, 0, "",
-                _IncidentScaleFactor*(i == 4 ? _MuonScaleFactor : 1.)));
+                _IncidentScaleFactor*(_IncidentTopology[i] == 4 ?
+                                      _MuonScaleFactor : 1.)));
       }
 
       inchisto->SetNameTitle(Form("MC_ChannelIncident_%s_Histo",
@@ -1442,7 +1447,7 @@ void protoana::ProtoDUNEFit::ScaleMCToData(bool data_is_mc) {
     //std::string cut = "(true_beam_PDG == 211 || true_beam_PDG == -13)";
     nIncidentPionsMC += incident_tree->GetEntries();
 
-    std::string cut = "passBeamCut && primary_ends_inAPA3 && primary_passes_chi2";
+    std::string cut = "passBeamCut && primary_ends_inAPA3"; // && primary_passes_chi2";
 
     nPrimaryPionsMC += incident_tree->GetEntries(cut.c_str());
     incidentFile.Close();
@@ -1462,7 +1467,7 @@ void protoana::ProtoDUNEFit::ScaleMCToData(bool data_is_mc) {
     //                   "data_BI_PDG_candidates[0] == 13");
     nIncidentPionsData += incident_tree->GetEntries();
 
-    std::string cut = "passBeamCut && primary_ends_inAPA3 && primary_passes_chi2";
+    std::string cut = "passBeamCut && primary_ends_inAPA3";//&& primary_passes_chi2";
 
     nPrimaryPionsData += incident_tree->GetEntries(cut.c_str());
 
@@ -1745,6 +1750,7 @@ bool protoana::ProtoDUNEFit::Configure(std::string configPath){
   //_StatFluctuation             = pset.get<bool>("StatFluctuation");
   _DataIsMC                    = pset.get<bool>("DataIsMC");
   _OnlyDrawXSecs               = pset.get<bool>("OnlyDrawXSecs");
+  _DoDrawXSecs                 = pset.get<bool>("DoDrawXSecs");
   _WirePitch                   = pset.get<double>("WirePitch");
 
   return true;

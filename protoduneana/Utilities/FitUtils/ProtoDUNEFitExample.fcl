@@ -1,5 +1,4 @@
 # Path to MC files. Each entry corresponds to a different channel and has to match with the DataFileNames.
-#MCFileNames:             ["eventSelection_mc_ABS.root","eventSelection_mc_CEX.root"]
 MCFileNames:             ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_ABS.root",
                           "/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_CEX.root"]
 
@@ -9,7 +8,7 @@ DataFileNames:             ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eve
                             "/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_CEX.root"]
 
 # Channel names. Follow the order of the MC/Data File Names
-ChannelNames:            ["ABS","CEX"]
+ChannelNames:            ["ABS", "CEX"]
 
 # Path to MC control samples.
 MCControlSampleFiles:    ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_beamType.root"]
@@ -23,7 +22,7 @@ SidebandTopology:     [1, 2, 3, 4, 5]
 
 # Path to file to get the number of incident pions
 IncidentMCFileNames:     ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_beamType.root"]
-                                                                                                       
+
 IncidentDataFileNames:   ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_beamType.root"] 
 
 # Number of toys to generate for MC studies. Any number above 0 will enable toy mc generation and won't fit the data.
@@ -49,7 +48,7 @@ IncidentTopologyName:    ["Pions", "Muons", "Cosmic", "TrueUnmatched", "Downstre
 TruthTreeName:           "pionana/beamana"
 
 # Define binning in truth/reco. It doesn't have to be symmetric.
-TruthBinning:            [0., 400., 600., 700., 800., 1200.]
+TruthBinning:            [0., 400., 600., 700., 800., 1270.]
 RecoBinning:             [0., 400., 600., 700., 800., 1200.]
 
 # Option to fit in reco. If enabled will ignore the truth binning and introduce one free parameter per reco bin
@@ -75,10 +74,10 @@ SystToConsider:          ["fReac"] #, "fAbs2", "fCex"] #["Systematic1","Systemat
 SystType:                ["NormShape"] #, "NormShape", "NormShape"] #["NormShape"  ,"NormShape"]   # For each systematic the type should be defined, options are: NormOnly, ShapeOnly, NormShape
 IgnoreSystematicErrorBelow: 0.01                     # Sytematic error will be ignored if below this value
 
-AddIncidentToMeasurement: true
+AddIncidentToMeasurement: false #true
 AddBackgroundFactors: [0, 0, 0, 0, 0]
-AddIncidentBackgroundFactors: [0, 1, 0, 0, 0]
-AddSidebandsToMeasurement: true 
+AddIncidentBackgroundFactors: [0, 0, 0, 0, 0]
+AddSidebandsToMeasurement: false 
 DoNegativeReco:           true
 EndZCut:                  226.
 SidebandBinning:      [@local::EndZCut, 300., 350., 375., 400, 450., 480.]
@@ -86,6 +85,7 @@ SidebandBinning:      [@local::EndZCut, 300., 350., 375., 400, 450., 480.]
 WirePitch: .47974  #.4792
 DoScaleMCToData:  false 
 OnlyDrawXSecs: false 
+DoDrawXSecs: false #true
 DataIsMC: true
 DoScaleMuonContent: false 
 
