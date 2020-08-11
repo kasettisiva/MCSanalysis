@@ -96,12 +96,12 @@ namespace pionana {
       int slice_num = std::floor(
           (ides[i]->z - (the_z0 - the_pitch/2.)) / the_pitch);
 
-      /*
+      
       std::cout << "IDE: " << i << " ID: " << ides[i]->trackID << " Edep: "
                 << ides[i]->energy << " (X,Y,Z): " << "(" << ides[i]->x << ","
                 << ides[i]->y<<","<<ides[i]->z << ") Z0: " << the_z0
                 << " Slice: " << slice_num << std::endl;
-      */
+      
 
       results[slice_num].push_back(ides[i]);
     }
@@ -622,6 +622,11 @@ private:
   std::vector< int >    true_beam_slices, true_beam_slices_found, true_beam_slices_nIDEs;
   std::vector< double > true_beam_slices_deltaE;
   double true_beam_interactingEnergy, new_true_beam_interactingEnergy;
+  double em_energy;
+  std::vector<double> true_beam_traj_X;
+  std::vector<double> true_beam_traj_Y;
+  std::vector<double> true_beam_traj_Z;
+  std::vector<double> true_beam_traj_KE;
 
   int    reco_beam_PFP_ID;
   int    reco_beam_PFP_nHits;
@@ -903,6 +908,8 @@ private:
 
   //FCL pars
   std::string fCalorimetryTag;
+  std::string fPandora2CaloNoSCE;
+  std::string fPandora2CaloSCE;
   std::string fTrackerTag;
   std::string fHitTag;
   std::string fShowerTag;
@@ -940,6 +947,8 @@ pionana::PionAnalyzer::PionAnalyzer(fhicl::ParameterSet const& p)
   fTrackModuleLabel(p.get< art::InputTag >("TrackModuleLabel")),
 
   fCalorimetryTag(p.get<std::string>("CalorimetryTag")),
+  fPandora2CaloNoSCE(p.get<std::string>("Pandora2CaloNoSCE")),
+  fPandora2CaloSCE(p.get<std::string>("Pandora2CaloSCE")),
   fTrackerTag(p.get<std::string>("TrackerTag")),
   fHitTag(p.get<std::string>("HitTag")),
   fShowerTag(p.get<std::string>("ShowerTag")),
@@ -1085,6 +1094,16 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
     if( !true_beam_particle ){
       MF_LOG_WARNING("PionAnalyzer") << "No true beam particle" << std::endl;
       return;
+    }
+    if (fVerbose) {
+      std::cout << "Got " << (*mcTruths)[0].NParticles() <<
+                   " particles in mcTruth" << std::endl;
+      for (int i = 0; i < (*mcTruths)[0].NParticles(); ++i) {
+        simb::MCParticle part = (*mcTruths)[0].GetParticle(i);
+        std::cout << part.Process() << " " << part.TrackId() << " " <<
+                     part.PdgCode() << std::endl;
+
+      }
     }
   }
   ////////////////////////////
@@ -1475,6 +1494,11 @@ std::cout << "Got" << std::endl;
         const sim::IDE * prev_IDE = view2_IDEs[i-1];
         const sim::IDE * this_IDE = view2_IDEs[i];
 
+        if (this_IDE->trackID < 0.) {
+          em_energy += this_IDE->energy;
+        }
+
+
         if( this_IDE->trackID < 0 && ( this_IDE->z - prev_IDE->z ) > 5 ){
           remove_index = i;
           do_remove = true;
@@ -1581,6 +1605,14 @@ std::cout << "Got" << std::endl;
     new_true_beam_incidentEnergies.pop_back();
     if( new_true_beam_incidentEnergies.size() ) new_true_beam_interactingEnergy = new_true_beam_incidentEnergies.back();
 
+    for (size_t i = 0; i < true_beam_trajectory.size(); ++i) {
+      true_beam_traj_X.push_back(true_beam_trajectory.X(i));
+      true_beam_traj_Y.push_back(true_beam_trajectory.Y(i));
+      true_beam_traj_Z.push_back(true_beam_trajectory.Z(i));
+      
+      true_beam_traj_KE.push_back(true_beam_trajectory.E(i)*1.e3 - mass);
+    }
+
     for( int i = 0; i < true_beam_particle->NumberDaughters(); ++i ){
       int daughterID = true_beam_particle->Daughter(i);
 
@@ -1609,7 +1641,7 @@ std::cout << "Got" << std::endl;
       true_beam_daughter_endProcess.push_back( part->EndProcess() );
 
       if (fVerbose) {
-        std::cout << "Proccess: " << part->Process() << std::endl;
+        std::cout << "Process: " << part->Process() << std::endl;
         std::cout << "PID: " << pid << std::endl;
         std::cout << "Start: " << part->Position(0).X() << " " << part->Position(0).Y() << " " << part->Position(0).Z() << std::endl;
         std::cout << "End: " << part->EndPosition().X() << " " << part->EndPosition().Y() << " " << part->EndPosition().Z() << std::endl;
@@ -1954,8 +1986,6 @@ std::cout << "Got" << std::endl;
         }
       }
     }
-
-
 
 ///isRealData
     //Thin slice
@@ -2895,8 +2925,8 @@ std::cout << "Got" << std::endl;
         if( pandora2Track ){
           reco_daughter_allTrack_ID.push_back( pandora2Track->ID() );
 
-          std::vector< anab::Calorimetry > dummy_calo = trackUtil.GetRecoTrackCalorimetry(*pandora2Track, evt, "pandora2Track", "pandora2calo");
-          std::vector< anab::Calorimetry > dummy_caloSCE = trackUtil.GetRecoTrackCalorimetry(*pandora2Track, evt, "pandora2Track", "pandora2caloSCE");
+          std::vector< anab::Calorimetry > dummy_calo = trackUtil.GetRecoTrackCalorimetry(*pandora2Track, evt, "pandora2Track", fPandora2CaloNoSCE/*"pandora2calo"*/);
+          std::vector< anab::Calorimetry > dummy_caloSCE = trackUtil.GetRecoTrackCalorimetry(*pandora2Track, evt, "pandora2Track", fPandora2CaloSCE/*"pandora2caloSCE"*/);
 
           auto dummy_dEdx = dummy_calo[0].dEdx();
           auto dummy_dQdx = dummy_calo[0].dQdx();
@@ -2910,8 +2940,8 @@ std::cout << "Got" << std::endl;
           reco_daughter_allTrack_momByRange_alt_muon.push_back(   track_p_calc.GetTrackMomentum( dummy_caloSCE[0].Range(), 13  ) );
           reco_daughter_allTrack_alt_len.push_back(    dummy_caloSCE[0].Range() );
 
-          std::vector<float> cali_dEdX = calibration.GetCalibratedCalorimetry(*pandora2Track, evt, "pandora2Track", "pandora2calo", 2);
-          std::vector<float> cali_dEdX_SCE = calibration.GetCalibratedCalorimetry(*pandora2Track, evt, "pandora2Track", "pandora2caloSCE", 2);
+          std::vector<float> cali_dEdX = calibration.GetCalibratedCalorimetry(*pandora2Track, evt, "pandora2Track", fPandora2CaloNoSCE/*"pandora2calo"*/, 2);
+          std::vector<float> cali_dEdX_SCE = calibration.GetCalibratedCalorimetry(*pandora2Track, evt, "pandora2Track", fPandora2CaloSCE/*"pandora2caloSCE"*/, 2);
 
           reco_daughter_allTrack_resRange.push_back( std::vector<double>() );
           reco_daughter_allTrack_dEdX.push_back( std::vector<double>() );
@@ -2950,9 +2980,9 @@ std::cout << "Got" << std::endl;
           auto resRange_plane0 = dummy_caloSCE[2].ResidualRange();
           auto resRange_plane1 = dummy_caloSCE[1].ResidualRange();
           std::vector<float> dEdX_plane0 = calibration.GetCalibratedCalorimetry(
-              *pandora2Track, evt, "pandora2Track", "pandora2caloSCE", 0);
+              *pandora2Track, evt, "pandora2Track", fPandora2CaloSCE/*"pandora2caloSCE"*/, 0);
           std::vector<float> dEdX_plane1 = calibration.GetCalibratedCalorimetry(
-              *pandora2Track, evt, "pandora2Track", "pandora2caloSCE", 1);
+              *pandora2Track, evt, "pandora2Track", fPandora2CaloSCE/*"pandora2caloSCE"*/, 1);
 
           reco_daughter_allTrack_resRange_plane0.push_back(
               std::vector<double>());
@@ -3490,11 +3520,13 @@ std::cout << "Got" << std::endl;
       G4ReweightTraj theTraj(true_beam_ID, true_beam_PDG, 0, event, {0,0});
       bool created = CreateRWTraj(*true_beam_particle, plist,
                                   fGeometryService, event, &theTraj);
-      if (created) {
+      if (created && theTraj.GetNSteps() > 0) {
         g4rw_primary_weights.push_back(MultiRW->GetWeightFromNominal(theTraj));
 
+        std::cout << g4rw_primary_weights.size() << std::endl;
         std::vector<double> weights_vec = MultiRW->GetWeightFromAll1DThrows(
             theTraj);
+        std::cout << weights_vec.size() << std::endl;
         g4rw_primary_weights.insert(g4rw_primary_weights.end(),
                                     weights_vec.begin(), weights_vec.end());
 
@@ -4079,6 +4111,11 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("true_beam_slices_deltaE", &true_beam_slices_deltaE);
   fTree->Branch("new_true_beam_incidentEnergies", &new_true_beam_incidentEnergies);
   fTree->Branch("new_true_beam_interactingEnergy", &new_true_beam_interactingEnergy);
+  fTree->Branch("em_energy", &em_energy);
+  fTree->Branch("true_beam_traj_X", &true_beam_traj_X);
+  fTree->Branch("true_beam_traj_Y", &true_beam_traj_Y);
+  fTree->Branch("true_beam_traj_Z", &true_beam_traj_Z);
+  fTree->Branch("true_beam_traj_KE", &true_beam_traj_KE);
 
   fTree->Branch("g4rw_primary_weights", &g4rw_primary_weights);
   fTree->Branch("g4rw_primary_plus_sigma_weight", &g4rw_primary_plus_sigma_weight);
@@ -4505,6 +4542,11 @@ void pionana::PionAnalyzer::reset()
   true_beam_slices_deltaE.clear();
   true_beam_interactingEnergy = -999.;
   new_true_beam_interactingEnergy = -999.;
+  em_energy = 0.;
+  true_beam_traj_X.clear();
+  true_beam_traj_Y.clear();
+  true_beam_traj_Z.clear();
+  true_beam_traj_KE.clear();
 
   /*
   reco_daughter_trackID.clear();

@@ -14,6 +14,8 @@ pionanalysis:
   TimeDecoderModuleLabel: "timingrawdecoder:daq"
 
   CalorimetryTag:         "pandoracalo"
+  Pandora2CaloNoSCE:      "pandora2calo"
+  Pandora2CaloSCE:        "pandora2caloSCE"
   TrackerTag:             "pandoraTrack"
   HitTag:                 "gaushit"
   ShowerTag:              "pandoraShower"

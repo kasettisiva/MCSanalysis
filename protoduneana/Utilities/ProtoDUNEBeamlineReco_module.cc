@@ -60,6 +60,7 @@ private:
   std::vector<int> possible_pdg;
   int nTracks;
   std::vector<double> trackEndX, trackEndY, trackEndZ;
+  std::vector<double> dirX, dirY, dirZ;
 
 
   std::vector<short> fibers_h_upstream,   fibers_v_upstream, 
@@ -111,6 +112,9 @@ void protoana::ProtoDUNEBeamlineReco::beginJob() {
   fOutTree->Branch("trackEndX", &trackEndX);
   fOutTree->Branch("trackEndY", &trackEndY);
   fOutTree->Branch("trackEndZ", &trackEndZ);
+  fOutTree->Branch("dirX", &dirX);
+  fOutTree->Branch("dirY", &dirY);
+  fOutTree->Branch("dirZ", &dirZ);
   fOutTree->Branch("possible_pdg", &possible_pdg);
 
   //Tracking Monitors
@@ -279,9 +283,12 @@ void protoana::ProtoDUNEBeamlineReco::analyze(art::Event const & evt){
     std::cout << "Z " << beamEvent.GetBeamTracks()[0].Trajectory().End().Z() << std::endl;
   }
   for (size_t i = 0; i < beamEvent.GetBeamTracks().size(); ++i) {
-    trackEndX.push_back(beamEvent.GetBeamTracks()[0].Trajectory().End().X());
-    trackEndY.push_back(beamEvent.GetBeamTracks()[0].Trajectory().End().Y());
-    trackEndZ.push_back(beamEvent.GetBeamTracks()[0].Trajectory().End().Z());
+    trackEndX.push_back(beamEvent.GetBeamTracks()[i].Trajectory().End().X());
+    trackEndY.push_back(beamEvent.GetBeamTracks()[i].Trajectory().End().Y());
+    trackEndZ.push_back(beamEvent.GetBeamTracks()[i].Trajectory().End().Z());
+    dirX.push_back(beamEvent.GetBeamTracks()[i].Trajectory().EndDirection().X());
+    dirY.push_back(beamEvent.GetBeamTracks()[i].Trajectory().EndDirection().Y());
+    dirZ.push_back(beamEvent.GetBeamTracks()[i].Trajectory().EndDirection().Z());
   }
   /////////////////////////////////////////////////////////////
 
@@ -405,6 +412,10 @@ void protoana::ProtoDUNEBeamlineReco::reset(){
   trackEndX.clear();
   trackEndY.clear();
   trackEndZ.clear();
+
+  dirX.clear();
+  dirY.clear();
+  dirZ.clear();
 }
  
 DEFINE_ART_MODULE(protoana::ProtoDUNEBeamlineReco)
