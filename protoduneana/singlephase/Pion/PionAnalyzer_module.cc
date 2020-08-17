@@ -4763,6 +4763,7 @@ bool pionana::PionAnalyzer::CreateRWTraj(
       if (fVerbose) {
         std::cout  << "LAr: " << test_material->GetDensity() << " " <<
                       test_material->GetA() << " " << test_material->GetZ() <<
+                      " " << x << " " << y << " " << z << 
                       std::endl;
       }
       traj_X.push_back(x);
@@ -4777,6 +4778,13 @@ bool pionana::PionAnalyzer::CreateRWTraj(
       if (itProc != proc_map.end() && itProc->second == "hadElastic") {
         elastic_indices.push_back(i);
       }
+    }
+    else if (fVerbose) {
+      std::cout << test_material->GetName() << " " <<
+                   test_material->GetDensity() << " " <<
+                   test_material->GetA() << " " << test_material->GetZ() <<
+                   " " << x << " " << y << " " << z << 
+                   std::endl;
     }
 
     if (i == part.NumberTrajectoryPoints() - 1)
