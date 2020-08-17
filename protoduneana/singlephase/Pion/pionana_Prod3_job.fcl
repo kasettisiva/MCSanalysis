@@ -57,11 +57,12 @@ physics:
 outputs: {}
 physics.analyzers.pionana.SelectEvents: []
 physics.analyzers.pionana.NSliceCheck: 2
-#physics.analyzers.pionana.CalorimetryTag: "pandoracaloSCE"
+#physics.analyzers.pionana.CalorimetryTag: "pandoracalonosce" ##For no-SCE sample
 physics.analyzers.pionana.Pandora2CaloNoSCE: "pandora2calonosce"
 physics.analyzers.pionana.Pandora2CaloSCE: "pandora2calo"
 physics.analyzers.pionana.HitTag: "hitpdune"
 physics.analyzers.pionana.MCHasBI: true
 physics.analyzers.pionana.Verbose: true
 physics.analyzers.pionana.DoReweight: true 
+services.ParticleInventoryService.ParticleInventory.EveIdCalculator: "EveIdCalculator"
 #physics.analyzers.pionana.SaveHits: true
