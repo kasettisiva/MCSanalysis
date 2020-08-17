@@ -1,0 +1,67 @@
+#include "protoDUNE_reco_data_Dec2018.fcl"
+#include "services_dune.fcl"
+#include "opticaldetectormodules_dune.fcl"
+#include "opticaldetectorservices_dune.fcl"
+
+#include "tools_dune.fcl"
+#include "protodune_tools_dune.fcl"
+
+process_name: RunPDSPMatchMC
+
+services:
+{
+  TimeTracker:       {}
+  RandomNumberGenerator: {}
+
+  @table::protodune_data_reco_services  
+
+  TFileService: { 
+   closeFileFast: true  # default
+   fileName:  "%ifb_match.root"
+   tmpDir: "<parent-path-of-filename>"  # default
+  }
+
+  IFDH:              {}
+}
+
+
+
+physics:
+{
+	analyzers:{}
+	protodunematch: [ PDSPmatchmc ]
+	stream1: []
+	trigger_paths: []
+	end_paths: [ protodunematch ]	
+}
+
+physics.analyzers.PDSPmatchmc:
+{
+	module_type: "PDSPmatchmc"
+	OpHitLabel_MC: "ophit"
+	PandoraLabel_MC: "pandoraTrack"
+	PFParListLabel_MC: "pandora"
+	PMLabel_MC: "pmtrack"
+	MCTruthLabel_MC: "cosmicgenerator"
+	GEANTLabel_MC: "largeant"
+}   
+
+outputs:
+{
+#  out1:
+#  {
+#    outputCommands: [ "keep *", "drop artdaq::Fragments_*_*_*" ]
+#    compressionLevel: 1
+#    module_type: RootOutput
+#    fileName: "%ifb_match.root"
+#    dataTier: "full-reconstructed"
+#  }
+}
+
+source:
+{
+  module_type: RootInput
+  fileNames: [ "/afs/cern.ch/user/s/sergiand/workspace/artdaq_devel/pdune_r1000077_sr01_20170629T181646_1_0.root" ]
+  maxEvents : -1
+}
+

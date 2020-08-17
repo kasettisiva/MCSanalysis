@@ -611,9 +611,12 @@ namespace protoana{
 		    hit_t = itck;
 		  }
 		}//finding peak signal
+		std::cout<<"hitpeak time, hitraw peak time "<<vhit[ii]->PeakTime()<<"  "<<hit_t<<std::endl;
+		int hitindx=0;
 		for(size_t it1=hit_t-20;it1<hit_t+30;it1++){
 		  if(it1<1||it1>5999||it1>inputsignal.size()) continue;
-		  hit_signal[ntrks][nhits-1][it1]=signal[it1];
+		  hit_signal[ntrks][nhits-1][hitindx]=signal[it1];
+		  hitindx++;
 		}//storing signal for peakT-20 to peakT+30 ticks
 		double hit_ch = 0;
 		double hit_fwhh = 0;
@@ -641,17 +644,32 @@ namespace protoana{
 		raw::Uncompress(digitVec->ADCs(), rawadc, digitVec->GetPedestal(), digitVec->Compression());
 		double hit_pk = -1;
 		//	double hit_t = -1;
+		std::vector<double> signalbuffer;
+		signalbuffer.clear();
+		//calculating the median of signals
+		for(size_t it=0;it<rawadc.size();it++){
+		  signalbuffer.push_back(rawadc[it]);
+		}
+		double med_signal=TMath::Median(signalbuffer.size(),&signalbuffer[0]);//median signal for a channel
+		std::cout<<"median , pedestal , rawadc size "<<med_signal<<" "<<digitVec->GetPedestal()<<" "<<rawadc.size()<<std::endl;
+		////////////////////////////////
+
 		for (size_t itck = t0; itck <rawadc.size(); ++itck){
 		  if(itck>t1) continue;
-		  inputsignal[itck] = rawadc[itck] - digitVec->GetPedestal();
+		  //  inputsignal[itck] = rawadc[itck] - digitVec->GetPedestal();
+		  inputsignal[itck] = rawadc[itck] - med_signal;
 		  if (inputsignal[itck]>hit_pk){
 		    hit_pk = inputsignal[itck];
 		    hit_t = itck;
 		  }
 		}//itick loop
+		std::cout<<"hitpeak time, hitraw peak time "<<vhit[ii]->PeakTime()<<"  "<<hit_t<<std::endl;
+		int hitindex=0;
 		for(size_t it1=hit_t-20;it1<hit_t+30;it1++){
-		  if(it1<=0|| it1>5999 || it1>rawadc.size()) continue;
-		  hit_signal[ntrks][nhits-1][it1]=rawadc[it1]-digitVec->GetPedestal();
+		  if(it1<1|| it1>5999 || it1>rawadc.size()) continue;
+		  // hit_signal[ntrks][nhits-1][hitindex]=rawadc[it1]-digitVec->GetPedestal();
+		  hit_signal[ntrks][nhits-1][hitindex]=rawadc[it1]-med_signal;
+		  hitindex++;
 		}
 	
 		double hit_ch = 0;
@@ -660,7 +678,8 @@ namespace protoana{
 		double mean_t2 = 0;
 		for (size_t itck = t0; itck < inputsignal.size(); ++itck){
 		  if(itck>t1) continue;
-		  inputsignal[itck] = rawadc[itck] - digitVec->GetPedestal();
+		  // inputsignal[itck] = rawadc[itck] - digitVec->GetPedestal();
+		  inputsignal[itck] = rawadc[itck] - med_signal;
 		  if (inputsignal[itck]>=0.5*hit_pk){
 		    ++hit_fwhh;
 		  }
@@ -718,7 +737,7 @@ namespace protoana{
 	}//loop over vhit
       }//fmthm valid
       //hits and calorimetry loop
-      if(peakT_2.size()<10) continue;
+      // if(peakT_2.size()<10) continue;
       max_value=*std::max_element(peakT_2.begin(),peakT_2.end());
       min_value=*std::min_element(peakT_2.begin(),peakT_2.end());
       // if(max_value-min_value<4300) continue;
