@@ -55,7 +55,6 @@ physics:
 outputs: {}
 
 physics.analyzers.pionana.SelectEvents: ["fpath"]
-physics.analyzers.pionana.NSliceCheck: 6
 physics.analyzers.pionana.CalorimetryTag: "pandoracaloSCE"
 physics.analyzers.pionana.HitTag: "hitpdune"
 #physics.analyzers.pionana.SaveHits: true

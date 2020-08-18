@@ -25,7 +25,6 @@ pionanalysis:
   BeamModuleLabel:        "beamevent"
   BeamlineUtils: @local::standard_protodunebeamlineutils
   Verbose:                false 
-  NSliceCheck:            1
 
   SelectEvents: []
 

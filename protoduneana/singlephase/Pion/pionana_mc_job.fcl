@@ -50,4 +50,3 @@ physics:
 
 outputs: {}
 physics.analyzers.pionana.SelectEvents: []
-physics.analyzers.pionana.NSliceCheck: 3

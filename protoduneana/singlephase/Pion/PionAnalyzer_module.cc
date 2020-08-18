@@ -97,11 +97,12 @@ namespace pionana {
           (ides[i]->z - (the_z0 - the_pitch/2.)) / the_pitch);
 
       
+      /*
       std::cout << "IDE: " << i << " ID: " << ides[i]->trackID << " Edep: "
                 << ides[i]->energy << " (X,Y,Z): " << "(" << ides[i]->x << ","
                 << ides[i]->y<<","<<ides[i]->z << ") Z0: " << the_z0
                 << " Slice: " << slice_num << std::endl;
-      
+     */ 
 
       results[slice_num].push_back(ides[i]);
     }
@@ -297,7 +298,7 @@ namespace pionana {
 
     auto ides = bt->HitToSimIDEs_Ps(hit);
     //First, check if the hit is matched to the beam id
-    //std::cout << "N IDES " << ides.size() << std::endl;
+    std::cout << "N IDES " << ides.size() << std::endl;
     for( size_t i = 0; i < ides.size(); ++i ){
       ID_to_IDE_electrons[ abs( ides[i]->trackID ) ] += ides[i]->numElectrons;
     }
@@ -528,9 +529,6 @@ private:
   //Matched to vertex/slice?
   //
   int reco_beam_vertex_slice;
-
-  std::vector< std::vector< double > > reco_beam_vertex_dRs;
-  std::vector< int > reco_beam_vertex_hits_slices;
   ////////////////////////
 
 
@@ -618,10 +616,10 @@ private:
 
   std::vector< double > reco_beam_incidentEnergies;
   double reco_beam_interactingEnergy;
-  std::vector< double > true_beam_incidentEnergies, new_true_beam_incidentEnergies;
+  std::vector< double > true_beam_incidentEnergies/*, new_true_beam_incidentEnergies*/;
   std::vector< int >    true_beam_slices, true_beam_slices_found, true_beam_slices_nIDEs;
   std::vector< double > true_beam_slices_deltaE;
-  double true_beam_interactingEnergy, new_true_beam_interactingEnergy;
+  double true_beam_interactingEnergy/*, new_true_beam_interactingEnergy*/;
   double em_energy;
   std::vector<double> true_beam_traj_X;
   std::vector<double> true_beam_traj_Y;
@@ -920,7 +918,6 @@ private:
   std::string dEdX_template_name;
   TFile dEdX_template_file;
   bool fVerbose;    
-  int fNSliceCheck;
   fhicl::ParameterSet BeamPars;
   fhicl::ParameterSet BeamCuts;
   protoana::ProtoDUNEBeamCuts beam_cuts;
@@ -959,7 +956,6 @@ pionana::PionAnalyzer::PionAnalyzer(fhicl::ParameterSet const& p)
   dEdX_template_name(p.get<std::string>("dEdX_template_name")),
   dEdX_template_file( dEdX_template_name.c_str(), "OPEN" ),
   fVerbose(p.get<bool>("Verbose")),
-  fNSliceCheck( p.get< int >("NSliceCheck") ),
   BeamPars(p.get<fhicl::ParameterSet>("BeamPars")),
   BeamCuts(p.get<fhicl::ParameterSet>("BeamCuts")),
   CalibrationPars(p.get<fhicl::ParameterSet>("CalibrationPars")),
@@ -967,8 +963,8 @@ pionana::PionAnalyzer::PionAnalyzer(fhicl::ParameterSet const& p)
   fSaveHits( p.get<bool>( "SaveHits" ) ),
   fCheckCosmics( p.get<bool>( "CheckCosmics" ) ),
   fTrueToReco( p.get<bool>( "TrueToReco" ) ),
-  fDoReweight(p.get<bool>("DoReweight")),
-  fMCHasBI(p.get<bool>("MCHasBI")) {
+  fDoReweight(p.get<bool>("DoReweight"))/*,
+  fMCHasBI(p.get<bool>("MCHasBI"))*/ {
 
   templates[ 211 ]  = (TProfile*)dEdX_template_file.Get( "dedx_range_pi"  );
   templates[ 321 ]  = (TProfile*)dEdX_template_file.Get( "dedx_range_ka"  );
@@ -1017,7 +1013,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
   auto pfpVec = evt.getValidHandle< std::vector< recob::PFParticle > >( fPFParticleTag );
   protoana::ProtoDUNETruthUtils                         truthUtil;
 
-/*
+/* //For attempting to get the beam PFParticle by-hand
   std::cout << "Got " << pfpVec->size() << " PFPs" << std::endl;
   //for (size_t i = 0; i < pfpVec->size(); ++i) {
   for (const recob::PFParticle & pfp : (*pfpVec)) {
@@ -1159,7 +1155,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
     data_BI_nFibersP2 = beamEvent.GetActiveFibers( "XBPF022701" ).size();
     data_BI_nFibersP3 = beamEvent.GetActiveFibers( "XBPF022702" ).size();
   }
-  else{
+  else{ //For MC events
     try{
       auto beamHandle = evt.getValidHandle<std::vector<beam::ProtoDUNEBeamEvent>>("generator");
 
@@ -1214,9 +1210,12 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
       data_BI_nFibersP1 = beamEvent.GetActiveFibers( "XBPF022697" ).size();
       data_BI_nFibersP2 = beamEvent.GetActiveFibers( "XBPF022701" ).size();
       data_BI_nFibersP3 = beamEvent.GetActiveFibers( "XBPF022702" ).size();
+
+      fMCHasBI = true;
     }
     catch( const cet::exception &e ){
       MF_LOG_WARNING("PionAnalyzer") << "BeamEvent generator object not found, moving on" << std::endl;
+      fMCHasBI = false;
     }
   }
   ////////////////////////////
@@ -1241,9 +1240,8 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
   }
 
 
-std::cout << "Getting beam particles" << std::endl;
+  ///Gets the beam pfparticle
   std::vector<const recob::PFParticle*> beamParticles = pfpUtil.GetPFParticlesFromBeamSlice(evt,fPFParticleTag);
-std::cout << "Got" << std::endl;
 
   if(beamParticles.size() == 0){
     std::cerr << "We found no beam particles for this event... moving on" << std::endl;
@@ -1253,13 +1251,13 @@ std::cout << "Got" << std::endl;
     std::cout << "Found " << beamParticles.size() << " particles" << std::endl;
   }
 
-  //////////////////////////////////////////////////////////////////
-
-
   // Get the reconstructed PFParticle tagged as beam by Pandora
   const recob::PFParticle* particle = beamParticles.at(0);
+  //////////////////////////////////////////////////////////////////
+  
+  
+  //If MC, attempt to match to some MCParticle
   const simb::MCParticle* trueParticle = 0x0;
-
   if( !evt.isRealData() ){
     protoana::MCParticleSharedHits beam_match  = truthUtil.GetMCParticleByHits( *particle, evt, fPFParticleTag, fHitTag );
     if( beam_match.particle ){
@@ -1349,7 +1347,7 @@ std::cout << "Got" << std::endl;
 
     }
 
-    //Some truth information
+    //Some truth information from the true particle we got above
     true_beam_endProcess = true_beam_particle->EndProcess();
 
     true_beam_PDG         = true_beam_particle->PdgCode();
@@ -1480,13 +1478,16 @@ std::cout << "Got" << std::endl;
 
     if (fVerbose) std::cout << "Looking at IDEs" << std::endl;
 
-    std::cout << "end: " << true_beam_endZ << std::endl;
     auto view2_IDEs = bt_serv->TrackIdToSimIDEs_Ps( true_beam_ID, geo::View_t(2) );
 
     if (fVerbose) std::cout << "N view2 IDEs: " << view2_IDEs.size() << std::endl;
+
+    //Sort based on ide z-position
     std::sort( view2_IDEs.begin(), view2_IDEs.end(), sort_IDEs );
     std::cout << "Sorted" << std::endl;
 
+    //This is an attempt to remove IDEs from things like delta-rays
+    //that have a large gap in z to the previous
     size_t remove_index = 0;
     bool   do_remove = false;
     if( view2_IDEs.size() ){
@@ -1511,6 +1512,7 @@ std::cout << "Got" << std::endl;
       view2_IDEs.erase( view2_IDEs.begin() + remove_index, view2_IDEs.end() );
     }
 
+    //Get the mass for the beam particle
     double mass = 139.57;
     if( true_beam_PDG == 2212 ) mass = 938.27;
     else if( abs(true_beam_PDG) == 211 ) mass = 139.57;
@@ -1519,6 +1521,7 @@ std::cout << "Got" << std::endl;
     else if( abs(true_beam_PDG) == 13 )  mass = 105.66;
 
     double init_KE = sqrt( 1.e6 * true_beam_startP*true_beam_startP + mass*mass ) - mass;
+    /* Old style of creating the Thin slices with the incident particle momentum
     true_beam_incidentEnergies.push_back( init_KE );
 
     double slice_end = pitch;
@@ -1541,23 +1544,20 @@ std::cout << "Got" << std::endl;
     //Remove the last. It's not considered an 'experiment'
     true_beam_incidentEnergies.pop_back();
     if( true_beam_incidentEnergies.size() ) true_beam_interactingEnergy = true_beam_incidentEnergies.back();
+    */
 
     //slice up the view2_IDEs up by the wire pitch
     auto sliced_ides = slice_IDEs( view2_IDEs, z0, pitch, true_beam_endZ);
-    //std::vector< int > found_slices;
-
     //Get the momentum at the start of the slices.
-    //
     //Get the first slice
-
-    std::cout << "size: " << sliced_ides.size() << std::endl;
+    if (fVerbose) std::cout << "size: " << sliced_ides.size() << std::endl;
     if (sliced_ides.size()) {
       auto first_slice = sliced_ides.begin();
-      std::cout << "Got first slice" << std::endl;
+      if (fVerbose) std::cout << "Got first slice" << std::endl;
 
       //Check it has any IDEs
       auto theIDEs = first_slice->second;
-      std::cout << "Got ides" << std::endl;
+      if (fVerbose) std::cout << "Got ides" << std::endl;
       if (theIDEs.size()) {
         //Get the first ide z position
         double ide_z = theIDEs[0]->z;
@@ -1582,11 +1582,8 @@ std::cout << "Got" << std::endl;
       }
     }
 
-
-    std::cout << "putting ke" << std::endl;
-    new_true_beam_incidentEnergies.push_back( init_KE );
-    std::cout << "put ke" << std::endl;
-
+    //Go through the sliced up IDEs to create the thin targets 
+    true_beam_incidentEnergies.push_back( init_KE );
     for( auto it = sliced_ides.begin(); it != sliced_ides.end(); ++it ){
 
       auto theIDEs = it->second;
@@ -1600,11 +1597,12 @@ std::cout << "Got" << std::endl;
       }
 
       true_beam_slices_deltaE.push_back( deltaE );
-      new_true_beam_incidentEnergies.push_back( new_true_beam_incidentEnergies.back() - deltaE );
+      true_beam_incidentEnergies.push_back( true_beam_incidentEnergies.back() - deltaE );
     }
-    new_true_beam_incidentEnergies.pop_back();
-    if( new_true_beam_incidentEnergies.size() ) new_true_beam_interactingEnergy = new_true_beam_incidentEnergies.back();
+    true_beam_incidentEnergies.pop_back();
+    if( true_beam_incidentEnergies.size() ) true_beam_interactingEnergy = true_beam_incidentEnergies.back();
 
+    //Save the trajectory points
     for (size_t i = 0; i < true_beam_trajectory.size(); ++i) {
       true_beam_traj_X.push_back(true_beam_trajectory.X(i));
       true_beam_traj_Y.push_back(true_beam_trajectory.Y(i));
@@ -1613,6 +1611,7 @@ std::cout << "Got" << std::endl;
       true_beam_traj_KE.push_back(true_beam_trajectory.E(i)*1.e3 - mass);
     }
 
+    //Look through the daughters
     for( int i = 0; i < true_beam_particle->NumberDaughters(); ++i ){
       int daughterID = true_beam_particle->Daughter(i);
 
@@ -1865,6 +1864,7 @@ std::cout << "Got" << std::endl;
     }
   }
 
+  //Get CNN output for the beam
   reco_beam_PFP_ID = particle->Self();
   const std::vector< art::Ptr< recob::Hit > > beamPFP_hits = pfpUtil.GetPFParticleHits_Ptrs( *particle, evt, fPFParticleTag );
   reco_beam_PFP_nHits = beamPFP_hits.size();
@@ -1965,6 +1965,10 @@ std::cout << "Got" << std::endl;
     ////////////////////////////////////////////////////////////////
 
 
+    //An old attempt at determining if the reco failed
+    //and if we should cut out this event
+    //
+    //Might throw this out
     TVector3 start( reco_beam_startX, reco_beam_startY, reco_beam_startZ );
     TVector3 dir( reco_beam_trackDirX, reco_beam_trackDirY, reco_beam_trackDirZ );
     for( size_t i = 0; i < thisTrack->NumberTrajectoryPoints(); ++i ){
@@ -1987,9 +1991,6 @@ std::cout << "Got" << std::endl;
       }
     }
 
-///isRealData
-    //Thin slice
-    //
     std::map< const recob::Hit *, int > hitsToSlices;
     std::map< int, std::vector< const recob::Hit * > > slicesToHits;
 
@@ -1999,9 +2000,9 @@ std::cout << "Got" << std::endl;
     double max_Y = 0.;
     double max_Z = 0.;
 
-    std::vector< int > view_0_TPC;
-    std::vector< int > view_1_TPC;
-    std::vector< int > view_2_TPC;
+    std::vector<int> view_0_TPC;
+    std::vector<int> view_1_TPC;
+    std::vector<int> view_2_TPC;
 
     for( auto it = trajPtsToHits.begin(); it != trajPtsToHits.end(); ++it ){
 
@@ -2014,23 +2015,24 @@ std::cout << "Got" << std::endl;
 
       if( fSaveHits ){
         //saving all hit coordinates for beamtrack
-        reco_beam_spacePts_X.push_back(x/*thisTrack->Trajectory().LocationAtPoint(i).X()*/);
-        reco_beam_spacePts_Y.push_back(y/*thisTrack->Trajectory().LocationAtPoint(i).Y()*/);
-        reco_beam_spacePts_Z.push_back(z/*thisTrack->Trajectory().LocationAtPoint(i).Z()*/);
+        reco_beam_spacePts_X.push_back(x);
+        reco_beam_spacePts_Y.push_back(y);
+        reco_beam_spacePts_Z.push_back(z);
       }
 
-      int slice = std::floor( ( thisTrack->Trajectory().LocationAtPoint(i).Z() - z0 ) / pitch );
-      hitsToSlices[ theHit ] = slice;
-      slicesToHits[ slice ].push_back( theHit );
+      //This creates the slices for the thin slice method.
+      int slice = std::floor(
+          (thisTrack->Trajectory().LocationAtPoint(i).Z() - z0) / pitch);
+      hitsToSlices[theHit] = slice;
+      slicesToHits[slice].push_back(theHit);
 
-      if( /*thisTrack->Trajectory().LocationAtPoint(i).Z()*/ z > max_Z ){
-        max_Z = z/*thisTrack->Trajectory().LocationAtPoint(i).Z()*/;
-        max_X = y/*thisTrack->Trajectory().LocationAtPoint(i).X()*/;
-        max_Y = x/*thisTrack->Trajectory().LocationAtPoint(i).Y()*/;
+      if (z > max_Z){
+        max_Z = z;
+        max_X = y;
+        max_Y = x;
       }
 
-
-      //std::cout << "View: " << theHit->View() << std::endl;
+      //Some more attempts at checking reconstruction quality
       switch( theHit->View() ){
         case 0:
           if( theHit->WireID().TPC == 5 )
@@ -2059,9 +2061,7 @@ std::cout << "Got" << std::endl;
       }
     }
 
- //   std::cout << "View 0: " << quality_reco_view_0_wire.size() << std::endl;
     for( size_t i = 1; i < quality_reco_view_0_wire.size(); ++i ){
- //     std::cout << i << " " << i-1 << std::endl;
       double segment = sqrt( (quality_reco_view_0_wire[i] - quality_reco_view_0_wire[i-1])*(quality_reco_view_0_wire[i] - quality_reco_view_0_wire[i-1])
                            + (quality_reco_view_0_tick[i] - quality_reco_view_0_tick[i-1])*(quality_reco_view_0_tick[i] - quality_reco_view_0_tick[i-1]) );
       if( segment > quality_reco_view_0_max_segment ) quality_reco_view_0_max_segment = segment;                  
@@ -2071,9 +2071,7 @@ std::cout << "Got" << std::endl;
       }
     }
 
- //   std::cout << "View 1: " << quality_reco_view_1_wire.size() << std::endl;
     for( size_t i = 1; i < quality_reco_view_1_wire.size(); ++i ){
- //     std::cout << i << " " << i-1 << std::endl;
       double segment = sqrt( (quality_reco_view_1_wire[i] - quality_reco_view_1_wire[i-1])*(quality_reco_view_1_wire[i] - quality_reco_view_1_wire[i-1])
                            + (quality_reco_view_1_tick[i] - quality_reco_view_1_tick[i-1])*(quality_reco_view_1_tick[i] - quality_reco_view_1_tick[i-1]) );
       if( segment > quality_reco_view_1_max_segment ) quality_reco_view_1_max_segment = segment;                  
@@ -2083,9 +2081,7 @@ std::cout << "Got" << std::endl;
       }
     }
 
-//    std::cout << "View 2: " << quality_reco_view_2_wire.size() << std::endl;
     for( size_t i = 1; i < quality_reco_view_2_wire.size(); ++i ){
-      //std::cout << i << " " << i-1 << std::endl;
       double segment = sqrt( (quality_reco_view_2_wire[i] - quality_reco_view_2_wire[i-1])*(quality_reco_view_2_wire[i] - quality_reco_view_2_wire[i-1])
                            + (quality_reco_view_2_tick[i] - quality_reco_view_2_tick[i-1])*(quality_reco_view_2_tick[i] - quality_reco_view_2_tick[i-1]) );
       if( segment > quality_reco_view_2_max_segment ) quality_reco_view_2_max_segment = segment;                  
@@ -2095,31 +2091,8 @@ std::cout << "Got" << std::endl;
       }
     }
 
+    //Last point is the vertex slice
     reco_beam_vertex_slice = slicesToHits.rbegin()->first;
-
-
-    //Go through the hits in the last slice, then backtrack to the IDs
-    //std::vector< const recob::Hit * > vertex_hits = slicesToHits.rbegin()->second;
-    std::vector< const recob::Hit * > vertex_hits;
-    int n_slices = 0;
-    auto itHits = slicesToHits.rbegin();
-
-    std::vector< int > temp_hits_slices;
-
-    while( n_slices < fNSliceCheck && itHits != slicesToHits.rend() ){
-
-      //std::cout << n_slices << std::endl;
-
-      std::vector< const recob::Hit * > temp_hits = itHits->second;
-      vertex_hits.insert( vertex_hits.end(), temp_hits.begin(), temp_hits.end() );
-
-      std::vector<int> hits_slices = std::vector<int>(temp_hits.size(), n_slices );
-      temp_hits_slices.insert( temp_hits_slices.end(), hits_slices.begin(), hits_slices.end() );
-
-      ++itHits;
-      ++n_slices;
-    }
-    ////////////////////////////////
 
     //Primary Track Calorimetry
     std::vector< anab::Calorimetry> calo = trackUtil.GetRecoTrackCalorimetry(*thisTrack, evt, fTrackerTag, fCalorimetryTag);
@@ -2139,6 +2112,7 @@ std::cout << "Got" << std::endl;
 
     std::vector< size_t > calo_hit_indices;
     for( size_t i = 0; i < calo_dQdX.size(); ++i ){
+      std::cout << i << std::endl;
       reco_beam_dQdX.push_back( calo_dQdX[i] );
       reco_beam_dEdX.push_back( calo_dEdX[i] );
       reco_beam_resRange.push_back( calo_range[i] );
@@ -2419,77 +2393,9 @@ std::cout << "Got" << std::endl;
         reco_beam_incidentEnergies.push_back( this_energy );
       }
       if( reco_beam_incidentEnergies.size() ) reco_beam_interactingEnergy = reco_beam_incidentEnergies.back();
-
-
     }
 
-
-
     if( !evt.isRealData() ){
-
-      for( size_t i = 0; i < vertex_hits.size(); ++i ){
-        std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( *(vertex_hits[i]) );
-        for( size_t j = 0; j < ides.size(); ++j ){
-          reco_beam_vertex_hits_slices.push_back( temp_hits_slices[i] );
-        }
-      }
-      //////////////////
-
-      //Also, get the distance between all of the IDEs in the last slice to the location of processes in the beam trajectory
-
-      const simb::MCTrajectory & true_beam_trajectory = true_beam_particle->Trajectory();
-      auto true_beam_proc_map = true_beam_trajectory.TrajectoryProcesses();
-      for( auto itProc = true_beam_proc_map.begin(); itProc != true_beam_proc_map.end(); ++itProc ){
-        double procX = true_beam_trajectory.X( itProc->first );
-        double procY = true_beam_trajectory.Y( itProc->first );
-        double procZ = true_beam_trajectory.Z( itProc->first );
-
-        if (fVerbose) std::cout << std::endl << "Process: " << true_beam_trajectory.KeyToProcess(itProc->second) << procX << " " << procY << " " << procZ << std::endl;
-
-        //keep here
-        std::vector< double > temp_dRs;
-        int nIDEs = 0;
-        for( size_t i = 0; i < vertex_hits.size(); ++i ){
- 
-          std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( *(vertex_hits[i]) );
-          //std::cout << "Hit: " << vertex_hits[i]->WireID().Wire << " " << vertex_hits[i]->WireID().TPC  << " " << vertex_hits[i]->WireID().Plane << std::endl;
-          for( size_t j = 0; j < ides.size(); ++j ){
-            //std::cout << "\tIDE: " << ides[j]->trackID << " " << ides[j]->x << " " << ides[j]->y << " " << ides[j]->z << std::endl;
-            temp_dRs.push_back( sqrt( std::pow( (ides[j]->x - procX), 2 ) +
-                                      std::pow( (ides[j]->y - procY), 2 ) +
-                                      std::pow( (ides[j]->z - procZ), 2 ) ) );
-   
-            ++nIDEs;
-          }
-        }
-        reco_beam_vertex_dRs.push_back( temp_dRs );
-      }
-
-      if( true_beam_endProcess.find( "Inelastic" ) == std::string::npos ){
-        //true_beam_processes.push_back( true_beam_endProcess );
-
-        double procX = true_beam_endX;
-        double procY = true_beam_endY;
-        double procZ = true_beam_endZ;
-
-        std::vector< double > temp_dRs;
-
-        int nIDEs = 0;
-        for( size_t i = 0; i < vertex_hits.size(); ++i ){
-          std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( *(vertex_hits[i]) );
-          for( size_t j = 0; j < ides.size(); ++j ){
-          temp_dRs.push_back( sqrt( std::pow( (ides[j]->x - procX), 2 ) +
-                                    std::pow( (ides[j]->y - procY), 2 ) +
-                                    std::pow( (ides[j]->z - procZ), 2 ) ) );
-   
-            ++nIDEs;
-
-          }
-        }
-        reco_beam_vertex_dRs.push_back( temp_dRs );
-
-      }
-
       //New
       auto reco_hits = trackUtil.GetRecoTrackHitsFromPlane( *thisTrack, evt, fTrackerTag, 2 );
 
@@ -2498,7 +2404,6 @@ std::cout << "Got" << std::endl;
       for( auto it = trajPtsToHits.begin(); it != trajPtsToHits.end(); ++it ){
         const recob::Hit * theHit = it->second;
         if( theHit->View() != 2 ) continue;
-        //std::cout << "Hit in reco_hits? " << ( std::find(reco_hits.begin(), reco_hits.end(), theHit) != reco_hits.end() ) << std::endl;
 
         std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( *theHit );
         for( size_t i = 0; i < ides.size(); ++i ){
@@ -2529,6 +2434,7 @@ std::cout << "Got" << std::endl;
           const sim::IDE * prev_IDE = view2_IDEs[i-1];
           const sim::IDE * this_IDE = view2_IDEs[i];
 
+          //Remove some unwanted EM activity... reconsider?
           if( this_IDE->trackID < 0 && ( this_IDE->z - prev_IDE->z ) > 5 ){
             remove_index = i;
             do_remove = true;
@@ -2571,6 +2477,7 @@ std::cout << "Got" << std::endl;
         std::cout << "Testing hit to true slice matching" << std::endl;
       }
 
+      //An attempt to match true-to-reco slices
       std::map< int, std::vector< std::pair<int, double> > > true_slice_to_reco_electrons;
       std::map< int, int > reco_beam_hit_to_true_ID;
       std::vector< int > reco_beam_hit_index;
@@ -2687,23 +2594,23 @@ std::cout << "Got" << std::endl;
         bool found_in_true_slices = ( reco_beam_hit_to_true_slice.find( thePoint.hit_index ) != reco_beam_hit_to_true_slice.end() );
         //std::cout << " And slice " << ( found_in_true_slices ? reco_beam_hit_to_true_slice[thePoint.hit_index] : -999) << std::endl;
         //std::cout << " and origin " << pi_serv->TrackIdToMCTruth_P( reco_beam_hit_to_true_ID[thePoint.hit_index] )->Origin() << std::endl;
+        int true_id = reco_beam_hit_to_true_ID[thePoint.hit_index];
+        reco_beam_hit_true_ID.push_back(true_id);
+        reco_beam_hit_true_origin.push_back((true_id != -999 ? pi_serv->TrackIdToMCTruth_P(true_id)->Origin() : -999));
+        reco_beam_hit_true_slice.push_back((found_in_true_slices ? reco_beam_hit_to_true_slice[thePoint.hit_index] : -999));
 
-        reco_beam_hit_true_ID.push_back( reco_beam_hit_to_true_ID[thePoint.hit_index] );
-        reco_beam_hit_true_origin.push_back( pi_serv->TrackIdToMCTruth_P( reco_beam_hit_to_true_ID[thePoint.hit_index] )->Origin() );
-        reco_beam_hit_true_slice.push_back( ( found_in_true_slices ? reco_beam_hit_to_true_slice[thePoint.hit_index] : -999) );
-
-        if( reco_beam_hit_to_true_ID[thePoint.hit_index] == true_beam_ID && found_in_true_slices ){
-          if( reco_beam_hit_to_true_slice[thePoint.hit_index] > max_slice_found )
+        if (true_id == true_beam_ID && found_in_true_slices) {
+          if (reco_beam_hit_to_true_slice[thePoint.hit_index] > max_slice_found)
             max_slice_found = reco_beam_hit_to_true_slice[thePoint.hit_index];
         }
       }
       if (fVerbose) std::cout << "Max slice found: " << max_slice_found << std::endl;
 
 
-
+      //Used to find which true slice a process was in.. kinda useless
       if (fVerbose) std::cout << "Comparing max slice to processes" << std::endl;
-      //const simb::MCTrajectory & true_beam_trajectory = true_beam_particle->Trajectory();
-      //auto true_beam_proc_map = true_beam_trajectory.TrajectoryProcesses();
+      const simb::MCTrajectory & true_beam_trajectory = true_beam_particle->Trajectory();
+      auto true_beam_proc_map = true_beam_trajectory.TrajectoryProcesses();
       for( auto itProc = true_beam_proc_map.begin(); itProc != true_beam_proc_map.end(); ++itProc ){
         int index = itProc->first;
         std::string process = true_beam_trajectory.KeyToProcess(itProc->second);
@@ -3904,10 +3811,6 @@ void pionana::PionAnalyzer::beginJob()
 
   fTree->Branch("reco_beam_vertex_slice", &reco_beam_vertex_slice);
 
-
-  fTree->Branch("reco_beam_vertex_dRs", &reco_beam_vertex_dRs);
-  fTree->Branch("reco_beam_vertex_hits_slices", &reco_beam_vertex_hits_slices);
-
   fTree->Branch("true_beam_daughter_PDG", &true_beam_daughter_PDG);
   fTree->Branch("true_beam_daughter_ID", &true_beam_daughter_ID);
   fTree->Branch("true_beam_daughter_len", &true_beam_daughter_len);
@@ -4109,8 +4012,8 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("true_beam_slices_found", &true_beam_slices_found);
   fTree->Branch("true_beam_slices_nIDEs", &true_beam_slices_nIDEs);
   fTree->Branch("true_beam_slices_deltaE", &true_beam_slices_deltaE);
-  fTree->Branch("new_true_beam_incidentEnergies", &new_true_beam_incidentEnergies);
-  fTree->Branch("new_true_beam_interactingEnergy", &new_true_beam_interactingEnergy);
+  //fTree->Branch("new_true_beam_incidentEnergies", &new_true_beam_incidentEnergies);
+  //fTree->Branch("new_true_beam_interactingEnergy", &new_true_beam_interactingEnergy);
   fTree->Branch("em_energy", &em_energy);
   fTree->Branch("true_beam_traj_X", &true_beam_traj_X);
   fTree->Branch("true_beam_traj_Y", &true_beam_traj_Y);
@@ -4183,8 +4086,6 @@ void pionana::PionAnalyzer::reset()
   reco_beam_passes_beam_cuts = false;
 
   reco_beam_vertex_slice = std::numeric_limits<int>::max();
-  reco_beam_vertex_dRs.clear();
-  reco_beam_vertex_hits_slices.clear();
 
   true_daughter_nPi0 = 0;
   true_daughter_nPiPlus = 0;
@@ -4535,13 +4436,13 @@ void pionana::PionAnalyzer::reset()
   reco_beam_incidentEnergies.clear();
   reco_beam_interactingEnergy = -999.;
   true_beam_incidentEnergies.clear();
-  new_true_beam_incidentEnergies.clear();
+  //new_true_beam_incidentEnergies.clear();
   true_beam_slices.clear();
   true_beam_slices_found.clear();
   true_beam_slices_nIDEs.clear();
   true_beam_slices_deltaE.clear();
   true_beam_interactingEnergy = -999.;
-  new_true_beam_interactingEnergy = -999.;
+  //new_true_beam_interactingEnergy = -999.;
   em_energy = 0.;
   true_beam_traj_X.clear();
   true_beam_traj_Y.clear();
