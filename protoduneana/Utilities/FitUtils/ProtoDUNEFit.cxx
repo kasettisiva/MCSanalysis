@@ -1125,7 +1125,8 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
           protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
               _MCFileNames[i], _RecoTreeName, _RecoBinning, _ChannelNames[i],
               _BackgroundTopologyName[j], topo, _EndZCut, tmin, tmax,
-              _DoNegativeReco, 0, "", _ScaleFactor));
+              _DoNegativeReco, 0, "", _ScaleFactor,
+              {_PionScaleFactor, _MuonScaleFactor}));
       _enable_bkg_factor.push_back(_AddBackgroundFactors[j]);
 
       //For systs later
@@ -1167,7 +1168,8 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
                   _MCFileNames[i], _RecoTreeName, _RecoBinning,
                   _ChannelNames[i], _SignalTopologyName[j], topo,
                   _TruthBinning[k-1], _TruthBinning[k], _EndZCut,
-                  _DoNegativeReco, 0, "", _ScaleFactor));
+                  _DoNegativeReco, 0, "", _ScaleFactor,
+                  {_PionScaleFactor, _MuonScaleFactor}));
 
           //For systs later
           _sig_chan_index.push_back(i);
@@ -1224,14 +1226,16 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
                 _IncidentMCFileNames[0], _RecoTreeName, _RecoBinning,
                 _IncidentTopologyName[i], _IncidentTopology[i],
                 _EndZCut, _TruthBinning[k-1], _TruthBinning[k],
-                _DoNegativeReco, 0, "", _IncidentScaleFactor*_PionScaleFactor);
+                _DoNegativeReco, 0, "", _IncidentScaleFactor,
+                {_PionScaleFactor, _MuonScaleFactor});
         for (size_t j = 1; j < _IncidentMCFileNames.size(); ++j) {
           inchisto->Add(
               protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
                   _IncidentMCFileNames[j], _RecoTreeName, _RecoBinning,
                   _IncidentTopologyName[i], _IncidentTopology[i],
                   _EndZCut, _TruthBinning[k-1], _TruthBinning[k],
-                  _DoNegativeReco, 0, "", _IncidentScaleFactor*_PionScaleFactor));
+                  _DoNegativeReco, 0, "", _IncidentScaleFactor,
+                  {_PionScaleFactor, _MuonScaleFactor}));
         }
         TString hname = Form("%s_TrueBin_%.1f-%.1f", inchisto->GetName(),
             _TruthBinning[k-1], _TruthBinning[k]);
@@ -1245,18 +1249,16 @@ bool protoana::ProtoDUNEFit::FillHistogramVectors_Pions(){
           protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
               _IncidentMCFileNames[0], _RecoTreeName, _RecoBinning,
               _IncidentTopologyName[i], _IncidentTopology[i], _EndZCut,
-              0., 10000., _DoNegativeReco, 0, "",
-              _IncidentScaleFactor*(_IncidentTopology[i] == 4 ?
-                                    _MuonScaleFactor : 1.));
+              0., 10000., _DoNegativeReco, 0, "", _IncidentScaleFactor,
+              {_PionScaleFactor, _MuonScaleFactor});
 
       for (size_t j = 1; j < _IncidentMCFileNames.size(); ++j) {
         inchisto->Add(
             protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
                 _IncidentMCFileNames[j], _RecoTreeName, _RecoBinning,
                 _IncidentTopologyName[i], _IncidentTopology[i], _EndZCut,
-                0., 10000., _DoNegativeReco, 0, "",
-                _IncidentScaleFactor*(_IncidentTopology[i] == 4 ?
-                                      _MuonScaleFactor : 1.)));
+                0., 10000., _DoNegativeReco, 0, "", _IncidentScaleFactor,
+                {_PionScaleFactor, _MuonScaleFactor}));
       }
 
       inchisto->SetNameTitle(Form("MC_ChannelIncident_%s_Histo",
@@ -1501,41 +1503,20 @@ void protoana::ProtoDUNEFit::ScaleMCToData(bool data_is_mc) {
 //********************************************************************
 void protoana::ProtoDUNEFit::ScaleMuonContent() {
   //Get the number of incident pions from MC
-  double nRejectedMC = 0.;
-  double nSelectedMC = 0.;
+  double nPiMC = 0.;
+  double nMuMC = 0.;
   for (size_t i = 0; i < _IncidentMCFileNames.size(); ++i) {
     //Get the tree
     TFile incidentFile(_IncidentMCFileNames[i].c_str(), "OPEN");
     TTree * incident_tree = (TTree*)incidentFile.Get(_RecoTreeName.c_str());
 
-    std::string selected_cut = "(passBeamCut && primary_ends_inAPA3)";
-    std::string rejected_cut = "(passBeamCut && !primary_ends_inAPA3)";
-
-    nSelectedMC += incident_tree->GetEntries(selected_cut.c_str());
-    nRejectedMC += incident_tree->GetEntries(rejected_cut.c_str());
+    nPiMC += incident_tree->GetEntries("true_beam_PDG == 211");
+    nMuMC += incident_tree->GetEntries("true_beam_PDG == -13");
     incidentFile.Close();
   }
   
-  //Get the number of incident pions from Data
-  double nRejectedData = 0.;
-  double nSelectedData = 0.;
-  for (size_t i = 0; i < _IncidentDataFileNames.size(); ++i) {
-    //Get the tree
-    TFile incidentFile(_IncidentDataFileNames[i].c_str(), "OPEN");
-    TTree * incident_tree = (TTree*)incidentFile.Get(_RecoTreeName.c_str());
-
-    std::string selected_cut = "(passBeamCut && primary_ends_inAPA3)";
-    std::string rejected_cut = "(passBeamCut && !primary_ends_inAPA3)";
-
-    nSelectedData += incident_tree->GetEntries(selected_cut.c_str());
-    nRejectedData += incident_tree->GetEntries(rejected_cut.c_str());
-    incidentFile.Close();
-  }
-  
-  _PionScaleFactor = (nRejectedMC/nSelectedMC + 1.) /
-                     (nRejectedData/nSelectedData + 1.);
-  _MuonScaleFactor = (nRejectedData/nSelectedData) * (nSelectedMC/nRejectedMC) *
-                     _PionScaleFactor;
+  _PionScaleFactor = ((nPiMC + nMuMC) - (_MuonScaleFactor*nMuMC)) / nPiMC;
+  std::cout << "nMu & nPi: " << nMuMC << " " << nPiMC << std::endl;
   std::cout << "Muon & Pion Scale: " << _MuonScaleFactor << " " <<
                _PionScaleFactor << std::endl;
 }
@@ -1746,6 +1727,9 @@ bool protoana::ProtoDUNEFit::Configure(std::string configPath){
 
   _DoScaleMCToData             = pset.get<bool>("DoScaleMCToData");
   _DoScaleMuonContent          = pset.get<bool>("DoScaleMuonContent");
+  if (_DoScaleMuonContent)
+    _MuonScaleFactor = pset.get<double>("MuonScaleFactor");
+
   _RandSigPriors               = pset.get<bool>("RandSigPriors");
   //_StatFluctuation             = pset.get<bool>("StatFluctuation");
   _DataIsMC                    = pset.get<bool>("DataIsMC");

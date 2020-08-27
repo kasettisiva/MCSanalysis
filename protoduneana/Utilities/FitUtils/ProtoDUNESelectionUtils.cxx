@@ -13,7 +13,8 @@
 TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
     std::string filename, std::string treename, std::vector<double> recoBins,
     std::string channel, std::string topo, int toponum, double endZ_cut,
-    double minval, double maxval, bool doNegativeReco, int doSyst, std::string systName, double weight) {
+    double minval, double maxval, bool doNegativeReco, int doSyst,
+    std::string systName, double weight, std::pair<double, double> PiMuScale) {
 //********************************************************************
 
   TFile *file = new TFile(filename.c_str(), "READ");
@@ -300,16 +301,24 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
     if (interaction_topology != toponum)
       continue;
 
+    double total_weight = weight*syst_weight;
+    if (true_beam_PDG == 211) {
+      total_weight *= PiMuScale.first;
+    }
+    else if (true_beam_PDG == -13) {
+      total_weight *= PiMuScale.second;
+    }
+
     if (doNegativeReco) {
       if (reco_beam_interactingEnergy < 0.) {
-        mchisto->AddBinContent(1, weight*syst_weight);
+        mchisto->AddBinContent(1, total_weight);
       }
       else{
         for (int l = 1; l < nrecobins; ++l) {
           if (reco_beam_interactingEnergy > recoBins[l-1] &&
               reco_beam_interactingEnergy <= recoBins[l]) {
             //Fill +1 because the first bin is negative
-            mchisto->AddBinContent(l+1, weight*syst_weight);
+            mchisto->AddBinContent(l+1, total_weight);
             break;
           }
         }       
@@ -322,7 +331,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
       for (int l = 1; l < nrecobins; ++l) {
         if (reco_beam_interactingEnergy > recoBins[l-1] &&
             reco_beam_interactingEnergy <= recoBins[l]) {
-          mchisto->AddBinContent(l/*+1*/, weight*syst_weight);
+          mchisto->AddBinContent(l/*+1*/, total_weight);
           break;
         }
       }
@@ -340,7 +349,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
     std::string filename, std::string treename, std::vector<double> recoBins,
     std::string channel, std::string topo, int toponum, double minval,
     double maxval, double endZ_cut, bool doNegativeReco, int doSyst,
-    std::string systName, double weight) {
+    std::string systName, double weight, std::pair<double, double> PiMuScale) {
 //********************************************************************
 
   TFile *file = new TFile(filename.c_str(), "READ");
@@ -555,6 +564,14 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
     //if(topology != toponum) continue;
     if(interaction_topology != toponum) continue;
 
+    double total_weight = weight*syst_weight;
+    if (true_beam_PDG == 211) {
+      total_weight *= PiMuScale.first;
+    }
+    else if (true_beam_PDG == -13) {
+      total_weight *= PiMuScale.second;
+    }
+
     // True energy bin
     //if(true_beam_interactingEnergy < minval) continue;
     //if(true_beam_interactingEnergy >= maxval) continue;
@@ -563,13 +580,13 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
 
     if (doNegativeReco) {
       if (reco_beam_interactingEnergy < 0.0){
-        mchisto->AddBinContent(1, weight*syst_weight);        
+        mchisto->AddBinContent(1, total_weight);        
       }
       else{
         for (int l = 1; l < nrecobins; l++) {
           if (reco_beam_interactingEnergy > recoBins[l-1] && 
               reco_beam_interactingEnergy <= recoBins[l]) {
-            mchisto->AddBinContent(l+1, weight*syst_weight);
+            mchisto->AddBinContent(l+1, total_weight);
             break;
           }
         }
@@ -583,7 +600,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
       for (int l = 1; l < nrecobins; l++) {
         if (reco_beam_interactingEnergy > recoBins[l-1] && 
             reco_beam_interactingEnergy <= recoBins[l]) {
-          mchisto->AddBinContent(l, weight*syst_weight);
+          mchisto->AddBinContent(l, total_weight);
           break;
         }
       }
@@ -750,7 +767,8 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
     std::string filename, std::string treename, std::vector<double> recoBins,
     std::string topo, int toponum,
     double reco_beam_endZ_cut, double minval, double maxval,
-    bool doNegativeReco, int doSyst, std::string systName, double weight) {
+    bool doNegativeReco, int doSyst, std::string systName, double weight,
+    std::pair<double, double> PiMuScale) {
   //********************************************************************
 
   TFile *file = new TFile(filename.c_str(), "READ");
@@ -1034,6 +1052,15 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
       if (topology != toponum) {
         continue;
       }
+
+      double total_weight = weight*syst_weight;
+      if (true_beam_PDG == 211) {
+        total_weight *= PiMuScale.first;
+      }
+      else if (true_beam_PDG == -13) {
+        total_weight *= PiMuScale.second;
+      }
+
       //Patch
       //if (true_energy < 0.) 
       //  true_energy = 10.;
@@ -1056,14 +1083,14 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
       double energy = (*reco_beam_incidentEnergies)[l];
       if (doNegativeReco) {
         if (energy < 0.) {
-          mchisto->AddBinContent(1, weight*syst_weight);
+          mchisto->AddBinContent(1, total_weight);
         }
         else{
           for (size_t m = 1; m < nrecobins; ++m) {
             if (energy > recoBins[m-1] &&
                 energy <= recoBins[m]) {
               //Fill +1 because the first bin is negative
-              mchisto->AddBinContent(m+1, weight*syst_weight);
+              mchisto->AddBinContent(m+1, total_weight);
               break;
             }
           }       
@@ -1076,7 +1103,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
         for (size_t m = 1; m < nrecobins; ++m) {
           if (energy > recoBins[m-1] &&
               energy <= recoBins[m]) {
-            mchisto->AddBinContent(m/*+1*/, weight*syst_weight);
+            mchisto->AddBinContent(m/*+1*/, total_weight);
             break;
           }
         }
