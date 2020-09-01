@@ -1,0 +1,152 @@
+#include "services_dune.fcl"
+#include "hitfindermodules_dune.fcl"
+#include "filters.fcl"
+#include "signalservices_dune.fcl"
+#include "caldata_dune.fcl"
+#include "trackfindermodules_dune.fcl"
+
+#include "ecalibration.fcl"
+#include "triggeralgo_service.fcl"
+#include "photpropservices_dune.fcl"
+#include "ProtoDUNEDataUtils.fcl"
+#include "ProtoDUNEBeamlineFilter.fcl"
+#include "ProtoDUNEBeamCuts.fcl"
+
+#include "protodune_tools_dune.fcl"
+
+
+process_name: protonmc
+
+services:
+{
+  #Load the service that manages root files for histograms.
+  TFileService: { fileName: "mcproton.root" }
+  RandomNumberGenerator: {}                     #ART native random number generator
+  #@table::protodune_services
+  @table::protodune_reco_services
+  message:      @local::standard_info
+  FileCatalogMetadata: @local::art_file_catalog_mc
+}
+
+#source is now a root file
+source:
+{
+  module_type: RootInput
+  maxEvents:  -1            # Number of events to create
+}
+
+outputs:
+{
+ out1:
+ {
+   module_type: RootOutput
+   fileName:    "mcproton.root"    #default file name, can override from command line with -o or --output
+   dataTier: "reconstructed"
+   fastCloning: false
+ } 
+}
+
+physics:
+{
+ producers:{
+
+  }
+ #filters:  {
+    #f1: @local::standard_protodunebeamlinefilter_Proton_1GeV	
+ #}
+ #fpath: [f1]
+
+ analyzers:{
+   protonmc:
+   {
+     module_type:             "protonmc"
+     BeamModuleLabel:         "beamevent"
+     #Warning!! The code will use CalorimetryTag to do sce correction
+     #CalorimetryTag:          "pandoracalo"	
+     #CalorimetryTag:         "pandoracaloSCE"
+     #CalorimetryTag:         "pandoracalo"
+     #pandoracalo + electron lifetime correction (recommended)
+     CalorimetryTag:         "pandoracali"
+
+     TrackerTag:              "pandoraTrack"
+     ShowerTag:               "pandoraShower"
+     PFParticleTag:           "pandora"
+     GeneratorTag:            "generator"
+     #Verbose:                 true
+     DataUtils:               @local::standard_protodunedatautils
+     #NNetModuleLabel:         "vtxid:emtrack"
+
+     #hy:: for sce on, disable the comment of Prod2BeamCuts
+     #BeamCuts:             @local::Prod2BeamCuts
+
+     #mcs angles	
+     #MuMCSInputTag:           "pandoraTrack" 
+     #TrajMCSFitter : {
+      #pIdHypothesis: 2212
+      #minNumSegments: 2
+      #segmentLength: 14.0
+      #segmentLength: 1.0
+      #minHitsPerSegment: 2
+      #nElossSteps: 10
+      #eLossMode: 0
+      #pMin: 0.01
+      #pMax: 7.50
+      #pStep: 0.01
+      #angResol: 3.0 #in mrad (uBoone angle resolution)
+     #}
+
+ 
+   }
+ }
+ 
+ ana:  [ protonmc ]
+ stream1:  [ out1 ]
+ end_paths:     [  ana ] 
+}
+
+#physics.analyzers.protonmc.TrackModuleLabel:        "pmtrack"
+#physics.analyzers.protonmc.CalorimetryModuleLabel:  "pmtrackcalo"
+#physics.analyzers.protonmc.HitsModuleLabel:  "gaushit"
+##physics.analyzers.protonmc.PFParticleTag: "pmtrack"
+
+#disable the following line for prod 2
+services.BackTrackerService.BackTracker.SimChannelModuleLabel: "tpcrawdecoder:simpleSC"
+
+#physics.analyzers.protonmc.TrackModuleLabel:        "pandoraTrack"
+#physics.analyzers.protonmc.CalorimetryModuleLabel:  "pandoracalo"
+#physics.analyzers.protonmc.CalorimetryModuleLabel:  "pandoracaloSCE"
+#physics.analyzers.protonmc.CalorimetryModuleLabel:  "pandoracalo"
+physics.analyzers.protonmc.CalorimetryModuleLabel:  "pandoracali"
+#physics.analyzers.protonmc.HitsModuleLabel:  "linecluster"
+physics.analyzers.protonmc.HitsModuleLabel:  "hitpdune"
+physics.analyzers.protonmc.SaveTrackInfo: true
+services.Geometry: @local::protodunev7_geo
+
+#g4 reweight
+#physics.analyzers.protonmc.FracsFile: "/dune/data2/users/calcuttj/GeantReweight/ForHengYe/cascade_fix.root"
+#physics.analyzers.protonmc.XSecFile: "/dune/data2/users/calcuttj/GeantReweight/ForHengYe/cross_section_out.root"
+
+#physics.analyzers.protonmc.FracsFile: "/dune/data2/users/hyliao/GeantReweight/xs_cascade/cascade_fix.root"
+#physics.analyzers.protonmc.XSecFile: "/dune/data2/users/hyliao/GeantReweight/xs_cascade/cross_section_out.root"
+
+physics.analyzers.protonmc.FracsFile: "./cascade_fix.root"
+physics.analyzers.protonmc.XSecFile: "./cross_section_out.root"
+
+physics.analyzers.protonmc.RW_PDG: 2212
+
+physics.analyzers.protonmc.ParameterSet: [
+  {
+    Cut: "reac"
+    Name: "fReac"
+    Range: [0.,  1200.]
+    Nominal: 1.0 
+    Sigma: .2
+  },
+  {
+    Cut: "elast"
+    Name: "fElast"
+    Range: [0.,  1200.]
+    Nominal: 1.0 
+    Sigma: .0
+  }
+]
