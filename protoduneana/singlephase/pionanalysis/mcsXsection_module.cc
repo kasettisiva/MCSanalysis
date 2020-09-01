@@ -204,6 +204,20 @@ private:
   //std::vector<float> nonescore;
   
   /////////
+  //beam info from spectrometer
+  std::vector<double> beamMomentum_spec;
+  std::vector<double> beamPosx_spec;
+  std::vector<double> beamPosy_spec;
+  std::vector<double> beamPosz_spec;
+  
+  std::vector<double> beamDirx_spec;
+  std::vector<double> beamDiry_spec;
+  std::vector<double> beamDirz_spec;
+
+
+
+
+
 
   std::vector<float> int_2;
   std::vector<float> hitz_1;
@@ -435,6 +449,16 @@ void protoana::mcsXsection::beginJob(){
   fPandoraBeam->Branch("beamtrk_Py",&beamtrk_Py);
   fPandoraBeam->Branch("beamtrk_Pz",&beamtrk_Pz);
   fPandoraBeam->Branch("beamtrk_Eng",&beamtrk_Eng);
+  ////.............spectrometer parameters
+  fPandoraBeam->Branch("beamMomentum_spec",&beamMomentum_spec);
+  fPandoraBeam->Branch("beamPosx_spec",&beamPosx_spec);
+  fPandoraBeam->Branch("beamPosy_spec",&beamPosy_spec);
+  fPandoraBeam->Branch("beamPosz_spec",&beamPosz_spec);
+  fPandoraBeam->Branch("beamDirx_spec",&beamDirx_spec);
+  fPandoraBeam->Branch("beamDiry_spec",&beamDiry_spec);
+  fPandoraBeam->Branch("beamDirz_spec",&beamDirz_spec);
+
+
 
 
   fPandoraBeam->Branch("vertex",                        &fvertex,                       "vertex[3]/D");
@@ -620,7 +644,7 @@ void protoana::mcsXsection::analyze(art::Event const & evt){
 
   const detinfo::DetectorProperties* detprop = lar::providerFrom<detinfo::DetectorPropertiesService>();
   // anab::MVAReader<recob::Hit,3> hitResults(evt, fNNetModuleLabel);
-  anab::MVAReader<recob::Hit,4> hitResults(evt, "emtrkmichelid:emtrkmichel" );
+  anab::MVAReader<recob::Hit,4> hitResults(evt, "emtrkmichelid:emtrkmichel");
   art::ServiceHandle<geo::Geometry> geom;
 
 
@@ -644,8 +668,43 @@ void protoana::mcsXsection::analyze(art::Event const & evt){
   // If this event is MC then we can check what the true beam particle is
   auto mcTruths = evt.getValidHandle<std::vector<simb::MCTruth>>(fGeneratorTag);
   if(!evt.isRealData()){
-    // mcTruths is basically a pointer to an std::vector of simb::MCTruth objects. There should only be one
-    // of these, so we pass the first element into the function to get the good particle
+    //Spectrometer values
+    //for prod. 3, new implementation to access the beam momentum from spectrometer //////////////////////////////
+    auto beamHandle = evt.getValidHandle<std::vector<beam::ProtoDUNEBeamEvent>>("generator");
+    std::vector<art::Ptr<beam::ProtoDUNEBeamEvent>> beamVec;
+    if( beamHandle.isValid()){
+      art::fill_ptr_vector(beamVec, beamHandle);
+    }
+    const beam::ProtoDUNEBeamEvent & beamEvent = *(beamVec.at(0)); //Should just have one
+
+    //Access momentum
+    const std::vector< double > & momenta = beamEvent.GetRecoBeamMomenta();
+    std::cout << "Number of reconstructed beam momenta from spec: " << momenta.size() << std::endl;
+
+    if( momenta.size() > 0 ) std::cout << "Measured Beam Momentum from spec: " << momenta.at(0) << std::endl;
+		
+    //std::cout<<"beam mom size:"<<momenta.size()<<std::endl;
+    for (size_t i = 0; i<momenta.size(); ++i){
+      beamMomentum_spec.push_back(momenta[i]);
+      //std::cout<<"beam mom["<<i<<"]:"<<momenta[i]<<" [GeV]"<<std::endl;
+    }
+
+    auto & btracks = beamEvent.GetBeamTracks();
+    std::cout<<"beam trk size:"<<btracks.size()<<std::endl;
+    for (size_t i = 0; i<btracks.size(); ++i){
+      std::cout<<"beamPosx/beamPosy/beamPosz:"<<btracks[i].End().X()<<"/"<<btracks[i].End().Y()<<"/"<<btracks[i].End().Z()<<std::endl;
+      std::cout<<"beamDirx/beamDiry/beamDirz:"<<btracks[i].StartDirection().X()<<"/"<<btracks[i].StartDirection().Y()<<"/"<<btracks[i].StartDirection().Z()<<std::endl;
+
+      beamPosx_spec.push_back(btracks[i].End().X());
+      beamPosy_spec.push_back(btracks[i].End().Y());
+      beamPosz_spec.push_back(btracks[i].End().Z());
+      beamDirx_spec.push_back(btracks[i].StartDirection().X());
+      beamDiry_spec.push_back(btracks[i].StartDirection().Y());
+      beamDirz_spec.push_back(btracks[i].StartDirection().Z());
+
+    }
+
+    //////Spectrometer values
     const simb::MCParticle* geantGoodParticle = truthUtil.GetGeantGoodParticle((*mcTruths)[0],evt);
     //std::cout<<"geantGoodParticle "<<geantGoodParticle.size()<<std::endl;
     if(geantGoodParticle != 0x0){
@@ -1038,7 +1097,7 @@ void protoana::mcsXsection::analyze(art::Event const & evt){
     double beamendz=100;    
 
     if(thisTrack != 0x0){
-
+      if(!beam_cuts.IsBeamlike(*thisTrack, evt, "1")) return;
       beamstx=thisTrack->Start().X();
       beamsty=thisTrack->Start().Y();
       beamstz=thisTrack->Start().Z();
@@ -1046,223 +1105,208 @@ void protoana::mcsXsection::analyze(art::Event const & evt){
       beamendy=thisTrack->End().Y();
       beamendz=thisTrack->End().Z();
       std::cout<<"beamstx "<<beamstx<<std::endl;
-    }
-
-
-    //////Michel tagging here
-    std::vector<double> secondarystartx1;
-    std::vector<double> secondarystarty1;
-    std::vector<double> secondarystartz1;
-    std::vector<double> secondaryendx1;
-    std::vector<double> secondaryendy1;
-    std::vector<double> secondaryendz1;
-    std::vector<double> dQmichel1;
-    std::vector<double> dQtrackbegin1;
-    std::vector<double> dQtrackend1;
-    std::vector<double> tracklengthsecondary1;
-    std::vector<double> primsectheta1; 
-    std::vector<int> endhitssecondary1;
-    std::vector<int> MtrackID1;
-    std::vector<double> trks1;
-    std::vector<double> ems1;
-    std::vector<double> michels1;
-    std::vector<double> nones1;
-    size_t NTracks = tracklist.size();
-    std::cout<<"number of tracks "<<NTracks<<std::endl;
-    for(size_t i=0;i<NTracks;i++){
-      art::Ptr<recob::Track> ptrack(trackListHandle, i);
-      const recob::Track& track = *ptrack;
-      auto pos = track.Vertex();
-      auto end = track.End();
-      int counter1=0;
-      double startx=pos.X();   
-      double starty=pos.Y();
-      double startz=pos.Z();
-      double endx=end.X();
-      double endy=end.Y();
-      double endz=end.Z();
-      std::cout<<"inside ntracks loop "<<std::endl;
-      if(track.Length()<10) continue;
-      std::cout<<"tracklength > 10 found "<<std::endl;
-      if(TMath::Max(endy,starty)>500 || TMath::Min(endy, starty)<200 || TMath::Max(startx, endx)>0||TMath::Min(startx,endx)<-200||TMath::Max(startz,endz)<230) continue;
-      //if(TMath::Max(endy,starty)>520 || TMath::Min(endy, starty)<150 || TMath::Max(startx, endx)>20||TMath::Min(startx,endx)<-300||TMath::Max(startz,endz)<230) continue;
       
-      std::vector<int> wirenos;
-      std::vector<float> peakts,dqbuff1;
-      std::vector<float> dQstart,dQend;
-      std::vector<double> micheldq;
-      wirenos.clear();peakts.clear();dqbuff1.clear();
-      float peaktime=-1;
-      int wireno=-99999;
-      int tpcno=-1;
-      float zlast0=-99999;
-      float zlast=-99999;
-      std::vector<std::tuple<double,double,double,double,int,double>> buff_ZYXTWQ;
-      buff_ZYXTWQ.clear();
-      double thetavalue=theta12(beamstx,beamendx,beamsty,beamendy,beamstz,beamendz,startx,endx,starty,endy,startz,endz);
-      if(fmthm.isValid()){
-	auto vhit=fmthm.at(i);
-	auto vmeta=fmthm.data(i);
-	for (size_t ii = 0; ii<vhit.size(); ++ii){ //loop over all meta data hit
-	  bool fBadhit = false;
-	  if (vmeta[ii]->Index() == std::numeric_limits<int>::max()){
-	    fBadhit = true;
-	    //cout<<"fBadHit"<<fBadhit<<endl;
-	    continue;
-	  }
-	  if (vmeta[ii]->Index()>=tracklist[i]->NumberTrajectoryPoints()){
-	    throw cet::exception("Calorimetry_module.cc") << "Requested track trajectory index "<<vmeta[ii]->Index()<<" exceeds the total number of trajectory points "<<tracklist[i]->NumberTrajectoryPoints()<<" for track index "<<i<<". Something is wrong with the track reconstruction. Please contact tjyang@fnal.gov!!";
-	  }
-	  if (!tracklist[i]->HasValidPoint(vmeta[ii]->Index())){
-	    fBadhit = true;
-	    // cout<<"had valid point "<<fBadhit<<endl;
-	    continue;
-	  }
+      //////Michel tagging here
+      std::vector<double> secondarystartx1;
+      std::vector<double> secondarystarty1;
+      std::vector<double> secondarystartz1;
+      std::vector<double> secondaryendx1;
+      std::vector<double> secondaryendy1;
+      std::vector<double> secondaryendz1;
+      std::vector<double> dQmichel1;
+      std::vector<double> dQtrackbegin1;
+      std::vector<double> dQtrackend1;
+      std::vector<double> tracklengthsecondary1;
+      std::vector<double> primsectheta1; 
+      std::vector<int> endhitssecondary1;
+      std::vector<int> MtrackID1;
+      std::vector<double> trks1;
+      std::vector<double> ems1;
+      std::vector<double> michels1;
+      std::vector<double> nones1;
+      size_t NTracks = tracklist.size();
+      std::cout<<"number of tracks "<<NTracks<<std::endl;
+      for(size_t i=0;i<NTracks;i++){
+	art::Ptr<recob::Track> ptrack(trackListHandle, i);
+	const recob::Track& track = *ptrack;
+	auto pos = track.Vertex();
+	auto end = track.End();
+	int counter1=0;
+	double startx=pos.X();   
+	double starty=pos.Y();
+	double startz=pos.Z();
+	double endx=end.X();
+	double endy=end.Y();
+	double endz=end.Z();
+	if(track.Length()<5) continue;
+	if(TMath::Max(endy,starty)>500 || TMath::Min(endy, starty)<200 || TMath::Max(startx, endx)>0||TMath::Min(startx,endx)<-200||TMath::Max(startz,endz)<30) continue;
+	//if(TMath::Max(endy,starty)>520 || TMath::Min(endy, starty)<150 || TMath::Max(startx, endx)>20||TMath::Min(startx,endx)<-300||TMath::Max(startz,endz)<230) continue;
+      
+	std::vector<int> wirenos;
+	std::vector<float> peakts,dqbuff1;
+	std::vector<float> dQstart,dQend;
+	std::vector<double> micheldq;
+	wirenos.clear();peakts.clear();dqbuff1.clear();
+	float peaktime=-1;
+	int wireno=-99999;
+	int tpcno=-1;
+	float zlast0=-99999;
+	float zlast=-99999;
+	std::vector<std::tuple<double,double,double,double,int,double>> buff_ZYXTWQ;
+	buff_ZYXTWQ.clear();
+	double thetavalue=theta12(beamstx,beamendx,beamsty,beamendy,beamstz,beamendz,startx,endx,starty,endy,startz,endz);
+	if(fmthm.isValid()){
+	  auto vhit=fmthm.at(i);
+	  auto vmeta=fmthm.data(i);
+	  for (size_t ii = 0; ii<vhit.size(); ++ii){ //loop over all meta data hit
+	    bool fBadhit = false;
+	    if (vmeta[ii]->Index() == std::numeric_limits<int>::max()){
+	      fBadhit = true;
+	      //cout<<"fBadHit"<<fBadhit<<endl;
+	      continue;
+	    }
+	    if (vmeta[ii]->Index()>=tracklist[i]->NumberTrajectoryPoints()){
+	      throw cet::exception("Calorimetry_module.cc") << "Requested track trajectory index "<<vmeta[ii]->Index()<<" exceeds the total number of trajectory points "<<tracklist[i]->NumberTrajectoryPoints()<<" for track index "<<i<<". Something is wrong with the track reconstruction. Please contact tjyang@fnal.gov!!";
+	    }
+	    if (!tracklist[i]->HasValidPoint(vmeta[ii]->Index())){
+	      fBadhit = true;
+	      // cout<<"had valid point "<<fBadhit<<endl;
+	      continue;
+	    }
         
-	  auto loc = tracklist[i]->LocationAtPoint(vmeta[ii]->Index());
-	  if (fBadhit) continue; //HY::If BAD hit, skip this hit and go next
-	  if (loc.Z()<-100) continue; //hit not on track
-	  if(vhit[ii]->WireID().Plane==2){
-	    buff_ZYXTWQ.push_back(std::make_tuple(loc.Z(),loc.Y(),loc.X(),vhit[ii]->PeakTime(),vhit[ii]->WireID().Wire,vhit[ii]->Integral()));
-	    wirenos.push_back(vhit[ii]->WireID().Wire);
-	    peakts.push_back(vhit[ii]->PeakTime());
-	    zlast=loc.Z();
-	    if(zlast>zlast0){
-	      zlast0=zlast;
-	      wireno=vhit[ii]->WireID().Wire;
-	      peaktime=vhit[ii]->PeakTime();
-	      tpcno=vhit[ii]->WireID().TPC;
-	    }        
-	  }//planenum 2
-	}//loop over vhit
-      }//fmthm valid
-      //save start and end point of each track
-      //taking care of flipped start and end point
-      if(endz<startz){
-	startx=end.X();   
-	starty=end.Y();
-	startz=end.Z();
-	endx=pos.X();
-	endy=pos.Y();
-	endz=pos.Z();
-      }
-      double trk_score=0.0;
-      double em_score=0;
-      double michel_score=0;
-      double none_score=0;
-      for(size_t hitl=0;hitl<hitlist.size();hitl++){
-	std::array<float,4> cnn_out=hitResults.getOutput(hitlist[hitl]);
-	auto & tracks = thass.at(hitlist[hitl].key());
-	if (!tracks.empty() && tracks[0].key()!=ptrack.key() && tracklist[tracks[0].key()]->Length()>25) continue;
-	// if (!tracks.empty() && tracks[0].key()!=ptrack.key() && tracklist[tracks[0].key()]->Length()>25) continue;
-	bool test=true;
-	float peakth1=hitlist[hitl]->PeakTime();
-	int wireh1=hitlist[hitl]->WireID().Wire;
-	for(size_t m=0;m<wirenos.size();m++){
-	  if(wireh1==wirenos[m] && peakth1==peakts[m]){
-	    test=false;
-	    break;
+	    auto loc = tracklist[i]->LocationAtPoint(vmeta[ii]->Index());
+	    if (fBadhit) continue; //HY::If BAD hit, skip this hit and go next
+	    if (loc.Z()<-100) continue; //hit not on track
+	    if(vhit[ii]->WireID().Plane==2){
+	      buff_ZYXTWQ.push_back(std::make_tuple(loc.Z(),loc.Y(),loc.X(),vhit[ii]->PeakTime(),vhit[ii]->WireID().Wire,vhit[ii]->Integral()));
+	      wirenos.push_back(vhit[ii]->WireID().Wire);
+	      peakts.push_back(vhit[ii]->PeakTime());
+	      zlast=loc.Z();
+	      if(zlast>zlast0){
+		zlast0=zlast;
+		wireno=vhit[ii]->WireID().Wire;
+		peaktime=vhit[ii]->PeakTime();
+		tpcno=vhit[ii]->WireID().TPC;
+	      }        
+	    }//planenum 2
+	  }//loop over vhit
+	}//fmthm valid
+	//save start and end point of each track
+	//taking care of flipped start and end point
+	if(endz<startz){
+	  startx=end.X();   
+	  starty=end.Y();
+	  startz=end.Z();
+	  endx=pos.X();
+	  endy=pos.Y();
+	  endz=pos.Z();
+	}
+	double trk_score=0.0;
+	double em_score=0;
+	double michel_score=0;
+	double none_score=0;
+	for(size_t hitl=0;hitl<hitlist.size();hitl++){
+	  std::array<float,4> cnn_out=hitResults.getOutput(hitlist[hitl]);
+	  auto & tracks = thass.at(hitlist[hitl].key());
+	  if (!tracks.empty() && tracks[0].key()!=ptrack.key() && tracklist[tracks[0].key()]->Length()>25) continue;
+	  // if (!tracks.empty() && tracks[0].key()!=ptrack.key() && tracklist[tracks[0].key()]->Length()>25) continue;
+	  bool test=true;
+	  float peakth1=hitlist[hitl]->PeakTime();
+	  int wireh1=hitlist[hitl]->WireID().Wire;
+	  for(size_t m=0;m<wirenos.size();m++){
+	    if(wireh1==wirenos[m] && peakth1==peakts[m]){
+	      test=false;
+	      break;
+	    }
 	  }
+	  if(!test) continue;
+	  int planeid=hitlist[hitl]->WireID().Plane;
+	  int tpcid=hitlist[hitl]->WireID().TPC;
+	  if(abs(wireh1-wireno)<15 && abs(peakth1-peaktime)<100 && planeid==2 && tpcid==tpcno){
+	    // if(abs(wireh1-wireno)<20 && abs(peakth1-peaktime)<150 && planeid==2 && tpcid==tpcno){
+	    counter1++;
+	    // std::cout<<"wireno, counter "<<wireno<<" "<<counter1<<std::endl;
+	    micheldq.push_back(hitlist[hitl]->Integral());
+	    trk_score+=cnn_out[hitResults.getIndex("track")];
+	    em_score+=cnn_out[hitResults.getIndex("em")];
+	    michel_score+=cnn_out[hitResults.getIndex("michel")];
+	    none_score+=cnn_out[hitResults.getIndex("none")];
+	    // std::cout<<"track, em, michel  none"<<cnn_out[hitResults.getIndex("track")]<<" "<<cnn_out[hitResults.getIndex("em")]<<" "<<cnn_out[hitResults.getIndex("michel")]<<" "<<cnn_out[hitResults.getIndex("none")]<<std::endl;
+	    //std::cout<<"wire, peaktime selected hit, wires "<<wireno<<" "<<peaktime<<" "<<hitlist[hitl]->PeakTime()<<" "<<hitlist[hitl]->WireID().Wire<<std::endl;
+	  }
+	}//hitlist loop
+	if(buff_ZYXTWQ.size()<10) continue;
+	sort(buff_ZYXTWQ.begin(),buff_ZYXTWQ.end());
+	dQstart.clear(); dQend.clear();
+	int qi11=buff_ZYXTWQ.size();
+	for(int qi=5;qi<TMath::Min(15,qi11);qi++){
+	  dQstart.push_back(std::get<5>(buff_ZYXTWQ[qi]));
 	}
-	if(!test) continue;
-	int planeid=hitlist[hitl]->WireID().Plane;
-	int tpcid=hitlist[hitl]->WireID().TPC;
-	if(abs(wireh1-wireno)<15 && abs(peakth1-peaktime)<100 && planeid==2 && tpcid==tpcno){
-	  // if(abs(wireh1-wireno)<20 && abs(peakth1-peaktime)<150 && planeid==2 && tpcid==tpcno){
-	  counter1++;
-	  // std::cout<<"wireno, counter "<<wireno<<" "<<counter1<<std::endl;
-	  micheldq.push_back(hitlist[hitl]->Integral());
-	  trk_score+=cnn_out[hitResults.getIndex("track")];
-	  em_score+=cnn_out[hitResults.getIndex("em")];
-	  michel_score+=cnn_out[hitResults.getIndex("michel")];
-	  none_score+=cnn_out[hitResults.getIndex("none")];
-	  // std::cout<<"track, em, michel  none"<<cnn_out[hitResults.getIndex("track")]<<" "<<cnn_out[hitResults.getIndex("em")]<<" "<<cnn_out[hitResults.getIndex("michel")]<<" "<<cnn_out[hitResults.getIndex("none")]<<std::endl;
-	  //std::cout<<"wire, peaktime selected hit, wires "<<wireno<<" "<<peaktime<<" "<<hitlist[hitl]->PeakTime()<<" "<<hitlist[hitl]->WireID().Wire<<std::endl;
+    
+	for(int qi=qi11-5;qi<qi11;qi++){
+	  dQend.push_back(std::get<5>(buff_ZYXTWQ[qi]));
 	}
-      }//hitlist loop
-      if(buff_ZYXTWQ.size()<15) continue;
-      sort(buff_ZYXTWQ.begin(),buff_ZYXTWQ.end());
-      dQstart.clear(); dQend.clear();
-      for(int qi=5;qi<15;qi++){
-	dQstart.push_back(std::get<5>(buff_ZYXTWQ[qi]));
-      }
-      int qi1=buff_ZYXTWQ.size();
-      for(int qi=qi1-5;qi<qi1;qi++){
-	dQend.push_back(std::get<5>(buff_ZYXTWQ[qi]));
-      }
-      secondarystartx1.push_back(startx);
-      secondarystarty1.push_back(starty);
-      secondarystartz1.push_back(startz);
-      secondaryendx1.push_back(endx);
-      secondaryendy1.push_back(endy);
-      secondaryendz1.push_back(endz);
-      endhitssecondary1.push_back(counter1);
-      tracklengthsecondary1.push_back(track.Length());
-      dQmichel1.push_back(TMath::Median(micheldq.size(),&micheldq[0]));
-      dQtrackbegin1.push_back(TMath::Median(dQstart.size(),&dQstart[0]));
-      dQtrackend1.push_back(TMath::Median(dQend.size(),&dQend[0]));
-      primsectheta1.push_back(thetavalue);
-      MtrackID1.push_back(track.ID());
-      trks1.push_back(trk_score);
-      ems1.push_back(em_score);
-      michels1.push_back(michel_score);
-      nones1.push_back(none_score);
-      std::cout<<"avg, trackscore, emscore, michelscore, nonescore "<<trk_score<<" "<<em_score<<" "<<michel_score<<" "<<none_score<<std::endl; 
-    }//Ntracks
-    secondarystartx.push_back(secondarystartx1);
-    secondarystarty.push_back(secondarystarty1);
-    secondarystartz.push_back(secondarystartz1);
-    secondaryendx.push_back(secondaryendx1);
-    secondaryendy.push_back(secondaryendy1);
-    secondaryendz.push_back(secondaryendz1);
-    endhitssecondary.push_back(endhitssecondary1);
-    tracklengthsecondary.push_back(tracklengthsecondary1);
-    dQmichel.push_back(dQmichel1);
-    dQtrackbegin.push_back(dQtrackbegin1);
-    dQtrackend.push_back(dQtrackend1);
-    primsectheta.push_back(primsectheta1);
-    MtrackID.push_back(MtrackID1);
+	secondarystartx1.push_back(startx);
+	secondarystarty1.push_back(starty);
+	secondarystartz1.push_back(startz);
+	secondaryendx1.push_back(endx);
+	secondaryendy1.push_back(endy);
+	secondaryendz1.push_back(endz);
+	endhitssecondary1.push_back(counter1);
+	tracklengthsecondary1.push_back(track.Length());
+	dQmichel1.push_back(TMath::Median(micheldq.size(),&micheldq[0]));
+	dQtrackbegin1.push_back(TMath::Median(dQstart.size(),&dQstart[0]));
+	dQtrackend1.push_back(TMath::Median(dQend.size(),&dQend[0]));
+	primsectheta1.push_back(thetavalue);
+	MtrackID1.push_back(track.ID());
+	trks1.push_back(trk_score);
+	ems1.push_back(em_score);
+	michels1.push_back(michel_score);
+	nones1.push_back(none_score);
+	std::cout<<"avg, trackscore, emscore, michelscore, nonescore "<<trk_score<<" "<<em_score<<" "<<michel_score<<" "<<none_score<<std::endl; 
+      }//Ntracks
+      secondarystartx.push_back(secondarystartx1);
+      secondarystarty.push_back(secondarystarty1);
+      secondarystartz.push_back(secondarystartz1);
+      secondaryendx.push_back(secondaryendx1);
+      secondaryendy.push_back(secondaryendy1);
+      secondaryendz.push_back(secondaryendz1);
+      endhitssecondary.push_back(endhitssecondary1);
+      tracklengthsecondary.push_back(tracklengthsecondary1);
+      dQmichel.push_back(dQmichel1);
+      dQtrackbegin.push_back(dQtrackbegin1);
+      dQtrackend.push_back(dQtrackend1);
+      primsectheta.push_back(primsectheta1);
+      MtrackID.push_back(MtrackID1);
 
-    trackscore.push_back(trks1);
-    emscore.push_back(ems1);
-    michelscore.push_back(michels1);
-    nonescore.push_back(nones1);
+      trackscore.push_back(trks1);
+      emscore.push_back(ems1);
+      michelscore.push_back(michels1);
+      nonescore.push_back(nones1);
       
-    endhitssecondary1.clear();
-    secondarystartx1.clear();
-    secondaryendx1.clear();
-    secondarystarty1.clear();
-    secondaryendy1.clear();
-    secondarystartz1.clear();
-    secondaryendz1.clear();
-    dQmichel1.clear();
-    primsectheta1.clear();
-    dQtrackbegin1.clear();
-    dQtrackend1.clear();
-    tracklengthsecondary1.clear();
-    MtrackID1.clear();
-    trks1.clear();
-    ems1.clear();
-    michels1.clear();
-    nones1.clear();
+      endhitssecondary1.clear();
+      secondarystartx1.clear();
+      secondaryendx1.clear();
+      secondarystarty1.clear();
+      secondaryendy1.clear();
+      secondarystartz1.clear();
+      secondaryendz1.clear();
+      dQmichel1.clear();
+      primsectheta1.clear();
+      dQtrackbegin1.clear();
+      dQtrackend1.clear();
+      tracklengthsecondary1.clear();
+      MtrackID1.clear();
+      trks1.clear();
+      ems1.clear();
+      michels1.clear();
+      nones1.clear();
+    }
     ///////////////End of Michel checking
   
     /////Michel tagging ends here
     if(thisTrack != 0x0){
       if(!beam_cuts.IsBeamlike(*thisTrack, evt, "1")) return;
-
-
-
-
-
-
-
-
-
-
-
-
-     
       // Get the true mc particle
       const simb::MCParticle* mcparticle = truthUtil.GetMCParticleFromRecoTrack(*thisTrack, evt, fTrackerTag);
       if(mcparticle!=0x0){
@@ -1941,6 +1985,16 @@ void protoana::mcsXsection::Initialise(){
   beamtrk_Eng.clear();
   beamtrk_z_wire.clear();
   beamtrk_z_tpc.clear();
+
+
+  beamMomentum_spec.clear();
+  beamPosx_spec.clear();
+  beamPosy_spec.clear();
+  beamPosz_spec.clear();
+  beamDirx_spec.clear();
+  beamDiry_spec.clear();
+  beamDirz_spec.clear();
+
 
  
   fisprimarytrack = 0;
