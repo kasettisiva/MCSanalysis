@@ -75,11 +75,10 @@ DriftAna::DriftAna(fhicl::ParameterSet const& p)
 
 void DriftAna::analyze(art::Event const& e)
 {
-
-  auto const * detprop = lar::providerFrom<detinfo::DetectorPropertiesService>();
-  double driftv = detprop->DriftVelocity(detprop->Efield(),
-                                         detprop->Temperature());
-  double efield = detprop->Efield();
+  auto const detProp = art::ServiceHandle<detinfo::DetectorPropertiesService>()->DataFor(e);
+  double driftv = detProp.DriftVelocity(detProp.Efield(),
+                                        detProp.Temperature());
+  double efield = detProp.Efield();
   std::cout<<"E field = "<<efield<<" Nominal drift velocity = "<<driftv<<std::endl;
 
   const int n = 100;
@@ -89,8 +88,8 @@ void DriftAna::analyze(art::Event const& e)
   std::vector<double> vece;
   for (int i = 0; i<n; ++i){
     double e_field = e0 + i*(e1-e0)/n;
-    double drift_v = detprop->DriftVelocity(e_field,
-                                            detprop->Temperature());
+    double drift_v = detProp.DriftVelocity(e_field,
+                                           detProp.Temperature());
     vecv.push_back(drift_v);
     vece.push_back(e_field);
   }
@@ -127,8 +126,8 @@ void DriftAna::analyze(art::Event const& e)
       double EField = std::sqrt( (efield + efield*fEfieldOffsets.X())*(efield + efield*fEfieldOffsets.X()) +
                                  (efield*fEfieldOffsets.Y()*efield*fEfieldOffsets.Y()) +
                                  (efield*fEfieldOffsets.Z()*efield*fEfieldOffsets.Z()) );
-      double v = detprop->DriftVelocity(EField,
-                                        detprop->Temperature());
+      double v = detProp.DriftVelocity(EField,
+                                       detProp.Temperature());
       dt += deltax/v;
       xyz1[0] += deltax*dir;
     }

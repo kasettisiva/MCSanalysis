@@ -300,10 +300,11 @@ namespace dune{
 
 
     auto const* SCE = lar::providerFrom<spacecharge::SpaceChargeService>();
-    const detinfo::DetectorProperties* detprop = lar::providerFrom<detinfo::DetectorPropertiesService>();
-    std::cout<<detprop->Temperature()<<endl;
-    std::cout<<"drift velocity "<<detprop->DriftVelocity(0.50,87.0)<<std::endl;
-    double efield=detprop->Efield();
+    auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(evt);
+    auto const detProp = art::ServiceHandle<detinfo::DetectorPropertiesService>()->DataFor(evt, clockData);
+    std::cout<<detProp.Temperature()<<endl;
+    std::cout<<"drift velocity "<<detProp.DriftVelocity(0.50,87.0)<<std::endl;
+    double efield=detProp.Efield();
     double ycord=300;
     double zcord=350;
     for(int i=0;i<120;i++){
@@ -389,7 +390,7 @@ namespace dune{
 
       for(size_t h=0; h<allHits.size();h++){
 	art::Ptr<recob::Hit> hit=allHits[h];
-	std::vector<sim::TrackIDE> eveIDs = bt_serv->HitToTrackIDEs(hit);
+        std::vector<sim::TrackIDE> eveIDs = bt_serv->HitToTrackIDEs(clockData, hit);
 	for(size_t e=0;e<eveIDs.size(); ++e){
 	  trkide[eveIDs[e].trackID] += eveIDs[e].energy;
 	}
@@ -411,7 +412,7 @@ namespace dune{
       for(size_t h=0; h<allHits.size();h++){
 	art::Ptr<recob::Hit> hit=allHits[h];
 	if (hit->WireID().Plane!=2) continue;
-	std::vector<sim::TrackIDE> eveIDs = bt_serv->HitToTrackIDEs(hit);
+        std::vector<sim::TrackIDE> eveIDs = bt_serv->HitToTrackIDEs(clockData, hit);
 	for(size_t e=0;e<eveIDs.size(); ++e){
 	  if (eveIDs[e].trackID == trackid) total_energy +=  eveIDs[e].energy;
 	}
@@ -436,7 +437,7 @@ namespace dune{
      
       for(size_t h=0; h<allHits.size();h++){
 	art::Ptr<recob::Hit> hit=allHits[h];
-	std::vector<const sim::IDE*> eventIDs = bt_serv->HitToSimIDEs_Ps(hit);
+        std::vector<const sim::IDE*> eventIDs = bt_serv->HitToSimIDEs_Ps(clockData, hit);
 	float charge=0;
 	int number_electrons=0;
 	if(hit->WireID().Plane!=2) continue;
@@ -594,5 +595,3 @@ namespace dune{
 	  
   DEFINE_ART_MODULE(protonanalysis)
 }
-
-

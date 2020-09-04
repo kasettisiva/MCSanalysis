@@ -267,20 +267,20 @@ T0RecoSCE::T0RecoSCE(fhicl::ParameterSet const & fcl)
 		}
 
   	// Use 'detp' to find 'efield' and 'temp'
-	auto const* detp = lar::providerFrom<detinfo::DetectorPropertiesService>();
-	double efield = detp -> Efield();
+        auto const detp = art::ServiceHandle<detinfo::DetectorPropertiesService>()->DataForJob();
+        double efield = detp.Efield();
 	std::cout << "Nominal electric field is: " << efield*1000 << " V/cm" << std::endl;
 
-	double temp   = detp -> Temperature();
+        double temp   = detp.Temperature();
 	std::cout << "LAr temperature is: " << temp << " K" << std::endl;
 
 	// Determine the drift velocity from 'efield' and 'temp'
-	fDriftVelocity = detp -> DriftVelocity(efield,temp);
+        fDriftVelocity = detp.DriftVelocity(efield,temp);
 	std::cout << "Drift velocity is: " << fDriftVelocity << " cm/us" << std::endl;
 
 	// Get Readout window length
 	
-	fReadoutWindow = detp->ReadOutWindowSize();
+        fReadoutWindow = detp.ReadOutWindowSize();
 	std::cout << "Readout window is: " << fReadoutWindow << " ticks" << std::endl;
 	}  
   
@@ -372,7 +372,7 @@ void T0RecoSCE::analyze(art::Event const & evt){
 	ev_ctr++;
 
 	// Load detector clocks for later
-	auto const* detclock = lar::providerFrom<detinfo::DetectorClocksService>();
+        auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(evt);
 
 	double TPC_trigger_offset = 0.0;
 
@@ -455,7 +455,7 @@ void T0RecoSCE::analyze(art::Event const & evt){
 		}
 
 	// Get trigger to TPC Offset
-		TPC_trigger_offset = detclock->TriggerOffsetTPC();
+                TPC_trigger_offset = clockData.TriggerOffsetTPC();
 		if(fDebug) std::cout << "TPC time offset from trigger: " 
 			<< TPC_trigger_offset << " us" << std::endl;
 
@@ -601,7 +601,7 @@ void T0RecoSCE::analyze(art::Event const & evt){
 		// if we should use MC info -> continue w/ MC validation
       	if (fUseMC){
 
-			mc_particle = truthUtil.GetMCParticleFromRecoTrack(*track,evt,fTrackProducer);
+                        mc_particle = truthUtil.GetMCParticleFromRecoTrack(clockData, *track,evt,fTrackProducer);
 
 			if(mc_particle==0x0) { 
 				if(fDebug) std::cout << "\t\t\tNo MC particle matched to PFParticle " 
@@ -614,7 +614,7 @@ void T0RecoSCE::analyze(art::Event const & evt){
 			last_mc_point = mc_particle->NumberTrajectoryPoints()-1;
 			mc_particle_te = mc_particle->T(last_mc_point)/1000;
 
-			mc_time = detclock->G4ToElecTime(mc_particle_ts) + TPC_trigger_offset;
+                        mc_time = clockData.G4ToElecTime(mc_particle_ts) + TPC_trigger_offset;
 
 			if(fDebug&&fabs(mc_particle_te - mc_particle_ts)>1) std::cout << 
 			"\t\t\tMC Particle end time: " << mc_particle_te << 
@@ -727,7 +727,7 @@ void T0RecoSCE::analyze(art::Event const & evt){
     			readout_edge = false;
     			for (auto& hits : hit_v) {
     				auto hit_tick = hits->PeakTime();
-					double hit_time = detclock->TPCTick2TrigTime(hit_tick);
+                                        double hit_time = clockData.TPCTick2TrigTime(hit_tick);
     				//if(fDebug) std::cout << "\t\tHit from track " << trk_ctr << 
 						//" at tick: " << hit_tick << ", in TPC " 
 						//<< hits->WireID().TPC << ", plane " << hits->WireID().Plane 
@@ -1071,4 +1071,3 @@ size_t  T0RecoSCE::FlashMatch(const double reco_time, std::vector<double> op_tim
 	}
 
 DEFINE_ART_MODULE(T0RecoSCE) 
-  

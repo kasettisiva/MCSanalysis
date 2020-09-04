@@ -11,12 +11,19 @@
 #include "canvas/Persistency/Common/FindManyP.h"
 #include "larsim/MCCheater/BackTrackerService.h"
 
+namespace detinfo {
+  class DetectorClocksData;
+  class DetectorPropertiesData;
+}
+
 namespace pizero {
 
 // Class to store information of hits that fall within it.
 class Cone {
  private:
   const art::Event* m_evt;
+  detinfo::DetectorClocksData const* m_clockdata;
+  detinfo::DetectorPropertiesData const* m_detprop;
   TVector3 m_start;
   TVector3 m_direction;
   double m_length;
@@ -28,9 +35,17 @@ class Cone {
   std::vector<const recob::SpacePoint*> m_spacepoints;
 
  public:
-  Cone(const art::Event& evt, const TVector3& newStart, const TVector3& newDir,
+  Cone(const art::Event& evt,
+       detinfo::DetectorClocksData const& clockData,
+       detinfo::DetectorPropertiesData const& detProp,
+       const TVector3& newStart,
+       const TVector3& newDir,
        const double newLen):
-       m_evt(&evt), m_start(newStart), m_direction(newDir.Unit()), m_length(newLen) {
+    m_evt(&evt),
+    m_clockdata(&clockData),
+    m_detprop(&detProp),
+    m_start(newStart), m_direction(newDir.Unit()), m_length(newLen)
+  {
     // Move the start back by a constant to catch all hits.
     m_start = m_start - m_direction.Unit()*m_startoffset;
     m_length += m_startoffset;
@@ -75,14 +90,14 @@ class Cone {
 
   double energy(calo::CalorimetryAlg caloAlg) const {
     protoana::ProtoDUNEShowerUtils shUtil;
-    return shUtil.EstimateEnergyFromHitCharge(m_hits, caloAlg)[2];
+    return shUtil.EstimateEnergyFromHitCharge(*m_clockdata, *m_detprop, m_hits, caloAlg)[2];
   }
   double completeness(const simb::MCParticle& mcpart,
                       const std::string hitLabel = "hitpdune") const;
   double purity(const simb::MCParticle& mcpart) const;
 };
 
-double Cone::completeness(const simb::MCParticle& mcpart,
+inline double Cone::completeness(const simb::MCParticle& mcpart,
                           const std::string hitLabel) const {
   // Get all hits in the event.
   art::Handle<std::vector<recob::Hit>> hitHandle;
@@ -97,7 +112,7 @@ double Cone::completeness(const simb::MCParticle& mcpart,
   double sharedHits = 0;
   double MChits = 0;
   for(const recob::Hit& hit : *hitHandle) {
-    for(const int trackId : bt_serv->HitToTrackIds(hit)) {
+    for(const int trackId : bt_serv->HitToTrackIds(*m_clockdata, hit)) {
       if(std::abs(trackId) == std::abs(mcpart.TrackId())) {
         // Hit is in MCParticle.
         ++MChits;
@@ -119,11 +134,11 @@ double Cone::completeness(const simb::MCParticle& mcpart,
   return MChits==0? 0: sharedHits/MChits;
 } // Cone::completeness
 
-double Cone::purity(const simb::MCParticle& mcpart) const {
+inline double Cone::purity(const simb::MCParticle& mcpart) const {
   unsigned sharedHits = 0;
   art::ServiceHandle<cheat::BackTrackerService> bt_serv;
   for(const recob::Hit* hit : m_hits) {
-    for(const int trackId : bt_serv->HitToTrackIds(*hit)) {
+    for(const int trackId : bt_serv->HitToTrackIds(*m_clockdata, *hit)) {
       if(std::abs(trackId) == std::abs(mcpart.TrackId())) {
         ++sharedHits;
         break;

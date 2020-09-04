@@ -36,6 +36,8 @@
 #include "larcore/Geometry/Geometry.h"
 #include "larcorealg/Geometry/GeometryCore.h"
 #include "larcoreobj/SimpleTypesAndConstants/geo_types.h"
+#include "lardata/DetectorInfoServices/DetectorClocksService.h"
+#include "lardata/DetectorInfoServices/DetectorPropertiesService.h"
 
 #include "nusimdata/SimulationBase/MCParticle.h"
 #include "nusimdata/SimulationBase/MCTruth.h"
@@ -115,9 +117,20 @@ private:
   void FillConfigTree();
 
   bool FillPrimaryBeamParticle(art::Event const & evt);
-  void FillPrimaryPFParticle(art::Event const & evt, const recob::PFParticle* particle);
-  void FillPrimaryDaughterPFParticle(art::Event const & evt, const recob::PFParticle* daughterParticle, int daughterID);
-  void FillPrimaryGrandDaughterPFParticle(art::Event const & evt, const recob::PFParticle* gdaughterParticle, int daughterID, int gdaughterID);
+  void FillPrimaryPFParticle(art::Event const & evt,
+                             detinfo::DetectorClocksData const& clockData,
+                             detinfo::DetectorPropertiesData const& detProp,
+                             const recob::PFParticle* particle);
+  void FillPrimaryDaughterPFParticle(art::Event const & evt,
+                                     detinfo::DetectorClocksData const& clockData,
+                                     detinfo::DetectorPropertiesData const& detProp,
+                                     const recob::PFParticle* daughterParticle,
+                                     int daughterID);
+  void FillPrimaryGrandDaughterPFParticle(art::Event const & evt,
+                                          detinfo::DetectorClocksData const& clockData,
+                                          detinfo::DetectorPropertiesData const& detProp,
+                                          const recob::PFParticle* gdaughterParticle,
+                                          int daughterID, int gdaughterID);
 
   // fcl parameters
   const art::InputTag fBeamModuleLabel;
@@ -537,6 +550,9 @@ void protoana::ProtoDUNEAnalysisTree::analyze(art::Event const & evt){
   auto recoParticles = evt.getValidHandle<std::vector<recob::PFParticle>>(fPFParticleTag);
   //std::cout << "All primary pfParticles = " <<  pfpUtil.GetNumberPrimaryPFParticle(evt,fPFParticleTag) << std::endl;
 
+  auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(evt);
+  auto const detProp = art::ServiceHandle<detinfo::DetectorPropertiesService>()->DataFor(evt, clockData);
+
   // We'd like to find the beam particle. Pandora tries to do this for us, so let's use the PFParticle utility 
   // to look for it. Pandora reconstructs slices containing one (or sometimes more) primary PFParticles. These
   // are tagged as either beam or cosmic for ProtoDUNE. This function automatically considers only those
@@ -547,7 +563,7 @@ void protoana::ProtoDUNEAnalysisTree::analyze(art::Event const & evt){
   // We can now look at these particles
   for(const recob::PFParticle* particle : pfParticles){
 
-    FillPrimaryPFParticle(evt, particle);
+    FillPrimaryPFParticle(evt, clockData, detProp, particle);
 
     // Find the particle vertex. We need the tracker tag here because we need to do a bit of
     // additional work if the PFParticle is track-like to find the vertex. 
@@ -571,14 +587,14 @@ void protoana::ProtoDUNEAnalysisTree::analyze(art::Event const & evt){
       //std::cout << "Daughter " << daughterID << " has " << daughterParticle->NumDaughters() << " daughters" << std::endl;
 
       // Fill tree with daughter info
-      FillPrimaryDaughterPFParticle(evt, daughterParticle, daughterID);
+      FillPrimaryDaughterPFParticle(evt, clockData, detProp, daughterParticle, daughterID);
 
       // Get the secondary vertex from daughter interactions
       const TVector3 secinteractionVtx = pfpUtil.GetPFParticleSecondaryVertex(*daughterParticle,evt,fPFParticleTag,fTrackerTag);
       fgranddaughterVertex[fNDAUGHTERS][0] = secinteractionVtx.X(); fgranddaughterVertex[fNDAUGHTERS][1] = secinteractionVtx.Y(); fgranddaughterVertex[fNDAUGHTERS][2] = secinteractionVtx.Z();
 
       for(const int gdaughterID : daughterParticle->Daughters()){
-	FillPrimaryGrandDaughterPFParticle(evt, daughterParticle, gdaughterID, daughterID);
+        FillPrimaryGrandDaughterPFParticle(evt, clockData, detProp, daughterParticle, gdaughterID, daughterID);
 	
 	// Only process NMAXDAUGTHERS
 	if(fNGRANDDAUGHTERS > NMAXDAUGTHERS) break;
@@ -825,7 +841,10 @@ bool protoana::ProtoDUNEAnalysisTree::FillPrimaryBeamParticle(art::Event const &
 }
 
 // -----------------------------------------------------------------------------
-void protoana::ProtoDUNEAnalysisTree::FillPrimaryPFParticle(art::Event const & evt, const recob::PFParticle* particle){
+void protoana::ProtoDUNEAnalysisTree::FillPrimaryPFParticle(art::Event const & evt,
+                                                            detinfo::DetectorClocksData const& clockData,
+                                                            detinfo::DetectorPropertiesData const& detProp,
+                                                            const recob::PFParticle* particle){
 
   // Pandora's BDT beam-cosmic score
   fprimaryBDTScore = (double)pfpUtil.GetBeamCosmicScore(*particle,evt,fPFParticleTag);
@@ -917,7 +936,7 @@ void protoana::ProtoDUNEAnalysisTree::FillPrimaryPFParticle(art::Event const & e
     
     // Get the true mc particle
     //const simb::MCParticle* mcparticle = truthUtil.GetMCParticleFromRecoTrack(*thisTrack, evt, fTrackerTag);
-    mcparticle = truthUtil.GetMCParticleFromRecoTrack(*thisTrack, evt, fTrackerTag);
+    mcparticle = truthUtil.GetMCParticleFromRecoTrack(clockData, *thisTrack, evt, fTrackerTag);
   } // end is track
   else if(thisShower != 0x0){
     fprimaryIstrack                     = 0;
@@ -941,7 +960,7 @@ void protoana::ProtoDUNEAnalysisTree::FillPrimaryPFParticle(art::Event const & e
       fprimaryShowerdEdx[k] = thisShower->dEdx()[k];
 
     //const simb::MCParticle* mcparticle = truthUtil.GetMCParticleFromRecoShower(*thisShower, evt, fShowerTag);
-    mcparticle = truthUtil.GetMCParticleFromRecoShower(*thisShower, evt, fShowerTag);
+    mcparticle = truthUtil.GetMCParticleFromRecoShower(clockData, *thisShower, evt, fShowerTag);
   } // end is shower
   else{
     if(fVerbose > 0){
@@ -1105,7 +1124,11 @@ void protoana::ProtoDUNEAnalysisTree::FillPrimaryPFParticle(art::Event const & e
 }
 
 // -----------------------------------------------------------------------------
-void protoana::ProtoDUNEAnalysisTree::FillPrimaryDaughterPFParticle(art::Event const & evt, const recob::PFParticle* daughterParticle, int daughterID){
+void protoana::ProtoDUNEAnalysisTree::FillPrimaryDaughterPFParticle(art::Event const & evt,
+                                                                    detinfo::DetectorClocksData const& clockData,
+                                                                    detinfo::DetectorPropertiesData const& detProp,
+                                                                    const recob::PFParticle* daughterParticle,
+                                                                    int daughterID){
 
   const recob::Track* daughterTrack              = pfpUtil.GetPFParticleTrack(*daughterParticle,evt, fPFParticleTag,fTrackerTag);
   const recob::Shower* daughterShower            = pfpUtil.GetPFParticleShower(*daughterParticle,evt,fPFParticleTag,fShowerTag);
@@ -1173,7 +1196,7 @@ void protoana::ProtoDUNEAnalysisTree::FillPrimaryDaughterPFParticle(art::Event c
     
     // Get the true mc particle
     //const simb::MCParticle* mcdaughterparticle = truthUtil.GetMCParticleFromRecoTrack(*daughterTrack, evt, fTrackerTag);
-    mcdaughterparticle = truthUtil.GetMCParticleFromRecoTrack(*daughterTrack, evt, fTrackerTag);
+    mcdaughterparticle = truthUtil.GetMCParticleFromRecoTrack(clockData, *daughterTrack, evt, fTrackerTag);
   }
   else if(daughterShower != 0x0){
     fdaughterIstrack[fNDAUGHTERS]                   = 0;
@@ -1196,7 +1219,7 @@ void protoana::ProtoDUNEAnalysisTree::FillPrimaryDaughterPFParticle(art::Event c
 
     // Get the true mc particle
     //const simb::MCParticle* mcdaughterparticle = truthUtil.GetMCParticleFromRecoShower(*daughterShower, evt, fShowerTag);
-    mcdaughterparticle = truthUtil.GetMCParticleFromRecoShower(*daughterShower, evt, fShowerTag);
+    mcdaughterparticle = truthUtil.GetMCParticleFromRecoShower(clockData, *daughterShower, evt, fShowerTag);
   }
   else{
     if(fVerbose > 0){
@@ -1254,7 +1277,11 @@ void protoana::ProtoDUNEAnalysisTree::FillPrimaryDaughterPFParticle(art::Event c
 }
 
 // -----------------------------------------------------------------------------
-void protoana::ProtoDUNEAnalysisTree::FillPrimaryGrandDaughterPFParticle(art::Event const & evt, const recob::PFParticle* gdaughterParticle, int daughterID, int gdaughterID){
+void protoana::ProtoDUNEAnalysisTree::FillPrimaryGrandDaughterPFParticle(art::Event const & evt,
+                                                                         detinfo::DetectorClocksData const& clockData,
+                                                                         detinfo::DetectorPropertiesData const& detProp,
+                                                                         const recob::PFParticle* gdaughterParticle,
+                                                                         int daughterID, int gdaughterID){
 
   const recob::Track* gdaughterTrack                       = pfpUtil.GetPFParticleTrack(*gdaughterParticle,evt, fPFParticleTag,fTrackerTag);
   const recob::Shower* gdaughterShower                     = pfpUtil.GetPFParticleShower(*gdaughterParticle,evt,fPFParticleTag,fShowerTag);
@@ -1322,7 +1349,7 @@ void protoana::ProtoDUNEAnalysisTree::FillPrimaryGrandDaughterPFParticle(art::Ev
     
     // Get the true mc particle
     //const simb::MCParticle* mcdaughterparticle = truthUtil.GetMCParticleFromRecoTrack(*gdaughterTrack, evt, fTrackerTag);
-    mcdaughterparticle = truthUtil.GetMCParticleFromRecoTrack(*gdaughterTrack, evt, fTrackerTag);
+    mcdaughterparticle = truthUtil.GetMCParticleFromRecoTrack(clockData, *gdaughterTrack, evt, fTrackerTag);
   }
   else if(gdaughterShower != 0x0){
     fgranddaughterIstrack[fNGRANDDAUGHTERS]                   = 0;
@@ -1345,7 +1372,7 @@ void protoana::ProtoDUNEAnalysisTree::FillPrimaryGrandDaughterPFParticle(art::Ev
 
     // Get the true mc particle
     //const simb::MCParticle* mcdaughterparticle = truthUtil.GetMCParticleFromRecoShower(*gdaughterShower, evt, fShowerTag);
-    mcdaughterparticle = truthUtil.GetMCParticleFromRecoShower(*gdaughterShower, evt, fShowerTag);
+    mcdaughterparticle = truthUtil.GetMCParticleFromRecoShower(clockData, *gdaughterShower, evt, fShowerTag);
   }
   else{
     if(fVerbose > 0){
@@ -2091,4 +2118,3 @@ void protoana::ProtoDUNEAnalysisTree::Initialise(){
 }
 
 DEFINE_ART_MODULE(protoana::ProtoDUNEAnalysisTree)
-

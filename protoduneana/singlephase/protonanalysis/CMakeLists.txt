@@ -17,6 +17,7 @@ art_make(BASENAME_ONLY
   lardata_Utilities
   larcorealg_Geometry
   lardataobj_Simulation
+  lardataalg_DetectorInfo
   lardata_ArtDataHelper
   nusimdata_SimulationBase
   larsim_MCCheater_PhotonBackTrackerService_service           

@@ -153,11 +153,6 @@ class protoana::protonmc : public art::EDAnalyzer {
   		art::ServiceHandle < geo::Geometry > fGeometryService_rw;
 
 
-		//detector service
-		detinfo::DetectorProperties const *detprop = lar::providerFrom<detinfo::DetectorPropertiesService>();
-		detinfo::DetectorClocks const *ts = lar::providerFrom<detinfo::DetectorClocksService>();
-		double XDriftVelocity      = detprop->DriftVelocity()*1e-3; //cm/ns
-		double WindowSize          = detprop->NumberTimeSamples() * ts->TPCClock().TickPeriod() * 1e3;
 		double MCTruthT0, TickT0;
 		int nT0s;   
 
@@ -770,6 +765,8 @@ void protoana::protonmc::analyze(art::Event const & evt){
 	fGeometry = &*(art::ServiceHandle<geo::Geometry>());
 	//anab::MVAReader<recob::Hit,3> hitResults(evt, fNNetModuleLabel);
 
+        auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(evt);
+        auto const detProp = art::ServiceHandle<detinfo::DetectorPropertiesService>()->DataFor(evt, clockData);
 	//T0
 	std::vector<const anab::T0*> T0s;    
 	nT0s = T0s.size();
@@ -783,7 +780,7 @@ void protoana::protonmc::analyze(art::Event const & evt){
 		std::cout << "No T0s found" << std::endl;
 		MCTruthT0 = 0;
 	}        
-	TickT0 = MCTruthT0 / detprop->SamplingRate();
+        TickT0 = MCTruthT0 / sampling_rate(clockData);
 	std::cout<<"TickT0:"<<TickT0<<std::endl;
 
 
@@ -1178,7 +1175,7 @@ void protoana::protonmc::analyze(art::Event const & evt){
 
 		if(thisTrack != 0x0) { //this track
 			// Get the true mc particle
-			const simb::MCParticle* mcparticle0 = truthUtil.GetMCParticleFromRecoTrack(*thisTrack, evt, fTrackerTag);
+                         const simb::MCParticle* mcparticle0 = truthUtil.GetMCParticleFromRecoTrack(clockData, *thisTrack, evt, fTrackerTag);
 			std::cout<<"inside the this track loop "<<std::endl;
 			if(mcparticle0!=0x0) {
 				std::cout<<"fTruth PDG: "<<mcparticle0->PdgCode()<<std::endl;
@@ -1425,11 +1422,11 @@ void protoana::protonmc::analyze(art::Event const & evt){
 						interaction_wid_v.push_back(fGeometry->WireCoordinate(yval, zval, 1, tpcno, 0));
 						interaction_wid_u.push_back(fGeometry->WireCoordinate(yval, zval, 0, tpcno, 0));
 
-						interaction_tt_c.push_back(detprop->ConvertXToTicks(xval, 2, tpcno, 0));
-						interaction_tt_v.push_back(detprop->ConvertXToTicks(xval, 1, tpcno, 0));
-						interaction_tt_u.push_back(detprop->ConvertXToTicks(xval, 0, tpcno, 0));
+                                                interaction_tt_c.push_back(detProp.ConvertXToTicks(xval, 2, tpcno, 0));
+                                                interaction_tt_v.push_back(detProp.ConvertXToTicks(xval, 1, tpcno, 0));
+                                                interaction_tt_u.push_back(detProp.ConvertXToTicks(xval, 0, tpcno, 0));
 
-						//interactionT.push_back(detprop->ConvertXToTicks(xval, 2, tpcno, 0));
+                                                //interactionT.push_back(detProp.ConvertXToTicks(xval, 2, tpcno, 0));
 						//interactionU.push_back(fGeometry->WireCoordinate(((truetraj.at(couple1.first)).first).Y(), ((truetraj.at(couple1.first)).first).Z(),0, tpcno, 0));
 						//interactionV.push_back(fGeometry->WireCoordinate(((truetraj.at(couple1.first)).first).Y(), ((truetraj.at(couple1.first)).first).Z(),1, tpcno, 0));
 						//interactionW.push_back(fGeometry->WireCoordinate(((truetraj.at(couple1.first)).first).Y(), ((truetraj.at(couple1.first)).first).Z(),2, tpcno, 0));
@@ -1438,9 +1435,9 @@ void protoana::protonmc::analyze(art::Event const & evt){
 						//geo::PlaneID collection_plane = geom->PlaneIDs(2);
 						//std::cout<<"fprimaryT0:"<<fprimaryT0<<std::endl;
 						//std::cout<<"\nint_vtx x/y/z:"<<((truetraj.at(couple1.first)).first).X()<<"/"<<((truetraj.at(couple1.first)).first).Y()<<"/"<<((truetraj.at(couple1.first)).first).Z()<<std::endl;
-						//std::cout<<"(wid,tt)_c:"<<"("<<fGeometry->WireCoordinate(yval, zval, 2, tpcno, 0)<<","<<detprop->ConvertXToTicks(xval, 2, tpcno, 0)<<")"<<std::endl;              
-						//std::cout<<"(wid,tt)_v:"<<"("<<fGeometry->WireCoordinate(yval, zval, 1, tpcno, 0)<<","<<detprop->ConvertXToTicks(xval, 1, tpcno, 0)<<")"<<std::endl;              
-						//std::cout<<"(wid,tt)_u:"<<"("<<fGeometry->WireCoordinate(yval, zval, 0, tpcno, 0)<<","<<detprop->ConvertXToTicks(xval, 0, tpcno, 0)<<")"<<std::endl;              
+                                                //std::cout<<"(wid,tt)_c:"<<"("<<fGeometry->WireCoordinate(yval, zval, 2, tpcno, 0)<<","<<detProp.ConvertXToTicks(xval, 2, tpcno, 0)<<")"<<std::endl;
+                                                //std::cout<<"(wid,tt)_v:"<<"("<<fGeometry->WireCoordinate(yval, zval, 1, tpcno, 0)<<","<<detProp.ConvertXToTicks(xval, 1, tpcno, 0)<<")"<<std::endl;
+                                                //std::cout<<"(wid,tt)_u:"<<"("<<fGeometry->WireCoordinate(yval, zval, 0, tpcno, 0)<<","<<detProp.ConvertXToTicks(xval, 0, tpcno, 0)<<")"<<std::endl;
 
 
 						//not interested of CoulombScat	
@@ -1827,7 +1824,7 @@ void protoana::protonmc::analyze(art::Event const & evt){
 
 								//convert the position of the interaction to (wireID, peak time)
 								wid_c.push_back(fGeometry->WireCoordinate(ypos, zpos, planenum, tpc_no, 0));
-								tt_c.push_back(detprop->ConvertXToTicks(xpos, planenum, tpc_no, 0));
+                                                                tt_c.push_back(detProp.ConvertXToTicks(xpos, planenum, tpc_no, 0));
 
 								//save ch number
 								ch_c.push_back(vhit[ii]->Channel());
@@ -1845,7 +1842,7 @@ void protoana::protonmc::analyze(art::Event const & evt){
 								wirez_c.push_back(xyzStart[2]);
 
 
-								//std::cout<<"(w,t):("<<fGeometry->WireCoordinate(ypos, zpos, planenum, tpc_no, 0)<<","<<detprop->ConvertXToTicks(xpos, planenum, tpc_no, 0)<<")|"<<
+                                                                //std::cout<<"(w,t):("<<fGeometry->WireCoordinate(ypos, zpos, planenum, tpc_no, 0)<<","<<detProp.ConvertXToTicks(xpos, planenum, tpc_no, 0)<<")|"<<
 								//"[inel,el,non]:["<<cnn_out[hitResults.getIndex("inel")]<<","<<cnn_out[hitResults.getIndex("el")]<<","<<cnn_out[hitResults.getIndex("none")]<<"]"<<std::endl;
 								// std::cout<<"peaktime "<<vhit[ii]->PeakTime()<<std::endl;	
 
@@ -1869,7 +1866,7 @@ void protoana::protonmc::analyze(art::Event const & evt){
 
 								//convert the position of the interaction to (wireID, peak time)
 								wid_v.push_back(fGeometry->WireCoordinate(ypos, zpos, planenum, tpc_no, 0));
-								tt_v.push_back(detprop->ConvertXToTicks(xpos, planenum, tpc_no, 0));
+                                                                tt_v.push_back(detProp.ConvertXToTicks(xpos, planenum, tpc_no, 0));
 
 								//save ch number
 								ch_v.push_back(vhit[ii]->Channel());
@@ -1892,7 +1889,7 @@ void protoana::protonmc::analyze(art::Event const & evt){
 
 								//convert the position of the interaction to (wireID, peak time)
 								wid_u.push_back(fGeometry->WireCoordinate(ypos, zpos, planenum, tpc_no, 0));
-								tt_u.push_back(detprop->ConvertXToTicks(xpos, planenum, tpc_no, 0));
+                                                                tt_u.push_back(detProp.ConvertXToTicks(xpos, planenum, tpc_no, 0));
 
 								//save ch number
 								ch_u.push_back(vhit[ii]->Channel());
@@ -2068,7 +2065,7 @@ void protoana::protonmc::analyze(art::Event const & evt){
 						}
 
 						// Get the true mc particle
-						const simb::MCParticle* mcdaughterparticle = truthUtil.GetMCParticleFromRecoTrack(*daughterTrack, evt, fTrackerTag);
+                                                const simb::MCParticle* mcdaughterparticle = truthUtil.GetMCParticleFromRecoTrack(clockData, *daughterTrack, evt, fTrackerTag);
 						if(mcdaughterparticle != 0x0){
 							fdaughter_truth_TrackId[fNDAUGHTERS]          = mcdaughterparticle->TrackId();
 							fdaughter_truth_Pdg[fNDAUGHTERS]              = mcdaughterparticle->PdgCode();
@@ -2433,4 +2430,3 @@ void protoana::protonmc::analyze(art::Event const & evt){
 			}
 
 			DEFINE_ART_MODULE(protoana::protonmc)
-

@@ -1,4 +1,3 @@
-
 art_make( LIBRARY_NAME ProtoDUNEUtilities
 	  LIB_LIBRARIES
                         dune_ArtSupport
@@ -9,6 +8,7 @@ art_make( LIBRARY_NAME ProtoDUNEUtilities
                         larreco_RecoAlg_PMAlg
                         larcorealg_Geometry
                         larcore_Geometry_Geometry_service
+                        lardataalg_DetectorInfo
                         lardata_ArtDataHelper
                         lardata_Utilities
                         larsim_Simulation 

@@ -305,7 +305,7 @@ namespace protoana{
     // art::ServiceHandle<cheat::ParticleInventoryService> pi_serv;
     fGeometry = &*(art::ServiceHandle<geo::Geometry>());
     //Detector properties service
-    auto const* detectorPropertiesService = lar::providerFrom<detinfo::DetectorPropertiesService>();
+    auto const detProp = art::ServiceHandle<detinfo::DetectorPropertiesService>()->DataFor(evt);
    
     art::Handle< std::vector<recob::Track> > trackListHandle;
     std::vector<art::Ptr<recob::Track> > tracklist;
@@ -503,11 +503,11 @@ namespace protoana{
       auto allHits=fmthm.at(i);
       double ticksoffset=0;
 
-      // if (this_t0crt2 > -DBL_MAX) ticksoffset = this_t0crt2/500.+detectorPropertiesService->GetXTicksOffset(allHits[0]->WireID());
-      if (this_t0crt2 > -DBL_MAX) ticksoffset = this_t0crt2/500.+detectorPropertiesService->GetXTicksOffset (allHits[0]->WireID().Plane, allHits[0]->WireID().TPC, allHits[0]->WireID().Cryostat);
-      //  else if (this_t0crt1 > -DBL_MAX) ticksoffset = this_t0crt1/500.+detectorPropertiesService->GetXTicksOffset(allHits[0]->WireID());
-      xoffset = detectorPropertiesService->ConvertTicksToX(ticksoffset,allHits[0]->WireID());
-      std::cout<<"tickoffset , x offset "<<ticksoffset<<"  "<<xoffset<<" default term "<<detectorPropertiesService->GetXTicksOffset (allHits[10]->WireID().Plane, allHits[10]->WireID().TPC, allHits[10]->WireID().Cryostat)<<std::endl;
+      // if (this_t0crt2 > -DBL_MAX) ticksoffset = this_t0crt2/500.+detProp.GetXTicksOffset(allHits[0]->WireID());
+      if (this_t0crt2 > -DBL_MAX) ticksoffset = this_t0crt2/500.+detProp.GetXTicksOffset (allHits[0]->WireID().Plane, allHits[0]->WireID().TPC, allHits[0]->WireID().Cryostat);
+      //  else if (this_t0crt1 > -DBL_MAX) ticksoffset = this_t0crt1/500.+detProp.GetXTicksOffset(allHits[0]->WireID());
+      xoffset = detProp.ConvertTicksToX(ticksoffset,allHits[0]->WireID());
+      std::cout<<"tickoffset , x offset "<<ticksoffset<<"  "<<xoffset<<" default term "<<detProp.GetXTicksOffset (allHits[10]->WireID().Plane, allHits[10]->WireID().TPC, allHits[10]->WireID().Cryostat)<<std::endl;
 
 
 

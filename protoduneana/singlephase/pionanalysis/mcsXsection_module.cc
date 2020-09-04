@@ -642,7 +642,8 @@ void protoana::mcsXsection::analyze(art::Event const & evt){
   fGeometry = &*(art::ServiceHandle<geo::Geometry>());
   // const sim::ParticleList& plist=pi_serv->ParticleList();
 
-  const detinfo::DetectorProperties* detprop = lar::providerFrom<detinfo::DetectorPropertiesService>();
+  auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(evt);
+  auto const detProp = art::ServiceHandle<detinfo::DetectorPropertiesService>()->DataFor(evt, clockData);
   // anab::MVAReader<recob::Hit,3> hitResults(evt, fNNetModuleLabel);
   anab::MVAReader<recob::Hit,4> hitResults(evt, "emtrkmichelid:emtrkmichel");
   art::ServiceHandle<geo::Geometry> geom;
@@ -869,7 +870,7 @@ void protoana::mcsXsection::analyze(art::Event const & evt){
 	  if(xval>0 && zval>232 && zval<464) tpcno=6; 
 	  if(xval>0 && zval>=464) tpcno=10;
 
-	  interactionT.push_back(detprop->ConvertXToTicks(((truetraj.at(couple1.first)).first).X(), 2, tpcno, 0));
+          interactionT.push_back(detProp.ConvertXToTicks(((truetraj.at(couple1.first)).first).X(), 2, tpcno, 0));
 	  interactionU.push_back(fGeometry->WireCoordinate(((truetraj.at(couple1.first)).first).Y(), ((truetraj.at(couple1.first)).first).Z(),0, tpcno, 0));
 	  interactionV.push_back(fGeometry->WireCoordinate(((truetraj.at(couple1.first)).first).Y(), ((truetraj.at(couple1.first)).first).Z(),1, tpcno, 0));
 	  interactionW.push_back(fGeometry->WireCoordinate(((truetraj.at(couple1.first)).first).Y(), ((truetraj.at(couple1.first)).first).Z(),2, tpcno, 0));
@@ -1308,7 +1309,7 @@ void protoana::mcsXsection::analyze(art::Event const & evt){
     if(thisTrack != 0x0){
       if(!beam_cuts.IsBeamlike(*thisTrack, evt, "1")) return;
       // Get the true mc particle
-      const simb::MCParticle* mcparticle = truthUtil.GetMCParticleFromRecoTrack(*thisTrack, evt, fTrackerTag);
+      const simb::MCParticle* mcparticle = truthUtil.GetMCParticleFromRecoTrack(clockData, *thisTrack, evt, fTrackerTag);
       if(mcparticle!=0x0){
 	std::cout<<"ftruth pdg "<<mcparticle->PdgCode()<<std::endl;
 	ftruthpdg=mcparticle->PdgCode();
@@ -1855,7 +1856,7 @@ void protoana::mcsXsection::analyze(art::Event const & evt){
 	}
 
 	// Get the true mc particle
-	const simb::MCParticle* mcdaughterparticle = truthUtil.GetMCParticleFromRecoTrack(*daughterTrack, evt, fTrackerTag);
+        const simb::MCParticle* mcdaughterparticle = truthUtil.GetMCParticleFromRecoTrack(clockData, *daughterTrack, evt, fTrackerTag);
 	if(mcdaughterparticle != 0x0){
 	  fdaughter_truth_TrackId[fNDAUGHTERS]          = mcdaughterparticle->TrackId();
 	  fdaughter_truth_Pdg[fNDAUGHTERS]              = mcdaughterparticle->PdgCode();
@@ -2158,4 +2159,3 @@ void protoana::mcsXsection::Initialise(){
 }
 
 DEFINE_ART_MODULE(protoana::mcsXsection)
-
