@@ -36,6 +36,7 @@ namespace protoana {
 }
 
 using protoana::G4ReweightUtils::CreateRWTraj;
+using protoana::G4ReweightUtils::CreateNRWTrajs;
 
 class protoana::G4RWExampleAnalyzer : public art::EDAnalyzer {
 public:
@@ -68,6 +69,8 @@ private:
   std::vector<double> g4rw_primary_minus_sigma_weight;
   std::vector<double> g4rw_primary_weights;
   std::vector<std::string> g4rw_primary_var;
+  std::vector<double> g4rw_alt_primary_plus_sigma_weight;
+  std::vector<double> g4rw_alt_primary_minus_sigma_weight;
 
   
   std::string fGeneratorTag;
@@ -152,6 +155,33 @@ void protoana::G4RWExampleAnalyzer::analyze(art::Event const& e) {
       }
 
     }
+
+    std::vector<G4ReweightTraj *> trajs = CreateNRWTrajs(
+        *true_beam_particle, plist,
+        fGeometryService, event, true);
+    
+    bool added = false;
+    for (size_t i = 0; i < trajs.size(); ++i) {
+      if (trajs[i]->GetNSteps() > 0) {
+        //std::cout << i << " " << trajs[i]->GetNSteps() << std::endl;
+        for (size_t j = 0; j < ParSet.size(); ++j) {
+          std::pair<double, double> pm_weights =
+              MultiRW.GetPlusMinusSigmaParWeight((*trajs[i]), j);
+          //std::cout << "got weights" << std::endl;
+          //std::cout << pm_weights.first << " " << pm_weights.second << std::endl;
+
+          if (!added) {
+            g4rw_alt_primary_plus_sigma_weight.push_back(pm_weights.first);
+            g4rw_alt_primary_minus_sigma_weight.push_back(pm_weights.second);
+          }
+          else {
+            g4rw_alt_primary_plus_sigma_weight[j] *= pm_weights.first;
+            g4rw_alt_primary_minus_sigma_weight[j] *= pm_weights.second;
+          }
+        }
+        added = true;
+      }
+    }
   }
 
   fTree->Fill();
@@ -172,6 +202,10 @@ void protoana::G4RWExampleAnalyzer::beginJob() {
   fTree->Branch("g4rw_primary_plus_sigma_weight", &g4rw_primary_plus_sigma_weight);
   fTree->Branch("g4rw_primary_minus_sigma_weight", &g4rw_primary_minus_sigma_weight);
   fTree->Branch("g4rw_primary_var", &g4rw_primary_var);
+  fTree->Branch("g4rw_alt_primary_plus_sigma_weight",
+                &g4rw_alt_primary_plus_sigma_weight);
+  fTree->Branch("g4rw_alt_primary_minus_sigma_weight",
+                &g4rw_alt_primary_minus_sigma_weight);
 }
 
 void protoana::G4RWExampleAnalyzer::reset() {
@@ -183,5 +217,7 @@ void protoana::G4RWExampleAnalyzer::reset() {
   g4rw_primary_plus_sigma_weight.clear();
   g4rw_primary_minus_sigma_weight.clear();
   g4rw_primary_var.clear();
+  g4rw_alt_primary_plus_sigma_weight.clear();
+  g4rw_alt_primary_minus_sigma_weight.clear();
 }
 DEFINE_ART_MODULE(protoana::G4RWExampleAnalyzer)

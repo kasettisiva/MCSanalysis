@@ -14,6 +14,12 @@ namespace protoana {
                     const sim::ParticleList & plist,
                     art::ServiceHandle < geo::Geometry > geo_serv, int event,
                     G4ReweightTraj * theTraj); 
+
+  std::vector<G4ReweightTraj *> CreateNRWTrajs(
+      const simb::MCParticle & part,
+      const sim::ParticleList & plist,
+      art::ServiceHandle < geo::Geometry > geo_serv, int event,
+      bool fVerbose=false);
  }
 }
 

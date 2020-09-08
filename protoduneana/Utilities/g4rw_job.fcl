@@ -40,3 +40,77 @@ physics:
 }
 
 outputs: {}
+
+physics.analyzers.rwexample.XSecFile: "/dune/data2/users/calcuttj/GeantReweight/FlatTree/cross_section_with_decay.root"
+physics.analyzers.pionana.ParameterSet: [
+                                          { 
+                                            Cut:    "reac"
+                                            Name: "fReac1"
+                                            Range: [000., 1200.]
+                                            Nominal: 1.0 
+                                            Sigma: .05
+                                          },
+                                          { 
+                                            Cut:    "reac"
+                                            Name: "fReac2"
+                                            Range: [000., 1200.]
+                                            Nominal: 1.0 
+                                            Sigma: .1
+                                          },
+                                          { 
+                                            Cut:    "reac"
+                                            Name: "fReac3"
+                                            Range: [000., 1200.]
+                                            Nominal: 1.0 
+                                            Sigma: .15
+                                          },
+                                          { 
+                                            Cut:    "reac"
+                                            Name: "fReac4"
+                                            Range: [000., 1200.]
+                                            Nominal: 1.0 
+                                            Sigma: .2
+                                          },
+                                          { 
+                                            Cut:    "reac"
+                                            Name: "fReac5"
+                                            Range: [000., 1200.]
+                                            Nominal: 1.0 
+                                            Sigma: .25
+                                          },
+                                          { 
+                                            Cut:    "reac"
+                                            Name: "fReac6"
+                                            Range: [000., 1200.]
+                                            Nominal: 1.0 
+                                            Sigma: .3
+                                          },
+                                          { 
+                                            Cut:    "reac"
+                                            Name: "fReac7"
+                                            Range: [000., 1200.]
+                                            Nominal: 1.0 
+                                            Sigma: .35
+                                          },
+                                          { 
+                                            Cut:    "reac"
+                                            Name: "fReac8"
+                                            Range: [000., 1200.]
+                                            Nominal: 1.0 
+                                            Sigma: .4
+                                          },
+                                          {
+                                            Cut:    "reac"
+                                            Name: "fReac9"
+                                            Range: [000., 1200.]
+                                            Nominal: 1.0 
+                                            Sigma: .45
+                                          },
+                                          {
+                                            Cut:    "reac"
+                                            Name: "fReac10"
+                                            Range: [000., 1200.]
+                                            Nominal: 1.0 
+                                            Sigma: .5
+                                          }
+                                        ]
