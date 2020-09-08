@@ -17,6 +17,7 @@
 #include "messagefacility/MessageLogger/MessageLogger.h"
 #include "fhiclcpp/ParameterSet.h"
 #include "protoduneana/Utilities/ProtoDUNEBeamlineUtils.h"
+#include "ProtoDUNETruthUtils.h"
 
 #include "lardataobj/RecoBase/Track.h"
 
@@ -56,7 +57,10 @@ private:
   std::vector< int > glitches_h_upstream, glitches_v_upstream, glitches_h_downstream, glitches_v_downstream;
   int nMomenta;
   std::vector<double> momenta;
+  std::vector<int> possible_pdg;
   int nTracks;
+  std::vector<double> trackEndX, trackEndY, trackEndZ;
+  std::vector<double> dirX, dirY, dirZ;
 
 
   std::vector<short> fibers_h_upstream,   fibers_v_upstream, 
@@ -66,6 +70,10 @@ private:
 
   unsigned long long GenTrigTS;
   bool perfectP;
+
+  int true_PDG;
+  double true_P;
+  double true_X, true_Y, true_Z;
 };
   
 //-----------------------------------------------------------------------
@@ -101,6 +109,13 @@ void protoana::ProtoDUNEBeamlineReco::beginJob() {
   fOutTree->Branch("nMomenta", &nMomenta);
   fOutTree->Branch("Momenta", &momenta);
   fOutTree->Branch("nTracks", &nTracks);
+  fOutTree->Branch("trackEndX", &trackEndX);
+  fOutTree->Branch("trackEndY", &trackEndY);
+  fOutTree->Branch("trackEndZ", &trackEndZ);
+  fOutTree->Branch("dirX", &dirX);
+  fOutTree->Branch("dirY", &dirY);
+  fOutTree->Branch("dirZ", &dirZ);
+  fOutTree->Branch("possible_pdg", &possible_pdg);
 
   //Tracking Monitors
   fOutTree->Branch("fibers_h_upstream", &fibers_h_upstream);
@@ -120,6 +135,13 @@ void protoana::ProtoDUNEBeamlineReco::beginJob() {
 
   //Timestamp
   fOutTree->Branch("GenTrigTS", &GenTrigTS);
+
+  //True info
+  fOutTree->Branch("true_PDG", &true_PDG);
+  fOutTree->Branch("true_P", &true_P);
+  fOutTree->Branch("true_X", &true_X);
+  fOutTree->Branch("true_Y", &true_Y);
+  fOutTree->Branch("true_Z", &true_Z);
 }
 
 //-----------------------------------------------------------------------
@@ -140,6 +162,11 @@ void protoana::ProtoDUNEBeamlineReco::analyze(art::Event const & evt){
   tof = -1.;
   chan = -1;
   GenTrigTS = 0;
+  true_PDG = -1;
+  true_P = -999.;
+  true_X = 0.;
+  true_Y = 0.;
+  true_Z = 0.;
 
   event = evt.id().event();
   run   = evt.run();
@@ -235,6 +262,8 @@ void protoana::ProtoDUNEBeamlineReco::analyze(art::Event const & evt){
   }
   std::cout << std::endl;
 
+  possible_pdg.insert(possible_pdg.end(), pids.begin(), pids.end());
+
   PossibleParticleCands candidates = fBeamlineUtils.GetPIDCandidates( beamEvent, fReferenceMomentum );
   std::cout << std::left << std::setw(10) << "electron " << candidates.electron << std::endl;
   std::cout << std::left << std::setw(10) << "muon "     << candidates.muon     << std::endl;
@@ -252,6 +281,14 @@ void protoana::ProtoDUNEBeamlineReco::analyze(art::Event const & evt){
     std::cout << "X " << beamEvent.GetBeamTracks()[0].Trajectory().End().X() << std::endl;
     std::cout << "Y " << beamEvent.GetBeamTracks()[0].Trajectory().End().Y() << std::endl;
     std::cout << "Z " << beamEvent.GetBeamTracks()[0].Trajectory().End().Z() << std::endl;
+  }
+  for (size_t i = 0; i < beamEvent.GetBeamTracks().size(); ++i) {
+    trackEndX.push_back(beamEvent.GetBeamTracks()[i].Trajectory().End().X());
+    trackEndY.push_back(beamEvent.GetBeamTracks()[i].Trajectory().End().Y());
+    trackEndZ.push_back(beamEvent.GetBeamTracks()[i].Trajectory().End().Z());
+    dirX.push_back(beamEvent.GetBeamTracks()[i].Trajectory().EndDirection().X());
+    dirY.push_back(beamEvent.GetBeamTracks()[i].Trajectory().EndDirection().Y());
+    dirZ.push_back(beamEvent.GetBeamTracks()[i].Trajectory().EndDirection().Z());
   }
   /////////////////////////////////////////////////////////////
 
@@ -320,6 +357,29 @@ void protoana::ProtoDUNEBeamlineReco::analyze(art::Event const & evt){
   std::cout << "Perfect Momentum?" << fBeamlineUtils.HasPerfectBeamMomentum( evt ) << std::endl;
   perfectP = fBeamlineUtils.HasPerfectBeamMomentum( evt );
   
+  if (!evt.isRealData()) {
+    auto mcTruths = evt.getValidHandle<std::vector<simb::MCTruth>>("generator");
+    protoana::ProtoDUNETruthUtils truthUtil;
+    auto true_beam_particle = truthUtil.GetGeantGoodParticle((*mcTruths)[0],evt);
+    if (!true_beam_particle) {
+      std::cout << "No true beam particle" << std::endl;
+    }
+    else {
+      std::cout << "True PDG: " << true_beam_particle->PdgCode() << std::endl;
+      true_PDG = true_beam_particle->PdgCode();
+      true_P = true_beam_particle->P();
+      size_t nPoints = true_beam_particle->NumberTrajectoryPoints();
+      for (size_t i = 0; i < nPoints; ++i) {
+        if (true_beam_particle->Position(i).Z() > 0. &&
+            true_beam_particle->Position(i).Z() < 1.) {
+          true_X = true_beam_particle->Position(i).X();
+          true_Y = true_beam_particle->Position(i).Y();
+          true_Z = true_beam_particle->Position(i).Z();
+          break;
+        }
+      }
+    }
+  }
 
   fOutTree->Fill();
 }
@@ -347,6 +407,15 @@ void protoana::ProtoDUNEBeamlineReco::reset(){
   glitches_v_downstream.clear();
 
   perfectP = false;
+  possible_pdg.clear();
+
+  trackEndX.clear();
+  trackEndY.clear();
+  trackEndZ.clear();
+
+  dirX.clear();
+  dirY.clear();
+  dirZ.clear();
 }
  
 DEFINE_ART_MODULE(protoana::ProtoDUNEBeamlineReco)

@@ -1,0 +1,45 @@
+BEGIN_PROLOG
+
+g4rwexample: {
+  module_type: "G4RWExampleAnalyzer"
+  GeneratorTag: "generator"
+
+  FracsFile: "/dune/data2/users/calcuttj/GeantReweight/FlatTree/LAr_PiPlus_cascade.root"
+  XSecFile: "/dune/data2/users/calcuttj/GeantReweight/FlatTree/LAr_cross_section.root"
+
+  RW_PDG: 211
+
+  ParameterSet: [
+    { 
+      Cut:    "reac"
+      Name: "fReac"
+      Range: [000., 1200.]
+      Nominal: 1.0 
+      Sigma: .2
+    },
+    {
+      Cut:  "abs"
+      Name: "fAbs1"
+      Range: [000., 300.]
+      Nominal: 1.0
+      Sigma: .2
+    },
+    {
+      Cut:  "abs"
+      Name: "fAbs2"
+      Range: [300., 1200.]
+      Nominal: 1.0
+      Sigma: .2
+    },
+    {
+      Cut:  "cex"
+      Name: "fCex"
+      Range: [000., 1200.]
+      Nominal: 1.0
+      Sigma: .2
+    }
+  ]
+
+}
+
+END_PROLOG

@@ -30,10 +30,12 @@ class ShowerProcess {
   std::vector<const recob::Track*> m_tracks;
   // double cone_length = 100;
   // double cone_width = 20;
-  Cone* m_cone = 0x0;
+  Cone* m_cone = nullptr;
 
   // Event information.
-  const art::Event* m_evt = 0x0;
+  const art::Event* m_evt;
+  detinfo::DetectorClocksData const* m_clockdata;
+  detinfo::DetectorPropertiesData const* m_detprop;
   std::string m_showerLabel;
   std::string m_trackLabel;
   std::string m_simulationLabel;
@@ -50,11 +52,16 @@ class ShowerProcess {
 
  public:
   // Constructors from MCParticle, shower and both.
-  ShowerProcess(const simb::MCParticle& mcpart, const art::Event& evt,
+  ShowerProcess(const simb::MCParticle& mcpart,
+                const art::Event& evt,
+                detinfo::DetectorClocksData const& clockData,
+                detinfo::DetectorPropertiesData const& detProp,
                 std::string showerLabel = "pandoraShower",
                 std::string trackLabel = "pandoraTrack",
                 std::string simulationLabel = "largeant"):
                 m_evt(&evt),
+                m_clockdata(&clockData),
+                m_detprop(&detProp),
                 m_showerLabel(showerLabel),
                 m_trackLabel(trackLabel),
                 m_simulationLabel(simulationLabel) {
@@ -64,10 +71,14 @@ class ShowerProcess {
     fill_cone();
   }
   ShowerProcess(const recob::Shower& shower, const art::Event& evt,
+                detinfo::DetectorClocksData const& clockData,
+                detinfo::DetectorPropertiesData const& detProp,
                 std::string showerLabel = "pandoraShower",
                 std::string trackLabel = "pandoraTrack",
                 std::string simulationLabel = "largeant"):
                 m_evt(&evt),
+                m_clockdata(&clockData),
+                m_detprop(&detProp),
                 m_showerLabel(showerLabel),
                 m_trackLabel(trackLabel),
                 m_simulationLabel(simulationLabel) {
@@ -78,10 +89,14 @@ class ShowerProcess {
   }
   ShowerProcess(const simb::MCParticle& mcpart, const recob::Shower& shower,
                 const art::Event& evt,
+                detinfo::DetectorClocksData const& clockData,
+                detinfo::DetectorPropertiesData const& detProp,
                 std::string showerLabel = "pandoraShower",
                 std::string trackLabel = "pandoraTrack",
                 std::string simulationLabel = "largeant"):
                 m_evt(&evt),
+                m_clockdata(&clockData),
+                m_detprop(&detProp),
                 m_showerLabel(showerLabel),
                 m_trackLabel(trackLabel),
                 m_simulationLabel(simulationLabel) {
@@ -90,17 +105,17 @@ class ShowerProcess {
     find_tracks();
     fill_cone();
   }
-  ~ShowerProcess() { if(m_cone != 0x0) delete m_cone; } // TODO: make unique_ptr.
+  ~ShowerProcess() { if(m_cone != nullptr) delete m_cone; } // TODO: make unique_ptr.
 
   // Related object getters. The elements are guaranteed to be descending in energy.
   const simb::MCParticle* mcparticle() const {
-    return m_mcparts.size()!=0? m_mcparts[0]: 0x0;
+    return m_mcparts.size()!=0? m_mcparts[0]: nullptr;
   }
   const recob::Shower* shower() const {
-    return m_showers.size()!=0? m_showers[0]: 0x0;
+    return m_showers.size()!=0? m_showers[0]: nullptr;
   }
   const recob::Track* track() const {
-    return m_tracks.size()!=0? m_tracks[0]: 0x0;
+    return m_tracks.size()!=0? m_tracks[0]: nullptr;
   }
   const Cone* cone() const {
     return m_cone;
@@ -119,7 +134,7 @@ class ShowerProcess {
 // Find MCParticle based on the biggest shower via truth utilities.
 void ShowerProcess::find_mcparticles() {
   if(m_evt->isRealData() || m_showers.size() == 0) return;
-  m_mcparts.push_back(truthUtils.GetMCParticleFromReco(*m_showers[0], *m_evt, m_showerLabel));
+  m_mcparts.push_back(truthUtils.GetMCParticleFromReco(*m_clockdata, *m_showers[0], *m_evt, m_showerLabel));
 }
 
 // Find showers based on the given MCParticle.
@@ -128,11 +143,11 @@ void ShowerProcess::find_showers() {
 
   // Find all showers this MCParticle contributed to.
   std::vector<std::pair<const recob::Shower*, double>> showers =
-    truthUtils.GetRecoShowerListFromMCParticle(*m_mcparts[0], *m_evt, m_showerLabel);
+    truthUtils.GetRecoShowerListFromMCParticle(*m_clockdata, *m_mcparts[0], *m_evt, m_showerLabel);
   // Only showers to which the MCParticle was the primary contributor are saved.
   for(const std::pair<const recob::Shower*, double>& sh : showers) {
     const simb::MCParticle* sh_part =
-      truthUtils.GetMCParticleFromReco(*sh.first, *m_evt, m_showerLabel);
+      truthUtils.GetMCParticleFromReco(*m_clockdata, *sh.first, *m_evt, m_showerLabel);
     if(std::abs(sh_part->TrackId()) == std::abs(m_mcparts[0]->TrackId())) {
       m_showers.push_back(sh.first);
     }
@@ -165,7 +180,7 @@ void ShowerProcess::find_tracks() {
     // Loop through the track's hits.
     for (art::Ptr<recob::Hit> const & hptr : findTrackHits.at(track.ID())) {
       // Loop over hit IDEs to find our MCParticle's part in it
-      for (const sim::IDE* ide : bt_serv->HitToSimIDEs_Ps(hptr)) {
+      for (const sim::IDE* ide : bt_serv->HitToSimIDEs_Ps(*m_clockdata, hptr)) {
         mcpmap[abs(ide->trackID)] += ide->energy;
         if (abs(ide->trackID) == mcparticle()->TrackId()) {
           recoTrack[track.ID()] += ide->energy;
@@ -231,7 +246,7 @@ void ShowerProcess::fill_cone() {
     cstart = m_showers[0]->ShowerStart();
     cdir = m_showers[0]->Direction();
     // Make cone object
-    m_cone = new Cone(*m_evt, cstart, cdir, m_showers[0]->Length());
+    m_cone = new Cone(*m_evt, *m_clockdata, *m_detprop, cstart, cdir, m_showers[0]->Length());
   }
   // else if(m_tracks.size() != 0) {
   //   const recob::tracking::Point_t tstart = m_tracks[0]->Start();
@@ -248,7 +263,7 @@ double ShowerProcess::energy(const std::string& caloLabel, const double calib,
   double totE = 0;
 
   // Check whether there is a shower associated with this object.
-  if(shower() == 0x0) return totE;
+  if(shower() == nullptr) return totE;
 
   // Constants from DUNE docDB 15974 by A Paudel.
   const double Wion = 23.6e-6; // ArgoNeuT-determined parameter at E0 kV/cm

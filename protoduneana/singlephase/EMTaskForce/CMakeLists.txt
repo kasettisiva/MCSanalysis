@@ -15,6 +15,7 @@ art_make(BASENAME_ONLY
   cetlib cetlib_except
   larreco_Calorimetry
   lardataobj_RecoBase
+  lardataalg_DetectorInfo
   lardata_Utilities
   lardata_ArtDataHelper
   larcorealg_Geometry
@@ -32,4 +33,3 @@ art_make(BASENAME_ONLY
 install_headers()
 install_fhicl()
 install_source()
-

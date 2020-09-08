@@ -36,6 +36,11 @@ art_make_exec( NAME runProtoDUNEFit
 	       LIBRARIES protodune_fitutils
 	    )
 
+art_make_exec( NAME Geant4ReweightSysts 
+	       SOURCE Geant4ReweightSysts.cc
+	       LIBRARIES protodune_fitutils
+	    )
+
 install_headers()
 install_fhicl()
 install_source()

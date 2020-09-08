@@ -1,0 +1,116 @@
+#include "G4RWExampleAnalyzer.fcl"
+#include "services_dune.fcl"
+
+process_name: "G4RWExample"
+
+services: {
+  # Load the service that manages root files for histograms.
+  TFileService: { fileName: "g4rw_example.root" }
+  TimeTracker:       {}
+  MemoryTracker:     {}
+  RandomNumberGenerator: {} #ART native random number generator
+  message:                      @local::dune_message_services_prod_debug
+  FileCatalogMetadata:          @local::art_file_catalog_mc
+                                @table::protodune_services
+  PdspChannelMapService:        @local::pdspchannelmap
+  ChannelStatusService:         @local::pdsp_channel_status
+ 
+}
+services.message.destinations.LogStandardOut.threshold: "INFO"
+
+source: {
+  module_type: RootInput
+  maxEvents: -1
+  fileNames: ["input_file.root"]
+}
+
+physics:
+{
+
+ analyzers: {
+  rwexample:          @local::g4rwexample
+ }
+ 
+ ana:  [ rwexample ]
+
+ #stream1: [ out1 ]
+ 
+ end_paths:     [ ana ]
+
+}
+
+outputs: {}
+
+physics.analyzers.rwexample.XSecFile: "/dune/data2/users/calcuttj/GeantReweight/FlatTree/cross_section_with_decay.root"
+physics.analyzers.pionana.ParameterSet: [
+                                          { 
+                                            Cut:    "reac"
+                                            Name: "fReac1"
+                                            Range: [000., 1200.]
+                                            Nominal: 1.0 
+                                            Sigma: .05
+                                          },
+                                          { 
+                                            Cut:    "reac"
+                                            Name: "fReac2"
+                                            Range: [000., 1200.]
+                                            Nominal: 1.0 
+                                            Sigma: .1
+                                          },
+                                          { 
+                                            Cut:    "reac"
+                                            Name: "fReac3"
+                                            Range: [000., 1200.]
+                                            Nominal: 1.0 
+                                            Sigma: .15
+                                          },
+                                          { 
+                                            Cut:    "reac"
+                                            Name: "fReac4"
+                                            Range: [000., 1200.]
+                                            Nominal: 1.0 
+                                            Sigma: .2
+                                          },
+                                          { 
+                                            Cut:    "reac"
+                                            Name: "fReac5"
+                                            Range: [000., 1200.]
+                                            Nominal: 1.0 
+                                            Sigma: .25
+                                          },
+                                          { 
+                                            Cut:    "reac"
+                                            Name: "fReac6"
+                                            Range: [000., 1200.]
+                                            Nominal: 1.0 
+                                            Sigma: .3
+                                          },
+                                          { 
+                                            Cut:    "reac"
+                                            Name: "fReac7"
+                                            Range: [000., 1200.]
+                                            Nominal: 1.0 
+                                            Sigma: .35
+                                          },
+                                          { 
+                                            Cut:    "reac"
+                                            Name: "fReac8"
+                                            Range: [000., 1200.]
+                                            Nominal: 1.0 
+                                            Sigma: .4
+                                          },
+                                          {
+                                            Cut:    "reac"
+                                            Name: "fReac9"
+                                            Range: [000., 1200.]
+                                            Nominal: 1.0 
+                                            Sigma: .45
+                                          },
+                                          {
+                                            Cut:    "reac"
+                                            Name: "fReac10"
+                                            Range: [000., 1200.]
+                                            Nominal: 1.0 
+                                            Sigma: .5
+                                          }
+                                        ]

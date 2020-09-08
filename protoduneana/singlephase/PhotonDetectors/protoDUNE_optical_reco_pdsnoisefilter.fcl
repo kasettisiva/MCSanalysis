@@ -1,0 +1,84 @@
+#include "services_dune.fcl"
+#include "RawDecoder.fcl"
+#include "opticaldetectormodules_dune.fcl"
+#include "opticaldetectorservices_dune.fcl"
+#include "PDSNoiseFilter.fcl"
+
+
+process_name: OpDetReco
+
+services:
+{
+  # Load the service that manages root files for histograms.
+  TFileService: { fileName: "%ifb_filtered_opreco_hist.root" }
+  TimeTracker:       {}
+  @table::protodune_rawdecoding_services
+  @table::protodune_data_reco_services
+  message:      @local::standard_info 
+}
+
+
+source:
+{
+  module_type: RootInput
+  maxEvents : 1000
+}
+
+
+outputs:
+{
+   out1:
+   {
+      module_type: RootOutput
+      fileName:    "%ifb_filtered_opreco.root"
+      
+      # Drop the raw data and just keep the decoded and reconstructed data
+      outputCommands: [ "keep *", "drop artdaq::Fragments_*_*_*" ]
+   }
+}
+
+physics:
+{
+
+ producers:
+   {
+      # photon detector reconstruction
+      ssprawdecoder:   @local::ssp_raw_decoder_split
+      pdsnoisefilter:  @local::pds_noise_filter_split
+      ophitInternal:   @local::protodune_ophit_data_internal
+      ophitExternal:   @local::protodune_ophit_data_external
+      opflashInternal: @local::protodune_opflash_data_internal
+      opflashExternal: @local::protodune_opflash_data_external
+      rns:       { module_type: "RandomNumberSaver" }
+   }
+
+ analyzers:
+ {
+   opflashanaInternal:  @local::standard_opflashana
+   opflashanaExternal:  @local::standard_opflashana
+ }
+ produceIt: [ssprawdecoder, pdsnoisefilter, ophitInternal, ophitExternal, opflashInternal, opflashExternal]
+ analyzeIt: [opflashanaInternal, opflashanaExternal]
+
+   
+ #define the output stream, there could be more than one if using filters 
+ stream1:  [ out1 ]
+
+ #trigger_paths is a keyword and contains the paths that modify the art::event, 
+ #ie filters and producers
+ trigger_paths: [produceIt]
+
+ #end_paths is a keyword and contains the paths that do not modify the art::Event, 
+ #ie analyzers and output streams.  these all run simultaneously
+ end_paths:     [analyzeIt, stream1]  
+}
+
+physics.producers.ophitInternal.InputModule: "pdsnoisefilter"
+physics.producers.ophitExternal.InputModule: "pdsnoisefilter"
+
+physics.analyzers.opflashanaInternal.OpHitModuleLabel:   "ophitInternal"
+physics.analyzers.opflashanaInternal.OpFlashModuleLabel: "opflashInternal"
+physics.analyzers.opflashanaExternal.OpHitModuleLabel:   "ophitExternal"
+physics.analyzers.opflashanaExternal.OpFlashModuleLabel: "opflashExternal"
+
+

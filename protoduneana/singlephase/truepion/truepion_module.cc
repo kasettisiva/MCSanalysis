@@ -25,7 +25,7 @@
 
 #include "larcore/Geometry/Geometry.h"
 #include "larcoreobj/SimpleTypesAndConstants/geo_types.h"
-
+#include "lardata/DetectorInfoServices/DetectorClocksService.h"
 #include "larsim/MCCheater/BackTrackerService.h"
 #include "larsim/MCCheater/ParticleInventoryService.h"
 #include "lardataobj/RecoBase/Hit.h"
@@ -710,6 +710,7 @@ void protoana::truepion::analyze(art::Event const & evt){
 
 
   // We can now look at these particles
+  auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(evt);
   for(const recob::PFParticle* particle : pfParticles){
     // Pandora's BDT beam-cosmic score
     fprimaryBDTScore = (double)pfpUtil.GetBeamCosmicScore(*particle,evt,fPFParticleTag);
@@ -729,7 +730,7 @@ void protoana::truepion::analyze(art::Event const & evt){
 
     if(thisTrack != 0x0){
       // Get the true mc particle
-      const simb::MCParticle* mcparticle = truthUtil.GetMCParticleFromRecoTrack(*thisTrack, evt, fTrackerTag);
+      const simb::MCParticle* mcparticle = truthUtil.GetMCParticleFromRecoTrack(clockData, *thisTrack, evt, fTrackerTag);
       if(mcparticle!=0x0){
 	std::cout<<"ftruth pdg "<<mcparticle->PdgCode()<<std::endl;
 	ftruthpdg=mcparticle->PdgCode();
@@ -967,7 +968,7 @@ void protoana::truepion::analyze(art::Event const & evt){
 	}
 
 	// Get the true mc particle
-	const simb::MCParticle* mcdaughterparticle = truthUtil.GetMCParticleFromRecoTrack(*daughterTrack, evt, fTrackerTag);
+        const simb::MCParticle* mcdaughterparticle = truthUtil.GetMCParticleFromRecoTrack(clockData, *daughterTrack, evt, fTrackerTag);
 	if(mcdaughterparticle != 0x0){
 	  fdaughter_truth_TrackId[fNDAUGHTERS]          = mcdaughterparticle->TrackId();
 	  fdaughter_truth_Pdg[fNDAUGHTERS]              = mcdaughterparticle->PdgCode();
@@ -1203,4 +1204,3 @@ void protoana::truepion::Initialise(){
 }
 
 DEFINE_ART_MODULE(protoana::truepion)
-

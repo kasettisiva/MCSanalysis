@@ -1,0 +1,109 @@
+#include "protoDUNE_reco_data_Dec2018.fcl"
+#include "services_dune.fcl"
+#include "opticaldetectormodules_dune.fcl"
+#include "opticaldetectorservices_dune.fcl"
+
+#include "tools_dune.fcl"
+#include "protodune_tools_dune.fcl"
+
+process_name: RunPDSPMatch
+
+services:
+{
+  #message:              @local::dune_message_services_prod_debug
+
+  TimeTracker:       {}
+  RandomNumberGenerator: {}
+
+  @table::protodune_rawdecoding_services
+  @table::protodune_data_reco_services  
+
+  TFileService: { 
+   closeFileFast: true  # default
+   fileName:  "%ifb_match.root"
+   tmpDir: "<parent-path-of-filename>"  # default
+  }
+
+  IFDH:              {}
+}
+
+#protodune_match:
+#{
+#  module_type: "PDSPmatch"
+#  CTBLabel: "ctbrawdecoder:daq" 
+#}
+
+physics:
+{
+  producers:
+  {
+    @table::protoDUNE_rawdecoding_producers
+    #ophitInternal:   @local::protodune_ophit_data_internal #recoadd
+    ophitExternal:   @local::protodune_ophit_data_external #recoadd
+    #opflashInternal: @local::protodune_opflash_data_internal #recoadd
+    opflashExternal: @local::protodune_opflash_data_external #recoadd
+    rns:       { module_type: "RandomNumberSaver" } #recoadd
+
+  }
+
+  analyzers:
+  {
+    protodunematch:
+    {
+	module_type: "PDSPmatch"
+	TimingLabel: "timingrawdecoder:daq"
+	CTBLabel: "ctbrawdecoder:daq"
+        CRTLabel: "crtrawdecoder"
+	OpHitLabel: "ophitExternal"
+	PandoraLabel: "pandoraTrack"
+	PFParListLabel: "pandora"
+	
+	CRTCTBOffset: -87
+        CRTWindow: 12		
+	MC: true
+	
+	SelectEvents: [ produce ]
+    }   
+    
+    opflashanaExternal: @local::standard_opflashana
+  }	
+  #Create path to run module
+  #add ctbrawdecoder when it is tested
+  #produce: [ @sequence::protoDUNE_rawdecoding ] 
+  produce: [
+      "timingrawdecoder",
+      "ssprawdecoder",
+      "crtrawdecoder",
+      "ctbrawdecoder",
+      ophitExternal
+  ]
+  analyze: [ protodunematch ]
+  output: [ out1 ]
+  trigger_paths : [ produce ]
+  end_paths: [ analyze ]
+} 	     
+
+outputs:
+{
+  out1:
+  {
+    outputCommands: [ "keep *", "drop artdaq::Fragments_*_*_*" ]
+    compressionLevel: 1
+    module_type: RootOutput
+    fileName: "%ifb_match.root"
+    dataTier: "full-reconstructed"
+  }
+
+}
+
+
+
+source:
+{
+  module_type: RootInput
+  fileNames: [ "/afs/cern.ch/user/s/sergiand/workspace/artdaq_devel/pdune_r1000077_sr01_20170629T181646_1_0.root" ]
+  maxEvents : -1
+}
+
+ 
+physics.analyzers.opflashanaExternal.OpHitModuleLabel:   "ophitExternal"

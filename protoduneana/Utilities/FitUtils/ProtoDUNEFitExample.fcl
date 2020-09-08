@@ -1,45 +1,46 @@
 # Path to MC files. Each entry corresponds to a different channel and has to match with the DataFileNames.
-#MCFileNames:             ["eventSelection_mc_ABS.root","eventSelection_mc_CEX.root"]
-MCFileNames:             ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_ABS.root", "/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_CEX.root"]
+MCFileNames:             ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_ABS.root",
+                          "/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_CEX.root"]
 
 # Path to data file. Each entry corresponds to a different channel and has to match with the MCFileNames.
 #DataFileNames:           ["eventSelection_mc_ABS.root","eventSelection_mc_CEX.root"]
-DataFileNames:             ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_ABS.root", "/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_CEX.root"]
+DataFileNames:             ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_ABS.root", 
+                            "/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_CEX.root"]
 
 # Channel names. Follow the order of the MC/Data File Names
-ChannelNames:            ["ABS","CEX"]
+ChannelNames:            ["ABS", "CEX"]
 
 # Path to MC control samples.
-MCControlSampleFiles:    []
+MCControlSampleFiles:    ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_beamType.root"]
 
 # Path to Data control samples.
-DataControlSampleFiles:  []
+DataControlSampleFiles:  ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_beamType.root"]
+
+# Name of sideband topologies. Must match the background samples 
+SidebandTopologyName: ["Muons", "PionsSB", "DecaySB", "DownstreamSB", "OtherSB"]
+SidebandTopology:     [1, 2, 3, 4, 5]
 
 # Path to file to get the number of incident pions
-IncidentMCFileNames:     ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_PRIMARYPION.root"]
+IncidentMCFileNames:     ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_beamType.root"]
+
+IncidentDataFileNames:   ["/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_beamType.root"] 
 
 # Number of toys to generate for MC studies. Any number above 0 will enable toy mc generation and won't fit the data.
-NToys:                   0	
+NToys:                   0 
 
 # Name of the tree with reconstructed events.
 RecoTreeName:            "pionana/beamana"
 
 # Signal topologies. Change as appropriate.
-SignalTopology:          [1,2]
-SignalTopologyName:      ["ABS","CEX"]
+SignalTopology:          [1, 2]
+SignalTopologyName:      ["ABS", "CEX"]
 
 # Background topologies. Change as appropriate.
-#BackgroundTopology:      [3,4,5,6]
-#BackgroundTopologyName:  ["Pion Inel. Bkg","Protons","Muons","Other Bkg"]
-#BackgroundTopology:      [3,4,5,6,7,8,9]
-#BackgroundTopologyName:  ["Pion Inel. Bkg","Upstream Int","Muons","Decay Product","Extra Beam", "Cosmic", "Other Bkg"]
-BackgroundTopology:      [3,4,5,6,7]
-BackgroundTopologyName:  ["Pion Inel. Bkg","Upstream Int","Muons","TrueUnmatched", "Other Bkg"]
+BackgroundTopology:      [3, 4, 5, 6, 7]
+BackgroundTopologyName:  ["Pion Inel. Bkg", "Upstream Int", "Muons", "TrueUnmatched", "Other Bkg"]
 
 
 # Incident particle topologies. First is assumed to be signal
-#IncidentTopology:        [3,4,5,6]
-#IncidentTopologyName:    ["Pions","Protons","Muons","Other"]
 IncidentTopology:        [3, 4, 5, 6, 7, 8]
 IncidentTopologyName:    ["Pions", "Muons", "Cosmic", "TrueUnmatched", "Downstream", "Other"]
 
@@ -47,8 +48,8 @@ IncidentTopologyName:    ["Pions", "Muons", "Cosmic", "TrueUnmatched", "Downstre
 TruthTreeName:           "pionana/beamana"
 
 # Define binning in truth/reco. It doesn't have to be symmetric.
-TruthBinning:            [0.0,400.0,600.0,700.0,800.0,1200.0]
-RecoBinning:             [0.0,400.0,600.0,700.0,800.0,1200.0]
+TruthBinning:            [0., 400., 600., 700., 800., 1270.]
+RecoBinning:             [0., 400., 600., 700., 800., 1200.]
 
 # Option to fit in reco. If enabled will ignore the truth binning and introduce one free parameter per reco bin
 FitInReco:               false
@@ -64,13 +65,31 @@ EnableStatisticalError:  true
 IgnoreStatisticalErrorBelow: 0.01 # MC stats error will be ignored if below this value
 
 # Enable systematic error - need files with the fractional error for each systematic and a list of systematics to consider. Two histograms are required for each histogram, one with +1 sigma variation and one with the -1 sigma variation. 
-EnableSystematicError:   false
+EnableSystematicError:   false 
 NormalisedSystematic:    false       # Systematics are added as 'normalised', only the effect of shape is considered.
-SystFileNames:           ["/path/to/file.root"]
-SystToConsider:          ["Systematic1","Systematic2"]
-SystType:                ["NormShape"  ,"NormShape"]   # For each systematic the type should be defined, options are: NormOnly, ShapeOnly, NormShape
+CommonSystFile:          "/dune/app/users/calcuttj/larsoft/srcs/protoduneana/protoduneana/Utilities/FitUtils/asdf.root"
+UseComputedSysts:        false 
+SystFileNames:           [@local::CommonSystFile, @local::CommonSystFile]
+SystToConsider:          ["fReac"] #, "fAbs2", "fCex"] #["Systematic1","Systematic2"]
+SystType:                ["NormShape"] #, "NormShape", "NormShape"] #["NormShape"  ,"NormShape"]   # For each systematic the type should be defined, options are: NormOnly, ShapeOnly, NormShape
 IgnoreSystematicErrorBelow: 0.01                     # Sytematic error will be ignored if below this value
 
 AddIncidentToMeasurement: true
-DoNegativeReco:           true 
-EndZCut:                  225.
+AddBackgroundFactors: [0, 0, 0, 0, 0]
+AddIncidentBackgroundFactors: [0, 0, 0, 0, 0]
+AddSidebandsToMeasurement: false 
+DoNegativeReco:           true
+EndZCut:                  226.
+SidebandBinning:      [@local::EndZCut, 300., 350., 375., 400, 450., 480.]
+
+WirePitch: .47974  #.4792
+
+DoScaleMCToData: false 
+DoScaleMuonContent: true 
+MuonScaleFactor: 2. 
+
+OnlyDrawXSecs: false 
+DoDrawXSecs: false #true
+DataIsMC: true
+
+RandSigPriors: false 

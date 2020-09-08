@@ -35,6 +35,8 @@
 #include "larcoreobj/SimpleTypesAndConstants/PhysicalConstants.h"
 #include "lardata/Utilities/DatabaseUtil.h"
 #include "larreco/RecoAlg/PMAlg/Utilities.h"
+#include "lardata/DetectorInfoServices/DetectorClocksService.h"
+#include "lardata/DetectorInfoServices/DetectorPropertiesService.h"
 
 #include "art/Framework/Core/EDAnalyzer.h"
 #include "art/Framework/Core/ModuleMacros.h"
@@ -104,7 +106,8 @@ private:
 
 	double GetEdepMC(art::Event const & e) const;
 
-	double GetEdepHits() const;
+        double GetEdepHits(detinfo::DetectorClocksData const& clockData,
+                           detinfo::DetectorPropertiesData const& detProp) const;
 
 	bool EvMCselect(art::Event const & e);
 
@@ -347,9 +350,12 @@ void proto::ECalibration::analyze(art::Event const & e)
 	if (e.getByLabel(fHitsModuleLabel, hitListHandle))
 		art::fill_ptr_vector(fHitlist, hitListHandle);
 
+        auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(e);
+        auto const detProp = art::ServiceHandle<detinfo::DetectorPropertiesService>()->DataFor(e, clockData);
+
 	if (fHitlist.size())
 	{
-		fEdep = GetEdepHits();
+                fEdep = GetEdepHits(clockData, detProp);
 		fEdepMC = GetEdepMC(e);
 	}
 
@@ -392,7 +398,7 @@ void proto::ECalibration::analyze(art::Event const & e)
 				double dqadc = vhit[h]->Integral();
 				int wire = vhit[h]->WireID().Wire;
 
-				double dq = fCalorimetryAlg.dEdx_AREA(dqadc/dx, tdrift, view, fT0) * dx;
+                                double dq = fCalorimetryAlg.dEdx_AREA(clockData, detProp, dqadc/dx, tdrift, view, fT0) * dx;
 				fEkin += dq;
 
 				fTrk2InfoMap[idt][view].emplace_back(idx, dx, dq, wire);
@@ -526,7 +532,8 @@ double proto::ECalibration::GetEdepMC(art::Event const & e) const
 }
 
 // use best view defined in fcl
-double proto::ECalibration::GetEdepHits() const
+double proto::ECalibration::GetEdepHits(detinfo::DetectorClocksData const& clockData,
+                                        detinfo::DetectorPropertiesData const& detProp) const
 {
 	if (!fHitlist.size()) return 0.0;
 
@@ -542,7 +549,7 @@ double proto::ECalibration::GetEdepHits() const
 		double dqel = fCalorimetryAlg.ElectronsFromADCArea(dqadc, plane);
 		
 		double tdrift = fHitlist[h]->PeakTime();
-		double correllifetime = fCalorimetryAlg.LifetimeCorrection(tdrift, fT0);
+                double correllifetime = fCalorimetryAlg.LifetimeCorrection(clockData, detProp, tdrift, fT0);
 
 		double dq = dqel * correllifetime * fElectronsToGeV * 1000;
 		if (!std::isnormal(dq) || (dq < 0)) continue;

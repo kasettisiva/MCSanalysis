@@ -35,7 +35,7 @@
 #include "lardataobj/AnalysisBase/T0.h"
 #include "larreco/RecoAlg/TrackMomentumCalculator.h"
 #include "lardataobj/AnalysisBase/Calorimetry.h"
-
+#include "lardata/DetectorInfoServices/DetectorClocksService.h"
 #include "dune/DuneObj/ProtoDUNEBeamEvent.h"
 //#include "dune/EventGenerator/ProtoDUNEbeamDataProducts/ProtoDUNEbeamsim.h"
 //#include "dune/EventGenerator/ProtoDUNEbeamDataProducts/ProtoDUNEBeamInstrument.h"
@@ -432,6 +432,8 @@ void protoana::pionanalysismc::analyze(art::Event const & evt){
      fNactivefembs[k] = dataUtil.GetNActiveFembsForAPA(evt, k);
   }
 
+  auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(evt);
+
   bool beamTriggerEvent = false;
   // If this event is MC then we can check what the true beam particle is
   if(!evt.isRealData()){
@@ -660,7 +662,7 @@ void protoana::pionanalysismc::analyze(art::Event const & evt){
 
 
       // Get the true mc particle
-      const simb::MCParticle* mcparticle1 = truthUtil.GetMCParticleFromRecoTrack(*thisTrack, evt, fTrackerTag);
+      const simb::MCParticle* mcparticle1 = truthUtil.GetMCParticleFromRecoTrack(clockData, *thisTrack, evt, fTrackerTag);
       if(mcparticle1 != 0x0){
         const simb::MCParticle *mcparticle=pi_serv->TrackIdToMotherParticle_P(mcparticle1->TrackId());
         if (mcparticle) {
@@ -791,7 +793,7 @@ void protoana::pionanalysismc::analyze(art::Event const & evt){
 	}
 
 	// Get the true mc particle
-	const simb::MCParticle* mcdaughterparticle = truthUtil.GetMCParticleFromRecoTrack(*daughterTrack, evt, fTrackerTag);
+        const simb::MCParticle* mcdaughterparticle = truthUtil.GetMCParticleFromRecoTrack(clockData, *daughterTrack, evt, fTrackerTag);
 	if(mcdaughterparticle != 0x0){
 	  fdaughter_truth_TrackId[fNDAUGHTERS]          = mcdaughterparticle->TrackId();
 	  fdaughter_truth_Pdg[fNDAUGHTERS]              = mcdaughterparticle->PdgCode();
@@ -1017,4 +1019,3 @@ void protoana::pionanalysismc::Initialise(){
 }
 
 DEFINE_ART_MODULE(protoana::pionanalysismc)
-

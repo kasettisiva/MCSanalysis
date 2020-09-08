@@ -36,6 +36,9 @@ namespace protoana{
     // Generate and fit a number of nexp toys. Results will be written in a ttree  
     TTree* GenerateAndFit(RooWorkspace* ws, int nexp);
 
+    // Add comment 
+    RooFitResult * GenerateAndFitOneToy(RooWorkspace* ws);
+
     // Fit the data
     RooFitResult* FitData(RooWorkspace* ws, bool isWeighted=false);
     

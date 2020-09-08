@@ -1,0 +1,64 @@
+#include "PionAnalyzer.fcl"
+#include "services_dune.fcl"
+#include "missingproductfilter.fcl"
+
+process_name: PionAna
+
+services:
+{
+  # Load the service that manages root files for histograms.
+  TFileService: { fileName: "pionana_mc.root" }
+  TimeTracker:       {}
+  MemoryTracker:     {}
+  RandomNumberGenerator: {} #ART native random number generator
+  message:                      @local::dune_message_services_prod_debug
+  FileCatalogMetadata:          @local::art_file_catalog_mc
+                                @table::protodune_services
+  PdspChannelMapService:        @local::pdspchannelmap
+  ChannelStatusService:         @local::pdsp_channel_status
+}
+services.message.destinations.LogStandardOut.threshold: "INFO"
+#services.Geometry: @local::protodunev6_geo
+
+source:
+{
+  module_type: RootInput
+  maxEvents: -1
+  fileNames: ["input_file.root"]
+}
+
+physics:
+{
+
+ producers: { 
+ 
+ }
+
+ filters: {
+   fMissingProds: @local::standard_missingproductfilter
+ }
+ fpath: [fMissingProds]
+
+ analyzers:
+ {
+  pionana:          @local::pionanalysis
+ }
+ 
+ ana:  [ pionana ]
+
+ #stream1: [ out1 ]
+ 
+ end_paths:     [ ana ]
+
+}
+
+outputs: {}
+
+physics.analyzers.pionana.SelectEvents: ["fpath"]
+physics.analyzers.pionana.CalorimetryTag: "pandoracaloSCE"
+physics.analyzers.pionana.HitTag: "hitpdune"
+#physics.analyzers.pionana.SaveHits: true
+physics.analyzers.pionana.Verbose: true
+
+physics.analyzers.pionana.CalibrationPars: @local::CalorimetryParameters_SPProd2_Data_r5387
+physics.analyzers.pionana.DoReweight: false 

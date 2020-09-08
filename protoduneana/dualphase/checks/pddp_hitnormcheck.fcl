@@ -1,0 +1,41 @@
+process_name: PDDPHitNormCheck
+
+services:
+{
+  TFileService: { fileName: "hitana_results.root" }
+  TimeTracker:       {}
+  RandomNumberGenerator: {} 
+}
+
+
+source:
+{
+  module_type: RootInput
+  maxEvents: -1
+  fileNames: [ "detsim.root" ]
+}
+
+outputs: {}
+
+
+physics:
+{
+  analyzers:
+  {
+    hitana:
+    {
+    	module_type:  "HitNormCheck"
+	LogLevel:     1 
+	HitModuleLabel:  "gaushit"
+	WireModuleLabel: "caldata"
+	PedSamples:      200 # number of pedestal samples
+	PadRawRight:     30  # pad roi to get sum of signal from RawDigit waveform
+	MaxPadRoi:       50  # max ticks to look for ped samples away from hit group
+	WirePadLeft:     5   # samples to pad recob::Wire hit region before hit 
+	WirePadRight:    10  # samples to pad recob::Wire hit region after hit
+	Dump:            0   # numober of ROIs to dump to file (for debug)
+     }
+   }
+  analysis: [ hitana ] 
+  end_paths: [ analysis ]
+}

@@ -30,6 +30,7 @@
 
 #include "larsim/MCCheater/BackTrackerService.h"
 #include "larsim/MCCheater/ParticleInventoryService.h"
+#include "lardata/DetectorInfoServices/DetectorClocksService.h"
 #include "lardataobj/RecoBase/Hit.h"
 #include "lardataobj/RecoBase/Track.h"
 #include "lardataobj/RecoBase/Shower.h"
@@ -142,6 +143,7 @@ void protoana::UtilityExample::analyze(art::Event const & evt)
   unsigned int nTracksWithCalo  = 0;
   // Get the reconstructed tracks, by default from the "pandoraTrack" module
   auto recoTracks = evt.getValidHandle<std::vector<recob::Track> >(fTrackerTag);
+  auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(evt);
 
   // Loop over the reconstructed tracks
   for(unsigned int t = 0; t < recoTracks->size(); ++t){
@@ -149,7 +151,7 @@ void protoana::UtilityExample::analyze(art::Event const & evt)
     // Take the t-th element for our current track
     const recob::Track thisTrack = (*recoTracks)[t];
     // We can then use the truth utility to give us the true track matching out reconstructed track
-    const simb::MCParticle *trueMatch = truthUtil.GetMCParticleFromRecoTrack(thisTrack,evt,fTrackerTag);
+    const simb::MCParticle *trueMatch = truthUtil.GetMCParticleFromRecoTrack(clockData, thisTrack,evt,fTrackerTag);
     bool hasTruth = (trueMatch != 0x0);
  
     // Some of the tracks, primarily those that cross the cathode, will have a reconstructed T0.
@@ -312,4 +314,3 @@ void protoana::UtilityExample::endJob()
 }
 
 DEFINE_ART_MODULE(protoana::UtilityExample)
-

@@ -20,6 +20,7 @@
 #include "fhiclcpp/ParameterSet.h"
 #include "messagefacility/MessageLogger/MessageLogger.h"
 
+#include "lardata/DetectorInfoServices/DetectorClocksService.h"
 #include "lardataobj/RecoBase/Cluster.h"
 #include "lardataobj/RecoBase/Hit.h"
 
@@ -52,6 +53,7 @@ private:
   float sumAdc(const std::vector< art::Ptr<recob::Hit> > & hits) const;
 
   const simb::MCParticle* getTruthParticle(
+    detinfo::DetectorClocksData const& clockData,
     const std::vector< art::Ptr<recob::Hit> > & hits,
     float & fraction, bool & foundEmParent) const;
 
@@ -105,6 +107,7 @@ void ClusterCounter4::analyze(art::Event const & evt)
 
     fNClusters = 0;
 
+    auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(evt);
     // and here we go by index:
     for (size_t i = 0; i < cluHandle->size(); ++i)
     {
@@ -112,7 +115,7 @@ void ClusterCounter4::analyze(art::Event const & evt)
         fAdcSum = sumAdc(hitsFromClusters.at(i));
 
         bool isEM = false;
-        const simb::MCParticle* p = getTruthParticle(hitsFromClusters.at(i), fClean, isEM);
+        const simb::MCParticle* p = getTruthParticle(clockData, hitsFromClusters.at(i), fClean, isEM);
         if (p)
         {
             if (isEM) { mf::LogVerbatim("ClusterCounter4") << "matched mother particle PDG: " << p->PdgCode(); }
@@ -131,7 +134,8 @@ void ClusterCounter4::analyze(art::Event const & evt)
     fEventTree->Fill();
 }
 
-const simb::MCParticle* ClusterCounter4::getTruthParticle(const std::vector< art::Ptr<recob::Hit> > & hits,
+const simb::MCParticle* ClusterCounter4::getTruthParticle(detinfo::DetectorClocksData const& clockData,
+                                                          const std::vector< art::Ptr<recob::Hit> > & hits,
     float & fraction, bool & foundEmParent) const
 {
     const simb::MCParticle* mcParticle = 0;
@@ -143,7 +147,7 @@ const simb::MCParticle* ClusterCounter4::getTruthParticle(const std::vector< art
     std::unordered_map<int, double> trkIDE;
     for (auto const & h : hits)
     {
-        for (auto const & ide : bt_serv->HitToTrackIDEs(h)) // loop over std::vector<sim::TrackIDE>
+        for (auto const & ide : bt_serv->HitToTrackIDEs(clockData, h)) // loop over std::vector<sim::TrackIDE>
         {
             trkIDE[ide.trackID] += ide.energy; // sum energy contribution by each track ID
         }

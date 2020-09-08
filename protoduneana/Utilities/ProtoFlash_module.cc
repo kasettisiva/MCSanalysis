@@ -171,7 +171,7 @@ namespace protoana {
     hNFlash->Fill(FlashHandle->size());
 
     // Use the clocks service to make sure to account for the offset between true times and the electronics clocks
-    auto const* detclock = lar::providerFrom<detinfo::DetectorClocksService>();
+    auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(evt);
 
     // Store a map of flash times
     std::map<int,double> flashMap;
@@ -187,7 +187,7 @@ namespace protoana {
       std::vector< art::Ptr<recob::OpHit> > matchedHits = Assns.at(i);
 
       // Account for the time offset in the TPC
-      flashMap.insert(std::make_pair(i,TheFlash.Time() - detclock->TriggerOffsetTPC()));
+      flashMap.insert(std::make_pair(i,TheFlash.Time() - clockData.TriggerOffsetTPC()));
 
       hNHitPerFlash->Fill(matchedHits.size());
       hFlashTimes->Fill(TheFlash.Time());

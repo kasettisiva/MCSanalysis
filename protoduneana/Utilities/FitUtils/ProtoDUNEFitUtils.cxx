@@ -367,9 +367,115 @@ double protoana::ProtoDUNEFitUtils::GetDataMCChi2(RooWorkspace *work, TString ch
 
 }
 
+std::vector<TH1 *> protoana::ProtoDUNEFitUtils::PlotXSecs(
+        RooWorkspace * work, std::string name, /*std::string error,*/
+        std::vector<TString> binnames, std::vector<double> recobins,
+        std::vector<TString> incidentBinNames,
+        RooAbsData * data,
+        RooFitResult * result) {
+
+  std::vector<TH1 *> xsecs;
+
+  if (!work) {
+    std::cerr << "ERROR:NULL dir. Will return empty canvas" << std::endl;
+    return xsecs;
+  }
+
+  // Silence output
+  RooMsgService::instance().getStream(1).removeTopic(RooFit::NumIntegration);
+  RooMsgService::instance().getStream(1).removeTopic(RooFit::Plotting);
+
+  // Get pdf from workspace
+  RooSimultaneous* pdf = (RooSimultaneous*)work->pdf("simPdf");
+  if(!pdf){
+    std::cerr << "ERROR::No pdf found in workspace. Will return empty vector!"
+              << std::endl;
+    std::cerr << "ERROR::No pdf found in workspace. Will return empty vector!"
+              << std::endl;
+    std::cerr << "ERROR::No pdf found in workspace. Will return empty vector!"
+              << std::endl;
+    return xsecs;
+  }
+
+
+
+  // Get category components
+  // i.e. Incident, Abs, Cex
+  RooCategory* categories = work->cat("channelCat");
+
+  std::vector<TString> categoriesName;  
+  TIterator* iter = categories->typeIterator();
+  RooCatType* catType;
+  while( (catType = (RooCatType*) iter->Next())) {
+    TString catname = catType->GetName();
+    categoriesName.push_back(catname);
+    std::cout << catname << std::endl;
+  }
+
+  for (size_t i = 0; i < categoriesName.size(); ++i) {
+
+    TString catname = categoriesName[i];
+
+    RooAbsPdf* subpdf = (RooAbsPdf*)pdf->getPdf(catname.Data());
+    if(!subpdf){
+      std::cout << "WARNING::Can't find sub-pdf for region " << catname.Data()
+                << ". Will skip." << std::endl;
+      continue;
+    }
+
+    TString RRSumPdfName = Form("%s_model",catname.Data()); 
+    RooRealSumPdf* RRSumPdf =
+        (RooRealSumPdf*)subpdf->getComponents()->find(RRSumPdfName);
+    RooArgList RRSumComponentsList =  RRSumPdf->funcList();
+    RooLinkedListIter iter = RRSumComponentsList.iterator();
+    RooProduct* component;
+
+    std::vector<TString> compNameVec;
+    while( (component = (RooProduct*) iter.Next()) ){
+      TString componentName = component->GetName();
+      std::cout << componentName << std::endl;
+    }
+  }
+
+  /*
+  TH1 * incident_signal = 0x0;
+  std::vector<TH1 *> incident_backgrounds;
+
+  for (const auto  && key : *keys) {
+    std::string name = key->GetName();
+
+    auto find_Incident = name.find("MC_ChannelIncident_Pions");
+    if (find_Incident != std::string::npos) {
+      incident_signal = (TH1*)key->Clone();
+    }
+    else {
+      incident_backgrounds.push_back((TH1*)key->Clone());
+    }
+  }
+  std::cout << incident_signal << " " << incident_backgrounds.size() << std::endl;
+
+  for (const std::string & main_channel : {"ABS", "CEX"}) {
+    std::cout << main_channel << std::endl;
+
+    for (const auto  && key : *keys) {
+       std::string name = key->GetName();
+       std::cout << name << std::endl;
+    }
+  }
+  */
+
+  return xsecs;
+}
+
 //********************************************************************
-std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorkspace *work, TString name, TString error, TString plottodraw, std::vector<TString> binnames, std::vector<double> recobins, std::vector<TString> incidentBinNames, TString measurement, bool doNegativeReco, RooAbsData* data, RooFitResult* result){
-  //********************************************************************
+std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(
+    RooWorkspace *work, TString name, TString error, TString plottodraw,
+    std::vector<TString> binnames, std::vector<double> recobins,
+    std::vector<TString> incidentBinNames,
+    std::vector<TString> sidebandBinNames, std::vector<double> sidebandBins,
+    TString measurement,
+    bool doNegativeReco, RooAbsData* data, RooFitResult* result) {
+//********************************************************************
 
   std::vector<TCanvas*> rooplots;
 
@@ -385,6 +491,8 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorksp
   // Get pdf from workspace
   RooSimultaneous* pdf = (RooSimultaneous*)work->pdf("simPdf");
   if(!pdf){
+    std::cerr << "ERROR::No pdf found in workspace. Will return empty vector!" << std::endl;
+    std::cerr << "ERROR::No pdf found in workspace. Will return empty vector!" << std::endl;
     std::cerr << "ERROR::No pdf found in workspace. Will return empty vector!" << std::endl;
     return rooplots;
   }
@@ -514,9 +622,7 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorksp
 
     Int_t counter = 0;
     Int_t sigcolor[13] = {2,3,4,5,6,7,8,9,kMagenta, 1, kGreen+2, kTeal, kOrange+10};
-    //Int_t sigcolor[9] = {1,1,1,1,1,1,1,1,1};
     for(int i = (compFracVec.size()-1); i > -1; i--){
-    //for(unsigned int i = 0; i < compFracVec.size(); i++){
       Int_t compPlotColor = i;
       if(compNameVec[i].Contains("ChannelABS_CEX") || compNameVec[i].Contains("ChannelCEX_ABS")){
 	compPlotColor = 0;
@@ -548,8 +654,9 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorksp
     
     Int_t counter2 = 0;
     bool found = false; bool found2 = false;
-    //for(int i = (compNameVec.size()-1) ; i > -1; i--){
+    //for(int i = (compNameVec.size()-1) ; i > -1; i--)
     for(unsigned int i = 0; i < compFracVec.size(); i++){
+      std::cout << "NAME: " << compNameVec[i] << std::endl;
       Int_t compPlotColor = i;
       if(compNameVec[i].Contains("ChannelABS_CEX") && !found){
 	compPlotColor = 0;
@@ -585,7 +692,10 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorksp
 
       if(counter2 < (int)binnames.size()){
 	TString legName = binnames[counter2];
-	if(compNameVec[i].Contains("Incident")) legName = incidentBinNames[counter2];
+	if (compNameVec[i].Contains("Incident"))
+          legName = incidentBinNames[counter2];
+        if (compNameVec[i].Contains("Sideband"))
+          legName = sidebandBinNames[counter2];
 	
 	entry=legend->AddEntry("",legName.Data(),"f");
 	entry->SetLineColor(compPlotColor);
@@ -617,6 +727,12 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorksp
     frame->Draw(); //Draw("same");
     frame->GetXaxis()->SetTitle("Reco Bin");
     frame->GetYaxis()->SetTitle("Events");
+
+
+    std::string chi2_text = "#chi^{2}: " +
+                            std::to_string(GetDataMCChi2(work, catname, data));
+    legend->AddEntry((TObject*)0x0, chi2_text.c_str(), "");
+
     legend->Draw();
 
     pad2->cd();
@@ -758,16 +874,31 @@ std::vector<TCanvas*> protoana::ProtoDUNEFitUtils::PlotDatasetsAndPdfs(RooWorksp
     if(plottodraw == "ratio" && result) frame2->addPlotable(ratio_curve,"F");
     frame2->addPlotable(hratio,"P");
     
-    //if (doNegativeReco)
-    //  frame2->GetXaxis()->SetBinLabel(1, "< 0.");
-    for(unsigned int i = 1; i < recobins.size(); i++){
-      TString ibinstr = Form("%.1f-%.1f",recobins[i-1],recobins[i]);
-      //frame2->GetXaxis()->SetBinLabel((doNegativeReco ? i+1 : i), ibinstr.Data());
-      frame2->GetXaxis()->SetBinLabel(i, ibinstr.Data());
+    if (catname.Contains("Sideband")) {
+      //frame2->GetXaxis()->SetBinLabel(1, "Generic Label");
+      frame2->GetXaxis()->SetTitle("Generic Label");
+      for(size_t i = 1; i < sidebandBins.size(); i++){
+        TString ibinstr = Form("%.1f-%.1f",sidebandBins[i-1],sidebandBins[i]);
+        frame2->GetXaxis()->SetBinLabel(i, ibinstr.Data());
+      }
     }
-    
-    frame2->GetXaxis()->SetTitle("E_{reco} [MeV]");
-    
+    else {
+      if (doNegativeReco) {
+        frame2->GetXaxis()->SetBinLabel(1, "< 0.");
+        for(size_t i = 1; i < recobins.size(); i++){
+          TString ibinstr = Form("%.1f-%.1f",recobins[i-1],recobins[i]);
+          frame2->GetXaxis()->SetBinLabel(i+1, ibinstr.Data());
+        }
+      }
+      else {
+        for(size_t i = 1; i < recobins.size(); i++){
+          TString ibinstr = Form("%.1f-%.1f",recobins[i-1],recobins[i]);
+          frame2->GetXaxis()->SetBinLabel(i, ibinstr.Data());
+        }
+      }
+      frame2->GetXaxis()->SetTitle("E_{reco} [MeV]");
+    }
+
     // Cosmetics
     int firstbin = frame_dummy->GetXaxis()->GetFirst();
     int lastbin = frame_dummy->GetXaxis()->GetLast();
@@ -1371,6 +1502,7 @@ TCanvas* protoana::ProtoDUNEFitUtils::PlotNuisanceParametersPull(TTree* tree, Ro
   RooRealVar* var(0);
   TIterator* Itr = nuisanceParsList->createIterator();
   Int_t counter = 0;
+  int ngammas = 0;
   for (Int_t i=0; (var = (RooRealVar*)Itr->Next()); ++i) {
     if(var->isConstant()) continue;
     TString varName = var->GetName() + TString("pull"); 
@@ -1378,6 +1510,9 @@ TCanvas* protoana::ProtoDUNEFitUtils::PlotNuisanceParametersPull(TTree* tree, Ro
     if(!varName.Contains("alpha") && !varName.Contains("gamma_stat")) continue;
     if(varName.Contains("Lumi") || varName.Contains("binWidth") || varName.Contains("corr")) continue;
     tree->SetBranchAddress(varName.Data(), &varValsPull[i]);
+
+    if (varName.Contains("gamma_stat"))
+      ++ngammas;
 
     TH1F* nuispullhisto = new TH1F(Form("nuispullhisto%i",i),Form("nuispullhisto%i",i),100,-5,5);
     for(Int_t j=0; j < tree->GetEntries(); j++){
@@ -1443,6 +1578,8 @@ TCanvas* protoana::ProtoDUNEFitUtils::PlotNuisanceParametersPull(TTree* tree, Ro
   mline->SetLineColor(kBlue);
   TLine *sline = new TLine(0,1.0,n,1.0);
   sline->SetLineColor(kBlue);
+  TLine *vline = new TLine(n-ngammas, -3., n - ngammas, 3.);
+  vline->SetLineColor(kGreen);
 
   cpullnui->cd();
   nuispullsigmahisto->Draw("e");
@@ -1450,6 +1587,7 @@ TCanvas* protoana::ProtoDUNEFitUtils::PlotNuisanceParametersPull(TTree* tree, Ro
   mline->Draw();
   sline->Draw();
   legend->Draw();
+  vline->Draw();
   
   return cpullnui;
 
@@ -1533,6 +1671,7 @@ TCanvas* protoana::ProtoDUNEFitUtils::PlotNuisanceParameters(TTree* tree, RooWor
     }
 
     nuisancehisto->SetBinError(i+1, temphisto->GetMean());
+    nuisancehisto->GetXaxis()->SetBinLabel(i+1, varName);
     delete temphisto;
   }
 
@@ -1570,8 +1709,8 @@ TCanvas* protoana::ProtoDUNEFitUtils::PlotNuisanceParameters(TTree* tree, RooWor
 }
 
 //********************************************************************
-TCanvas* protoana::ProtoDUNEFitUtils::PlotAverageResultsFromToys(TTree* tree, RooWorkspace* ws, TString channelname, TString catname){
-  //********************************************************************
+TCanvas* protoana::ProtoDUNEFitUtils::PlotAverageResultsFromToys(TTree* tree, RooWorkspace* ws, TString channelname, TString catname, RooArgList * PreFit_POI){
+//********************************************************************
 
   if(!tree || !ws){
     std::cerr << "ERROR::No tree or workspace found. Plot failed!" << std::endl;
@@ -1626,7 +1765,13 @@ TCanvas* protoana::ProtoDUNEFitUtils::PlotAverageResultsFromToys(TTree* tree, Ro
 
   Int_t n = namevec.size();
   TString histoname = channelname + "_MomHisto_" + catname;
-  TH1D* histo = new TH1D(histoname.Data(), histoname.Data(), n+1, 0, n+1);
+  TH1D* histo = new TH1D(histoname.Data(), histoname.Data(), n/*+1*/, 0, n/*+1*/);
+
+  TH1D * prefit_histo = 0x0;
+  if (PreFit_POI) {
+    TString prefit_name = "PreFit_" + histoname;
+    prefit_histo = (TH1D*)histo->Clone(prefit_name.Data());
+  }
 
   RooRealVar* var(0);
   TIterator* Itr = floatParsList->createIterator();
@@ -1634,6 +1779,7 @@ TCanvas* protoana::ProtoDUNEFitUtils::PlotAverageResultsFromToys(TTree* tree, Ro
 
   for(Int_t i=0; (var = (RooRealVar*)Itr->Next()); ++i) {
     TString varName = TString(var->GetName());
+    std::cout << "Ave name: " << varName << std::endl;
     if(!varName.Contains(channelname.Data())) continue;
     if(!varName.Contains(catname.Data())) continue;
     //if(varName.Contains("Lumi") || varName.Contains("binWidth") || varName.Contains("corr") || varName.Contains("Gamma")) continue;
@@ -1654,6 +1800,20 @@ TCanvas* protoana::ProtoDUNEFitUtils::PlotAverageResultsFromToys(TTree* tree, Ro
 
     histo->SetBinContent(counter, av);
     histo->SetBinError(counter, averr);
+    
+    if (PreFit_POI) {
+      RooRealVar * var2(0);
+      TIterator * prefit_itr = PreFit_POI->createIterator();
+      while ((var2 = (RooRealVar*)prefit_itr->Next())) {
+        std::cout << "Prefit:" << var2->GetName() << std::endl;
+        TString var2Name(var2->GetName());
+        if (var2Name == varName) {
+          std::cout << "Found match " << var2->GetName() << std::endl;
+          prefit_histo->SetBinContent(counter, var2->getVal());
+        }
+      }
+    }
+
     counter--;
   }
   
@@ -1688,11 +1848,26 @@ TCanvas* protoana::ProtoDUNEFitUtils::PlotAverageResultsFromToys(TTree* tree, Ro
   histo->GetXaxis()->SetLabelSize(0.02);
 
   TCanvas* c = new TCanvas(histoname.Data(), histoname.Data());
-  histo->Draw("e");
+  histo->SetFillStyle(3144);
+  histo->SetFillColor(kRed);
+  histo->Draw("e2");
   line->Draw("same");
+
   //line1->Draw("same");
   //line2->Draw("same");
   //line3->Draw("same");
+
+  TLegend * leg = new TLegend(.65, .65, .85, .85);
+  leg->AddEntry(histo, "Postfit", "lpf");
+
+  if (PreFit_POI) {
+    prefit_histo->SetMarkerColor(kBlue);
+    prefit_histo->SetMarkerStyle(20);
+    prefit_histo->Draw("p same");
+    leg->AddEntry(prefit_histo, "Prefit", "lpf");
+  }
+
+  leg->Draw("same");
 
   return c;
 
@@ -1934,7 +2109,6 @@ void protoana::ProtoDUNEFitUtils::ResetError(RooWorkspace* ws, const RooArgList&
       }
       else{
 	std::cout << "WARNING::Unknown constraint type " << constraintString.Data() << ". Set prefit uncertainty to 0.00001." << std::endl;
-	var->setError(0.00001);
       }
     }
 

@@ -111,8 +111,10 @@ public:
 
 private:
   void ResetVars();
-  double GetLengthInTPC(simb::MCParticle part);
-  TVector3 GetPositionInTPC(simb::MCParticle part, int MCHit);
+  double GetLengthInTPC(detinfo::DetectorClocksData const& clockData,
+                        simb::MCParticle part);
+  TVector3 GetPositionInTPC(detinfo::DetectorClocksData const& clockData,
+                            simb::MCParticle part, int MCHit);
   double GetdEdX(simb::MCTrajectory traj, size_t this_step);
   
   TH1D* fDenominatorHist;
@@ -215,10 +217,8 @@ private:
   std::string fEndProcess;
 
   art::ServiceHandle<geo::Geometry> geom;  
-  detinfo::DetectorProperties const *detprop = lar::providerFrom<detinfo::DetectorPropertiesService>();
-  detinfo::DetectorClocks const *ts = lar::providerFrom<detinfo::DetectorClocksService>();
-  double XDriftVelocity      = detprop->DriftVelocity()*1e-3; //cm/ns
-  double WindowSize          = detprop->NumberTimeSamples() * ts->TPCClock().TickPeriod() * 1e3;
+  double XDriftVelocity{};
+  double WindowSize{};
 };
 
 pdune::RecoEff::RecoEff(Parameters const& config) : EDAnalyzer(config),
@@ -247,6 +247,11 @@ pdune::RecoEff::RecoEff(Parameters const& config) : EDAnalyzer(config),
 //    fEnableIDETree(config().EnableIDETree)
 
 {
+  auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataForJob();
+  auto const detProp = art::ServiceHandle<detinfo::DetectorPropertiesService>()->DataForJob(clockData);
+  XDriftVelocity = detProp.DriftVelocity()*1e-3; //cm/ns
+  WindowSize = detProp.NumberTimeSamples() * clockData.TPCClock().TickPeriod() * 1e3;
+
     auto flt = config().Filters();
     for (const auto & s : flt)
     {
@@ -389,6 +394,9 @@ void pdune::RecoEff::analyze(art::Event const & evt)
   art::ServiceHandle<cheat::BackTrackerService> bt_serv;
   art::ServiceHandle<cheat::ParticleInventoryService> pi_serv;
   
+  auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(evt);
+  auto const detProp = art::ServiceHandle<detinfo::DetectorPropertiesService>()->DataFor(evt, clockData);
+
   if(fEnableParticleTree){
     //Particle List diagnostics
     const sim::ParticleList& plist = pi_serv->ParticleList();  
@@ -401,7 +409,7 @@ void pdune::RecoEff::analyze(art::Event const & evt)
 
         fPartStatus = part->StatusCode();
         fPartID     = part->TrackId();
-        fPartLength = GetLengthInTPC(*part);
+        fPartLength = GetLengthInTPC(clockData, *part);
         fTotLength  = part->Trajectory().TotalLength();
         fProcess    = part->Process();
         fEndProcess = part->EndProcess();
@@ -425,7 +433,7 @@ void pdune::RecoEff::analyze(art::Event const & evt)
   {
     std::unordered_map<int, double> particleID_E;
 
-    for (auto const & id : bt_serv->HitToTrackIDEs(h)) // loop over std::vector< sim::TrackIDE > contributing to hit h
+    for (auto const & id : bt_serv->HitToTrackIDEs(clockData,h)) // loop over std::vector< sim::TrackIDE > contributing to hit h
 	{
 
         // select only hadronic and muon track, skip EM activity (electron's pdg, negative track id)
@@ -433,7 +441,7 @@ void pdune::RecoEff::analyze(art::Event const & evt)
         {
             particleID_E[id.trackID] += id.energy;
             const simb::MCParticle * part = pi_serv->TrackIdToParticle_P(id.trackID);
-            mapTrackIDtoLength[id.trackID] = GetLengthInTPC(*part);
+            mapTrackIDtoLength[id.trackID] = GetLengthInTPC(clockData, *part);
         }        
     }
 
@@ -558,7 +566,7 @@ void pdune::RecoEff::analyze(art::Event const & evt)
     for (const auto & h : hits)                          // loop over hits assigned to track t
     {
         size_t plane = h->WireID().Plane;
-        for (auto const & ide : bt_serv->HitToTrackIDEs(h))     // loop over std::vector< sim::TrackIDE >, for a hit h
+        for (auto const & ide : bt_serv->HitToTrackIDEs(clockData, h))     // loop over std::vector< sim::TrackIDE >, for a hit h
         {
             if (mapTrackIDtoHits_filtered.find(ide.trackID) != mapTrackIDtoHits_filtered.end())
             {
@@ -647,7 +655,7 @@ void pdune::RecoEff::analyze(art::Event const & evt)
       std::cout << "No T0s found" << std::endl;
       MCTruthT0 = 0;
     }        
-    TickT0 = MCTruthT0 / detprop->SamplingRate();
+    TickT0 = MCTruthT0 / sampling_rate(clockData);
 
 
     int track_step = 0;
@@ -655,8 +663,8 @@ void pdune::RecoEff::analyze(art::Event const & evt)
       if (track_step > 9999) break;
 //      fTrkX[track_step] = pos.X(); //need to correct t0
       auto const this_wire = hits[hits.size() - (1 + track_step)]->WireID();
-      double t0Correction = detprop->ConvertTicksToX( TickT0, this_wire.Plane, this_wire.TPC, this_wire.Cryostat );          
-      std::cout << "Correction: " << t0Correction << " " << detprop->SamplingRate() << std::endl;
+      double t0Correction = detProp.ConvertTicksToX( TickT0, this_wire.Plane, this_wire.TPC, this_wire.Cryostat );
+      std::cout << "Correction: " << t0Correction << " " << sampling_rate(clockData) << std::endl;
       fT0Corr[track_step] = t0Correction;
       fTrkX[track_step] = (pos.X()/* - t0Correction*/);
       fTrkY[track_step] = pos.Y();
@@ -684,7 +692,7 @@ void pdune::RecoEff::analyze(art::Event const & evt)
             if (sps.empty()) { continue; }
             const auto & sp = *sps.front();
 
-            std::vector< sim::IDE > ides = bt_serv->HitToAvgSimIDEs(*h);
+            std::vector< sim::IDE > ides = bt_serv->HitToAvgSimIDEs(clockData, *h);
 
             std::array< double, 3 > hitpos = {{0, 0, 0}};
             double hitE = 0;
@@ -748,7 +756,7 @@ void pdune::RecoEff::analyze(art::Event const & evt)
         //Don't know if I need this break, but just to be sure...
         if (track_step > 9999) break;
 
-        TVector3 pos = GetPositionInTPC(*part, step);
+        TVector3 pos = GetPositionInTPC(clockData, *part, step);
 
         if( (pos != TVector3(-1,-1,-1)) && (pos != TVector3(0,0,0))){       
           fTrueTrkX[track_step] = pos.X();
@@ -850,7 +858,8 @@ void pdune::RecoEff::ResetVars()
         }
 }
 
-double pdune::RecoEff::GetLengthInTPC(const simb::MCParticle part) {
+double pdune::RecoEff::GetLengthInTPC(detinfo::DetectorClocksData const& clockData,
+                                      const simb::MCParticle part) {
 
   unsigned int nTrajectoryPoints = part.NumberTrajectoryPoints();
   std::vector<double> TPCLengthHits(nTrajectoryPoints,0);
@@ -875,7 +884,7 @@ double pdune::RecoEff::GetLengthInTPC(const simb::MCParticle part) {
       double XPlanePosition = tpc.PlaneLocation(0)[0];
       double DriftTimeCorrection = fabs( tmpPosition[0] - XPlanePosition )/ XDriftVelocity;
       double TimeAtPlane = part.T() + DriftTimeCorrection;
-      if( TimeAtPlane < detprop->TriggerOffset() || TimeAtPlane > detprop->TriggerOffset() + WindowSize){
+      if( TimeAtPlane < trigger_offset(clockData) || TimeAtPlane > trigger_offset(clockData) + WindowSize){
         continue;}
       //Good hit in TPC
       LastHit = MCHit;
@@ -891,7 +900,8 @@ double pdune::RecoEff::GetLengthInTPC(const simb::MCParticle part) {
   return TPCLength;
 }
 
-TVector3 pdune::RecoEff::GetPositionInTPC(const simb::MCParticle part, int MCHit) {
+TVector3 pdune::RecoEff::GetPositionInTPC(detinfo::DetectorClocksData const& clockData,
+                                          const simb::MCParticle part, int MCHit) {
 
   const TLorentzVector& tmpPosition = part.Position(MCHit);
   double const tmpPosArray[] = {tmpPosition[0], tmpPosition[1], tmpPosition[2]};
@@ -904,7 +914,7 @@ TVector3 pdune::RecoEff::GetPositionInTPC(const simb::MCParticle part, int MCHit
     double XPlanePosition = tpc.PlaneLocation(0)[0];
     double DriftTimeCorrection = fabs( tmpPosition[0] - XPlanePosition )/ XDriftVelocity;
     double TimeAtPlane = part.T() + DriftTimeCorrection;
-    if( TimeAtPlane < detprop->TriggerOffset() || TimeAtPlane > detprop->TriggerOffset() + WindowSize){
+    if( TimeAtPlane < trigger_offset(clockData) || TimeAtPlane > trigger_offset(clockData) + WindowSize){
       return TVector3(-1,-1,-1);}
   }     
   else{

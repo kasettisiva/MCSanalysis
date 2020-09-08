@@ -1,0 +1,59 @@
+#
+# Runs OpDet reco object analyzers on ART files produced by standard reco
+# or the Optical Detector reco for protoDUNE data
+#
+
+#include "services_dune.fcl"
+#include "opticaldetectormodules_dune.fcl"
+
+
+process_name: OpDetAnalysis
+
+services:
+{
+  # Load the service that manages root files for histograms.
+  TFileService: { fileName: "%ifb_opana_hist.root" }
+  TimeTracker:       {}
+  @table::protodune_services
+  message:      @local::standard_info 
+}
+
+
+source:
+{
+  module_type: RootInput
+  maxEvents : 1000
+}
+
+
+physics:
+{
+
+ producers:
+   {
+   }
+
+ analyzers:
+ {
+   opflashanaInternal:  @local::standard_opflashana
+   opflashanaExternal:  @local::standard_opflashana
+ }
+
+ analyzeIt: [opflashanaInternal, opflashanaExternal]
+
+   
+ #trigger_paths is a keyword and contains the paths that modify the art::event, 
+ #ie filters and producers
+ trigger_paths: []
+
+ #end_paths is a keyword and contains the paths that do not modify the art::Event, 
+ #ie analyzers and output streams.  these all run simultaneously
+ end_paths:     [analyzeIt]  
+}
+
+physics.analyzers.opflashanaInternal.OpHitModuleLabel:   "ophitInternal"
+physics.analyzers.opflashanaInternal.OpFlashModuleLabel: "opflashInternal"
+physics.analyzers.opflashanaExternal.OpHitModuleLabel:   "ophitExternal"
+physics.analyzers.opflashanaExternal.OpFlashModuleLabel: "opflashExternal"
+
+

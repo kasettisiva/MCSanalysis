@@ -1,0 +1,58 @@
+#include "services_dune.fcl"
+#include "RawDecoder.fcl"
+#include "opticaldetectormodules_dune.fcl"
+#include "opticaldetectorservices_dune.fcl"
+
+
+process_name: OpDetReco
+
+services:
+{
+  # Load the service that manages root files for histograms.
+  TFileService: { fileName: "%ifb_waveforms_hist.root" }
+  TimeTracker:       {}
+  @table::protodune_rawdecoding_services
+  message:      @local::standard_info 
+}
+
+
+source:
+{
+  module_type: RootInput
+  maxEvents : 1000
+}
+
+
+physics:
+{
+
+ producers:
+   {
+      # photon detector reconstruction
+      ssprawdecoder:   @local::ssp_raw_decoder_split
+      rns:       { module_type: "RandomNumberSaver" }
+   }
+
+ analyzers:
+ {
+   opdigianaInternal:   @local::dunefd_opdigiana
+   opdigianaExternal:   @local::dunefd_opdigiana
+ }
+ produceIt: [ssprawdecoder]
+ analyzeIt: [opdigianaInternal, opdigianaExternal] 
+
+   
+ #trigger_paths is a keyword and contains the paths that modify the art::event, 
+ #ie filters and producers
+ trigger_paths: [produceIt]
+
+ #end_paths is a keyword and contains the paths that do not modify the art::Event, 
+ #ie analyzers and output streams.  these all run simultaneously
+ end_paths:     [analyzeIt]  
+}
+
+physics.analyzers.opdigianaInternal.InputModule:  "ssprawdecoder"
+physics.analyzers.opdigianaInternal.InstanceName: "internal"
+
+physics.analyzers.opdigianaExternal.InputModule:  "ssprawdecoder"
+physics.analyzers.opdigianaExternal.InstanceName: "external"
