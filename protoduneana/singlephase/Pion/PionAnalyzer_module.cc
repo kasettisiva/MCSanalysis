@@ -298,7 +298,7 @@ namespace pionana {
 
     auto ides = bt->HitToSimIDEs_Ps(hit);
     //First, check if the hit is matched to the beam id
-    std::cout << "N IDES " << ides.size() << std::endl;
+    //std::cout << "N IDES " << ides.size() << std::endl;
     for( size_t i = 0; i < ides.size(); ++i ){
       ID_to_IDE_electrons[ abs( ides[i]->trackID ) ] += ides[i]->numElectrons;
     }
@@ -428,6 +428,12 @@ private:
                     const sim::ParticleList & plist,
                     art::ServiceHandle < geo::Geometry > geo_serv, int event,
                     G4ReweightTraj * theTraj);
+
+  std::vector<G4ReweightTraj *> CreateNRWTrajs(
+      const simb::MCParticle & part,
+      const sim::ParticleList & plist,
+      art::ServiceHandle < geo::Geometry > geo_serv, int event);
+
   //void line(double t, double * p, double & x, double & y, double & z);
   //const void SumDistance2(int &, double *, double & sum, double * par, int);
   //double distance2(double x, double y, double z, double * p);
@@ -586,6 +592,9 @@ private:
   std::vector<double> g4rw_primary_minus_sigma_weight;
   std::vector<std::string> g4rw_primary_var;
 
+  std::vector<double> g4rw_alt_primary_plus_sigma_weight;
+  std::vector<double> g4rw_alt_primary_minus_sigma_weight;
+  int new_branch = 1;
 
   //EDIT: STANDARDIZE
   //EndProcess --> endProcess ?
@@ -927,15 +936,17 @@ private:
   bool fCheckCosmics;
   bool fTrueToReco;
   bool fDoReweight;
+  bool fDoProtReweight;
   bool fMCHasBI;
 
   //Geant4Reweight stuff
   TFile * FracsFile, * XSecFile;
+  TFile * ProtFracsFile, * ProtXSecFile;
   std::vector<fhicl::ParameterSet> ParSet;
   G4ReweightParameterMaker ParMaker;
-  G4MultiReweighter * MultiRW;
+  G4MultiReweighter * MultiRW, * ProtMultiRW;
   G4ReweighterFactory RWFactory;
-  G4Reweighter * theRW;
+  //G4Reweighter * theRW;
 };
 
 
@@ -963,7 +974,8 @@ pionana::PionAnalyzer::PionAnalyzer(fhicl::ParameterSet const& p)
   fSaveHits( p.get<bool>( "SaveHits" ) ),
   fCheckCosmics( p.get<bool>( "CheckCosmics" ) ),
   fTrueToReco( p.get<bool>( "TrueToReco" ) ),
-  fDoReweight(p.get<bool>("DoReweight"))/*,
+  fDoReweight(p.get<bool>("DoReweight")),
+  fDoProtReweight(p.get<bool>("DoProtReweight"))/*
   fMCHasBI(p.get<bool>("MCHasBI"))*/ {
 
   templates[ 211 ]  = (TProfile*)dEdX_template_file.Get( "dedx_range_pi"  );
@@ -988,7 +1000,17 @@ pionana::PionAnalyzer::PionAnalyzer(fhicl::ParameterSet const& p)
     ParMaker = G4ReweightParameterMaker(ParSet);
     MultiRW = new G4MultiReweighter(211, *XSecFile, *FracsFile, ParSet/*, 100, 0*/);
 
-    theRW = RWFactory.BuildReweighter( 211, XSecFile, FracsFile, ParMaker.GetFSHists(), ParMaker.GetElasticHist()/*, true*/ );
+    //theRW = RWFactory.BuildReweighter( 211, XSecFile, FracsFile, ParMaker.GetFSHists(), ParMaker.GetElasticHist()/*, true*/ );
+  }
+  if (fDoProtReweight) {
+    ProtFracsFile =  new TFile((p.get<std::string>("ProtFracsFile")).c_str(),
+                               "OPEN");
+    ProtXSecFile = new TFile((p.get<std::string>("ProtXSecFile")).c_str(),
+                             "OPEN");
+    ParSet = p.get<std::vector<fhicl::ParameterSet>>("ParameterSet");
+    ParMaker = G4ReweightParameterMaker(ParSet);
+    ProtMultiRW = new G4MultiReweighter(2212, *ProtXSecFile, *ProtFracsFile,
+                                        ParSet);
   }
 
   // Call appropriate consumes<>() for any products to be retrieved by this module.
@@ -3451,6 +3473,63 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
         }
 
       }
+
+      std::vector<G4ReweightTraj *> trajs = CreateNRWTrajs(
+          *true_beam_particle, plist,
+          fGeometryService, event);
+      
+      bool added = false;
+      for (size_t i = 0; i < trajs.size(); ++i) {
+        if (trajs[i]->GetNSteps() > 0) {
+          //std::cout << i << " " << trajs[i]->GetNSteps() << std::endl;
+          for (size_t j = 0; j < ParSet.size(); ++j) {
+            std::pair<double, double> pm_weights =
+                MultiRW->GetPlusMinusSigmaParWeight((*trajs[i]), j);
+            //std::cout << "got weights" << std::endl;
+            //std::cout << pm_weights.first << " " << pm_weights.second << std::endl;
+
+            if (!added) {
+              g4rw_alt_primary_plus_sigma_weight.push_back(pm_weights.first);
+              g4rw_alt_primary_minus_sigma_weight.push_back(pm_weights.second);
+            }
+            else {
+              g4rw_alt_primary_plus_sigma_weight[j] *= pm_weights.first;
+              g4rw_alt_primary_minus_sigma_weight[j] *= pm_weights.second;
+            }
+          }
+          added = true;
+        }
+      }
+      
+    }
+  }
+  if (!evt.isRealData() && fDoProtReweight && true_beam_PDG == 2212) {
+    std::vector<G4ReweightTraj *> trajs = CreateNRWTrajs(
+        *true_beam_particle, plist,
+        fGeometryService, event);
+    
+    bool added = false;
+    for (size_t i = 0; i < trajs.size(); ++i) {
+      if (trajs[i]->GetNSteps() > 0) {
+        //std::cout << i << " " << trajs[i]->GetNSteps() << std::endl;
+        for (size_t j = 0; j < ParSet.size(); ++j) {
+          std::pair<double, double> pm_weights =
+              ProtMultiRW->GetPlusMinusSigmaParWeight((*trajs[i]), j);
+          //std::cout << "alt got weights" << std::endl;
+          //std::cout << pm_weights.first << " " << pm_weights.second <<
+          //             std::endl;
+
+          if (!added) {
+            g4rw_alt_primary_plus_sigma_weight.push_back(pm_weights.first);
+            g4rw_alt_primary_minus_sigma_weight.push_back(pm_weights.second);
+          }
+          else {
+            g4rw_alt_primary_plus_sigma_weight[j] *= pm_weights.first;
+            g4rw_alt_primary_minus_sigma_weight[j] *= pm_weights.second;
+          }
+        }
+        added = true;
+      }
     }
   }
 
@@ -4024,6 +4103,13 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("g4rw_primary_plus_sigma_weight", &g4rw_primary_plus_sigma_weight);
   fTree->Branch("g4rw_primary_minus_sigma_weight", &g4rw_primary_minus_sigma_weight);
   fTree->Branch("g4rw_primary_var", &g4rw_primary_var);
+
+  //fTree->Branch("g4rw_alt_primary_weights", &g4rw_alt_primary_weights);
+  fTree->Branch("g4rw_alt_primary_plus_sigma_weight",
+                &g4rw_alt_primary_plus_sigma_weight);
+  fTree->Branch("g4rw_alt_primary_minus_sigma_weight",
+                &g4rw_alt_primary_minus_sigma_weight);
+  fTree->Branch("new_branch", &new_branch);
 
   if( fSaveHits ){
     fTree->Branch( "reco_beam_spacePts_X", &reco_beam_spacePts_X );
@@ -4620,6 +4706,8 @@ void pionana::PionAnalyzer::reset()
   g4rw_primary_plus_sigma_weight.clear();
   g4rw_primary_minus_sigma_weight.clear();
   g4rw_primary_var.clear();
+  g4rw_alt_primary_plus_sigma_weight.clear();
+  g4rw_alt_primary_minus_sigma_weight.clear();
 }
 
 bool pionana::PionAnalyzer::CreateRWTraj(
@@ -4664,7 +4752,7 @@ bool pionana::PionAnalyzer::CreateRWTraj(
       if (fVerbose) {
         std::cout  << "LAr: " << test_material->GetDensity() << " " <<
                       test_material->GetA() << " " << test_material->GetZ() <<
-                      " " << x << " " << y << " " << z << 
+                      " " << x << " " << y << " " << z << " " << part.P(i) <<
                       std::endl;
       }
       traj_X.push_back(x);
@@ -4745,6 +4833,203 @@ bool pionana::PionAnalyzer::CreateRWTraj(
   }
 
   return true;
+}
+
+
+std::vector<G4ReweightTraj *> pionana::PionAnalyzer::CreateNRWTrajs(
+    const simb::MCParticle & part, const sim::ParticleList & plist,
+    art::ServiceHandle < geo::Geometry > geo_serv, int event) {
+  std::vector<G4ReweightTraj *> results;
+
+
+  //Create process map
+  auto procs = part.Trajectory().TrajectoryProcesses();
+  std::map<size_t, std::string> proc_map;
+  for (auto it = procs.begin(); it != procs.end(); ++it) {
+    proc_map[it->first] = part.Trajectory().KeyToProcess(it->second);
+  }
+
+  std::vector<double> traj_X, traj_Y, traj_Z;
+  //std::vector<double> traj_PX, traj_PY, traj_PZ;
+  //std::vector<size_t> elastic_indices;
+
+  std::vector<std::pair<size_t, size_t>> ranges;
+
+  //bool found_last = false;
+  bool found_LAr = false;
+  size_t start = 0, end = 0;
+  //G4ReweightTraj theTraj(part.TrackId(), part.PdgCode(), 0, event, {0,0});
+  for (size_t i = 0; i < part.NumberTrajectoryPoints(); ++i) {
+    double x = part.Position(i).X();
+    double y = part.Position(i).Y();
+    double z = part.Position(i).Z();
+
+    geo::Point_t test_point{x, y, z};
+    const TGeoMaterial * test_material = geo_serv->Material(test_point);
+
+    if (!strcmp(test_material->GetName(), "LAr")) {
+      if (fVerbose) {
+        std::cout << i << " " << "LAr: " << test_material->GetDensity() << " " <<
+                     test_material->GetA() << " " << test_material->GetZ() <<
+                     " " << x << " " << y << " " << z << 
+                     std::endl;
+      }
+
+      if (!found_LAr) {
+        found_LAr = true;
+        start = i;
+      }
+
+      //traj_PX.push_back(part.Px(i));
+      //traj_PY.push_back(part.Py(i));
+      //traj_PZ.push_back(part.Pz(i));
+
+      //auto itProc = proc_map.find(i);
+      //if (itProc != proc_map.end() && itProc->second == "hadElastic") {
+      //  elastic_indices.push_back(i);
+      //}
+    }
+    else {
+      if (fVerbose) {
+        std::cout << i << " " << test_material->GetName() << " " <<
+                     test_material->GetDensity() << " " <<
+                     test_material->GetA() << " " << test_material->GetZ() <<
+                     " " << x << " " << y << " " << z << 
+                     std::endl;
+      }
+      if (found_LAr) {
+        found_LAr = false;
+        end = i;
+        ranges.push_back({start, end});
+      }
+    }
+
+    //if (i == part.NumberTrajectoryPoints() - 1)
+    //  found_last = true;
+  }
+  if (found_LAr) {
+    //size_t np = part.NumberTrajectoryPoints();
+    ranges.push_back({start, part.NumberTrajectoryPoints() - 1});
+    //double x = part.Position(np - 1).X();
+    //double y = part.Position(np - 1).Y();
+    //double z = part.Position(np - 1).Z();
+  }
+
+  double mass = 0.;
+
+  switch (abs(part.PdgCode())) {
+    case 211: {
+      mass = 139.57;
+      break;
+    }
+    case 2212: {
+      mass = 938.28;
+      break;
+    }
+    default: {
+      return results;
+      break;
+    }
+  }
+
+  for (size_t i = 0; i < ranges.size(); ++i) {
+    //std::cout << ranges[i].first << " " << ranges[i].second << std::endl;
+    G4ReweightTraj * theTraj = new G4ReweightTraj(i, part.PdgCode(), 0, event, {0,0});
+    
+    for (size_t j = ranges[i].first; j < ranges[i].second; ++j) {
+      double dx = part.Position(j+1).X() - part.Position(j).X();
+      double dy = part.Position(j+1).Y() - part.Position(j).Y();
+      double dz = part.Position(j+1).Z() - part.Position(j).Z();
+
+      double len = sqrt(dx*dx + dy*dy + dz*dz);
+  
+      double preStepP[3] = {part.Px(j)*1.e3,
+                            part.Py(j)*1.e3,
+                            part.Pz(j)*1.e3};
+  
+      double postStepP[3] = {part.Px(j + 1)*1.e3,
+                             part.Py(j + 1)*1.e3,
+                             part.Pz(j + 1)*1.e3};
+      if (j == ranges[i].first) {
+        double p_squared = preStepP[0]*preStepP[0] + preStepP[1]*preStepP[1] +
+                           preStepP[2]*preStepP[2];
+        theTraj->SetEnergy(sqrt(p_squared + mass*mass));
+      }
+
+      //prochere
+      auto itProc = proc_map.find(j);
+      std::string proc = "default";
+      if (itProc != proc_map.end() &&
+          j != (part.NumberTrajectoryPoints() - 2)) {
+        proc = itProc->second;
+      }
+      //- 2 because the last element is the end of the last step
+      else if (j == (part.NumberTrajectoryPoints() - 2)) {
+        proc = part.EndProcess();
+      }
+      //std::cout << j << " Proc: " << proc << std::endl;
+      G4ReweightStep * step = new G4ReweightStep(i, part.PdgCode(),
+                                                 0, event, preStepP, postStepP,
+                                                 len, proc);
+      theTraj->AddStep(step);
+    }
+
+    results.push_back(theTraj);
+  }
+
+  if (results.size()) {
+    //Loop over daughters
+    for (int i = 0; i < part.NumberDaughters(); ++i) {
+      int d_index = part.Daughter(i);
+      auto d_part = plist[d_index];
+
+      int d_PDG = d_part->PdgCode();
+      int d_ID = d_part->TrackId();
+
+      results.back()->AddChild(new G4ReweightTraj(d_ID, d_PDG,
+                               results.size() - 1, event, {0,0}));
+    }
+  }
+  return results;
+  /*
+
+  for (size_t i = 1; i < traj_X.size(); ++i) {
+    std::string proc = "default";
+    if (found_last && i == traj_X.size() - 1) {
+      proc = part.EndProcess();
+    }
+    else if (std::find(elastic_indices.begin(), elastic_indices.end(), i) !=
+             elastic_indices.end()){
+      proc = "hadElastic";
+    }
+
+    double dX = traj_X[i] - traj_X[i-1];
+    double dY = traj_Y[i] - traj_Y[i-1];
+    double dZ = traj_Z[i] - traj_Z[i-1];
+
+    double len = sqrt(dX*dX + dY*dY + dZ*dZ);
+
+    double preStepP[3] = {traj_PX[i-1]*1.e3,
+                          traj_PY[i-1]*1.e3,
+                          traj_PZ[i-1]*1.e3};
+
+    double postStepP[3] = {traj_PX[i]*1.e3,
+                           traj_PY[i]*1.e3,
+                           traj_PZ[i]*1.e3};
+    if (i == 1) {
+      double p_squared = preStepP[0]*preStepP[0] + preStepP[1]*preStepP[1] +
+                         preStepP[2]*preStepP[2];
+      theTraj->SetEnergy(sqrt(p_squared + mass*mass));
+    }
+
+    G4ReweightStep * step = new G4ReweightStep(part.TrackId(), part.PdgCode(),
+                                               0, event, preStepP, postStepP,
+                                               len, proc);
+    theTraj->AddStep(step);
+  }
+
+  return true;
+  */
 }
 
 // define the parameteric line equation

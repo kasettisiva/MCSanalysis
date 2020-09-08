@@ -36,10 +36,13 @@ pionanalysis:
   CheckCosmics: false
   TrueToReco: false
   DoReweight: true
+  DoProtReweight: true
   MCHasBI: false
 
   FracsFile: "/dune/data2/users/calcuttj/GeantReweight/FlatTree/LAr_PiPlus_cascade.root"
   XSecFile: "/dune/data2/users/calcuttj/GeantReweight/FlatTree/LAr_cross_section.root"
+  ProtFracsFile: "/dune/data2/users/calcuttj/GeantReweight/FlatTree/proton_cascade.root"
+  ProtXSecFile: "/dune/data2/users/calcuttj/GeantReweight/FlatTree/proton_cross_section.root"
 
   ParameterSet: [
     { 
