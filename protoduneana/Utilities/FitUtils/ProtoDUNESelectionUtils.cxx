@@ -13,7 +13,8 @@
 TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
     std::string filename, std::string treename, std::vector<double> recoBins,
     std::string channel, std::string topo, int toponum, double endZ_cut,
-    double minval, double maxval, bool doNegativeReco, int doSyst, std::string systName, double weight) {
+    double minval, double maxval, bool doNegativeReco, int doSyst,
+    std::string systName, double weight, std::pair<double, double> PiMuScale) {
 //********************************************************************
 
   TFile *file = new TFile(filename.c_str(), "READ");
@@ -107,11 +108,11 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
 
   //For vertex type 
   std::vector< std::string > * true_beam_processes = 0x0;
-  std::vector< std::vector < double > > * reco_beam_vertex_dRs = 0x0;
-  std::vector< int > * reco_beam_vertex_hits_slices = 0x0;
   defaultTree->SetBranchAddress( "true_beam_processes", &true_beam_processes );
-  defaultTree->SetBranchAddress( "reco_beam_vertex_dRs", &reco_beam_vertex_dRs );
-  defaultTree->SetBranchAddress( "reco_beam_vertex_hits_slices", &reco_beam_vertex_hits_slices );
+  //std::vector< std::vector < double > > * reco_beam_vertex_dRs = 0x0;
+  //std::vector< int > * reco_beam_vertex_hits_slices = 0x0;
+  //defaultTree->SetBranchAddress( "reco_beam_vertex_dRs", &reco_beam_vertex_dRs );
+  //defaultTree->SetBranchAddress( "reco_beam_vertex_hits_slices", &reco_beam_vertex_hits_slices );
 
   //For systs
   std::vector<double> * g4rw_primary_plus_sigma_weight = 0x0;
@@ -300,16 +301,24 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
     if (interaction_topology != toponum)
       continue;
 
+    double total_weight = weight*syst_weight;
+    if (true_beam_PDG == 211) {
+      total_weight *= PiMuScale.first;
+    }
+    else if (true_beam_PDG == -13) {
+      total_weight *= PiMuScale.second;
+    }
+
     if (doNegativeReco) {
       if (reco_beam_interactingEnergy < 0.) {
-        mchisto->AddBinContent(1, weight*syst_weight);
+        mchisto->AddBinContent(1, total_weight);
       }
       else{
         for (int l = 1; l < nrecobins; ++l) {
           if (reco_beam_interactingEnergy > recoBins[l-1] &&
               reco_beam_interactingEnergy <= recoBins[l]) {
             //Fill +1 because the first bin is negative
-            mchisto->AddBinContent(l+1, weight*syst_weight);
+            mchisto->AddBinContent(l+1, total_weight);
             break;
           }
         }       
@@ -322,7 +331,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCBackgroundHistogram_Pions(
       for (int l = 1; l < nrecobins; ++l) {
         if (reco_beam_interactingEnergy > recoBins[l-1] &&
             reco_beam_interactingEnergy <= recoBins[l]) {
-          mchisto->AddBinContent(l/*+1*/, weight*syst_weight);
+          mchisto->AddBinContent(l/*+1*/, total_weight);
           break;
         }
       }
@@ -340,7 +349,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
     std::string filename, std::string treename, std::vector<double> recoBins,
     std::string channel, std::string topo, int toponum, double minval,
     double maxval, double endZ_cut, bool doNegativeReco, int doSyst,
-    std::string systName, double weight) {
+    std::string systName, double weight, std::pair<double, double> PiMuScale) {
 //********************************************************************
 
   TFile *file = new TFile(filename.c_str(), "READ");
@@ -409,20 +418,20 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
   int true_daughter_nPiPlus, true_daughter_nPiMinus, true_daughter_nPi0, true_beam_ID;
   std::vector< std::string > * true_beam_processes = 0x0;
   std::vector< int > * reco_beam_hit_true_ID = 0x0;
-  double new_true_beam_interactingEnergy;
+  //double true_beam_interactingEnergy;
   defaultTree->SetBranchAddress( "true_daughter_nPiPlus", &true_daughter_nPiPlus );
   defaultTree->SetBranchAddress( "true_daughter_nPiMinus", &true_daughter_nPiMinus );
   defaultTree->SetBranchAddress( "true_daughter_nPi0", &true_daughter_nPi0 );
   defaultTree->SetBranchAddress( "true_beam_ID", &true_beam_ID );
   defaultTree->SetBranchAddress( "true_beam_processes", &true_beam_processes );
   defaultTree->SetBranchAddress( "reco_beam_hit_true_ID", &reco_beam_hit_true_ID );
-  defaultTree->SetBranchAddress("new_true_beam_interactingEnergy",      &new_true_beam_interactingEnergy);
+  //defaultTree->SetBranchAddress("true_beam_interactingEnergy",      &true_beam_interactingEnergy);
 
 
-  std::vector< int > * reco_beam_vertex_hits_slices = 0x0; 
-  std::vector< std::vector< double > > * reco_beam_vertex_dRs = 0x0;
-  defaultTree->SetBranchAddress( "reco_beam_vertex_hits_slices", &reco_beam_vertex_hits_slices );
-  defaultTree->SetBranchAddress( "reco_beam_vertex_dRs", &reco_beam_vertex_dRs );
+  //std::vector< int > * reco_beam_vertex_hits_slices = 0x0; 
+  //std::vector< std::vector< double > > * reco_beam_vertex_dRs = 0x0;
+  //defaultTree->SetBranchAddress( "reco_beam_vertex_hits_slices", &reco_beam_vertex_hits_slices );
+  //defaultTree->SetBranchAddress( "reco_beam_vertex_dRs", &reco_beam_vertex_dRs );
 
   //For systs
   std::vector<double> * g4rw_primary_plus_sigma_weight = 0x0;
@@ -555,21 +564,29 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
     //if(topology != toponum) continue;
     if(interaction_topology != toponum) continue;
 
+    double total_weight = weight*syst_weight;
+    if (true_beam_PDG == 211) {
+      total_weight *= PiMuScale.first;
+    }
+    else if (true_beam_PDG == -13) {
+      total_weight *= PiMuScale.second;
+    }
+
     // True energy bin
     //if(true_beam_interactingEnergy < minval) continue;
     //if(true_beam_interactingEnergy >= maxval) continue;
-    if (new_true_beam_interactingEnergy < minval ||
-        new_true_beam_interactingEnergy >= maxval) continue;
+    if (true_beam_interactingEnergy < minval ||
+        true_beam_interactingEnergy >= maxval) continue;
 
     if (doNegativeReco) {
       if (reco_beam_interactingEnergy < 0.0){
-        mchisto->AddBinContent(1, weight*syst_weight);        
+        mchisto->AddBinContent(1, total_weight);        
       }
       else{
         for (int l = 1; l < nrecobins; l++) {
           if (reco_beam_interactingEnergy > recoBins[l-1] && 
               reco_beam_interactingEnergy <= recoBins[l]) {
-            mchisto->AddBinContent(l+1, weight*syst_weight);
+            mchisto->AddBinContent(l+1, total_weight);
             break;
           }
         }
@@ -583,7 +600,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCSignalHistogram_Pions(
       for (int l = 1; l < nrecobins; l++) {
         if (reco_beam_interactingEnergy > recoBins[l-1] && 
             reco_beam_interactingEnergy <= recoBins[l]) {
-          mchisto->AddBinContent(l, weight*syst_weight);
+          mchisto->AddBinContent(l, total_weight);
           break;
         }
       }
@@ -750,7 +767,8 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
     std::string filename, std::string treename, std::vector<double> recoBins,
     std::string topo, int toponum,
     double reco_beam_endZ_cut, double minval, double maxval,
-    bool doNegativeReco, int doSyst, std::string systName, double weight) {
+    bool doNegativeReco, int doSyst, std::string systName, double weight,
+    std::pair<double, double> PiMuScale) {
   //********************************************************************
 
   TFile *file = new TFile(filename.c_str(), "READ");
@@ -815,14 +833,14 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
   std::vector< std::string > * true_beam_processes = 0x0;
   defaultTree->SetBranchAddress("true_beam_processes", &true_beam_processes);
 
-  std::vector< int > * reco_beam_vertex_hits_slices = 0x0;
-  std::vector< std::vector<double> > * reco_beam_vertex_dRs = 0x0;
   std::vector< int > * true_beam_daughter_ID = 0x0;
   std::vector< int > * true_beam_grand_daughter_ID = 0x0;
-  defaultTree->SetBranchAddress( "reco_beam_vertex_hits_slices", &reco_beam_vertex_hits_slices );
-  defaultTree->SetBranchAddress( "reco_beam_vertex_dRs", &reco_beam_vertex_dRs );
   defaultTree->SetBranchAddress( "true_beam_daughter_ID", &true_beam_daughter_ID );
   defaultTree->SetBranchAddress( "true_beam_grand_daughter_ID", &true_beam_grand_daughter_ID );
+  //std::vector< int > * reco_beam_vertex_hits_slices = 0x0;
+  //std::vector< std::vector<double> > * reco_beam_vertex_dRs = 0x0;
+  //defaultTree->SetBranchAddress( "reco_beam_vertex_hits_slices", &reco_beam_vertex_hits_slices );
+  //defaultTree->SetBranchAddress( "reco_beam_vertex_dRs", &reco_beam_vertex_dRs );
 
   //For systs
   std::vector<double> * g4rw_primary_plus_sigma_weight = 0x0;
@@ -836,10 +854,10 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
 
   //Splitting by true energy
   std::vector<int> * true_beam_slices = 0x0;
-  std::vector<double> * new_true_beam_incidentEnergies = 0x0;
+  std::vector<double> * true_beam_incidentEnergies = 0x0;
   defaultTree->SetBranchAddress( "true_beam_slices", &true_beam_slices );
-  defaultTree->SetBranchAddress("new_true_beam_incidentEnergies",
-                                &new_true_beam_incidentEnergies);
+  defaultTree->SetBranchAddress("true_beam_incidentEnergies",
+                                &true_beam_incidentEnergies);
 
   //std::replace(channel.begin(), channel.end(), ' ', '-');
   //channel.erase(std::remove(channel.begin(), channel.end(), '.'), channel.end());
@@ -1002,7 +1020,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
                 bool found_true_slice = false;
                 for (size_t i = 0; i < true_beam_slices->size(); ++i) {
                   int check_slice = (*true_beam_slices)[i];  
-                  true_energy = (*new_true_beam_incidentEnergies)[i];
+                  true_energy = (*true_beam_incidentEnergies)[i];
                   if (true_slice == check_slice) {
                     //std::cout << "Reco inc energy: " <<
                     //            (*reco_beam_incidentEnergies)[l] << " " <<
@@ -1034,9 +1052,18 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
       if (topology != toponum) {
         continue;
       }
+
+      double total_weight = weight*syst_weight;
+      if (true_beam_PDG == 211) {
+        total_weight *= PiMuScale.first;
+      }
+      else if (true_beam_PDG == -13) {
+        total_weight *= PiMuScale.second;
+      }
+
       //Patch
-      if (true_energy < 0.) 
-        true_energy = 10.;
+      //if (true_energy < 0.) 
+      //  true_energy = 10.;
       if (true_energy < minval || true_energy >= maxval) {
         //if (true_energy > maxval) {
         //  std::cout << "TrueEnergy G: " << true_energy << " " << minval <<
@@ -1056,14 +1083,14 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
       double energy = (*reco_beam_incidentEnergies)[l];
       if (doNegativeReco) {
         if (energy < 0.) {
-          mchisto->AddBinContent(1, weight*syst_weight);
+          mchisto->AddBinContent(1, total_weight);
         }
         else{
           for (size_t m = 1; m < nrecobins; ++m) {
             if (energy > recoBins[m-1] &&
                 energy <= recoBins[m]) {
               //Fill +1 because the first bin is negative
-              mchisto->AddBinContent(m+1, weight*syst_weight);
+              mchisto->AddBinContent(m+1, total_weight);
               break;
             }
           }       
@@ -1076,7 +1103,7 @@ TH1* protoana::ProtoDUNESelectionUtils::FillMCIncidentHistogram_Pions(
         for (size_t m = 1; m < nrecobins; ++m) {
           if (energy > recoBins[m-1] &&
               energy <= recoBins[m]) {
-            mchisto->AddBinContent(m/*+1*/, weight*syst_weight);
+            mchisto->AddBinContent(m/*+1*/, total_weight);
             break;
           }
         }
@@ -1333,18 +1360,14 @@ std::pair< TH1 *, TH1 * >
 
   double reco_beam_interactingEnergy, true_beam_endZ; 
   int true_beam_ID, true_beam_PDG;
-  std::vector< int > * reco_beam_vertex_hits_slices = 0x0;
-  std::vector< std::vector< double > > * reco_beam_vertex_dRs = 0x0;
   std::vector< int > * reco_beam_hit_true_ID = 0x0;
   std::vector< int > * reco_beam_hit_true_slice = 0x0;
 
   std::vector< std::string > * true_beam_processes = 0x0;
   std::vector< int > * true_beam_slices = 0x0;
-  std::vector< double > * new_true_beam_incidentEnergies = 0x0;
+  std::vector< double > * true_beam_incidentEnergies = 0x0;
 
   defaultTree->SetBranchAddress( "reco_beam_interactingEnergy", &reco_beam_interactingEnergy );
-  defaultTree->SetBranchAddress( "reco_beam_vertex_hits_slices", &reco_beam_vertex_hits_slices );
-  defaultTree->SetBranchAddress( "reco_beam_vertex_dRs", &reco_beam_vertex_dRs );
   defaultTree->SetBranchAddress( "reco_beam_hit_true_ID", &reco_beam_hit_true_ID );
   defaultTree->SetBranchAddress( "reco_beam_hit_true_slice", &reco_beam_hit_true_slice );
   defaultTree->SetBranchAddress( "true_beam_processes", &true_beam_processes );
@@ -1352,7 +1375,12 @@ std::pair< TH1 *, TH1 * >
   defaultTree->SetBranchAddress( "true_beam_ID", &true_beam_ID );
   defaultTree->SetBranchAddress( "true_beam_PDG", &true_beam_PDG );
   defaultTree->SetBranchAddress( "true_beam_endZ", &true_beam_endZ );
-  defaultTree->SetBranchAddress( "new_true_beam_incidentEnergies", &new_true_beam_incidentEnergies );
+  defaultTree->SetBranchAddress( "true_beam_incidentEnergies", &true_beam_incidentEnergies );
+
+  //std::vector< int > * reco_beam_vertex_hits_slices = 0x0;
+  //std::vector< std::vector< double > > * reco_beam_vertex_dRs = 0x0;
+  //defaultTree->SetBranchAddress( "reco_beam_vertex_hits_slices", &reco_beam_vertex_hits_slices );
+  //defaultTree->SetBranchAddress( "reco_beam_vertex_dRs", &reco_beam_vertex_dRs );
 
   double g4rw_primary_plus_sigma_weight, g4rw_primary_minus_sigma_weight;
   if (doSyst != 0) {
@@ -1381,10 +1409,10 @@ std::pair< TH1 *, TH1 * >
     //if ( true_beam_endZ > 225. ) 
     //  continue;
 
-    if ((new_true_beam_incidentEnergies->size() && !true_beam_slices->size()) ||
-        (!new_true_beam_incidentEnergies->size() && true_beam_slices->size())) {
+    if ((true_beam_incidentEnergies->size() && !true_beam_slices->size()) ||
+        (!true_beam_incidentEnergies->size() && true_beam_slices->size())) {
       std::cout << "NOTICE! Energies: " <<
-                   new_true_beam_incidentEnergies->size() << " slices: " <<
+                   true_beam_incidentEnergies->size() << " slices: " <<
                    true_beam_slices->size() << std::endl;
     }
 
@@ -1396,14 +1424,14 @@ std::pair< TH1 *, TH1 * >
 
     //First, fill the denominator histogram
     //
-    for (size_t i = 0; i < new_true_beam_incidentEnergies->size(); ++i) {
+    for (size_t i = 0; i < true_beam_incidentEnergies->size(); ++i) {
 
       int the_slice = (*true_beam_slices)[i];
       if (the_slice > slice_cut) continue;
 
       for ( size_t j = 1; j < nBins; ++j ) {
-        if ( new_true_beam_incidentEnergies->at(i) > bins[j-1] && 
-            new_true_beam_incidentEnergies->at(i) <= bins[j] ) {
+        if ( true_beam_incidentEnergies->at(i) > bins[j-1] && 
+            true_beam_incidentEnergies->at(i) <= bins[j] ) {
           denominator->AddBinContent(j, weight*syst_weight);
           break;
         }
@@ -1435,8 +1463,8 @@ std::pair< TH1 *, TH1 * >
                         << "that was not in denominator" << std::endl;
             }
             for ( size_t m = 1; m < nBins; ++m ) {
-              if ( (*new_true_beam_incidentEnergies)[j] > bins[m-1] 
-                  && (*new_true_beam_incidentEnergies)[j] <= bins[m] ) {
+              if ( (*true_beam_incidentEnergies)[j] > bins[m-1] 
+                  && (*true_beam_incidentEnergies)[j] <= bins[m] ) {
                 numerator->AddBinContent(m, weight*syst_weight);
                 break;
               }
@@ -1509,9 +1537,7 @@ std::pair< TH1 *, TH1 *>
   int true_beam_PDG, true_daughter_nPiPlus, true_daughter_nPiMinus, true_daughter_nPi0;
   std::string * true_beam_endProcess = 0x0;
   std::vector< std::string > * true_beam_processes = 0x0;
-  std::vector< int > * reco_beam_vertex_hits_slices = 0x0;
-  std::vector< std::vector< double > > * reco_beam_vertex_dRs = 0x0;
-  double new_true_beam_interactingEnergy, true_beam_endZ;
+  double true_beam_interactingEnergy, true_beam_endZ;
   bool has_noPion_daughter, has_shower_nHits_distance;
 
   std::vector< int > * true_beam_slices = 0x0;
@@ -1524,11 +1550,14 @@ std::pair< TH1 *, TH1 *>
   defaultTree->SetBranchAddress( "true_daughter_nPiMinus", &true_daughter_nPiMinus );
   defaultTree->SetBranchAddress( "true_daughter_nPi0", &true_daughter_nPi0 );
   defaultTree->SetBranchAddress( "true_beam_processes", &true_beam_processes );
-  defaultTree->SetBranchAddress( "reco_beam_vertex_hits_slices", &reco_beam_vertex_hits_slices );
-  defaultTree->SetBranchAddress( "reco_beam_vertex_dRs", &reco_beam_vertex_dRs );
-  defaultTree->SetBranchAddress( "new_true_beam_interactingEnergy", &new_true_beam_interactingEnergy );
+  defaultTree->SetBranchAddress( "true_beam_interactingEnergy", &true_beam_interactingEnergy );
   defaultTree->SetBranchAddress( "has_noPion_daughter", &has_noPion_daughter );
   defaultTree->SetBranchAddress( "has_shower_nHits_distance", &has_shower_nHits_distance );
+
+  //std::vector< int > * reco_beam_vertex_hits_slices = 0x0;
+  //std::vector< std::vector< double > > * reco_beam_vertex_dRs = 0x0;
+  //defaultTree->SetBranchAddress( "reco_beam_vertex_hits_slices", &reco_beam_vertex_hits_slices );
+  //defaultTree->SetBranchAddress( "reco_beam_vertex_dRs", &reco_beam_vertex_dRs );
 
   double g4rw_primary_plus_sigma_weight, g4rw_primary_minus_sigma_weight;
   if (doSyst != 0) {
@@ -1578,8 +1607,8 @@ std::pair< TH1 *, TH1 *>
 
     //Fill the denominator
     for ( size_t i = 1; i < nBins; ++i ) {
-      if (new_true_beam_interactingEnergy > bins[i-1] 
-          && new_true_beam_interactingEnergy <= bins[i]){
+      if (true_beam_interactingEnergy > bins[i-1] 
+          && true_beam_interactingEnergy <= bins[i]){
         denominator->AddBinContent(i, weight*syst_weight);
 
         if ( has_noPion_daughter ) { //Abs/Cex selection

@@ -737,7 +737,7 @@ namespace protoana{
 	}//loop over vhit
       }//fmthm valid
       //hits and calorimetry loop
-      // if(peakT_2.size()<10) continue;
+      if(peakT_2.size()<10) continue;
       max_value=*std::max_element(peakT_2.begin(),peakT_2.end());
       min_value=*std::min_element(peakT_2.begin(),peakT_2.end());
       // if(max_value-min_value<4300) continue;

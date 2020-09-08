@@ -74,7 +74,7 @@ SystToConsider:          ["fReac"] #, "fAbs2", "fCex"] #["Systematic1","Systemat
 SystType:                ["NormShape"] #, "NormShape", "NormShape"] #["NormShape"  ,"NormShape"]   # For each systematic the type should be defined, options are: NormOnly, ShapeOnly, NormShape
 IgnoreSystematicErrorBelow: 0.01                     # Sytematic error will be ignored if below this value
 
-AddIncidentToMeasurement: false #true
+AddIncidentToMeasurement: true
 AddBackgroundFactors: [0, 0, 0, 0, 0]
 AddIncidentBackgroundFactors: [0, 0, 0, 0, 0]
 AddSidebandsToMeasurement: false 
@@ -83,10 +83,13 @@ EndZCut:                  226.
 SidebandBinning:      [@local::EndZCut, 300., 350., 375., 400, 450., 480.]
 
 WirePitch: .47974  #.4792
-DoScaleMCToData:  false 
+
+DoScaleMCToData: false 
+DoScaleMuonContent: true 
+MuonScaleFactor: 2. 
+
 OnlyDrawXSecs: false 
 DoDrawXSecs: false #true
 DataIsMC: true
-DoScaleMuonContent: false 
 
 RandSigPriors: false 

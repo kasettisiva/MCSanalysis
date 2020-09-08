@@ -65,12 +65,15 @@ private:
   int true_beam_PDG;
   int true_beam_ID;
   double true_beam_len;
+  int true_beam_nElasticScatters;
   std::vector<double> g4rw_primary_plus_sigma_weight;
   std::vector<double> g4rw_primary_minus_sigma_weight;
   std::vector<double> g4rw_primary_weights;
   std::vector<std::string> g4rw_primary_var;
   std::vector<double> g4rw_alt_primary_plus_sigma_weight;
   std::vector<double> g4rw_alt_primary_minus_sigma_weight;
+  double g4rw_primary_singular_weight;
+  std::vector<double> g4rw_set_weights;
 
   
   std::string fGeneratorTag;
@@ -94,7 +97,7 @@ protoana::G4RWExampleAnalyzer::G4RWExampleAnalyzer(
       FracsFile( (p.get< std::string >( "FracsFile" )).c_str(), "OPEN" ),
       XSecFile( (p.get< std::string >( "XSecFile" )).c_str(), "OPEN"),
       ParSet(p.get<std::vector<fhicl::ParameterSet>>("ParameterSet")),
-      ParMaker(ParSet),
+      ParMaker(ParSet, RW_PDG),
       MultiRW(RW_PDG, XSecFile, FracsFile, ParSet) {
 
   theRW = RWFactory.BuildReweighter(RW_PDG, &XSecFile, &FracsFile,
@@ -125,6 +128,21 @@ void protoana::G4RWExampleAnalyzer::analyze(art::Event const& e) {
   true_beam_PDG = true_beam_particle->PdgCode();
   true_beam_ID = true_beam_particle->TrackId();
   true_beam_len = true_beam_particle->Trajectory().TotalLength();
+
+  const simb::MCTrajectory & true_beam_trajectory =
+      true_beam_particle->Trajectory();
+  auto true_beam_proc_map = true_beam_trajectory.TrajectoryProcesses();
+ 
+  for (auto itProc = true_beam_proc_map.begin();
+       itProc != true_beam_proc_map.end(); ++itProc) {
+    //int index = itProc->first;
+    std::string process = true_beam_trajectory.KeyToProcess(itProc->second);
+
+    if (process == "hadElastic") {
+      ++true_beam_nElasticScatters;
+    }
+  }
+
   event = e.id().event();
   run = e.run();
   subrun = e.subRun();
@@ -136,9 +154,9 @@ void protoana::G4RWExampleAnalyzer::analyze(art::Event const& e) {
                                 fGeometryService, event, &theTraj);
     if (created && theTraj.GetNSteps()) {
 
-      g4rw_primary_weights.push_back(theRW->GetWeight(&theTraj));
-
-      g4rw_primary_weights.push_back(MultiRW.GetWeightFromNominal(theTraj));
+      g4rw_primary_singular_weight = MultiRW.GetWeightFromNominal(theTraj);
+      //the following method achieves the same result
+      //g4rw_primary_singular_weight = theRW->GetWeight(&theTraj);
       
       std::vector<double> weights_vec = MultiRW.GetWeightFromAll1DThrows(
           theTraj);
@@ -153,6 +171,21 @@ void protoana::G4RWExampleAnalyzer::analyze(art::Event const& e) {
         g4rw_primary_minus_sigma_weight.push_back(pm_weights.second);
         g4rw_primary_var.push_back(ParSet[i].get<std::string>("Name"));
       }
+
+      //For testing with Heng-Ye's parameters
+      if (ParSet.size() == 2) {
+        for (size_t i = 0; i < 20; ++i) {
+          for (size_t j = 0; j < 20; ++j) {
+            std::vector<double> input_values = {(.1 + i*.1), (.1 + j*.1)};
+            bool set_values = MultiRW.SetAllParameterValues(input_values);
+            if (!set_values) continue;
+
+            g4rw_set_weights.push_back(
+                MultiRW.GetWeightFromSetParameters(theTraj));
+          }
+        }
+      }
+
 
     }
 
@@ -197,8 +230,10 @@ void protoana::G4RWExampleAnalyzer::beginJob() {
   fTree->Branch("true_beam_ID", &true_beam_ID);
   fTree->Branch("true_beam_PDG", &true_beam_PDG);
   fTree->Branch("true_beam_len", &true_beam_len);
+  fTree->Branch("true_beam_nElasticScatters", &true_beam_nElasticScatters);
 
   fTree->Branch("g4rw_primary_weights", &g4rw_primary_weights);
+  fTree->Branch("g4rw_primary_singular_weight", &g4rw_primary_singular_weight);
   fTree->Branch("g4rw_primary_plus_sigma_weight", &g4rw_primary_plus_sigma_weight);
   fTree->Branch("g4rw_primary_minus_sigma_weight", &g4rw_primary_minus_sigma_weight);
   fTree->Branch("g4rw_primary_var", &g4rw_primary_var);
@@ -206,18 +241,22 @@ void protoana::G4RWExampleAnalyzer::beginJob() {
                 &g4rw_alt_primary_plus_sigma_weight);
   fTree->Branch("g4rw_alt_primary_minus_sigma_weight",
                 &g4rw_alt_primary_minus_sigma_weight);
+  fTree->Branch("g4rw_set_weights", &g4rw_set_weights);
 }
 
 void protoana::G4RWExampleAnalyzer::reset() {
   true_beam_PDG = -1;
   true_beam_ID = -1;
   true_beam_len = -1.;
+  true_beam_nElasticScatters = 0.;
   
   g4rw_primary_weights.clear();
+  g4rw_primary_singular_weight = 1.;
   g4rw_primary_plus_sigma_weight.clear();
   g4rw_primary_minus_sigma_weight.clear();
   g4rw_primary_var.clear();
   g4rw_alt_primary_plus_sigma_weight.clear();
   g4rw_alt_primary_minus_sigma_weight.clear();
+  g4rw_set_weights.clear();
 }
 DEFINE_ART_MODULE(protoana::G4RWExampleAnalyzer)
