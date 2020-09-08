@@ -1,6 +1,7 @@
 simple_plugin(PDSPmatch "module"
                         lardataobj_RawData
                         lardataobj_RecoBase
+                        larcorealg_Geometry
                         dune-raw-data_Overlays
                         artdaq-core_Data
                         dune_Geometry
@@ -20,6 +21,7 @@ simple_plugin(PDSPmatch "module"
 simple_plugin(PDSPmatchmc "module"
                         lardataobj_RawData
                         lardataobj_RecoBase
+                        larcorealg_Geometry
                         dune-raw-data_Overlays
                         artdaq-core_Data
                         dune_Geometry
