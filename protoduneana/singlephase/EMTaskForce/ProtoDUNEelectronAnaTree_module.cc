@@ -105,12 +105,14 @@ private:
 
   // Track momentum algorithm calculates momentum based on track range
   trkf::TrackMomentumCalculator trmom;
-  const detinfo::DetectorProperties* detprop = lar::providerFrom<detinfo::DetectorPropertiesService>();
   geo::GeometryCore const * fGeometry = &*(art::ServiceHandle<geo::Geometry>());
 
   // Initialize tree variables
   void Initialize();
-  void FillPrimaryPFParticle(art::Event const & evt, const recob::PFParticle* particle);
+  void FillPrimaryPFParticle(art::Event const & evt,
+                             detinfo::DetectorClocksData const& clockData,
+                             detinfo::DetectorPropertiesData const& detProp,
+                             const recob::PFParticle* particle);
   void FillPrimaryDaughterPFParticle(art::Event const & evt, const recob::PFParticle* daughterParticle, int daughterID);
 
   // Fill cosmics tree
@@ -493,9 +495,11 @@ void protoana::ProtoDUNEelectronAnaTree::analyze(art::Event const & evt){
   // are tagged as either beam or cosmic for ProtoDUNE. This function automatically considers only those
   // PFParticles considered as primary
   std::vector<const recob::PFParticle*> pfParticles = pfpUtil.GetPFParticlesFromBeamSlice(evt,fPFParticleTag);
+  auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(evt);
+  auto const detProp = art::ServiceHandle<detinfo::DetectorPropertiesService>()->DataFor(evt, clockData);
   for(const recob::PFParticle* particle : pfParticles){
 
-    FillPrimaryPFParticle(evt, particle);
+    FillPrimaryPFParticle(evt, clockData, detProp, particle);
     const TVector3 vtx = pfpUtil.GetPFParticleVertex(*particle,evt,fPFParticleTag,fTrackerTag);
      
     fprimaryVertex[0] = vtx.X(); fprimaryVertex[1] = vtx.Y(); fprimaryVertex[2] = vtx.Z();
@@ -523,7 +527,10 @@ void protoana::ProtoDUNEelectronAnaTree::endJob(){
 }
 
 // -----------------------------------------------------------------------------
-void protoana::ProtoDUNEelectronAnaTree::FillPrimaryPFParticle(art::Event const & evt, const recob::PFParticle* particle){
+void protoana::ProtoDUNEelectronAnaTree::FillPrimaryPFParticle(art::Event const & evt,
+                                                               detinfo::DetectorClocksData const& clockData,
+                                                               detinfo::DetectorPropertiesData const& detProp,
+                                                               const recob::PFParticle* particle){
 
   // Pandora's BDT beam-cosmic score
   fprimaryBDTScore = (double)pfpUtil.GetBeamCosmicScore(*particle,evt,fPFParticleTag);
@@ -543,7 +550,7 @@ void protoana::ProtoDUNEelectronAnaTree::FillPrimaryPFParticle(art::Event const 
   const simb::MCParticle* mcparticle = NULL; 
   if(thisTrack != 0x0){
 
-    mcparticle = truthUtil.GetMCParticleFromRecoTrack(*thisTrack, evt, fTrackerTag);
+    mcparticle = truthUtil.GetMCParticleFromRecoTrack(clockData, *thisTrack, evt, fTrackerTag);
     if(mcparticle){
       fprimaryTruth_pdg = mcparticle->PdgCode();        
       fprimaryTruth_trkID = mcparticle->TrackId();
@@ -600,7 +607,7 @@ void protoana::ProtoDUNEelectronAnaTree::FillPrimaryPFParticle(art::Event const 
   } // end is track
   else if(thisShower != 0x0){
 
-    mcparticle = truthUtil.GetMCParticleFromRecoShower(*thisShower, evt, fShowerTag);
+    mcparticle = truthUtil.GetMCParticleFromRecoShower(clockData, *thisShower, evt, fShowerTag);
     if(mcparticle){
       fprimaryTruth_pdg = mcparticle->PdgCode();        
       fprimaryTruth_trkID = mcparticle->TrackId();
@@ -612,12 +619,12 @@ void protoana::ProtoDUNEelectronAnaTree::FillPrimaryPFParticle(art::Event const 
         fprimaryIsBeamparticle = 1;
 
       double Edepo = truthUtil.GetDepEnergyMC(evt, fGeometry, mcparticle->TrackId(), 2 );
-      double purity = truthUtil.GetPurity(*thisShower, evt, fShowerTag);
+      double purity = truthUtil.GetPurity(clockData, *thisShower, evt, fShowerTag);
       fprimaryTruth_Edepo = Edepo;
       fprimaryTruth_purity = purity; //not really useful in this case
       
       double tot_ch =0;
-      std::vector<const recob::Hit*> hitsFromMCPart = truthUtil.GetMCParticleHits(  *mcparticle, evt, fHitTag);
+      std::vector<const recob::Hit*> hitsFromMCPart = truthUtil.GetMCParticleHits(clockData, *mcparticle, evt, fHitTag);
       art::FindManyP<recob::SpacePoint> spFromMCPartHits(hitsFromMCPart,evt,fPFParticleTag);
 
       if( hitsFromMCPart.size()){
@@ -630,7 +637,7 @@ void protoana::ProtoDUNEelectronAnaTree::FillPrimaryPFParticle(art::Event const 
            fprimaryTruthShower_hit_w[n_hits]=hitsFromMCPart[i]->WireID().Wire;
            fprimaryTruthShower_hit_t[n_hits]=hitsFromMCPart[i]->PeakTime();
            fprimaryTruthShower_hit_q[n_hits]=hitsFromMCPart[i]->Integral(); 
-           fprimaryTruthShower_hit_X[n_hits]=detprop->ConvertTicksToX(hitsFromMCPart[i]->PeakTime(),hitsFromMCPart[i]->WireID().Plane,hitsFromMCPart[i]->WireID().TPC,0);
+           fprimaryTruthShower_hit_X[n_hits]=detProp.ConvertTicksToX(hitsFromMCPart[i]->PeakTime(),hitsFromMCPart[i]->WireID().Plane,hitsFromMCPart[i]->WireID().TPC,0);
            fprimaryTruthShower_hit_Z[n_hits] = xyzWire.Z();
            std::vector<art::Ptr<recob::SpacePoint>> sp = spFromMCPartHits.at(i); 
            if(!sp.empty() ){
@@ -684,7 +691,7 @@ void protoana::ProtoDUNEelectronAnaTree::FillPrimaryPFParticle(art::Event const 
        fprimaryShower_hit_w[idx]=sh_hits[j]->WireID().Wire;
        fprimaryShower_hit_t[idx]=sh_hits[j]->PeakTime();
        fprimaryShower_hit_q[idx]=sh_hits[j]->Integral(); 
-       fprimaryShower_hit_X[idx]=detprop->ConvertTicksToX(sh_hits[j]->PeakTime(),sh_hits[j]->WireID().Plane,sh_hits[j]->WireID().TPC,0);
+       fprimaryShower_hit_X[idx]=detProp.ConvertTicksToX(sh_hits[j]->PeakTime(),sh_hits[j]->WireID().Plane,sh_hits[j]->WireID().TPC,0);
        fprimaryShower_hit_Z[idx]= xyzWire.Z();  
        fprimaryShower_hit_ch[idx]= wires[0]->Channel(); //only one channel per wire at collection plane
        std::vector<art::Ptr<recob::SpacePoint>> sp = spFromShowerHits.at(j); 
@@ -903,4 +910,3 @@ void protoana::ProtoDUNEelectronAnaTree::Initialize(){
 }
 
 DEFINE_ART_MODULE(protoana::ProtoDUNEelectronAnaTree)
-

@@ -141,8 +141,6 @@ void pdsp::CheckT0::analyze(art::Event const& e)
   //Services
   art::ServiceHandle<cheat::BackTrackerService> bt_serv;
   art::ServiceHandle<cheat::ParticleInventoryService> pi_serv;
-  //Detector properties service
-  auto const* detectorPropertiesService = lar::providerFrom<detinfo::DetectorPropertiesService>();
   //Space charge service
   auto const* SCE = lar::providerFrom<spacecharge::SpaceChargeService>();
   
@@ -178,6 +176,9 @@ void pdsp::CheckT0::analyze(art::Event const& e)
   art::FindManyP<anab::T0> fmt0crt1(trackListHandle, e, "crttag");
   art::FindManyP<anab::CosmicTag> fmctcrt1(trackListHandle, e, "crttag");
   
+  auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(e);
+  auto const detProp = art::ServiceHandle<detinfo::DetectorPropertiesService>()->DataFor(e, clockData);
+
   for (auto const& track : trackList){
     int this_trackid = track.key();
     double this_t0crt2 = -DBL_MAX;
@@ -269,7 +270,7 @@ void pdsp::CheckT0::analyze(art::Event const& e)
         std::map<int,double> trkide;
         for(size_t h = 0; h < allHits.size(); ++h){
           art::Ptr<recob::Hit> hit = allHits[h];
-          std::vector<sim::TrackIDE> TrackIDs = bt_serv->HitToTrackIDEs(hit);
+          std::vector<sim::TrackIDE> TrackIDs = bt_serv->HitToTrackIDEs(clockData, hit);
           for(size_t e = 0; e < TrackIDs.size(); ++e){
             trkide[TrackIDs[e].trackID] += TrackIDs[e].energy;
           }	    
@@ -301,10 +302,10 @@ void pdsp::CheckT0::analyze(art::Event const& e)
       if (std::abs(this_t0pandora+DBL_MAX)<1e-10){
         //no pandora t0 found, correct for t0
         double ticksOffset = 0;
-        if (this_t0crt2 > -DBL_MAX) ticksOffset = this_t0crt2/500.+detectorPropertiesService->GetXTicksOffset(allHits[0]->WireID());
-        else if (this_t0crt1 > -DBL_MAX) ticksOffset = this_t0crt1/500.+detectorPropertiesService->GetXTicksOffset(allHits[0]->WireID());
-        else if (this_t0anodep > -DBL_MAX) ticksOffset = this_t0anodep/500.+detectorPropertiesService->GetXTicksOffset(allHits[0]->WireID());
-        double xOffset = detectorPropertiesService->ConvertTicksToX(ticksOffset,allHits[0]->WireID());
+        if (this_t0crt2 > -DBL_MAX) ticksOffset = this_t0crt2/500.+detProp.GetXTicksOffset(allHits[0]->WireID());
+        else if (this_t0crt1 > -DBL_MAX) ticksOffset = this_t0crt1/500.+detProp.GetXTicksOffset(allHits[0]->WireID());
+        else if (this_t0anodep > -DBL_MAX) ticksOffset = this_t0anodep/500.+detProp.GetXTicksOffset(allHits[0]->WireID());
+        double xOffset = detProp.ConvertTicksToX(ticksOffset,allHits[0]->WireID());
         this_trackstartx -= xOffset;
         this_trackendx -= xOffset;
       }

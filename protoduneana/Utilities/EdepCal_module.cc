@@ -23,6 +23,8 @@
 #include "nusimdata/SimulationBase/MCTruth.h"
 #include "larcoreobj/SimpleTypesAndConstants/PhysicalConstants.h"
 #include "lardata/Utilities/DatabaseUtil.h"
+#include "lardata/DetectorInfoServices/DetectorClocksService.h"
+#include "lardata/DetectorInfoServices/DetectorPropertiesService.h"
 
 #include "art/Framework/Core/EDAnalyzer.h"
 #include "art/Framework/Core/ModuleMacros.h"
@@ -100,9 +102,13 @@ private:
 
 //	double GetEdepTotVox(art::Event const & e) const;
 
-	double GetEdepHits(const std::vector< recob::Hit > & hits) const;
+        double GetEdepHits(detinfo::DetectorClocksData const& clockData,
+                           detinfo::DetectorPropertiesData const& detProp,
+                           const std::vector< recob::Hit > & hits) const;
 	
-	double GetEdepHits(const std::vector< art::Ptr<recob::Hit> > & hits) const;
+        double GetEdepHits(detinfo::DetectorClocksData const& clockData,
+                           detinfo::DetectorPropertiesData const& detProp,
+                           const std::vector< art::Ptr<recob::Hit> > & hits) const;
 	
 	double GetEdepHitsMeV(const std::vector< recob::Hit > & hits) const;
 	
@@ -230,7 +236,10 @@ void proto::EdepCal::analyze(art::Event const & e)
 	// hits
 	fEdep = 0.0;
 	const auto& hitListHandle = *e.getValidHandle< std::vector<recob::Hit> >(fHitsModuleLabel);
-	fEdep = GetEdepHits(hitListHandle);
+
+        auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(e);
+        auto const detProp = art::ServiceHandle<detinfo::DetectorPropertiesService>()->DataFor(e, clockData);
+        fEdep = GetEdepHits(clockData, detProp, hitListHandle);
 	fEdepMeV = GetEdepHitsMeV(hitListHandle);
 
 	// clusters
@@ -242,7 +251,7 @@ void proto::EdepCal::analyze(art::Event const & e)
 	fEdepCl = 0.0;
 	for (size_t c = 0; c < clListHandle->size(); ++c)
 	{
-		fEdepCl += GetEdepHits(hitsFromClusters.at(c));
+                fEdepCl += GetEdepHits(clockData, detProp, hitsFromClusters.at(c));
 	}
 	
 	
@@ -455,7 +464,9 @@ double proto::EdepCal::GetEdepEMAttenuated_MC(art::Event const & e) const
 	return en;
 }*/
 
-double proto::EdepCal::GetEdepHits(const std::vector< recob::Hit > & hits) const
+double proto::EdepCal::GetEdepHits(detinfo::DetectorClocksData const& clockData,
+                                   detinfo::DetectorPropertiesData const& detProp,
+                                   const std::vector< recob::Hit > & hits) const
 {
 	if (!hits.size()) return 0.0;
 
@@ -471,7 +482,7 @@ double proto::EdepCal::GetEdepHits(const std::vector< recob::Hit > & hits) const
 		double dqel = fCalorimetryAlg.ElectronsFromADCArea(dqadc, plane);
 		
 		double tdrift = hits[h].PeakTime();
-		double correllifetime = fCalorimetryAlg.LifetimeCorrection(tdrift, fT0);
+                double correllifetime = fCalorimetryAlg.LifetimeCorrection(clockData, detProp, tdrift, fT0);
 
 		double dq = dqel * correllifetime * fElectronsToGeV * 1000;
 		if (!std::isnormal(dq) || (dq < 0)) continue;
@@ -506,7 +517,9 @@ double proto::EdepCal::GetEdepHitsMeV(const std::vector< recob::Hit > & hits) co
 	return dqsum; 
 }
 
-double proto::EdepCal::GetEdepHits(const std::vector< art::Ptr<recob::Hit> > & hits) const
+double proto::EdepCal::GetEdepHits(detinfo::DetectorClocksData const& clockData,
+                                   detinfo::DetectorPropertiesData const& detProp,
+                                   const std::vector< art::Ptr<recob::Hit> > & hits) const
 {
 	if (!hits.size()) return 0.0;
 
@@ -522,7 +535,7 @@ double proto::EdepCal::GetEdepHits(const std::vector< art::Ptr<recob::Hit> > & h
 		double dqel = fCalorimetryAlg.ElectronsFromADCArea(dqadc, plane);
 		
 		double tdrift = hits[h]->PeakTime();
-		double correllifetime = fCalorimetryAlg.LifetimeCorrection(tdrift, fT0);
+                double correllifetime = fCalorimetryAlg.LifetimeCorrection(clockData, detProp, tdrift, fT0);
 
 		double dq = dqel * correllifetime * fElectronsToGeV * 1000;
 		if (!std::isnormal(dq) || (dq < 0)) continue;

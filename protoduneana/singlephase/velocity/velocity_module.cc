@@ -338,6 +338,8 @@ namespace protoana{
     std::vector<float> hittruez_0; std::vector<float> hittruez_1; std::vector<float> hittruez_2;
     std::vector<float> hitz_wire2; std::vector<float> startcosxyz; std::vector<float> endcosxyz;
    
+    auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(evt);
+
     float max_value;
     float min_value;
     int trks=0;
@@ -435,7 +437,7 @@ namespace protoana{
           float truezpos = -9999;
           
           if (!evt.isRealData()){
-            auto simides = bt_serv->HitToSimIDEs_Ps(vhit[ii]);
+            auto simides = bt_serv->HitToSimIDEs_Ps(clockData, vhit[ii]);
             std::map<int, float> idemap;
             for (auto const & ide: simides){
               idemap[ide->trackID]+=ide->energy;

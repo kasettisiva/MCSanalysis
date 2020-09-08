@@ -29,6 +29,8 @@
 #include "larsim/Simulation/LArG4Parameters.h"
 #include "lardata/ArtDataHelper/MVAReader.h"
 #include "larreco/Calorimetry/CalorimetryAlg.h"
+#include "lardata/DetectorInfoServices/DetectorClocksService.h"
+#include "lardata/DetectorInfoServices/DetectorPropertiesService.h"
 #include "lardataobj/RecoBase/Hit.h"
 #include "lardataobj/RecoBase/Cluster.h"
 
@@ -69,9 +71,15 @@ public:
   void endJob() override;
 
 private:
-  template <size_t N> bool fillChargeHistos(const art::Event & evt);
-  void fillChargeHisto(TH2F* histo, const std::vector<art::Ptr<recob::Hit>> & hits);
-  double getHitMeV(const recob::Hit & hit) const;
+  template <size_t N> bool fillChargeHistos(const art::Event & evt,
+                                        detinfo::DetectorClocksData const& clockData,
+                                        detinfo::DetectorPropertiesData const& detProp);
+  void fillChargeHisto(detinfo::DetectorClocksData const& clockData,
+                       detinfo::DetectorPropertiesData const& detProp,
+                       TH2F* histo, const std::vector<art::Ptr<recob::Hit>> & hits);
+  double getHitMeV(detinfo::DetectorClocksData const& clockData,
+                   detinfo::DetectorPropertiesData const& detProp,
+                   const recob::Hit & hit) const;
   void ResetVars();
 
   double fElectronsToGeV;
@@ -134,7 +142,9 @@ void pdune::RecoStats::endJob()
 }
 
 template <size_t N>
-bool pdune::RecoStats::fillChargeHistos(const art::Event & evt)
+bool pdune::RecoStats::fillChargeHistos(const art::Event & evt,
+                                        detinfo::DetectorClocksData const& clockData,
+                                        detinfo::DetectorPropertiesData const& detProp)
 {
     float trackLikeThr = 0.63;  // should move to fcl params
     geo::View_t view = geo::kZ; // can move to fcl params
@@ -160,27 +170,31 @@ bool pdune::RecoStats::fillChargeHistos(const art::Event & evt)
 
         if (trackLike > trackLikeThr)
         {
-            fillChargeHisto(fHadChargePerTpcHist, hitsFromClusters.at(i));
+          fillChargeHisto(clockData, detProp, fHadChargePerTpcHist, hitsFromClusters.at(i));
         }
         else
         {
-            fillChargeHisto(fEmChargePerTpcHist, hitsFromClusters.at(i));
+            fillChargeHisto(clockData, detProp, fEmChargePerTpcHist, hitsFromClusters.at(i));
         }
-        fillChargeHisto(fChargePerTpcHist, hitsFromClusters.at(i));
+        fillChargeHisto(clockData, detProp, fChargePerTpcHist, hitsFromClusters.at(i));
     }
     return true;
 }
 
-void pdune::RecoStats::fillChargeHisto(TH2F* histo, const std::vector<art::Ptr<recob::Hit>> & hits)
+void pdune::RecoStats::fillChargeHisto(detinfo::DetectorClocksData const& clockData,
+                                       detinfo::DetectorPropertiesData const& detProp,
+                                       TH2F* histo, const std::vector<art::Ptr<recob::Hit>> & hits)
 {
     for (const auto & h : hits)
     {
         auto xy = mapTPCtoXY[ h->WireID().TPC ];
-        histo->Fill(xy.first, xy.second, getHitMeV(*h));
+        histo->Fill(xy.first, xy.second, getHitMeV(clockData, detProp, *h));
     }
 }
 
-double pdune::RecoStats::getHitMeV(const recob::Hit & hit) const
+double pdune::RecoStats::getHitMeV(detinfo::DetectorClocksData const& clockData,
+                                   detinfo::DetectorPropertiesData const& detProp,
+                                   const recob::Hit & hit) const
 {
 	double adc = hit.Integral();
 	if (!std::isnormal(adc) || (adc < 0)) adc = 0.0;
@@ -189,7 +203,7 @@ double pdune::RecoStats::getHitMeV(const recob::Hit & hit) const
 	double tdrift = hit.PeakTime();
 	double dqel = fCalorimetryAlg.ElectronsFromADCArea(adc, plane);
 
-	double correllifetime = fCalorimetryAlg.LifetimeCorrection(tdrift, 0); // for the moment T0 = 0 (beam particles)
+        double correllifetime = fCalorimetryAlg.LifetimeCorrection(clockData, detProp, tdrift, 0); // for the moment T0 = 0 (beam particles)
 	double dq = dqel * correllifetime * fElectronsToGeV * 1000;
 	if (!std::isnormal(dq) || (dq < 0)) dq = 0.0;
 
@@ -204,7 +218,10 @@ void pdune::RecoStats::analyze(art::Event const & evt)
   fEvent = evt.id().event();
 
   // try to dig out 4- or 3-output MVA data product
-  if (!fillChargeHistos<4>(evt) && !fillChargeHistos<3>(evt))
+  auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(evt);
+  auto const detProp = art::ServiceHandle<detinfo::DetectorPropertiesService>()->DataFor(evt, clockData);
+  if (!fillChargeHistos<4>(evt, clockData, detProp) &&
+      !fillChargeHistos<3>(evt, clockData, detProp))
   {
     throw cet::exception("PMAlgTrackMaker") << "No EM/track MVA data products." << std::endl;
   }

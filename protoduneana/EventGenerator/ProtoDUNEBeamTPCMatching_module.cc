@@ -24,6 +24,7 @@
 #include "fhiclcpp/ParameterSet.h"
 #include "messagefacility/MessageLogger/MessageLogger.h"
 
+#include "lardata/DetectorInfoServices/DetectorClocksService.h"
 #include "larsim/MCCheater/BackTrackerService.h"
 #include "larsim/MCCheater/ParticleInventoryService.h"
 #include "lardataobj/RecoBase/Hit.h"
@@ -191,6 +192,8 @@ void sim::ProtoDUNEBeamTPCMatching::analyze(art::Event const & evt)
   beam_smeared_bprof4_pos[2] = bprof4.GetZ() - 717242.5;
   beam_smeared_bprof4_pos[3] = bprof4.GetT();
 
+  auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(evt);
+
   double dummy;
   dummy = pow(pow(bprofext.GetX() -bprof4.GetX(),2)+pow(bprofext.GetY() -bprof4.GetY(),2)+pow(bprofext.GetZ() -bprof4.GetZ(),2),0.5);
   beam_true_dir[0] = (bprofext.GetX() -bprof4.GetX())/dummy;
@@ -256,7 +259,7 @@ void sim::ProtoDUNEBeamTPCMatching::analyze(art::Event const & evt)
 //    tpc_true_startpos = thisTrack->StartMomentumVector();
     if (dummy >= tpc_reco_startpos[3]){
       dummy = tpc_reco_startpos[3];
-      const simb::MCParticle *trueMatch = truthUtil.GetMCParticleFromRecoTrack(thisTrack,evt,fpandoraTrack);
+      const simb::MCParticle *trueMatch = truthUtil.GetMCParticleFromRecoTrack(clockData, thisTrack,evt,fpandoraTrack);
       bool hasTruth = (trueMatch != 0x0);
       if (hasTruth == true) {
 //   	 std::cout << "hey" << std::endl;
@@ -292,4 +295,3 @@ void sim::ProtoDUNEBeamTPCMatching::endJob()
 }
 
 DEFINE_ART_MODULE(sim::ProtoDUNEBeamTPCMatching)
-

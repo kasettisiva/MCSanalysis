@@ -18,6 +18,7 @@
 #include "messagefacility/MessageLogger/MessageLogger.h"
 #include "art_root_io/TFileService.h"
 
+#include "lardata/DetectorInfoServices/DetectorClocksService.h"
 #include "lardataobj/RecoBase/Track.h"
 #include "larsim/MCCheater/BackTrackerService.h"
 #include "larsim/MCCheater/ParticleInventoryService.h"
@@ -96,6 +97,7 @@ void pdsp::MDMAna::analyze(art::Event const& e)
   //Get hits associated with track
   art::FindManyP < recob::Hit > hitsFromTrack(trackListHandle, e, "pandoraTrack");
 
+  auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(e);
   for (auto const& track : trackList){
     int this_trackid = track.key();
     double this_tracklen = track->Length();
@@ -110,7 +112,7 @@ void pdsp::MDMAna::analyze(art::Event const& e)
       std::map<int,double> trkide;
       for(size_t h = 0; h < allHits.size(); ++h){
         art::Ptr<recob::Hit> hit = allHits[h];
-        std::vector<sim::TrackIDE> TrackIDs = bt_serv->HitToTrackIDEs(hit);
+        std::vector<sim::TrackIDE> TrackIDs = bt_serv->HitToTrackIDEs(clockData, hit);
         for(size_t e = 0; e < TrackIDs.size(); ++e){
           trkide[TrackIDs[e].trackID] += TrackIDs[e].energy;
         }	    

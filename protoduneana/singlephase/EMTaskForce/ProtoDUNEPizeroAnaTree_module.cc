@@ -117,15 +117,18 @@ private:
   art::ServiceHandle<cheat::BackTrackerService> bt_serv;
 
 
-  // Track momentum algorithm calculates momentum based on track range
-  const detinfo::DetectorProperties* detprop = lar::providerFrom<detinfo::DetectorPropertiesService>();
-
   // Initialise tree variables
   void Initialise();
   void ResetPi0Vars();
-  void FillPrimaryPFParticle(art::Event const & evt, const recob::PFParticle* particle);
+  void FillPrimaryPFParticle(art::Event const & evt,
+                             detinfo::DetectorClocksData const& clockData,
+                             detinfo::DetectorPropertiesData const& detProp,
+                             const recob::PFParticle* particle);
   void FillAPA3Object(art::Event const & evt, art::Handle<std::vector<recob::PFParticle>> pfpHandle);
-  void setPiZeroInfo(art::Event const & evt, const std::vector<const simb::MCParticle*>& pi0s);
+  void setPiZeroInfo(art::Event const & evt,
+                     detinfo::DetectorClocksData const& clockData,
+                     detinfo::DetectorPropertiesData const& detProp,
+                     const std::vector<const simb::MCParticle*>& pi0s);
 
   // fcl parameters
   const art::InputTag fBeamModuleLabel;
@@ -596,6 +599,9 @@ void protoana::ProtoDUNEPizeroAnaTree::analyze(art::Event const & evt){
       fNactivefembs[k] = dataUtil.GetNActiveFembsForAPA(evt, k);
   }
 
+  auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(evt);
+  auto const detProp = art::ServiceHandle<detinfo::DetectorPropertiesService>()->DataFor(evt, clockData);
+
   //check for reco pandora stuff
   art::Handle<std::vector<recob::PFParticle>> recoParticleHandle;
   if( !evt.getByLabel(fPFParticleTag,recoParticleHandle) ) return;
@@ -610,7 +616,7 @@ void protoana::ProtoDUNEPizeroAnaTree::analyze(art::Event const & evt){
   std::vector<const recob::PFParticle*> pfParticles = pfpUtil.GetPFParticlesFromBeamSlice(evt,fPFParticleTag);
   for(const recob::PFParticle* particle : pfParticles){
 
-    FillPrimaryPFParticle(evt, particle);
+    FillPrimaryPFParticle(evt, clockData, detProp, particle);
     const TVector3 vtx = pfpUtil.GetPFParticleVertex(*particle,evt,fPFParticleTag,fTrackTag);
     // std::cout << "Primary PFParticle ID: " << particle->Self() << '\n';
 
@@ -701,7 +707,7 @@ void protoana::ProtoDUNEPizeroAnaTree::analyze(art::Event const & evt){
       }
 
       // Record MC and shower information
-      setPiZeroInfo(evt, pi0s);
+      setPiZeroInfo(evt, clockData, detProp, pi0s);
 
     } //geantGoodParticle
   } // MC
@@ -798,7 +804,11 @@ void protoana::ProtoDUNEPizeroAnaTree::endJob(){
 }
 
 // -----------------------------------------------------------------------------
-void protoana::ProtoDUNEPizeroAnaTree::FillPrimaryPFParticle(art::Event const & evt, const recob::PFParticle* particle){
+void
+protoana::ProtoDUNEPizeroAnaTree::FillPrimaryPFParticle(art::Event const & evt,
+                                                        detinfo::DetectorClocksData const& clockData,
+                                                        detinfo::DetectorPropertiesData const& detProp,
+                                                        const recob::PFParticle* particle){
 
   // Pandora's BDT beam-cosmic score
   fprimaryBDTScore = (double)pfpUtil.GetBeamCosmicScore(*particle,evt,fPFParticleTag);
@@ -818,11 +828,11 @@ void protoana::ProtoDUNEPizeroAnaTree::FillPrimaryPFParticle(art::Event const & 
   if(thisTrack != 0x0) {
     pfpHits = findHitsFromTracks.at(thisTrack->ID());
     calovector = trackUtil.GetRecoTrackCalorimetry(*thisTrack, evt, fTrackTag, fCalorimetryTag);
-    mcparticle = truthUtil.GetMCParticleFromRecoTrack(*thisTrack, evt, fTrackTag);
+    mcparticle = truthUtil.GetMCParticleFromRecoTrack(clockData, *thisTrack, evt, fTrackTag);
   } else if(thisShower != 0x0) {
     pfpHits = findHitsFromShowers.at(thisShower->ID());
     calovector = showerUtil.GetRecoShowerCalorimetry(*thisShower, evt, fShowerTag, fShowerCaloTag);
-    mcparticle = truthUtil.GetMCParticleFromRecoShower(*thisShower, evt, fShowerTag);
+    mcparticle = truthUtil.GetMCParticleFromRecoShower(clockData, *thisShower, evt, fShowerTag);
   }
   // NHits associated with this pfParticle.
   fprimaryNHits = pfpHits.size();
@@ -981,7 +991,7 @@ void protoana::ProtoDUNEPizeroAnaTree::FillPrimaryPFParticle(art::Event const & 
       TVector3 xyzWire = pwire->GetCenter<TVector3>();
       fprimaryDaughterHitWire[di][rec_hiti] = pfpDHits[i]->WireID().Wire;
       fprimaryDaughterHitTime[di][rec_hiti] = pfpDHits[i]->PeakTime();
-      fprimaryDaughterHitPosition[di][rec_hiti][0] = detprop->ConvertTicksToX(pfpDHits[i]->PeakTime(),pfpDHits[i]->WireID().Plane,pfpDHits[i]->WireID().TPC,0);
+      fprimaryDaughterHitPosition[di][rec_hiti][0] = detProp.ConvertTicksToX(pfpDHits[i]->PeakTime(),pfpDHits[i]->WireID().Plane,pfpDHits[i]->WireID().TPC,0);
       fprimaryDaughterHitPosition[di][rec_hiti][2] = xyzWire.Z();
       std::vector<art::Ptr<recob::SpacePoint>> sps = spFromHits.at(i);
       if(!sps.empty()) {
@@ -1063,7 +1073,10 @@ void protoana::ProtoDUNEPizeroAnaTree::FillPrimaryPFParticle(art::Event const & 
       fprimaryDaughterIsshower[di] = 1;
 
       std::vector<const recob::Hit*> shHits = showerUtil.GetRecoShowerHits(*daughterShower, evt, fShowerTag);
-      fprimaryDaughterEnergyFromHits[di]     = showerUtil.EstimateEnergyFromHitCharge(shHits, fCalorimetryAlg)[2];
+      fprimaryDaughterEnergyFromHits[di]     = showerUtil.EstimateEnergyFromHitCharge(clockData,
+                                                                                      detProp,
+                                                                                      shHits,
+                                                                                      fCalorimetryAlg)[2];
       fprimaryDaughterLength[di]             = daughterShower->Length();
       fprimaryDaughterStartDirection[di][0]   = daughterShower->Direction().X();
       fprimaryDaughterStartDirection[di][1]   = daughterShower->Direction().Y();
@@ -1075,7 +1088,7 @@ void protoana::ProtoDUNEPizeroAnaTree::FillPrimaryPFParticle(art::Event const & 
 
     // Attempt to get the (grand)parent truth information of this daughter.
     art::ServiceHandle<cheat::ParticleInventoryService> pi_serv;
-    const simb::MCParticle* parent = truthUtil.GetMCParticleFromReco(*daughter, evt, fPFParticleTag);
+    const simb::MCParticle* parent = truthUtil.GetMCParticleFromReco(clockData, *daughter, evt, fPFParticleTag);
     if(parent != 0x0) {
       fprimaryDaughterParentPdg[di]          = parent->PdgCode();
       // std::cout << "True parent PDG: " << fprimaryDaughterParentPdg[di] << '\n';
@@ -1318,13 +1331,16 @@ void protoana::ProtoDUNEPizeroAnaTree::FillPrimaryPFParticle(art::Event const & 
 
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
-void protoana::ProtoDUNEPizeroAnaTree::setPiZeroInfo(art::Event const & evt, const std::vector<const simb::MCParticle*>& pi0s) {
+void protoana::ProtoDUNEPizeroAnaTree::setPiZeroInfo(art::Event const & evt,
+                                                     detinfo::DetectorClocksData const& clockData,
+                                                     detinfo::DetectorPropertiesData const& detProp,
+                                                     const std::vector<const simb::MCParticle*>& pi0s) {
   // Clean slate
   ResetPi0Vars();
 
   // Loop over all pi0s in the array by index.
   for(unsigned pi0i = 0; pi0i < NMAXPIZEROS && pi0i < pi0s.size(); ++pi0i) {
-    pizero::PiZeroProcess pzproc(*(pi0s[pi0i]), evt, fShowerTag);
+    pizero::PiZeroProcess pzproc(*(pi0s[pi0i]), evt, clockData, detProp, fShowerTag);
 
     // Set MC object variables
     if(pzproc.allMCSet()) {
@@ -1347,8 +1363,8 @@ void protoana::ProtoDUNEPizeroAnaTree::setPiZeroInfo(art::Event const & evt, con
       photon1->EndPosition().Vect().GetXYZ(fMCPhoton1EndPosition[pi0i]);
       photon2->EndPosition().Vect().GetXYZ(fMCPhoton2EndPosition[pi0i]);
       // Reco hits related to photons
-      std::vector<const recob::Hit*> ph1hits = truthUtil.GetMCParticleHits(*photon1, evt, fHitTag);
-      std::vector<const recob::Hit*> ph2hits = truthUtil.GetMCParticleHits(*photon2, evt, fHitTag);
+      std::vector<const recob::Hit*> ph1hits = truthUtil.GetMCParticleHits(clockData, *photon1, evt, fHitTag);
+      std::vector<const recob::Hit*> ph2hits = truthUtil.GetMCParticleHits(clockData, *photon2, evt, fHitTag);
       // Photon 1 hits
       art::FindManyP<recob::SpacePoint> ph1sps(ph1hits, evt, fPFParticleTag);
       unsigned phi1 = 0;
@@ -1407,9 +1423,9 @@ void protoana::ProtoDUNEPizeroAnaTree::setPiZeroInfo(art::Event const & evt, con
       shower1->ShowerStart().GetXYZ(fShower1StartPosition[pi0i]);
       shower1->Direction().GetXYZ(fShower1Direction[pi0i]);
       fShower1Length[pi0i] = shower1->Length();
-      unsigned numMChits = truthUtil.GetMCParticleHits(*pzproc.photon1(), evt, fHitTag).size();
+      unsigned numMChits = truthUtil.GetMCParticleHits(clockData, *pzproc.photon1(), evt, fHitTag).size();
       unsigned showerHits = showerUtil.GetRecoShowerHits(*shower1, evt, fShowerTag).size();
-      unsigned sharedHits = truthUtil.GetSharedHits(*pzproc.photon1(), *shower1, evt, fShowerTag, true).size();
+      unsigned sharedHits = truthUtil.GetSharedHits(clockData, *pzproc.photon1(), *shower1, evt, fShowerTag, true).size();
       fShower1Completeness[pi0i] = (double)sharedHits/numMChits;
       fShower1Purity[pi0i] = (double)sharedHits/showerHits;
       // Find out whether (grand)parent of shower was primary.
@@ -1448,7 +1464,10 @@ void protoana::ProtoDUNEPizeroAnaTree::setPiZeroInfo(art::Event const & evt, con
         fShower1_cal_E[pi0i] = sh1calo[k].KineticEnergy();
         std::vector<const recob::Hit*> shHitPtrs = showerUtil.GetRecoShowerHits(
                     *shower1, evt, fShowerTag);
-        fShower1EnergyFromHits[pi0i] = showerUtil.EstimateEnergyFromHitCharge(shHitPtrs, fCalorimetryAlg)[2];
+        fShower1EnergyFromHits[pi0i] = showerUtil.EstimateEnergyFromHitCharge(clockData,
+                                                                              detProp,
+                                                                              shHitPtrs,
+                                                                              fCalorimetryAlg)[2];
 
         for(int i=0; i<fShower1NumHits[pi0i]; ++i) {
           const geo::Point_t& pos = sh1calo[k].XYZ()[i];
@@ -1476,9 +1495,9 @@ void protoana::ProtoDUNEPizeroAnaTree::setPiZeroInfo(art::Event const & evt, con
       shower2->ShowerStart().GetXYZ(fShower2StartPosition[pi0i]);
       shower2->Direction().GetXYZ(fShower2Direction[pi0i]);
       fShower2Length[pi0i] = shower2->Length();
-      unsigned numMChits = truthUtil.GetMCParticleHits(*pzproc.photon2(), evt, fHitTag).size();
+      unsigned numMChits = truthUtil.GetMCParticleHits(clockData, *pzproc.photon2(), evt, fHitTag).size();
       unsigned showerHits = showerUtil.GetRecoShowerHits(*shower2, evt, fShowerTag).size();
-      unsigned sharedHits = truthUtil.GetSharedHits(*pzproc.photon2(), *shower2, evt, fShowerTag, true).size();
+      unsigned sharedHits = truthUtil.GetSharedHits(clockData, *pzproc.photon2(), *shower2, evt, fShowerTag, true).size();
       fShower2Completeness[pi0i] = (double)sharedHits/numMChits;
       fShower2Purity[pi0i] = (double)sharedHits/showerHits;
       // Find out whether (grand)parent of shower was primary.
@@ -1516,7 +1535,8 @@ void protoana::ProtoDUNEPizeroAnaTree::setPiZeroInfo(art::Event const & evt, con
         fShower2_cal_E[pi0i] = sh2calo[k].KineticEnergy();
         std::vector<const recob::Hit*> shHitPtrs = showerUtil.GetRecoShowerHits(
                     *shower2, evt, fShowerTag);
-        fShower2EnergyFromHits[pi0i] = showerUtil.EstimateEnergyFromHitCharge(shHitPtrs, fCalorimetryAlg)[2];
+        fShower2EnergyFromHits[pi0i] = showerUtil.EstimateEnergyFromHitCharge(clockData, detProp,
+                                                                              shHitPtrs, fCalorimetryAlg)[2];
         for(int i=0; i<fShower2NumHits[pi0i]; ++i) {
           const geo::Point_t& pos = sh2calo[k].XYZ()[i];
           fShower2_cal_pos[pi0i][i][0] = pos.X();

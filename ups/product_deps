@@ -60,7 +60,7 @@ table_fragment_end
 # Add the dependent product and version
 
 product          version
-dunetpc          v08_62_00
+dunetpc          v09_00_01
 hep_hpc          v0_12_01       -       optional
 cetbuildtools	 v7_15_01	-	only_for_build
 geant4reweight   v01_03_00
