@@ -110,81 +110,82 @@ namespace pionana {
     return results;
   }
 
-  const sim::IDE * getMatchedIDEFromHit( const recob::Hit & hit, art::ServiceHandle<cheat::BackTrackerService> bt ){
+  // const sim::IDE * getMatchedIDEFromHit( const recob::Hit & hit, art::ServiceHandle<cheat::BackTrackerService> bt ){
 
-    const sim::IDE * result = 0x0;
+  //   const sim::IDE * result = 0x0;
 
-    auto ides = bt->HitToSimIDEs_Ps(hit);
-    if( ides.size() ){
-      std::sort( ides.begin(), ides.end(), []( const sim::IDE * a, const sim::IDE * b ){return (a->numElectrons > b->numElectrons);} );
-      //std::sort( reco_beam_calo_points.begin(), reco_beam_calo_points.end(), [](calo_point a, calo_point b) {return ( a.wire < b.wire );} );
-      result = ides[0];
-    }
+  //   auto ides = bt->HitToSimIDEs_Ps(hit);
+  //   if( ides.size() ){
+  //     std::sort( ides.begin(), ides.end(), []( const sim::IDE * a, const sim::IDE * b ){return (a->numElectrons > b->numElectrons);} );
+  //     //std::sort( reco_beam_calo_points.begin(), reco_beam_calo_points.end(), [](calo_point a, calo_point b) {return ( a.wire < b.wire );} );
+  //     result = ides[0];
+  //   }
 
-    return result;
-  }
+  //   return result;
+  // }
 
-  std::pair< int, double > getTrueSliceFromRecoHit_electrons( const recob::Hit & hit, art::ServiceHandle<cheat::BackTrackerService> bt, const std::map< int, std::vector< const sim::IDE* > > & true_slices, int beam_id ){
+  // std::pair< int, double > getTrueSliceFromRecoHit_electrons( const recob::Hit & hit, art::ServiceHandle<cheat::BackTrackerService> bt, const std::map< int, std::vector< const sim::IDE* > > & true_slices, int beam_id ){
 
-    std::pair< int, double > result(-999,-999.);
-
-
-    auto ides = bt->HitToSimIDEs_Ps(hit);
-
-    std::map< int, double > ID_to_IDE_electrons;
-
-    //First, check if the hit is matched to the beam id
-    for( size_t i = 0; i < ides.size(); ++i ){
-      ID_to_IDE_electrons[ abs( ides[i]->trackID ) ] += ides[i]->numElectrons;
-    }
-
-    int max_id = -999;
-    double prev_max_electrons = -999.;
-    for( auto it = ID_to_IDE_electrons.begin(); it != ID_to_IDE_electrons.end(); ++it ){
-      if( it->second > prev_max_electrons ){
-        max_id = it->first;
-        prev_max_electrons = it->second;
-      }
-    }
-    //If it's not matched to beam, return default
-    if( max_id != beam_id ) return result;
-
-    std::map< int, double > slice_to_nElectrons;
-    //Now, count the number of electrons from ides in this hit ordered by slice number
-    for( size_t i = 0; i < ides.size(); ++i ){
-      const sim::IDE * theIDE = ides[i];
-      for( auto it = true_slices.begin(); it != true_slices.end(); ++it ){
-        if( std::find( it->second.begin(), it->second.end(), theIDE ) != it->second.end() ){
-          slice_to_nElectrons[it->first] += theIDE->numElectrons;
-          break;
-        }
-      }
-    }
-
-    //Find the slice with the max number of ides
-    double prev_max = 0;
-    int max_index = -999;
-    for( auto it = slice_to_nElectrons.begin(); it != slice_to_nElectrons.end(); ++it ){
-      if( it->second > prev_max ){
-        max_index = it->first;
-        prev_max = it->second;
-      }
-      else if( it->second > 0 && it->second == prev_max ){
-        MF_LOG_WARNING("PionAnalyzer")  << "Found double match " << max_index << " " << it->first << std::endl;
-      }
-    }
-    if( max_index > -999 ) result = { max_index, prev_max };
+  //   std::pair< int, double > result(-999,-999.);
 
 
+  //   auto ides = bt->HitToSimIDEs_Ps(hit);
 
-    return result;
-  }
+  //   std::map< int, double > ID_to_IDE_electrons;
 
-  std::vector< std::pair< int, double > > getTrueSliceListFromRecoHit_electrons( const recob::Hit & hit, art::ServiceHandle<cheat::BackTrackerService> bt, const std::map< int, std::vector< const sim::IDE* > > & true_slices, int beam_id ){
+  //   //First, check if the hit is matched to the beam id
+  //   for( size_t i = 0; i < ides.size(); ++i ){
+  //     ID_to_IDE_electrons[ abs( ides[i]->trackID ) ] += ides[i]->numElectrons;
+  //   }
+
+  //   int max_id = -999;
+  //   double prev_max_electrons = -999.;
+  //   for( auto it = ID_to_IDE_electrons.begin(); it != ID_to_IDE_electrons.end(); ++it ){
+  //     if( it->second > prev_max_electrons ){
+  //       max_id = it->first;
+  //       prev_max_electrons = it->second;
+  //     }
+  //   }
+  //   //If it's not matched to beam, return default
+  //   if( max_id != beam_id ) return result;
+
+  //   std::map< int, double > slice_to_nElectrons;
+  //   //Now, count the number of electrons from ides in this hit ordered by slice number
+  //   for( size_t i = 0; i < ides.size(); ++i ){
+  //     const sim::IDE * theIDE = ides[i];
+  //     for( auto it = true_slices.begin(); it != true_slices.end(); ++it ){
+  //       if( std::find( it->second.begin(), it->second.end(), theIDE ) != it->second.end() ){
+  //         slice_to_nElectrons[it->first] += theIDE->numElectrons;
+  //         break;
+  //       }
+  //     }
+  //   }
+
+  //   //Find the slice with the max number of ides
+  //   double prev_max = 0;
+  //   int max_index = -999;
+  //   for( auto it = slice_to_nElectrons.begin(); it != slice_to_nElectrons.end(); ++it ){
+  //     if( it->second > prev_max ){
+  //       max_index = it->first;
+  //       prev_max = it->second;
+  //     }
+  //     else if( it->second > 0 && it->second == prev_max ){
+  //       MF_LOG_WARNING("PionAnalyzer")  << "Found double match " << max_index << " " << it->first << std::endl;
+  //     }
+  //   }
+  //   if( max_index > -999 ) result = { max_index, prev_max };
+
+
+
+  //   return result;
+  // }
+
+  std::vector< std::pair< int, double > > getTrueSliceListFromRecoHit_electrons(detinfo::DetectorClocksData const& clockData,
+                                                                                const recob::Hit & hit, art::ServiceHandle<cheat::BackTrackerService> bt, const std::map< int, std::vector< const sim::IDE* > > & true_slices, int beam_id ){
 
     std::vector< std::pair< int, double > > results;
 
-    auto ides = bt->HitToSimIDEs_Ps(hit);
+    auto ides = bt->HitToSimIDEs_Ps(clockData, hit);
     std::map< int, double > ID_to_IDE_electrons;
     //First, check if the hit is matched to the beam id
     for( size_t i = 0; i < ides.size(); ++i ){
@@ -226,61 +227,61 @@ namespace pionana {
     return pair_vec;
   }
 
-  std::pair< int,size_t > getTrueSliceFromRecoHit( const recob::Hit & hit, art::ServiceHandle<cheat::BackTrackerService> bt, const std::map< int, std::vector< const sim::IDE* > > & true_slices, int beam_id ){
+  // std::pair< int,size_t > getTrueSliceFromRecoHit( const recob::Hit & hit, art::ServiceHandle<cheat::BackTrackerService> bt, const std::map< int, std::vector< const sim::IDE* > > & true_slices, int beam_id ){
 
-    std::pair< int,size_t > result(-999,9999);
+  //   std::pair< int,size_t > result(-999,9999);
 
-    std::map< int, size_t > slice_to_nMatched;
+  //   std::map< int, size_t > slice_to_nMatched;
 
-    auto ides = bt->HitToSimIDEs_Ps(hit);
+  //   auto ides = bt->HitToSimIDEs_Ps(hit);
 
-    std::map< int, double > ID_to_IDE_electrons;
+  //   std::map< int, double > ID_to_IDE_electrons;
 
-    //First, check if the hit is matched to the beam id
-    for( size_t i = 0; i < ides.size(); ++i ){
-      ID_to_IDE_electrons[ abs( ides[i]->trackID ) ] += ides[i]->numElectrons;
-    }
+  //   //First, check if the hit is matched to the beam id
+  //   for( size_t i = 0; i < ides.size(); ++i ){
+  //     ID_to_IDE_electrons[ abs( ides[i]->trackID ) ] += ides[i]->numElectrons;
+  //   }
 
-    int max_id = -999;
-    double prev_max_electrons = -999.;
-    for( auto it = ID_to_IDE_electrons.begin(); it != ID_to_IDE_electrons.end(); ++it ){
-      if( it->second > prev_max_electrons ){
-        max_id = it->first;
-        prev_max_electrons = it->second;
-      }
-    }
-    //If it's not matched to beam, return default
-    if( max_id != beam_id ) return result;
+  //   int max_id = -999;
+  //   double prev_max_electrons = -999.;
+  //   for( auto it = ID_to_IDE_electrons.begin(); it != ID_to_IDE_electrons.end(); ++it ){
+  //     if( it->second > prev_max_electrons ){
+  //       max_id = it->first;
+  //       prev_max_electrons = it->second;
+  //     }
+  //   }
+  //   //If it's not matched to beam, return default
+  //   if( max_id != beam_id ) return result;
 
-    //Now, count the number of ides in this hit ordered by slice number
-    for( size_t i = 0; i < ides.size(); ++i ){
-      const sim::IDE * theIDE = ides[i];
-      for( auto it = true_slices.begin(); it != true_slices.end(); ++it ){
-        if( std::find( it->second.begin(), it->second.end(), theIDE ) != it->second.end() ){
-          slice_to_nMatched[it->first]++;
-          break;
-        }
-      }
-    }
+  //   //Now, count the number of ides in this hit ordered by slice number
+  //   for( size_t i = 0; i < ides.size(); ++i ){
+  //     const sim::IDE * theIDE = ides[i];
+  //     for( auto it = true_slices.begin(); it != true_slices.end(); ++it ){
+  //       if( std::find( it->second.begin(), it->second.end(), theIDE ) != it->second.end() ){
+  //         slice_to_nMatched[it->first]++;
+  //         break;
+  //       }
+  //     }
+  //   }
 
-    //Find the slice with the max number of ides
-    size_t prev_max = 0;
-    int max_index = -999;
-    for( auto it = slice_to_nMatched.begin(); it != slice_to_nMatched.end(); ++it ){
-      if( it->second > prev_max ){
-        max_index = it->first;
-        prev_max = it->second;
-      }
-      else if( it->second > 0 && it->second == prev_max ){
-        MF_LOG_WARNING("PionAnalyzer")  << "Found double match " << max_index << " " << it->first << std::endl;
-      }
-    }
-    if( max_index > -999 ) result = { max_index, prev_max };
+  //   //Find the slice with the max number of ides
+  //   size_t prev_max = 0;
+  //   int max_index = -999;
+  //   for( auto it = slice_to_nMatched.begin(); it != slice_to_nMatched.end(); ++it ){
+  //     if( it->second > prev_max ){
+  //       max_index = it->first;
+  //       prev_max = it->second;
+  //     }
+  //     else if( it->second > 0 && it->second == prev_max ){
+  //       MF_LOG_WARNING("PionAnalyzer")  << "Found double match " << max_index << " " << it->first << std::endl;
+  //     }
+  //   }
+  //   if( max_index > -999 ) result = { max_index, prev_max };
 
 
 
-    return result;
-  }
+  //   return result;
+  // }
 
   double total_electrons( std::vector< const sim::IDE* > ides ){
     double result = 0.;
@@ -290,13 +291,14 @@ namespace pionana {
     return result;
   }
 
-  int getTrueIDFromHit( const recob::Hit & hit, art::ServiceHandle<cheat::BackTrackerService> bt ){
+  int getTrueIDFromHit( detinfo::DetectorClocksData const& clockData,
+                        const recob::Hit & hit, art::ServiceHandle<cheat::BackTrackerService> bt ){
     int max_id = -999;
     double prev_max_electrons = -999.;
 
     std::map< int, double > ID_to_IDE_electrons;
 
-    auto ides = bt->HitToSimIDEs_Ps(hit);
+    auto ides = bt->HitToSimIDEs_Ps(clockData, hit);
     //First, check if the hit is matched to the beam id
     //std::cout << "N IDES " << ides.size() << std::endl;
     for( size_t i = 0; i < ides.size(); ++i ){
@@ -1094,7 +1096,8 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
   const sim::ParticleList & plist = pi_serv->ParticleList();
 
   art::ServiceHandle < geo::Geometry > fGeometryService;
-  auto const* detprop = lar::providerFrom<detinfo::DetectorPropertiesService>();
+  auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(evt);
+  auto const detProp =  art::ServiceHandle<detinfo::DetectorPropertiesService>()->DataFor(evt, clockData);
   trkf::TrackMomentumCalculator track_p_calc;
   ////////////////////////////////////////
 
@@ -1267,7 +1270,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
 
   std::map< int, std::vector< int > > trueToPFPs;
   if( fTrueToReco ){
-   trueToPFPs = truthUtil.GetMapMCToPFPs_ByHits( evt, fPFParticleTag, fHitTag );
+    trueToPFPs = truthUtil.GetMapMCToPFPs_ByHits( clockData, evt, fPFParticleTag, fHitTag );
   }
 
 
@@ -1290,7 +1293,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
   //If MC, attempt to match to some MCParticle
   const simb::MCParticle* trueParticle = 0x0;
   if( !evt.isRealData() ){
-    protoana::MCParticleSharedHits beam_match  = truthUtil.GetMCParticleByHits( *particle, evt, fPFParticleTag, fHitTag );
+    protoana::MCParticleSharedHits beam_match  = truthUtil.GetMCParticleByHits( clockData, *particle, evt, fPFParticleTag, fHitTag );
     if( beam_match.particle ){
       //Check that this is the correct true particle
       //if( beam_match.particle->TrackId() == true_beam_particle->TrackId() )
@@ -1322,7 +1325,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
         reco_beam_true_byHits_endE  = beam_match.particle->E( np - 2 );
       }
 
-      auto list = truthUtil.GetMCParticleListByHits( *particle, evt, fPFParticleTag, fHitTag );
+      auto list = truthUtil.GetMCParticleListByHits( clockData, *particle, evt, fPFParticleTag, fHitTag );
       double total = 0.;
       double matched_hits = 0.;
       for( size_t j = 0; j < list.size(); ++j ){
@@ -1342,7 +1345,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
 
     }
 
-    trueParticle = truthUtil.GetMCParticleFromPFParticle(*particle, evt, fPFParticleTag);
+    trueParticle = truthUtil.GetMCParticleFromPFParticle(clockData, *particle, evt, fPFParticleTag);
     if( trueParticle ){
 
       //Check that this is the correct true particle
@@ -1406,7 +1409,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
     true_beam_startDirY  = true_beam_startPy / true_beam_startP;
     true_beam_startDirZ  = true_beam_startPz / true_beam_startP;
 
-    true_beam_nHits = truthUtil.GetMCParticleHits( *true_beam_particle, evt, fHitTag ).size();
+    true_beam_nHits = truthUtil.GetMCParticleHits( clockData, *true_beam_particle, evt, fHitTag ).size();
 
     true_beam_reco_byHits_PFP_ID.push_back( std::vector< int >() );
     true_beam_reco_byHits_PFP_nHits.push_back( std::vector< int >() );
@@ -1705,7 +1708,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
           true_beam_Pi0_decay_parID.push_back( pi0_decay_part->Mother() );
 
           true_beam_Pi0_decay_len.push_back( pi0_decay_part->Trajectory().TotalLength() );
-          true_beam_Pi0_decay_nHits.push_back( truthUtil.GetMCParticleHits( *pi0_decay_part, evt, fHitTag ).size() );
+          true_beam_Pi0_decay_nHits.push_back( truthUtil.GetMCParticleHits( clockData, *pi0_decay_part, evt, fHitTag ).size() );
 
           true_beam_Pi0_decay_reco_byHits_PFP_ID.push_back( std::vector<int>() );
           true_beam_Pi0_decay_reco_byHits_PFP_nHits.push_back( std::vector<int>() );
@@ -1802,7 +1805,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
         true_beam_grand_daughter_PDG.push_back( grand_daughter_part->PdgCode() );
         true_beam_grand_daughter_ID.push_back(  grand_daughter_part->TrackId() );
         true_beam_grand_daughter_parID.push_back(  part->TrackId() );
-        true_beam_grand_daughter_nHits.push_back( truthUtil.GetMCParticleHits( *grand_daughter_part, evt, fHitTag ).size() );
+        true_beam_grand_daughter_nHits.push_back( truthUtil.GetMCParticleHits( clockData, *grand_daughter_part, evt, fHitTag ).size() );
         true_beam_grand_daughter_Process.push_back( grand_daughter_part->Process() );
         true_beam_grand_daughter_endProcess.push_back( grand_daughter_part->EndProcess() );
       }
@@ -1896,7 +1899,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
         }
       }
 
-      true_beam_daughter_nHits.push_back( truthUtil.GetMCParticleHits( *part, evt, fHitTag ).size() );
+      true_beam_daughter_nHits.push_back( truthUtil.GetMCParticleHits( clockData, *part, evt, fHitTag ).size() );
 
     }
   }
@@ -2442,7 +2445,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
         const recob::Hit * theHit = it->second;
         if( theHit->View() != 2 ) continue;
 
-        std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( *theHit );
+        std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( clockData, *theHit );
         for( size_t i = 0; i < ides.size(); ++i ){
           //std::cout << ides[i]->trackID << " " << true_beam_ID << std::endl;
           if( abs( ides[i]->trackID ) == true_beam_ID ){
@@ -2525,8 +2528,8 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
 
         reco_beam_hit_index.push_back( thePoint.hit_index );
 
-        std::vector< std::pair< int, double > > theMap = getTrueSliceListFromRecoHit_electrons( theHit, bt_serv, sliced_ides, true_beam_ID );
-        reco_beam_hit_to_true_ID[thePoint.hit_index] = getTrueIDFromHit( theHit, bt_serv );
+        std::vector< std::pair< int, double > > theMap = getTrueSliceListFromRecoHit_electrons( clockData, theHit, bt_serv, sliced_ides, true_beam_ID );
+        reco_beam_hit_to_true_ID[thePoint.hit_index] = getTrueIDFromHit( clockData, theHit, bt_serv );
 
         //std::cout << "Reco hit: " << thePoint.hit_index << " ID: " << reco_beam_hit_to_true_ID[thePoint.hit_index] << std::endl;
 
@@ -2782,7 +2785,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
 
       if( !evt.isRealData() ){
         //Matching by hits
-        protoana::MCParticleSharedHits match = truthUtil.GetMCParticleByHits( *daughterPFP, evt, fPFParticleTag, fHitTag );
+        protoana::MCParticleSharedHits match = truthUtil.GetMCParticleByHits( clockData, *daughterPFP, evt, fPFParticleTag, fHitTag );
         if( match.particle ){
   
           reco_daughter_PFP_true_byHits_PDG.push_back( match.particle->PdgCode() );
@@ -2819,7 +2822,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
                                   match.particle->Pz()*match.particle->Pz()) );
           reco_daughter_PFP_true_byHits_endProcess.push_back( match.particle->EndProcess());
 
-          auto list = truthUtil.GetMCParticleListByHits( *daughterPFP, evt, fPFParticleTag, fHitTag );
+          auto list = truthUtil.GetMCParticleListByHits( clockData, *daughterPFP, evt, fPFParticleTag, fHitTag );
           double total = 0.;
           double matched_hits = 0.;
           for( size_t j = 0; j < list.size(); ++j ){
@@ -2835,8 +2838,8 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
 
           reco_daughter_PFP_true_byHits_purity.push_back( matched_hits / total );
 
-          double totalTruth = truthUtil.GetMCParticleHits( *match.particle, evt, fHitTag).size();
-          double sharedHits = truthUtil.GetSharedHits( *match.particle, *daughterPFP, evt, fPFParticleTag).size();
+          double totalTruth = truthUtil.GetMCParticleHits( clockData, *match.particle, evt, fHitTag).size();
+          double sharedHits = truthUtil.GetSharedHits( clockData, *match.particle, *daughterPFP, evt, fPFParticleTag).size();
           reco_daughter_PFP_true_byHits_completeness.push_back( sharedHits/totalTruth );
         }
         else{
@@ -2867,12 +2870,12 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
         }
 
         //Matching by energy
-        const simb::MCParticle* true_daughter_byE = truthUtil.GetMCParticleFromPFParticle(*daughterPFP, evt, fPFParticleTag);
+        const simb::MCParticle* true_daughter_byE = truthUtil.GetMCParticleFromPFParticle(clockData, *daughterPFP, evt, fPFParticleTag);
         if( true_daughter_byE ){
           reco_daughter_PFP_true_byE_PDG.push_back( true_daughter_byE->PdgCode() );
           reco_daughter_PFP_true_byE_len.push_back( true_daughter_byE->Trajectory().TotalLength() );
-          double purity = truthUtil.GetPurity( *daughterPFP, evt, fPFParticleTag);
-          double completeness = truthUtil.GetCompleteness( *daughterPFP, evt, fPFParticleTag, fHitTag );
+          double purity = truthUtil.GetPurity( clockData, *daughterPFP, evt, fPFParticleTag);
+          double completeness = truthUtil.GetCompleteness( clockData, *daughterPFP, evt, fPFParticleTag, fHitTag );
           reco_daughter_PFP_true_byE_purity.push_back( purity );
           reco_daughter_PFP_true_byE_completeness.push_back( completeness );
         }
@@ -3168,7 +3171,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
 
             good_hits.push_back(theHit);
 
-            double shower_hit_x = detprop->ConvertTicksToX(
+            double shower_hit_x = detProp.ConvertTicksToX(
                 theHit->PeakTime(),
                 theHit->WireID().Plane,
                 theHit->WireID().TPC, 0);
@@ -3291,7 +3294,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
 
             protoana::MCParticleSharedHits match = protoana::MCParticleSharedHits();
             if( !evt.isRealData() )
-              match = truthUtil.GetMCParticleByHits( (*pfpVec)[i], evt, fPFParticleTag, fHitTag );
+              match = truthUtil.GetMCParticleByHits( clockData, (*pfpVec)[i], evt, fPFParticleTag, fHitTag );
 
 
             for( size_t j = 0; j < planeHits.size(); ++j ){
@@ -3318,7 +3321,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
                 if( !found_new && !evt.isRealData() ){
                   if( match.particle ){
                     if( pi_serv->TrackIdToMCTruth_P(match.particle->TrackId())->Origin() == 2 ){
-                      std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( *theHit );
+                      std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( clockData, *theHit );
                       for( size_t j = 0; j < ides.size(); ++j ){
                         if( true_beam_ID == ides[j]->trackID ){
                           //cosmic_has_beam_IDE.push_back( (*recoTracks)[i].ID() );
@@ -3356,7 +3359,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
           auto theHit = planeHits[i];
           //std::cout << theHit->WireID().TPC << std::endl;
           if( theHit->WireID().TPC == 1 ){
-            std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( *theHit );
+            std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( clockData, *theHit );
             for( size_t j = 0; j < ides.size(); ++j ){
               if( pi_serv->TrackIdToMCTruth_P( ides[j]->trackID )->Origin() == 2 ){
                 beam_has_cosmic_IDE = true;

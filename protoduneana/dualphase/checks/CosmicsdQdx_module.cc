@@ -163,8 +163,6 @@ private:
 
   // detector geometry
   const geo::Geometry* fGeom;
-  // detector properties
-  const detinfo::DetectorProperties* fDetprop;
 
   bool checkCutsAndGetT0( const recob::Track& track, float &T0 );
   bool checkTrackHitInfo( const recob::Track& track, art::Event const& e);
@@ -182,7 +180,6 @@ pddpana::CosmicsdQdx::CosmicsdQdx(fhicl::ParameterSet const& p)
   fMaxHitMultiplicity( p.get< float  >("MaxHitMultiplicity") )
   {
     fGeom    = &*art::ServiceHandle<geo::Geometry>();
-    fDetprop = lar::providerFrom<detinfo::DetectorPropertiesService>();
 
     //auto const &tpc = ;
     fDrift = (std::abs( fGeom->TPC(0).DetectDriftDirection() ));
@@ -265,6 +262,7 @@ void pddpana::CosmicsdQdx::analyze(art::Event const& e)
 	  << " ; " << track.End().Z()<<" )"<<endl;
     }
 
+    auto const detProp = art::ServiceHandle<detinfo::DetectorPropertiesService>()->DataFor(e);
     // loop over the planes 
     for(size_t i_plane=0; i_plane<fGeom->Nplanes(); i_plane++) {
       fPlane = i_plane;
@@ -292,7 +290,7 @@ void pddpana::CosmicsdQdx::analyze(art::Event const& e)
 	}
 	
 	double x_pos    = pnt.X();
-	float tick      = fDetprop->ConvertXToTicks(x_pos,(int)i_plane,0,0);
+        float tick      = detProp.ConvertXToTicks(x_pos,(int)i_plane,0,0);
 	try{
 	  auto tpcid = fGeom->PositionToTPCID(pnt);
 	  // if( tpcid.TPC >= fGeom->NTPC() ){

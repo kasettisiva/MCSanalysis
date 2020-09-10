@@ -25,6 +25,8 @@
 #include "nusimdata/SimulationBase/MCTruth.h"
 #include "larcoreobj/SimpleTypesAndConstants/PhysicalConstants.h"
 #include "lardata/Utilities/DatabaseUtil.h"
+#include "lardata/DetectorInfoServices/DetectorClocksService.h"
+#include "lardata/DetectorInfoServices/DetectorPropertiesService.h"
 
 #include "art/Framework/Core/EDAnalyzer.h"
 #include "art/Framework/Core/ModuleMacros.h"
@@ -78,14 +80,24 @@ public:
 private:
 
   // Declare member data here.
-  double GetEdepHitsMeV(const std::vector< recob::Hit > & hits) const;
+  double GetEdepHitsMeV(detinfo::DetectorClocksData const& clockData,
+                        detinfo::DetectorPropertiesData const& detProp,
+                        const std::vector< recob::Hit > & hits) const;
   double GetEhitMeV(const recob::Hit & hit) const;
-  double GetEhitMeVcorrel(const recob::Hit & hit) const;
-  double GetEkinMeV(const std::vector < art::Ptr< recob::Hit > > & hits, const std::vector < recob::TrackHitMeta const* > & data);
+  double GetEhitMeVcorrel(detinfo::DetectorClocksData const& clockData,
+                          detinfo::DetectorPropertiesData const& detProp,
+                          const recob::Hit & hit) const;
+  double GetEkinMeV(detinfo::DetectorClocksData const& clockData,
+                    detinfo::DetectorPropertiesData const& detProp,
+                    const std::vector < art::Ptr< recob::Hit > > & hits,
+                    const std::vector < recob::TrackHitMeta const* > & data);
   // EM
   double GetEdepEM_MC(art::Event const & e) const;
   double GetEdepEMAtt_MC(art::Event const & e) const;
-  double GetEdepEMhAtt_MC(art::Event const & e, const std::vector< recob::Hit > & hits) const;
+  double GetEdepEMhAtt_MC(art::Event const & e,
+                          detinfo::DetectorClocksData const& clockData,
+                          detinfo::DetectorPropertiesData const& detProp,
+                          const std::vector< recob::Hit > & hits) const;
   
   double fEdepEM_MC;
   double fEdepEMAtt_MC;
@@ -97,7 +109,10 @@ private:
   // HAD
   double GetEdepHAD_MC(art::Event const & e) const;
   double GetEdepHADAtt_MC(art::Event const & e) const;
-  double GetEdepHADhAtt_MC(art::Event const & e, const std::vector< recob::Hit > & hits) const;
+  double GetEdepHADhAtt_MC(art::Event const & e,
+                           detinfo::DetectorClocksData const& clockData,
+                           detinfo::DetectorPropertiesData const& detProp,
+                           const std::vector< recob::Hit > & hits) const;
   
   double fEdepHAD_MC; // new
   double fEdepHADAtt_MC; // new
@@ -231,6 +246,8 @@ void proto::HadCal::analyze(art::Event const & e)
 	auto particleHandle = e.getValidHandle< std::vector<simb::MCParticle> >(fSimulationLabel);	
 	bool flag = true;
 	
+        auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(e);
+        auto const detProp = art::ServiceHandle<detinfo::DetectorPropertiesService>()->DataFor(e, clockData);
 	
 	for (auto const& p : *particleHandle)
 	{
@@ -252,11 +269,11 @@ void proto::HadCal::analyze(art::Event const & e)
 	
 	// hits
 	const auto& hitListHandle = *e.getValidHandle< std::vector<recob::Hit> >(fHitModuleLabel);
-	fEdepAllhits = GetEdepHitsMeV(hitListHandle); 
+        fEdepAllhits = GetEdepHitsMeV(clockData, detProp, hitListHandle);
 	
 	// MC associated with a hit
-	fEdepEMhAtt_MC = GetEdepEMhAtt_MC(e, hitListHandle);
-	fEdepHADhAtt_MC = GetEdepHADhAtt_MC(e, hitListHandle);
+        fEdepEMhAtt_MC = GetEdepEMhAtt_MC(e, clockData, detProp, hitListHandle);
+        fEdepHADhAtt_MC = GetEdepHADhAtt_MC(e, clockData, detProp, hitListHandle);
 	
 	// MC missing energy
 	fMissEn_MC = fEkGen - (fEdepEM_MC + fEdepHAD_MC);
@@ -326,7 +343,7 @@ void proto::HadCal::analyze(art::Event const & e)
   							if (hitsFromTracks.at(t)[h]->View() == fBestView)
   							{
   									fEdepHAD_reco += GetEhitMeV(*hitsFromTracks.at(t)[h]);
-  									fEdepHADcorr_ellifetime_reco += GetEhitMeVcorrel(*hitsFromTracks.at(t)[h]);
+                                                                        fEdepHADcorr_ellifetime_reco += GetEhitMeVcorrel(clockData, detProp, *hitsFromTracks.at(t)[h]);
   							}
   						}
   					}
@@ -340,7 +357,7 @@ void proto::HadCal::analyze(art::Event const & e)
   						if (hitsFromTracks.at(t)[h]->View() == fBestView)
   						{
   							fEdepEM_reco += GetEhitMeV(*hitsFromTracks.at(t)[h]);
-  							fEdepEMcorr_ellifetime_reco += GetEhitMeVcorrel(*hitsFromTracks.at(t)[h]);
+                                                        fEdepEMcorr_ellifetime_reco += GetEhitMeVcorrel(clockData, detProp, *hitsFromTracks.at(t)[h]);
   						}
   					}
 					}
@@ -372,12 +389,12 @@ void proto::HadCal::analyze(art::Event const & e)
   					if (pdg < 0.63)
   					{
   						fEdepHAD_reco += GetEhitMeV(*hitsFromCluster.at(c)[h]);
-  						fEdepHADcorr_ellifetime_reco += GetEhitMeVcorrel(*hitsFromCluster.at(c)[h]);
+                                                fEdepHADcorr_ellifetime_reco += GetEhitMeVcorrel(clockData, detProp, *hitsFromCluster.at(c)[h]);
   					}
   					else
   					{
   						fEdepEM_reco += GetEhitMeV(*hitsFromCluster.at(c)[h]);
-  						fEdepEMcorr_ellifetime_reco += GetEhitMeVcorrel(*hitsFromCluster.at(c)[h]);
+                                                fEdepEMcorr_ellifetime_reco += GetEhitMeVcorrel(clockData, detProp, *hitsFromCluster.at(c)[h]);
   					}
   				}
   				
@@ -398,7 +415,10 @@ void proto::HadCal::analyze(art::Event const & e)
 
 /******************************************************************************/
 
-double proto::HadCal::GetEkinMeV(const std::vector < art::Ptr< recob::Hit > > & hits, const std::vector < recob::TrackHitMeta const* > & data) 
+double proto::HadCal::GetEkinMeV(detinfo::DetectorClocksData const& clockData,
+                                 detinfo::DetectorPropertiesData const& detProp,
+                                 const std::vector < art::Ptr< recob::Hit > > & hits,
+                                 const std::vector < recob::TrackHitMeta const* > & data)
 {
 	double ekin = 0.0;
 	
@@ -420,7 +440,7 @@ double proto::HadCal::GetEkinMeV(const std::vector < art::Ptr< recob::Hit > > & 
   	if ((fdx > 0) && (fdQ > 0))
   	{
   		fdQdx = fdQ/fdx;
-  		fdEdx = fCalorimetryAlg.dEdx_AREA(fdQdx, time, plane, t0);
+                fdEdx = fCalorimetryAlg.dEdx_AREA(clockData, detProp, fdQdx, time, plane, t0);
   		if (fdEdx > 35) fdEdx = 35;
   		
   		ekin += ( fdEdx * fdx );
@@ -438,7 +458,9 @@ double proto::HadCal::GetEkinMeV(const std::vector < art::Ptr< recob::Hit > > & 
 
 /******************************************************************************/
 
-double proto::HadCal::GetEdepHitsMeV(const std::vector< recob::Hit > & hits) const
+double proto::HadCal::GetEdepHitsMeV(detinfo::DetectorClocksData const& clockData,
+                                     detinfo::DetectorPropertiesData const& detProp,
+                                     const std::vector< recob::Hit > & hits) const
 {
 	if (!hits.size()) return 0.0;
 
@@ -454,7 +476,7 @@ double proto::HadCal::GetEdepHitsMeV(const std::vector< recob::Hit > & hits) con
 			double tdrift = hits[h].PeakTime();
 			double dqel = fCalorimetryAlg.ElectronsFromADCArea(dqadc, plane);
 		
-			double correllifetime = fCalorimetryAlg.LifetimeCorrection(tdrift, fT0);
+                        double correllifetime = fCalorimetryAlg.LifetimeCorrection(clockData, detProp, tdrift, fT0);
 			double dq = dqel * correllifetime * fElectronsToGeV * 1000;
 
 			if (!std::isnormal(dq) || (dq < 0)) continue;
@@ -468,7 +490,9 @@ double proto::HadCal::GetEdepHitsMeV(const std::vector< recob::Hit > & hits) con
 
 /******************************************************************************/
 
-double proto::HadCal::GetEhitMeVcorrel(const recob::Hit & hit) const
+double proto::HadCal::GetEhitMeVcorrel(detinfo::DetectorClocksData const& clockData,
+                                       detinfo::DetectorPropertiesData const& detProp,
+                                       const recob::Hit & hit) const
 {
 	double dqadc = hit.Integral();
 	if (!std::isnormal(dqadc) || (dqadc < 0)) dqadc = 0.0;
@@ -477,7 +501,7 @@ double proto::HadCal::GetEhitMeVcorrel(const recob::Hit & hit) const
 	double tdrift = hit.PeakTime();
 	double dqel = fCalorimetryAlg.ElectronsFromADCArea(dqadc, plane);
 
-	double correllifetime = fCalorimetryAlg.LifetimeCorrection(tdrift, fT0);
+        double correllifetime = fCalorimetryAlg.LifetimeCorrection(clockData, detProp, tdrift, fT0);
 	double dq = dqel * correllifetime * fElectronsToGeV * 1000;
 	if (!std::isnormal(dq) || (dq < 0)) dq = 0.0;	
 
@@ -620,7 +644,10 @@ double proto::HadCal::GetEdepEMAtt_MC(art::Event const & e) const
 
 /******************************************************************************/
 
-double proto::HadCal::GetEdepEMhAtt_MC(art::Event const & e, const std::vector< recob::Hit > & hits) const
+double proto::HadCal::GetEdepEMhAtt_MC(art::Event const & e,
+                                       detinfo::DetectorClocksData const& clockData,
+                                       detinfo::DetectorPropertiesData const& detProp,
+                                       const std::vector< recob::Hit > & hits) const
 {
 	double totemhit = 0.0;
 	
@@ -692,7 +719,7 @@ double proto::HadCal::GetEdepEMhAtt_MC(art::Event const & e, const std::vector< 
 			// use energy of hit corrected for electron lifetime
 			if (ratio > 0.5)
 			{
-				totemhit += GetEhitMeVcorrel(hit);
+                                totemhit += GetEhitMeVcorrel(clockData, detProp, hit);
 			}
 		}
 	
@@ -805,7 +832,10 @@ double proto::HadCal::GetEdepHADAtt_MC(art::Event const & e) const
 
 /******************************************************************************/
 
-double proto::HadCal::GetEdepHADhAtt_MC(art::Event const & e, const std::vector< recob::Hit > & hits) const
+double proto::HadCal::GetEdepHADhAtt_MC(art::Event const & e,
+                                        detinfo::DetectorClocksData const& clockData,
+                                        detinfo::DetectorPropertiesData const& detProp,
+                                        const std::vector< recob::Hit > & hits) const
 {
 	double tothadhit = 0.0;
 	
@@ -868,7 +898,7 @@ double proto::HadCal::GetEdepHADhAtt_MC(art::Event const & e, const std::vector<
 		// use energy of hit corrected for electron lifetime
 		if (ratio > 0.5)
 		{
-			tothadhit += GetEhitMeVcorrel(hit);
+                        tothadhit += GetEhitMeVcorrel(clockData, detProp, hit);
 		}
 	}
     

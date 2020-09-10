@@ -91,7 +91,6 @@ private:
   art::ServiceHandle<geo::Geometry> fgeom;
   art::ServiceHandle<cheat::ParticleInventoryService> PIS;
   //art::ServiceHandle<SimChannelExtractService> m_pscx;
-  detinfo::DetectorClocks const * fClks;
 
   std::default_random_engine rndm_engine;
 
@@ -131,8 +130,7 @@ genFinder* gf = new genFinder();
 
 //-----------------------------------------------------------------------
 pdune::RawWaveformDump::RawWaveformDump(fhicl::ParameterSet const& p)
-  : EDAnalyzer{p},
-  fClks(lar::providerFrom<detinfo::DetectorClocksService>())
+  : EDAnalyzer{p}
 {
   this->reconfigure(p);
 }
@@ -291,6 +289,7 @@ void pdune::RawWaveformDump::analyze(art::Event const& evt)
   // .. create a track ID to vector of channel numbers (in w/c this track deposited energy) map
   std::map<int,std::vector<raw::ChannelID_t>>Trk2ChVecMap;
 
+  auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(evt);
   // ... Loop over simChannels
   for ( auto const& channel : (*simChannelHandle) ){
 
@@ -310,7 +309,7 @@ void pdune::RawWaveformDump::analyze(art::Event const& evt)
 
       auto const& energyDeposits = timeSlice.second;
       auto const tpctime = timeSlice.first;
-      unsigned int tdctick = static_cast<unsigned int>(fClks->TPCTDC2Tick(double(tpctime)));
+      unsigned int tdctick = static_cast<unsigned int>(clockData.TPCTDC2Tick(double(tpctime)));
       if(tdctick!=tpctime)std::cout << "tpctime: " << tpctime << ", tdctick: " << tdctick << std::endl;
       if(tdctick<0||tdctick>(dataSize-1))continue;
 

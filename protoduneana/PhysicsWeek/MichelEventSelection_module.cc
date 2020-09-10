@@ -29,6 +29,8 @@
 #include "nusimdata/SimulationBase/MCTruth.h"
 #include "larcoreobj/SimpleTypesAndConstants/PhysicalConstants.h"
 #include "lardata/Utilities/DatabaseUtil.h"
+#include "lardata/DetectorInfoServices/DetectorClocksService.h"
+#include "lardata/DetectorInfoServices/DetectorPropertiesService.h"
 
 #include "art/Framework/Core/EDAnalyzer.h"
 #include "art/Framework/Core/ModuleMacros.h"
@@ -85,7 +87,8 @@ public:
   bool insideFidVol(double pos[3]);
   
   // check if a hit is close to the projected 2d end of a track
-  bool hitCloseToTrackEnd(double radius, double end[3], 
+  bool hitCloseToTrackEnd(detinfo::DetectorPropertiesData const& detProp,
+                          double radius, double end[3],
                           double end2D[2], recob::Hit hit, 
                           geo::GeometryCore const & geom);  
 
@@ -99,7 +102,8 @@ public:
   
   //  takes vector of hits and checks that the majority
   //  of the charge in these hits is from a michel 
-  bool areHitsMichel( const std::vector<recob::Hit> & hits );
+  bool areHitsMichel(detinfo::DetectorClocksData const& clockData,
+                     const std::vector<recob::Hit> & hits );
   
   calo::CalorimetryAlg fCalorimetryAlg;
 
@@ -185,6 +189,9 @@ void MichelReco::analyze(art::Event const & evt)
   auto const & tracks = * trackHandle;
   art::FindManyP<recob::Hit> hitsFromTracks( trackHandle, evt, fTrackModuleLabel );
 
+  auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(evt);
+  auto const detProp = art::ServiceHandle<detinfo::DetectorPropertiesService>()->DataFor(evt, clockData);
+
   // loop over tracks
   for (auto const & track : tracks) {
     
@@ -238,7 +245,7 @@ void MichelReco::analyze(art::Event const & evt)
 
                 // check that the hit is close to the track endpoint
                 // and add to tagged hits if so
-                if ( hitCloseToTrackEnd( fRadiusThreshold, start, start2D, hit, geom ) ) {
+                if ( hitCloseToTrackEnd( detProp, fRadiusThreshold, start, start2D, hit, geom ) ) {
                   fNumberCloseHitsStart[ plane ] += 1;
                   if ( plane == 2 ) { taggedHitsStart.push_back( hit ); };
                 }
@@ -264,7 +271,7 @@ void MichelReco::analyze(art::Event const & evt)
 
                 // check that the hit is close to the track endpoint
                 // and add to tagged hits if so
-                if ( hitCloseToTrackEnd( fRadiusThreshold, end, end2D, hit, geom ) ) {
+                if ( hitCloseToTrackEnd( detProp, fRadiusThreshold, end, end2D, hit, geom ) ) {
                   fNumberCloseHitsEnd[ plane ] += 1;
                   if ( plane == 2 ) { taggedHitsEnd.push_back( hit ); }
                 }
@@ -289,8 +296,8 @@ void MichelReco::analyze(art::Event const & evt)
       //  i.e. do the tagged hits correspond to a michel 
       bool particleIsMichel(false);
       if (eventSelected) {
-        if ( startSelected ) { particleIsMichel = areHitsMichel(taggedHitsStart); }
-        if ( endSelected ) { particleIsMichel = areHitsMichel(taggedHitsEnd); }
+        if ( startSelected ) { particleIsMichel = areHitsMichel(clockData, taggedHitsStart); }
+        if ( endSelected ) { particleIsMichel = areHitsMichel(clockData, taggedHitsEnd); }
       }
       
       // update purity and efficiecny numbers and draw example events
@@ -436,42 +443,42 @@ void MichelReco::analyze(art::Event const & evt)
   } // end of loop over tracks
 
 }
-// Checks if the hits from a given track match the track with a given index
-int MichelReco::trackMatching( int trackIndex, art::FindManyP<recob::Hit> hitsFromTracks )
-{
-  std::map<int,double> trackID_E;
-  art::ServiceHandle<cheat::BackTrackerService> bt_serv;
+// // Checks if the hits from a given track match the track with a given index
+// int MichelReco::trackMatching( int trackIndex, art::FindManyP<recob::Hit> hitsFromTracks )
+// {
+//   std::map<int,double> trackID_E;
+//   art::ServiceHandle<cheat::BackTrackerService> bt_serv;
 
-  for (size_t h = 0; h < hitsFromTracks.at(trackIndex).size(); ++h)
-  { 
-    for (auto const & id : bt_serv->HitToTrackIDEs(hitsFromTracks.at(trackIndex)[h]))
-    { 
-      trackID_E[id.trackID] += id.energy;
-    }
-  }
+//   for (size_t h = 0; h < hitsFromTracks.at(trackIndex).size(); ++h)
+//   {
+//     for (auto const & id : bt_serv->HitToTrackIDEs(hitsFromTracks.at(trackIndex)[h]))
+//     {
+//       trackID_E[id.trackID] += id.energy;
+//     }
+//   }
 
-  double max_e = 0.0; double tot_e = 0.0;
-  int best_id = 0;
-  for (std::map<int,double>::iterator it = trackID_E.begin(); it != trackID_E.end(); ++it)
-  {
-    tot_e += it->second;
-    if (it->second > max_e)
-    {
-      max_e = it->second;
-      best_id = it->first;
-    }
-  }
+//   double max_e = 0.0; double tot_e = 0.0;
+//   int best_id = 0;
+//   for (std::map<int,double>::iterator it = trackID_E.begin(); it != trackID_E.end(); ++it)
+//   {
+//     tot_e += it->second;
+//     if (it->second > max_e)
+//     {
+//       max_e = it->second;
+//       best_id = it->first;
+//     }
+//   }
 
-  if ((max_e > 0.0) && (true/*max_e > 0.5*trackID_sumen[best_id]*/) && (tot_e > 0.0))
-  {
-    return best_id;
-  }
-  else
-  {
-    return -999;
-  }
+//   if ((max_e > 0.0) && (true/*max_e > 0.5*trackID_sumen[best_id]*/) && (tot_e > 0.0))
+//   {
+//     return best_id;
+//   }
+//   else
+//   {
+//     return -999;
+//   }
 
-}
+// }
 
 // checks if the particle responsible for a track has an associated muon decay
 bool MichelReco::isMuonDecaying ( simb::MCParticle particle, std::vector<simb::MCParticle> particles ) { 
@@ -546,11 +553,13 @@ bool MichelReco::insideFidVol( double pos[3] ) {
 }
 
 // checks if a 2d hit is close to a given position
-bool MichelReco::hitCloseToTrackEnd( double radius, double end[3], double end2D[2], recob::Hit hit, geo::GeometryCore const & geom ) {
+bool MichelReco::hitCloseToTrackEnd(detinfo::DetectorPropertiesData const& detProp,
+                                    double radius, double end[3], double end2D[2], recob::Hit hit, geo::GeometryCore const & geom ) {
 
   bool close = false;
  
-  auto const & hitLocation = pma::WireDriftToCm(hit.WireID().Wire, hit.PeakTime(), hit.View(), geom.FindTPCAtPosition(end).TPC, geom.FindCryostatAtPosition(end)); 
+  auto const & hitLocation = pma::WireDriftToCm(detProp,
+                                                hit.WireID().Wire, hit.PeakTime(), hit.View(), geom.FindTPCAtPosition(end).TPC, geom.FindCryostatAtPosition(end));
 
   double deltaXToHit = hitLocation.X() - end2D[0];
   double deltaYToHit = hitLocation.Y() - end2D[1];
@@ -564,7 +573,8 @@ bool MichelReco::hitCloseToTrackEnd( double radius, double end[3], double end2D[
 }
 
 // checks if vector of hits come mostly from michel charge
-bool MichelReco::areHitsMichel( const std::vector< recob::Hit > & hits ) {
+bool MichelReco::areHitsMichel(detinfo::DetectorClocksData const& clockData,
+                               const std::vector< recob::Hit > & hits ) {
 
   const simb::MCParticle *  mcParticle = 0;
 
@@ -572,7 +582,7 @@ bool MichelReco::areHitsMichel( const std::vector< recob::Hit > & hits ) {
   art::ServiceHandle< cheat::ParticleInventoryService > pi_serv;
   std::unordered_map< int, double > trkIDE;
   for ( auto const & hit : hits ) {
-    for ( auto const & ide : bt_serv->HitToTrackIDEs(hit) ) { trkIDE[ide.trackID] += ide.energy; }
+    for ( auto const & ide : bt_serv->HitToTrackIDEs(clockData, hit) ) { trkIDE[ide.trackID] += ide.energy; }
   }
   
   int best_id(0);

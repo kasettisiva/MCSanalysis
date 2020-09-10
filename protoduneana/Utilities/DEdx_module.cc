@@ -37,6 +37,8 @@
 #include "messagefacility/MessageLogger/MessageLogger.h"
 
 #include "lardata/ArtDataHelper/MVAReader.h"
+#include "lardata/DetectorInfoServices/DetectorClocksService.h"
+#include "lardata/DetectorInfoServices/DetectorPropertiesService.h"
 
 #include "TH1.h"
 #include "TTree.h"
@@ -68,7 +70,9 @@ private:
   // Declare member data here.                      
 
   // void CountdEdx(const std::vector < art::Ptr< recob::Hit > > & hits, const std::vector < recob::TrackHitMeta const* > & data); // MeV/cm
-  void CountdEdx(const std::vector < art::Ptr< recob::Hit > > & hits, const std::vector< recob::TrackHitMeta const* > & data);
+  void CountdEdx(detinfo::DetectorClocksData const& clockData,
+                 detinfo::DetectorPropertiesData const& detProp,
+                 const std::vector < art::Ptr< recob::Hit > > & hits, const std::vector< recob::TrackHitMeta const* > & data);
   void ResetVars();
 
   bool fCosmics;
@@ -149,6 +153,8 @@ void proto::DEdx::analyze(art::Event const & e)
   // Find the tagged tracks as cosmic muons
   const art::FindManyP<anab::CosmicTag> ct(trkHandle, e, fTrackModuleLabel);
 
+  auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(e);
+  auto const detProp = art::ServiceHandle<detinfo::DetectorPropertiesService>()->DataFor(e, clockData);
   if (fCosmics)
   {
     if (ct.isValid())
@@ -163,7 +169,7 @@ void proto::DEdx::analyze(art::Event const & e)
 			auto vhit = fmthm.at(t);
 			auto vmeta = fmthm.data(t);
 	
-			CountdEdx(vhit, vmeta);
+                        CountdEdx(clockData, detProp, vhit, vmeta);
 		}
       	 }
     }
@@ -177,14 +183,17 @@ void proto::DEdx::analyze(art::Event const & e)
 	auto vhit = fmthm.at(t);
 	auto vmeta = fmthm.data(t);
 	
-	CountdEdx(vhit, vmeta);
+        CountdEdx(clockData, detProp, vhit, vmeta);
       }
   }
 
   fTreere->Fill();
 }
 
-void proto::DEdx::CountdEdx(const std::vector < art::Ptr< recob::Hit > > & hits, const std::vector< recob::TrackHitMeta const* > & data) // MeV/cm
+void proto::DEdx::CountdEdx(detinfo::DetectorClocksData const& clockData,
+                            detinfo::DetectorPropertiesData const& detProp,
+                            const std::vector < art::Ptr< recob::Hit > > & hits,
+                            const std::vector< recob::TrackHitMeta const* > & data) // MeV/cm
 {
   for (size_t h = 0; h < hits.size(); ++h)
     {
@@ -204,7 +213,7 @@ void proto::DEdx::CountdEdx(const std::vector < art::Ptr< recob::Hit > > & hits,
       		if ((fdx > 0) && (fdQ > 0))
         	{
         	 fdQdx = fdQ/fdx;
-         	 fdEdx = fCalorimetryAlg.dEdx_AREA(fdQdx, time, plane, t0);
+                 fdEdx = fCalorimetryAlg.dEdx_AREA(clockData, detProp, fdQdx, time, plane, t0);
          	 if (fdEdx > 35) fdEdx = 35;
         	}
       		else if ((fdx == 0) && (fdQ > 0))
@@ -229,8 +238,3 @@ void proto::DEdx::ResetVars()
 
 
 DEFINE_ART_MODULE(proto::DEdx)
-
-
-
-
-

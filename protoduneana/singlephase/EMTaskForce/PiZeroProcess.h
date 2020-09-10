@@ -27,7 +27,7 @@
 namespace pizero {
 
 // Function to find the closest distance between a line and a point.
-double ClosestDistanceToPoint(const TVector3& p,
+inline double ClosestDistanceToPoint(const TVector3& p,
                   const TVector3& lineStart, const TVector3& lineDir) {
   // Difference vector between line start and point.
   const TVector3 diff = p - lineStart;
@@ -39,7 +39,7 @@ double ClosestDistanceToPoint(const TVector3& p,
 }
 
 // Function to find the point in the middle of the shortest distance between two lines.
-TVector3 ClosestPoint(const TVector3& a, const TVector3& adir,
+inline TVector3 ClosestPoint(const TVector3& a, const TVector3& adir,
                       const TVector3& b, const TVector3& bdir) {
   TVector3 result(-99999., -99999., -99999.);
   // Deal with both vectors being parallel.
@@ -54,7 +54,7 @@ TVector3 ClosestPoint(const TVector3& a, const TVector3& adir,
 
   return result;
 }
-TVector3 ClosestPoint(const recob::Shower* showerA,
+inline TVector3 ClosestPoint(const recob::Shower* showerA,
                       const recob::Shower* showerB) {
   const TVector3 candidate =
     ClosestPoint(showerA->ShowerStart(), showerA->Direction(),
@@ -64,14 +64,14 @@ TVector3 ClosestPoint(const recob::Shower* showerA,
 }
 
 // Function to find the shortest distance between two lines.
-double ClosestDistance(const TVector3& a, const TVector3& adir,
+inline double ClosestDistance(const TVector3& a, const TVector3& adir,
                          const TVector3& b, const TVector3& bdir) {
   // Find unit vector perpendicular to both a and b.
   const TVector3 unit = adir.Cross(bdir) * (1.0 / adir.Cross(bdir).Mag());
   // Project difference vector on perpendicular vector.
   return abs((a - b).Dot(unit));
 }
-double ClosestDistance(const recob::Shower* showerA,
+inline double ClosestDistance(const recob::Shower* showerA,
                          const recob::Shower* showerB) {
   // Check whether the intersection is behind both showers.
   const TVector3 candidate =
@@ -105,6 +105,8 @@ class PiZeroProcess {
   // const simb::MCParticle* _photon2 = 0x0;
 
   const art::Event& _evt;
+  const detinfo::DetectorClocksData& _clockData;
+  const detinfo::DetectorPropertiesData& _detProp;
   const std::string _showerLabel;
 
   // Utility objects.
@@ -113,11 +115,16 @@ class PiZeroProcess {
 
  public:
   PiZeroProcess(const simb::MCParticle& mcp, const art::Event& evt,
+                const detinfo::DetectorClocksData& clockData,
+                const detinfo::DetectorPropertiesData& detProp,
                 std::string showerLabel);
   PiZeroProcess(const recob::Shower& shower, const art::Event& evt,
+                const detinfo::DetectorClocksData& clockData,
+                const detinfo::DetectorPropertiesData& detProp,
                 std::string showerLabel);
-  PiZeroProcess(const recob::Shower& showerA, const recob::Shower& showerB,
-                const art::Event& evt, std::string showerLabel);
+  // PiZeroProcess(const recob::Shower& showerA, const recob::Shower& showerB,
+  //               const art::Event& evt,
+  //               std::string showerLabel);
   ~PiZeroProcess(){};
 
   bool _haveMCInfo;
@@ -182,7 +189,11 @@ class PiZeroProcess {
 
 // Constructor to set internal data from an MCParticle.
 PiZeroProcess::PiZeroProcess(const simb::MCParticle& mcp, const art::Event& evt,
-                std::string showerLabel): _evt(evt), _showerLabel(showerLabel) {
+                             const detinfo::DetectorClocksData& clockData,
+                             const detinfo::DetectorPropertiesData& detProp,
+                             std::string showerLabel):
+  _evt(evt), _clockData(clockData), _detProp{detProp}, _showerLabel(showerLabel)
+{
   if(mcp.PdgCode() == 111) {
     // Got a pi0.
     setPi0(mcp);
@@ -199,7 +210,11 @@ PiZeroProcess::PiZeroProcess(const simb::MCParticle& mcp, const art::Event& evt,
 
 // Constructor to set internal data from a shower.
 PiZeroProcess::PiZeroProcess(const recob::Shower& shower, const art::Event& evt,
-              std::string showerLabel): _evt(evt), _showerLabel(showerLabel) {
+                             const detinfo::DetectorClocksData& clockData,
+                             const detinfo::DetectorPropertiesData& detProp,
+                             std::string showerLabel):
+  _evt(evt), _clockData(clockData), _detProp{detProp}, _showerLabel(showerLabel)
+{
   // Get the event's showers.
   art::Handle<std::vector<recob::Shower>> showerHandle;
   if (!_evt.getByLabel(_showerLabel, showerHandle)) return;
@@ -280,8 +295,8 @@ void PiZeroProcess::setPi0(const simb::MCParticle& newPi0) {
     // Set photon1 to be the more energetic one.
     if(photon1->E() < photon2->E()) std::swap(photon1, photon2);
     // Fill the showerProcesses.
-    _shProcess1 = std::make_unique<ShowerProcess>(*photon1, _evt);
-    _shProcess2 = std::make_unique<ShowerProcess>(*photon2, _evt);
+    _shProcess1 = std::make_unique<ShowerProcess>(*photon1, _evt, _clockData, _detProp);
+    _shProcess2 = std::make_unique<ShowerProcess>(*photon2, _evt, _clockData, _detProp);
   }
 }
 

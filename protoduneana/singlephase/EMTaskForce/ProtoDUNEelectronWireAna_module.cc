@@ -75,7 +75,6 @@ private:
   protoana::ProtoDUNETruthUtils truthUtil;
  
   geo::GeometryCore const * fGeometry = &*(art::ServiceHandle<geo::Geometry>());
-  const detinfo::DetectorProperties* detprop = lar::providerFrom<detinfo::DetectorPropertiesService>();
 
   std::string fShowerTag;
   std::string fPFParticleTag;
@@ -146,11 +145,13 @@ void ProtoDUNEelectronWireAna::analyze(art::Event const& evt)
   std::vector<const recob::PFParticle*> pfParticles = pfpUtil.GetPFParticlesFromBeamSlice(evt,fPFParticleTag);
   const simb::MCParticle* mcparticle = NULL;
   bool doAna = false;
+  auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(evt);
+  auto const detProp = art::ServiceHandle<detinfo::DetectorPropertiesService>()->DataFor(evt, clockData);
   for(const recob::PFParticle* particle : pfParticles){
      const recob::Shower* thisShower = pfpUtil.GetPFParticleShower(*particle,evt,fPFParticleTag,fShowerTag);
      if( thisShower == 0x0 ) continue;
      if( !evt.isRealData() ){
-       mcparticle = truthUtil.GetMCParticleFromRecoShower(*thisShower, evt, "pandoraShower");
+       mcparticle = truthUtil.GetMCParticleFromRecoShower(clockData, *thisShower, evt, "pandoraShower");
        if( abs(mcparticle->PdgCode()) != 11 ) return;
      }
      fprimaryStartPosition[0] = thisShower->ShowerStart().X();
@@ -167,7 +168,7 @@ void ProtoDUNEelectronWireAna::analyze(art::Event const& evt)
        hit_w_and_t1[wires[0]->Channel()].push_back(sh_hits[j]->PeakTimeMinusRMS(5.0));
        hit_w_and_t2[wires[0]->Channel()].push_back(sh_hits[j]->PeakTimePlusRMS(5.0));
        //std::cout<<wires[0]->Channel()<<" "<<sh_hits[j]->PeakTime()<<" "<<sh_hits[j]->PeakTimePlusRMS(5.0)<<" "<<sh_hits[j]->PeakTimeMinusRMS(5.0)<<std::endl;
-       hit_w_and_x[wires[0]->Channel()].push_back(detprop->ConvertTicksToX(sh_hits[j]->PeakTime(),sh_hits[j]->WireID().Plane,sh_hits[j]->WireID().TPC,0));
+       hit_w_and_x[wires[0]->Channel()].push_back(detProp.ConvertTicksToX(sh_hits[j]->PeakTime(),sh_hits[j]->WireID().Plane,sh_hits[j]->WireID().TPC,0));
        std::vector<art::Ptr<recob::SpacePoint>> sp = spFromShowerHits.at(j); 
        if(!sp.empty()){
           hit_w_and_y[wires[0]->Channel()].push_back(sp[0]->XYZ()[1]);

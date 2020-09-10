@@ -75,7 +75,9 @@ std::vector<const recob::PCAxis*> protoana::ProtoDUNEShowerUtils::GetRecoShowerP
   return pcaVec;
 }
 
-std::vector<double> protoana::ProtoDUNEShowerUtils::EstimateEnergyFromHitCharge(const std::vector<const recob::Hit*> &hits, calo::CalorimetryAlg caloAlg) 
+std::vector<double> protoana::ProtoDUNEShowerUtils::EstimateEnergyFromHitCharge(detinfo::DetectorClocksData const& clockData,
+                                                                                detinfo::DetectorPropertiesData const& detProp,
+                                                                                const std::vector<const recob::Hit*> &hits, calo::CalorimetryAlg caloAlg)
 {
   double kGeVtoElectrons { 4.237e7 }; // obtained from utils class.. Copied for now, should use class (although this is a physical constant, so hopefully doesn't change).
   double recombination   { 1/0.63 };
@@ -86,7 +88,7 @@ std::vector<double> protoana::ProtoDUNEShowerUtils::EstimateEnergyFromHitCharge(
   for ( size_t h{0} ; h < hits.size() ; h++ ) {
     const recob::Hit* hit = hits[h];
     const int plane = hit->WireID().Plane;
-    showerEnergy[ plane ] += ( caloAlg.ElectronsFromADCArea( hit->Integral(), plane) * caloAlg.LifetimeCorrection(hit->PeakTime()) ) / kGeVtoElectrons;
+    showerEnergy[ plane ] += ( caloAlg.ElectronsFromADCArea( hit->Integral(), plane) * caloAlg.LifetimeCorrection(clockData, detProp, hit->PeakTime()) ) / kGeVtoElectrons;
   }
   
   showerEnergy[0] *= recombination;

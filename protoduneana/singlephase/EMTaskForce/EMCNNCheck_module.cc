@@ -20,6 +20,7 @@
 #include "messagefacility/MessageLogger/MessageLogger.h"
 
 #include "lardata/ArtDataHelper/MVAReader.h"
+#include "lardata/DetectorInfoServices/DetectorClocksService.h"
 #include "larsim/MCCheater/BackTrackerService.h"
 #include "larsim/MCCheater/ParticleInventoryService.h"
 
@@ -143,6 +144,7 @@ void pdsp::EMCNNCheck::analyze(art::Event const& e)
 
   anab::MVAReader<recob::Hit,4> hitResults(e, "emtrkmichelid:emtrkmichel");
 
+  auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(e);
   if (!e.isRealData()){
     // Get the truth utility to help us out
     protoana::ProtoDUNETruthUtils truthUtil;
@@ -255,7 +257,7 @@ void pdsp::EMCNNCheck::analyze(art::Event const& e)
             if (!e.isRealData()){
               int TrackID = 0;
               std::map<int,double> trkide;
-              std::vector<sim::TrackIDE> TrackIDs = bt_serv->HitToEveTrackIDEs(hit);
+              std::vector<sim::TrackIDE> TrackIDs = bt_serv->HitToEveTrackIDEs(clockData, hit);
               for(size_t e = 0; e < TrackIDs.size(); ++e){
                 trkide[TrackIDs[e].trackID] += TrackIDs[e].energy;
               }	    
