@@ -55,6 +55,32 @@ CalorimetryParameters_SPProd2_MC_35ms.PlaneParameters: [
 ]
 ##########################################
 
+##Prod3 MC SCE on
+CalorimetryParameters_SPProd3_MC_SCE: @local::CalorimetryParameters_SPProd2_MC_SCE
+CalorimetryParameters_SPProd3_MC_SCE.X_correction:       "/pnfs/dune/persistent/users/calcuttj/Prod3_Calibration/Xcalo_r6256030.root"
+CalorimetryParameters_SPProd3_MC_SCE.YZ_correction:      "/pnfs/dune/persistent/users/calcuttj/Prod3_Calibration/YZcalo_r6256030.root"
+CalorimetryParameters_SPProd3_MC_SCE.PlaneParameters: [
+  {
+    PlaneID: 2
+    norm_factor: 1.02
+    calib_factor: 5.02e-3
+  }
+]
+##########################################
+
+##Prod3 MC SCE off 
+CalorimetryParameters_SPProd3_MC_35ms: @local::CalorimetryParameters_SPProd2_MC_SCE
+CalorimetryParameters_SPProd3_MC_35ms.X_correction:       "/pnfs/dune/persistent/users/calcuttj/Prod3_Calibration/Xcalo_r31186687.root"
+CalorimetryParameters_SPProd3_MC_35ms.YZ_correction:      "/pnfs/dune/persistent/users/calcuttj/Prod3_Calibration/YZcalo_r31186687.root"
+CalorimetryParameters_SPProd3_MC_35ms.PlaneParameters: [
+  {
+    PlaneID: 2
+    norm_factor: 1.02
+    calib_factor: 5.007e-3
+  }
+]
+##########################################
+
 ##Data run 5387
 CalorimetryParameters_SPProd2_Data_r5387: @local::CalorimetryParameters_SPProd2_MC_SCE
 CalorimetryParameters_SPProd2_Data_r5387.X_correction:       "/pnfs/dune/persistent/users/apaudel/prod2_calibfactors/Xcalo_r5387.root"
