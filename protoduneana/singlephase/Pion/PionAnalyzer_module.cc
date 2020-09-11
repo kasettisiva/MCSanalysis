@@ -73,6 +73,7 @@
 #include "TPolyLine3D.h"
 #include "Math/Vector3D.h"
 #include "TGraph2D.h"
+#include "TROOT.h"
 
 namespace pionana {
   class PionAnalyzer;
@@ -562,11 +563,6 @@ private:
   std::vector<int> reco_beam_calo_TPC;
   std::vector< double > reco_beam_calibrated_dEdX;
 
-  std::vector<double> reco_beam_dEdX_no_SCE, reco_beam_dQdX_no_SCE, reco_beam_resRange_no_SCE, reco_beam_TrkPitch_no_SCE;
-  std::vector<double> reco_beam_calo_wire_no_SCE, reco_beam_calo_tick_no_SCE, reco_beam_calo_wire_z_no_SCE;
-  std::vector<int> reco_beam_calo_TPC_no_SCE;
-  std::vector< double > reco_beam_calibrated_dEdX_no_SCE;
-
   std::vector< int >    reco_beam_hit_true_ID, reco_beam_hit_true_origin, reco_beam_hit_true_slice;
   int reco_beam_trackID;
   bool reco_beam_flipped;
@@ -597,7 +593,6 @@ private:
 
   std::vector<double> g4rw_alt_primary_plus_sigma_weight;
   std::vector<double> g4rw_alt_primary_minus_sigma_weight;
-  int new_branch = 1;
 
   //EDIT: STANDARDIZE
   //EndProcess --> endProcess ?
@@ -792,9 +787,8 @@ private:
   std::vector< int > reco_daughter_allTrack_ID;
   std::vector< double > reco_daughter_allTrack_Theta;
   std::vector< double > reco_daughter_allTrack_Phi;
-  std::vector< std::vector< double > > reco_daughter_allTrack_dQdX, reco_daughter_allTrack_dEdX, reco_daughter_allTrack_resRange;
   std::vector< std::vector< double > > reco_daughter_allTrack_dQdX_SCE, reco_daughter_allTrack_dEdX_SCE, reco_daughter_allTrack_resRange_SCE;
-  std::vector< std::vector< double > > reco_daughter_allTrack_calibrated_dEdX, reco_daughter_allTrack_calibrated_dEdX_SCE;
+  std::vector< std::vector< double > > reco_daughter_allTrack_calibrated_dEdX_SCE;
   std::vector< double > reco_daughter_allTrack_Chi2_proton;
   std::vector< int >    reco_daughter_allTrack_Chi2_ndof;
 
@@ -926,7 +920,6 @@ private:
 
   //FCL pars
   std::string fCalorimetryTag;
-  std::string fPandora2CaloNoSCE;
   std::string fPandora2CaloSCE;
   std::string fTrackerTag;
   std::string fHitTag;
@@ -966,7 +959,6 @@ pionana::PionAnalyzer::PionAnalyzer(fhicl::ParameterSet const& p)
   fTrackModuleLabel(p.get< art::InputTag >("TrackModuleLabel")),
 
   fCalorimetryTag(p.get<std::string>("CalorimetryTag")),
-  fPandora2CaloNoSCE(p.get<std::string>("Pandora2CaloNoSCE")),
   fPandora2CaloSCE(p.get<std::string>("Pandora2CaloSCE")),
   fTrackerTag(p.get<std::string>("TrackerTag")),
   fHitTag(p.get<std::string>("HitTag")),
@@ -986,8 +978,7 @@ pionana::PionAnalyzer::PionAnalyzer(fhicl::ParameterSet const& p)
   fCheckCosmics( p.get<bool>( "CheckCosmics" ) ),
   fTrueToReco( p.get<bool>( "TrueToReco" ) ),
   fDoReweight(p.get<bool>("DoReweight")),
-  fDoProtReweight(p.get<bool>("DoProtReweight"))/*
-  fMCHasBI(p.get<bool>("MCHasBI"))*/ {
+  fDoProtReweight(p.get<bool>("DoProtReweight")) {
 
   templates[ 211 ]  = (TProfile*)dEdX_template_file.Get( "dedx_range_pi"  );
   templates[ 321 ]  = (TProfile*)dEdX_template_file.Get( "dedx_range_ka"  );
@@ -1278,7 +1269,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
   std::vector<const recob::PFParticle*> beamParticles = pfpUtil.GetPFParticlesFromBeamSlice(evt,fPFParticleTag);
 
   if(beamParticles.size() == 0){
-    std::cerr << "We found no beam particles for this event... moving on" << std::endl;
+    std::cout << "We found no beam particles for this event... moving on" << std::endl;
     return;
   }
   else {
@@ -2146,13 +2137,20 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
     auto calo_dQdX = calo[0].dQdx();
     auto calo_dEdX = calo[0].dEdx();
     auto calo_range = calo[0].ResidualRange();
-    auto TpIndices = calo[0].TpIndices();
+    std::vector<size_t> TpIndices;
+    if (fCalorimetryTag == "pandoracali") {
+      std::vector< anab::Calorimetry> pandoracalo = trackUtil.GetRecoTrackCalorimetry(*thisTrack, evt, fTrackerTag, "pandoracalo");
+      TpIndices = pandoracalo[0].TpIndices();
+    }
+    else {
+      TpIndices = calo[0].TpIndices();
+    }
     auto theXYZPoints = calo[0].XYZ();
     //std::cout << "View 2 hits " << calo_dQdX.size() << std::endl;
 
     std::vector< size_t > calo_hit_indices;
     for( size_t i = 0; i < calo_dQdX.size(); ++i ){
-      std::cout << i << std::endl;
+      if (fVerbose) std::cout << i << std::endl;
       reco_beam_dQdX.push_back( calo_dQdX[i] );
       reco_beam_dEdX.push_back( calo_dEdX[i] );
       reco_beam_resRange.push_back( calo_range[i] );
@@ -2180,6 +2178,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
                      theXYZPoints[i].Z() << " " << theHit.WireID().Wire << " " <<
                      geom->Wire(theHit.WireID()).GetCenter().Z() << " " <<
                      theHit.WireID().TPC << " " << std::endl;
+      
     }
 
     //Getting the SCE corrected start/end positions & directions
@@ -2323,6 +2322,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
     ////////////////////////////////////////////
 
     //no SCE
+    /*
     std::vector< anab::Calorimetry> calo_no_SCE = trackUtil.GetRecoTrackCalorimetry(*thisTrack, evt, fTrackerTag, "pandoracalo");
     auto calo_dQdX_no_SCE = calo_no_SCE[0].dQdx();
     auto calo_dEdX_no_SCE = calo_no_SCE[0].dEdx();
@@ -2363,6 +2363,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
     }
     std::vector< float > new_dEdX_no_SCE = calibration.GetCalibratedCalorimetry(  *thisTrack, evt, fTrackerTag, "pandoracalo", 2, -1.);
     for( size_t i = 0; i < new_dEdX_no_SCE.size(); ++i ){ reco_beam_calibrated_dEdX_no_SCE.push_back( new_dEdX_no_SCE[i] ); }
+    */
     ///////////////////////////////////////////
 
     std::pair< double, int > pid_chi2_ndof = trackUtil.Chi2PID( reco_beam_calibrated_dEdX, reco_beam_resRange, templates[ 2212 ] );
@@ -2791,6 +2792,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
           reco_daughter_PFP_true_byHits_PDG.push_back( match.particle->PdgCode() );
           reco_daughter_PFP_true_byHits_ID.push_back( match.particle->TrackId() );
           reco_daughter_PFP_true_byHits_parID.push_back( match.particle->Mother() );
+          //std::cout << "mother: " << match.particle->Mother() << std::endl;
           //reco_daughter_PFP_true_byHits_parPDG.push_back( pi_serv->TrackIdToMotherParticle_P( match.particle->TrackId() )->PdgCode() );
           reco_daughter_PFP_true_byHits_parPDG.push_back(
             ( (match.particle->Mother() > 0) ? plist[ match.particle->Mother() ]->PdgCode() : 0 )
@@ -2889,16 +2891,12 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
 
       try{
         const recob::Track* pandora2Track = pfpUtil.GetPFParticleTrack( *daughterPFP, evt, fPFParticleTag, "pandora2Track" );
+        if (fVerbose) std::cout << "pandora2 track: " << pandora2Track << std::endl;
 
         if( pandora2Track ){
           reco_daughter_allTrack_ID.push_back( pandora2Track->ID() );
 
-          std::vector< anab::Calorimetry > dummy_calo = trackUtil.GetRecoTrackCalorimetry(*pandora2Track, evt, "pandora2Track", fPandora2CaloNoSCE/*"pandora2calo"*/);
-          std::vector< anab::Calorimetry > dummy_caloSCE = trackUtil.GetRecoTrackCalorimetry(*pandora2Track, evt, "pandora2Track", fPandora2CaloSCE/*"pandora2caloSCE"*/);
-
-          auto dummy_dEdx = dummy_calo[0].dEdx();
-          auto dummy_dQdx = dummy_calo[0].dQdx();
-          auto dummy_Range = dummy_calo[0].ResidualRange();
+          std::vector< anab::Calorimetry > dummy_caloSCE = trackUtil.GetRecoTrackCalorimetry(*pandora2Track, evt, "pandora2Track", fPandora2CaloSCE);
 
           auto dummy_dEdx_SCE = dummy_caloSCE[0].dEdx();
           auto dummy_dQdx_SCE = dummy_caloSCE[0].dQdx();
@@ -2908,18 +2906,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
           reco_daughter_allTrack_momByRange_alt_muon.push_back(   track_p_calc.GetTrackMomentum( dummy_caloSCE[0].Range(), 13  ) );
           reco_daughter_allTrack_alt_len.push_back(    dummy_caloSCE[0].Range() );
 
-          std::vector<float> cali_dEdX = calibration.GetCalibratedCalorimetry(*pandora2Track, evt, "pandora2Track", fPandora2CaloNoSCE/*"pandora2calo"*/, 2);
-          std::vector<float> cali_dEdX_SCE = calibration.GetCalibratedCalorimetry(*pandora2Track, evt, "pandora2Track", fPandora2CaloSCE/*"pandora2caloSCE"*/, 2);
-
-          reco_daughter_allTrack_resRange.push_back( std::vector<double>() );
-          reco_daughter_allTrack_dEdX.push_back( std::vector<double>() );
-          reco_daughter_allTrack_dQdX.push_back( std::vector<double>() );
-
-          for( size_t j = 0; j < dummy_dEdx.size(); ++j ){
-            reco_daughter_allTrack_resRange.back().push_back( dummy_Range[j] );
-            reco_daughter_allTrack_dEdX.back().push_back( dummy_dEdx[j] );
-            reco_daughter_allTrack_dQdX.back().push_back( dummy_dQdx[j] );
-          }
+          std::vector<float> cali_dEdX_SCE = calibration.GetCalibratedCalorimetry(*pandora2Track, evt, "pandora2Track", fPandora2CaloSCE, 2);
 
           reco_daughter_allTrack_resRange_SCE.push_back( std::vector<double>() );
           reco_daughter_allTrack_dEdX_SCE.push_back( std::vector<double>() );
@@ -2931,26 +2918,25 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
             reco_daughter_allTrack_dQdX_SCE.back().push_back( dummy_dQdx_SCE[j] );
           }
 
-          reco_daughter_allTrack_calibrated_dEdX.push_back( std::vector<double>() );
           reco_daughter_allTrack_calibrated_dEdX_SCE.push_back( std::vector<double>() );
-          for( size_t j = 0; j < cali_dEdX.size(); ++j ){
-            reco_daughter_allTrack_calibrated_dEdX.back().push_back( cali_dEdX[j] );
-          }
           for( size_t j = 0; j < cali_dEdX_SCE.size(); ++j ){
             reco_daughter_allTrack_calibrated_dEdX_SCE.back().push_back( cali_dEdX_SCE[j] );
           }
 
-          std::pair< double, int > this_chi2_ndof = trackUtil.Chi2PID( reco_daughter_allTrack_calibrated_dEdX_SCE.back(), reco_daughter_allTrack_resRange.back(), templates[ 2212 ] );
-          reco_daughter_allTrack_Chi2_proton.push_back( this_chi2_ndof.first );
-          reco_daughter_allTrack_Chi2_ndof.push_back( this_chi2_ndof.second );
+          std::pair<double, int> this_chi2_ndof = trackUtil.Chi2PID(
+              reco_daughter_allTrack_calibrated_dEdX_SCE.back(),
+              reco_daughter_allTrack_resRange_SCE.back(), templates[2212]);
+
+          reco_daughter_allTrack_Chi2_proton.push_back(this_chi2_ndof.first);
+          reco_daughter_allTrack_Chi2_ndof.push_back(this_chi2_ndof.second);
 
           //Calorimetry + chi2 for planes 0 and 1
           auto resRange_plane0 = dummy_caloSCE[2].ResidualRange();
           auto resRange_plane1 = dummy_caloSCE[1].ResidualRange();
           std::vector<float> dEdX_plane0 = calibration.GetCalibratedCalorimetry(
-              *pandora2Track, evt, "pandora2Track", fPandora2CaloSCE/*"pandora2caloSCE"*/, 0);
+              *pandora2Track, evt, "pandora2Track", fPandora2CaloSCE, 0);
           std::vector<float> dEdX_plane1 = calibration.GetCalibratedCalorimetry(
-              *pandora2Track, evt, "pandora2Track", fPandora2CaloSCE/*"pandora2caloSCE"*/, 1);
+              *pandora2Track, evt, "pandora2Track", fPandora2CaloSCE, 1);
 
           reco_daughter_allTrack_resRange_plane0.push_back(
               std::vector<double>());
@@ -3006,6 +2992,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
           reco_daughter_allTrack_endY.push_back(   pandora2Track->Trajectory().End().Y() );
           reco_daughter_allTrack_endZ.push_back(   pandora2Track->Trajectory().End().Z() );
 
+          std::cout << "pandora2Length " << pandora2Track->Length() << std::endl;
           reco_daughter_allTrack_momByRange_proton.push_back( track_p_calc.GetTrackMomentum( pandora2Track->Length(), 2212 ) );
           reco_daughter_allTrack_momByRange_muon.push_back(   track_p_calc.GetTrackMomentum( pandora2Track->Length(), 13  ) );
 
@@ -3085,13 +3072,9 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
         }
         else{
           reco_daughter_allTrack_ID.push_back( -1 );
-          reco_daughter_allTrack_resRange.push_back( std::vector<double>() );
-          reco_daughter_allTrack_dEdX.push_back( std::vector<double>() );
-          reco_daughter_allTrack_dQdX.push_back( std::vector<double>() );
           reco_daughter_allTrack_resRange_SCE.push_back( std::vector<double>() );
           reco_daughter_allTrack_dEdX_SCE.push_back( std::vector<double>() );
           reco_daughter_allTrack_dQdX_SCE.push_back( std::vector<double>() );
-          reco_daughter_allTrack_calibrated_dEdX.push_back(std::vector<double>());
           reco_daughter_allTrack_calibrated_dEdX_SCE.push_back(std::vector<double>());
           reco_daughter_allTrack_Chi2_proton.push_back( -999. );
           reco_daughter_allTrack_Chi2_ndof.push_back( 0 );
@@ -3577,6 +3560,9 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
 
 void pionana::PionAnalyzer::beginJob()
 {
+
+  gROOT->SetBatch(1);
+
   art::ServiceHandle<art::TFileService> tfs;
   fTree = tfs->make<TTree>("beamana","beam analysis tree");
 
@@ -3629,19 +3615,6 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("reco_beam_calo_wire_z", &reco_beam_calo_wire_z);
   fTree->Branch("reco_beam_calo_tick", &reco_beam_calo_tick);
   fTree->Branch("reco_beam_calo_TPC", &reco_beam_calo_TPC);
-
-  //No SCE
-  fTree->Branch("reco_beam_dQdX_no_SCE", &reco_beam_dQdX_no_SCE);
-  fTree->Branch("reco_beam_dEdX_no_SCE", &reco_beam_dEdX_no_SCE);
-  fTree->Branch("reco_beam_calibrated_dEdX_no_SCE", &reco_beam_calibrated_dEdX_no_SCE);
-  fTree->Branch("reco_beam_resRange_no_SCE", &reco_beam_resRange_no_SCE);
-  fTree->Branch("reco_beam_TrkPitch_no_SCE", &reco_beam_TrkPitch_no_SCE);
-  fTree->Branch("reco_beam_calo_wire_no_SCE", &reco_beam_calo_wire_no_SCE);
-  fTree->Branch("reco_beam_calo_wire_z_no_SCE", &reco_beam_calo_wire_z_no_SCE);
-  fTree->Branch("reco_beam_calo_tick_no_SCE", &reco_beam_calo_tick_no_SCE);
-  fTree->Branch("reco_beam_calo_TPC_no_SCE", &reco_beam_calo_TPC_no_SCE);
-  ////////////////////////
-
 
   fTree->Branch("reco_beam_hit_true_ID", &reco_beam_hit_true_ID);
   fTree->Branch("reco_beam_hit_true_slice", &reco_beam_hit_true_slice);
@@ -3750,14 +3723,9 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("reco_daughter_PFP_true_byE_purity", &reco_daughter_PFP_true_byE_purity);
 
   fTree->Branch("reco_daughter_allTrack_ID", &reco_daughter_allTrack_ID);
-  fTree->Branch("reco_daughter_allTrack_dEdX", &reco_daughter_allTrack_dEdX);
-  fTree->Branch("reco_daughter_allTrack_dQdX", &reco_daughter_allTrack_dQdX);
-  fTree->Branch("reco_daughter_allTrack_resRange", &reco_daughter_allTrack_resRange);
   fTree->Branch("reco_daughter_allTrack_dQdX_SCE", &reco_daughter_allTrack_dQdX_SCE);
-  fTree->Branch("reco_daughter_allTrack_dEdX_SCE", &reco_daughter_allTrack_dEdX);
-  fTree->Branch("reco_daughter_allTrack_resRange_SCE", &reco_daughter_allTrack_resRange);
-
-  fTree->Branch("reco_daughter_allTrack_calibrated_dEdX", &reco_daughter_allTrack_calibrated_dEdX);
+  fTree->Branch("reco_daughter_allTrack_dEdX_SCE", &reco_daughter_allTrack_dEdX_SCE);
+  fTree->Branch("reco_daughter_allTrack_resRange_SCE", &reco_daughter_allTrack_resRange_SCE);
   fTree->Branch("reco_daughter_allTrack_calibrated_dEdX_SCE", &reco_daughter_allTrack_calibrated_dEdX_SCE);
 
   fTree->Branch("reco_daughter_allTrack_Chi2_proton", &reco_daughter_allTrack_Chi2_proton);
@@ -4160,7 +4128,6 @@ void pionana::PionAnalyzer::beginJob()
                 &g4rw_alt_primary_plus_sigma_weight);
   fTree->Branch("g4rw_alt_primary_minus_sigma_weight",
                 &g4rw_alt_primary_minus_sigma_weight);
-  fTree->Branch("new_branch", &new_branch);
 
   if( fSaveHits ){
     fTree->Branch( "reco_beam_spacePts_X", &reco_beam_spacePts_X );
@@ -4556,6 +4523,7 @@ void pionana::PionAnalyzer::reset()
   reco_beam_hit_true_slice.clear();
 
   //No SCE
+  /*
   reco_beam_resRange_no_SCE.clear();
   reco_beam_TrkPitch_no_SCE.clear();
   reco_beam_calo_wire_no_SCE.clear();
@@ -4565,6 +4533,7 @@ void pionana::PionAnalyzer::reset()
   reco_beam_dQdX_no_SCE.clear();
   reco_beam_dEdX_no_SCE.clear();
   reco_beam_calibrated_dEdX_no_SCE.clear();
+  */
 /*
   reco_daughter_dQdX.clear();
   reco_daughter_dEdX.clear();
@@ -4662,9 +4631,9 @@ void pionana::PionAnalyzer::reset()
 
 
   reco_daughter_allTrack_ID.clear();
-  reco_daughter_allTrack_dEdX.clear();
-  reco_daughter_allTrack_dQdX.clear();
-  reco_daughter_allTrack_resRange.clear();
+  //reco_daughter_allTrack_dEdX.clear();
+  //reco_daughter_allTrack_dQdX.clear();
+  //reco_daughter_allTrack_resRange.clear();
   reco_daughter_allTrack_dEdX_SCE.clear();
   reco_daughter_allTrack_dQdX_SCE.clear();
   reco_daughter_allTrack_resRange_SCE.clear();
@@ -4685,7 +4654,7 @@ void pionana::PionAnalyzer::reset()
   ///////////////////////////////////////////
 
 
-  reco_daughter_allTrack_calibrated_dEdX.clear();
+  //reco_daughter_allTrack_calibrated_dEdX.clear();
   reco_daughter_allTrack_calibrated_dEdX_SCE.clear();
 
   reco_daughter_allTrack_Chi2_proton.clear();
@@ -5149,7 +5118,7 @@ TVector3 pionana::FitLine(const std::vector<TVector3> & input) {
 
   double arglist[10];
   
-  arglist[0] = 0;
+  arglist[0] = -1;
   min->ExecuteCommand("SET PRINT",arglist,1);
   
 

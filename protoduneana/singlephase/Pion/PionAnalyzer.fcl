@@ -14,7 +14,6 @@ pionanalysis:
   TimeDecoderModuleLabel: "timingrawdecoder:daq"
 
   CalorimetryTag:         "pandoracalo"
-  Pandora2CaloNoSCE:      "pandora2calo"
   Pandora2CaloSCE:        "pandora2caloSCE"
   TrackerTag:             "pandoraTrack"
   HitTag:                 "gaushit"
@@ -37,7 +36,6 @@ pionanalysis:
   TrueToReco: false
   DoReweight: true
   DoProtReweight: true
-  MCHasBI: false
 
   FracsFile: "/dune/data2/users/calcuttj/GeantReweight/FlatTree/LAr_PiPlus_cascade.root"
   XSecFile: "/dune/data2/users/calcuttj/GeantReweight/FlatTree/LAr_cross_section.root"
