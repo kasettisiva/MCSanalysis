@@ -61,7 +61,7 @@ physics.analyzers.pionana.CalorimetryTag: "pandoracali"
 #physics.analyzers.pionana.Pandora2CaloSCE: "pandora2calo"
 physics.analyzers.pionana.Pandora2CaloSCE: "pandora2cali"
 physics.analyzers.pionana.HitTag: "hitpdune"
-physics.analyzers.pionana.Verbose: false 
+physics.analyzers.pionana.Verbose: true
 physics.analyzers.pionana.DoReweight: false 
 physics.analyzers.pionana.DoProtReweight: false 
 physics.analyzers.pionana.CalibrationPars: @local::CalorimetryParameters_SPProd3_MC_SCE
