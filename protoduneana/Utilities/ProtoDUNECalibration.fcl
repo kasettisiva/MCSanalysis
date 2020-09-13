@@ -27,13 +27,14 @@ CalorimetryParameters_SPProd2_MC_SCE: {
 
   X_correction:       "/pnfs/dune/persistent/users/apaudel/prod2_calibfactors/Xcalo_sce.root"
   YZ_correction:      "/pnfs/dune/persistent/users/apaudel/prod2_calibfactors/YZcalo_sce.root"
-  E_field_correction: "/dune/app/users/apaudel/v083001/prod2_calibfactors/SCE_DataDriven_180kV_v3.root"
+  #E_field_correction: "/dune/app/users/apaudel/v083001/prod2_calibfactors/SCE_DataDriven_180kV_v3.root"
+  E_field_correction: "SpaceChargeProtoDUNE/SCE_DataDriven_180kV_v3.root"
 }
 ##For use with the grid
  CalorimetryParameters_SPProd2_MC_SCE_grid: @local::CalorimetryParameters_SPProd2_MC_SCE
  CalorimetryParameters_SPProd2_MC_SCE_grid.X_correction: "./Xcalo_sce.root"
  CalorimetryParameters_SPProd2_MC_SCE_grid.YZ_correction: "./YZcalo_sce.root"
- CalorimetryParameters_SPProd2_MC_SCE_grid.E_field_correction: "./SCE_DataDriven_180kV_v3.root"
+ #CalorimetryParameters_SPProd2_MC_SCE_grid.E_field_correction: "./SCE_DataDriven_180kV_v3.root"
 ##########################################
 
 
@@ -62,7 +63,7 @@ CalorimetryParameters_SPProd2_MC_35ms.PlaneParameters: [
  CalorimetryParameters_SPProd2_MC_35ms_grid: @local::CalorimetryParameters_SPProd2_MC_35ms
  CalorimetryParameters_SPProd2_MC_35ms_grid.X_correction: "./Xcalo_35ms.root"
  CalorimetryParameters_SPProd2_MC_35ms_grid.YZ_correction: "./YZcalo_35ms.root"
- CalorimetryParameters_SPProd2_MC_35ms_grid.E_field_correction: "./SCE_DataDriven_180kV_v3.root"
+ #CalorimetryParameters_SPProd2_MC_35ms_grid.E_field_correction: "./SCE_DataDriven_180kV_v3.root"
 ##########################################
 
 ##Prod3 MC SCE on
@@ -78,9 +79,9 @@ CalorimetryParameters_SPProd3_MC_SCE.PlaneParameters: [
 ]
 ##For use with the grid
  CalorimetryParameters_SPProd3_MC_SCE_grid: @local::CalorimetryParameters_SPProd3_MC_SCE
- CalorimetryParameters_SPProd3_MC_SCE_grid.X_correction: "./Xcalo_r6256030.root"
- CalorimetryParameters_SPProd3_MC_SCE_grid.YZ_correction: "./YZcalo_r6256030.root"
- CalorimetryParameters_SPProd3_MC_SCE_grid.E_field_correction: "./SCE_DataDriven_180kV_v3.root"
+ CalorimetryParameters_SPProd3_MC_SCE_grid.X_correction: "CalorimetryCalibration/ProtoDUNESP/Prod3_MC/Xcalo_r6256030.root"
+ CalorimetryParameters_SPProd3_MC_SCE_grid.YZ_correction: "CalorimetryCalibration/ProtoDUNESP/Prod3_MC/YZcalo_r6256030.root"
+ #CalorimetryParameters_SPProd3_MC_SCE_grid.E_field_correction: "SCE_DataDriven_180kV_v3.root"
 ##########################################
 
 ##Prod3 MC SCE off 
@@ -98,7 +99,7 @@ CalorimetryParameters_SPProd3_MC_35ms.PlaneParameters: [
  CalorimetryParameters_SPProd3_MC_35ms_grid: @local::CalorimetryParameters_SPProd3_MC_35ms
  CalorimetryParameters_SPProd3_MC_35ms_grid.X_correction: "./Xcalo_r31186687.root"
  CalorimetryParameters_SPProd3_MC_35ms_grid.YZ_correction: "./YZcalo_r31186687.root"
- CalorimetryParameters_SPProd3_MC_35ms_grid.E_field_correction: "./SCE_DataDriven_180kV_v3.root"
+ #CalorimetryParameters_SPProd3_MC_35ms_grid.E_field_correction: "./SCE_DataDriven_180kV_v3.root"
 ##########################################
 
 ##Data run 5387
@@ -116,7 +117,7 @@ CalorimetryParameters_SPProd2_Data_r5387.PlaneParameters: [
  CalorimetryParameters_SPProd2_Data_r5387_grid: @local::CalorimetryParameters_SPProd2_Data_r5387
  CalorimetryParameters_SPProd2_Data_r5387_grid.X_correction: "./Xcalo_r5387.root"
  CalorimetryParameters_SPProd2_Data_r5387_grid.YZ_correction: "./YZcalo_r5387.root"
- CalorimetryParameters_SPProd2_Data_r5387_grid.E_field_correction: "./SCE_DataDriven_180kV_v3.root"
+ #CalorimetryParameters_SPProd2_Data_r5387_grid.E_field_correction: "./SCE_DataDriven_180kV_v3.root"
 ##########################################
 
 ##Data run 5809
@@ -134,7 +135,7 @@ CalorimetryParameters_SPProd2_Data_r5809.PlaneParameters: [
  CalorimetryParameters_SPProd2_Data_r5809_grid: @local::CalorimetryParameters_SPProd2_Data_r5809
  CalorimetryParameters_SPProd2_Data_r5809_grid.X_correction: "./Xcalo_r5809.root"
  CalorimetryParameters_SPProd2_Data_r5809_grid.YZ_correction: "./YZcalo_r5809.root"
- CalorimetryParameters_SPProd2_Data_r5809_grid.E_field_correction: "./SCE_DataDriven_180kV_v3.root"
+ #CalorimetryParameters_SPProd2_Data_r5809_grid.E_field_correction: "./SCE_DataDriven_180kV_v3.root"
 ##########################################
 
 ##Data run 5770
@@ -152,7 +153,7 @@ CalorimetryParameters_SPProd2_Data_r5770.PlaneParameters: [
  CalorimetryParameters_SPProd2_Data_r5809_grid: @local::CalorimetryParameters_SPProd2_Data_r5809
  CalorimetryParameters_SPProd2_Data_r5809_grid.X_correction: "./Xcalo_r5809.root"
  CalorimetryParameters_SPProd2_Data_r5809_grid.YZ_correction: "./YZcalo_r5809.root"
- CalorimetryParameters_SPProd2_Data_r5809_grid.E_field_correction: "./SCE_DataDriven_180kV_v3.root"
+ #CalorimetryParameters_SPProd2_Data_r5809_grid.E_field_correction: "./SCE_DataDriven_180kV_v3.root"
 ##########################################
 
 END_PROLOG

@@ -66,6 +66,8 @@ namespace protoana{
 
       ProtoDUNETrackUtils trackUtil;
 
+      TFile * OpenFile(const std::string filename);
+
   };
 
 }
