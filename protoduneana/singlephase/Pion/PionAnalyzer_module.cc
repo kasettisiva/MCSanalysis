@@ -2181,58 +2181,52 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
 
     //Primary Track Calorimetry
     /*std::vector< anab::Calorimetry> */ auto calo = trackUtil.GetRecoTrackCalorimetry(*thisTrack, evt, fTrackerTag, fCalorimetryTag);
+    bool found_calo = false;
     size_t index = 0;
     for ( index = 0; index < calo.size(); ++index) {
       if (calo[index].PlaneID().Plane == 2) {
+        found_calo = true;
         break; 
       }
     }
     std::cout << "Cali index " << index << std::endl;
 
-    reco_beam_momByRange_alt_proton = track_p_calc.GetTrackMomentum(
-        calo[index].Range(), 2212);
-    reco_beam_momByRange_alt_muon = track_p_calc.GetTrackMomentum(
-        calo[index].Range(), 13);
-    reco_beam_alt_len = calo[index].Range();
+    if (found_calo) {
+      reco_beam_momByRange_alt_proton = track_p_calc.GetTrackMomentum(
+          calo[index].Range(), 2212);
+      reco_beam_momByRange_alt_muon = track_p_calc.GetTrackMomentum(
+          calo[index].Range(), 13);
+      reco_beam_alt_len = calo[index].Range();
 
-    auto calo_dQdX = calo[index].dQdx();
-    auto calo_dEdX = calo[index].dEdx();
-    auto calo_range = calo[index].ResidualRange();
-    auto TpIndices = calo[index].TpIndices();
+      auto calo_dQdX = calo[index].dQdx();
+      auto calo_dEdX = calo[index].dEdx();
+      auto calo_range = calo[index].ResidualRange();
+      auto TpIndices = calo[index].TpIndices();
 
-    //std::vector<size_t> TpIndices;
-    
-
-    if (fCalorimetryTag == "pandoracali") {
-      /*std::vector< anab::Calorimetry>*/ auto pandoracalo = trackUtil.GetRecoTrackCalorimetry(*thisTrack, evt, fTrackerTag, "pandoracalo");
-      size_t this_index = 0;
-      for ( this_index = 0; this_index < pandoracalo.size(); ++this_index) {
-        if (pandoracalo[this_index].PlaneID().Plane == 2) {
-          break; 
+      if (fCalorimetryTag == "pandoracali") {
+        auto pandoracalo = trackUtil.GetRecoTrackCalorimetry(*thisTrack, evt, fTrackerTag, "pandoracalo");
+        size_t this_index = 0;
+        for ( this_index = 0; this_index < pandoracalo.size(); ++this_index) {
+          if (pandoracalo[this_index].PlaneID().Plane == 2) {
+            break; 
+          }
         }
+        std::cout << this_index << std::endl;
+        TpIndices = pandoracalo[this_index].TpIndices();
+        std::cout << "pandoracalo hits " << pandoracalo[this_index].dQdx().size() << std::endl;
       }
-      std::cout << this_index << std::endl;
-      TpIndices = pandoracalo[this_index].TpIndices();
-      std::cout << "pandoracalo hits " << pandoracalo[this_index].dQdx().size() << std::endl;
-    }
-    std::cout << calo_dQdX.size() << std::endl;
-    std::cout << calo[index].PlaneID().Plane << std::endl;
+      std::cout << calo_dQdX.size() << std::endl;
+      std::cout << calo[index].PlaneID().Plane << std::endl;
 
-/*
-    else {
-      TpIndices = calo[0].TpIndices();
-    }
-    */
-    auto theXYZPoints = calo[index].XYZ();
-    std::vector< size_t > calo_hit_indices;
-    for( size_t i = 0; i < calo_dQdX.size(); ++i ){
-      if (fVerbose) std::cout << i << std::endl;
-      reco_beam_dQdX.push_back( calo_dQdX[i] );
-      reco_beam_dEdX.push_back( calo_dEdX[i] );
-      reco_beam_resRange.push_back( calo_range[i] );
-      reco_beam_TrkPitch.push_back( calo[index].TrkPitchVec()[i] );
+      auto theXYZPoints = calo[index].XYZ();
+      std::vector< size_t > calo_hit_indices;
+      for( size_t i = 0; i < calo_dQdX.size(); ++i ){
+        if (fVerbose) std::cout << i << std::endl;
+        reco_beam_dQdX.push_back( calo_dQdX[i] );
+        reco_beam_dEdX.push_back( calo_dEdX[i] );
+        reco_beam_resRange.push_back( calo_range[i] );
+        reco_beam_TrkPitch.push_back( calo[index].TrkPitchVec()[i] );
 
-      if (fCalorimetryTag != "pandoracali") {
         const recob::Hit & theHit = (*allHits)[ TpIndices[i] ];
         reco_beam_calo_TPC.push_back(theHit.WireID().TPC);
         if (theHit.WireID().TPC == 1) {
@@ -2256,208 +2250,158 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
                        geom->Wire(theHit.WireID()).GetCenter().Z() << " " <<
                        theHit.WireID().TPC << " " << std::endl;
       }
-    }
 
-    //Getting the SCE corrected start/end positions & directions
-    std::sort(theXYZPoints.begin(), theXYZPoints.end(), [](auto a, auto b)
-        {return (a.Z() < b.Z());});
+      //Getting the SCE corrected start/end positions & directions
+      std::sort(theXYZPoints.begin(), theXYZPoints.end(), [](auto a, auto b)
+          {return (a.Z() < b.Z());});
 
-    //std::cout << theXYZPoints.size() << std:;endl;
-    if (theXYZPoints.size()) {
-      reco_beam_calo_startX = theXYZPoints[0].X();
-      reco_beam_calo_startY = theXYZPoints[0].Y();
-      reco_beam_calo_startZ = theXYZPoints[0].Z();
-      reco_beam_calo_endX = theXYZPoints.back().X();
-      reco_beam_calo_endY = theXYZPoints.back().Y();
-      reco_beam_calo_endZ = theXYZPoints.back().Z();
+      //std::cout << theXYZPoints.size() << std:;endl;
+      if (theXYZPoints.size()) {
+        reco_beam_calo_startX = theXYZPoints[0].X();
+        reco_beam_calo_startY = theXYZPoints[0].Y();
+        reco_beam_calo_startZ = theXYZPoints[0].Z();
+        reco_beam_calo_endX = theXYZPoints.back().X();
+        reco_beam_calo_endY = theXYZPoints.back().Y();
+        reco_beam_calo_endZ = theXYZPoints.back().Z();
 
-      TVector3 dir((theXYZPoints.back().X() - theXYZPoints[0].X()),
-                   (theXYZPoints.back().Y() - theXYZPoints[0].Y()),
-                   (theXYZPoints.back().Z() - theXYZPoints[0].Z()));
-      reco_beam_calo_startDirX.push_back(dir.Unit().X());
-      reco_beam_calo_endDirX.push_back(dir.Unit().X());
-      reco_beam_calo_startDirY.push_back(dir.Unit().Y());
-      reco_beam_calo_endDirY.push_back(dir.Unit().Y());
-      reco_beam_calo_startDirZ.push_back(dir.Unit().Z());
-      reco_beam_calo_endDirZ.push_back(dir.Unit().Z());
-    }
-    else {
-      reco_beam_calo_startDirX.push_back(-1.);
-      reco_beam_calo_endDirX.push_back(-1.);
-      reco_beam_calo_startDirY.push_back(-1.);
-      reco_beam_calo_endDirY.push_back(-1.);
-      reco_beam_calo_startDirZ.push_back(-1.);
-      reco_beam_calo_endDirZ.push_back(-1.);
-    }
-
-    if (theXYZPoints.size() > 1) {
-      TVector3 start_p1(theXYZPoints[0].X(),
-          theXYZPoints[0].Y(), theXYZPoints[0].Z());
-      TVector3 start_p2(theXYZPoints[1].X(),
-          theXYZPoints[1].Y(), theXYZPoints[1].Z());
-      TVector3 start_diff = start_p2 - start_p1;
-
-      reco_beam_calo_startDirX.push_back(start_diff.Unit().X());
-      reco_beam_calo_startDirY.push_back(start_diff.Unit().Y());
-      reco_beam_calo_startDirZ.push_back(start_diff.Unit().Z());
-
-      size_t nPoints = theXYZPoints.size();
-      TVector3 end_p1(theXYZPoints[nPoints - 2].X(),
-          theXYZPoints[nPoints - 2].Y(), theXYZPoints[nPoints - 2].Z());
-      TVector3 end_p2(theXYZPoints[nPoints - 1].X(),
-          theXYZPoints[nPoints - 1].Y(), theXYZPoints[nPoints - 1].Z());
-      TVector3 end_diff = end_p2 - end_p1;
-
-      reco_beam_calo_endDirX.push_back(end_diff.Unit().X());
-      reco_beam_calo_endDirY.push_back(end_diff.Unit().Y());
-      reco_beam_calo_endDirZ.push_back(end_diff.Unit().Z());
-    }
-    else {
-      reco_beam_calo_startDirX.push_back(-1.);
-      reco_beam_calo_endDirX.push_back(-1.);
-      reco_beam_calo_startDirY.push_back(-1.);
-      reco_beam_calo_endDirY.push_back(-1.);
-      reco_beam_calo_startDirZ.push_back(-1.);
-      reco_beam_calo_endDirZ.push_back(-1.);
-    }
-
-    if (theXYZPoints.size() > 2) {
-      std::vector<TVector3> input;
-      for (size_t iP = 0; iP < 3; ++iP) {
-        input.push_back(TVector3(theXYZPoints[iP].X(),
-                                 theXYZPoints[iP].Y(),
-                                 theXYZPoints[iP].Z()));
-      }
-
-      TVector3 startDiff = FitLine(input);
-      reco_beam_calo_startDirX.push_back(startDiff.Unit().X());
-      reco_beam_calo_startDirY.push_back(startDiff.Unit().Y());
-      reco_beam_calo_startDirZ.push_back(startDiff.Unit().Z());
-
-      std::vector<TVector3> end_input;
-      size_t nPoints = theXYZPoints.size();
-      for (size_t iP = nPoints - 3; iP < nPoints; ++iP) {
-        end_input.push_back(TVector3(theXYZPoints[iP].X(),
-                                     theXYZPoints[iP].Y(),
-                                     theXYZPoints[iP].Z()));
-      }
-
-      TVector3 endDiff = FitLine(end_input);
-      reco_beam_calo_endDirX.push_back(endDiff.Unit().X());
-      reco_beam_calo_endDirY.push_back(endDiff.Unit().Y());
-      reco_beam_calo_endDirZ.push_back(endDiff.Unit().Z());
-    }
-    else {
-      reco_beam_calo_startDirX.push_back(-1.);
-      reco_beam_calo_endDirX.push_back(-1.);
-      reco_beam_calo_startDirY.push_back(-1.);
-      reco_beam_calo_endDirY.push_back(-1.);
-      reco_beam_calo_startDirZ.push_back(-1.);
-      reco_beam_calo_endDirZ.push_back(-1.);
-    }
-
-    if (theXYZPoints.size() > 3) {
-      std::vector<TVector3> input;
-      for (size_t iP = 0; iP < 4; ++iP) {
-        input.push_back(TVector3(theXYZPoints[iP].X(),
-                                 theXYZPoints[iP].Y(),
-                                 theXYZPoints[iP].Z()));
-      }
-
-      TVector3 startDiff = FitLine(input);
-      reco_beam_calo_startDirX.push_back(startDiff.Unit().X());
-      reco_beam_calo_startDirY.push_back(startDiff.Unit().Y());
-      reco_beam_calo_startDirZ.push_back(startDiff.Unit().Z());
-
-      std::vector<TVector3> end_input;
-      size_t nPoints = theXYZPoints.size();
-      for (size_t iP = nPoints - 4; iP < nPoints; ++iP) {
-        end_input.push_back(TVector3(theXYZPoints[iP].X(),
-                                     theXYZPoints[iP].Y(),
-                                     theXYZPoints[iP].Z()));
-      }
-
-      TVector3 endDiff = FitLine(end_input);
-      reco_beam_calo_endDirX.push_back(endDiff.Unit().X());
-      reco_beam_calo_endDirY.push_back(endDiff.Unit().Y());
-      reco_beam_calo_endDirZ.push_back(endDiff.Unit().Z());
-
-    }
-    else {
-      reco_beam_calo_startDirX.push_back(-1.);
-      reco_beam_calo_endDirX.push_back(-1.);
-      reco_beam_calo_startDirY.push_back(-1.);
-      reco_beam_calo_endDirY.push_back(-1.);
-      reco_beam_calo_startDirZ.push_back(-1.);
-      reco_beam_calo_endDirZ.push_back(-1.);
-    }
-    ////////////////////////////////////////////
-
-    //New Calibration
-    std::cout << "Getting reco beam calo" << std::endl;
-    std::vector< float > new_dEdX = calibration.GetCalibratedCalorimetry(  *thisTrack, evt, fTrackerTag, fCalorimetryTag, 2, -1.);
-    std::cout << new_dEdX.size() << " " << reco_beam_resRange.size() << std::endl;
-    for( size_t i = 0; i < new_dEdX.size(); ++i ){ reco_beam_calibrated_dEdX.push_back( new_dEdX[i] ); }
-    std::cout << "got calibrated dedx" << std::endl;
-    ////////////////////////////////////////////
-
-    //no SCE
-    /*
-    std::vector< anab::Calorimetry> calo_no_SCE = trackUtil.GetRecoTrackCalorimetry(*thisTrack, evt, fTrackerTag, "pandoracalo");
-    auto calo_dQdX_no_SCE = calo_no_SCE[0].dQdx();
-    auto calo_dEdX_no_SCE = calo_no_SCE[0].dEdx();
-    auto calo_range_no_SCE = calo_no_SCE[0].ResidualRange();
-    auto TpIndices_no_SCE = calo_no_SCE[0].TpIndices();
-    auto theXYZPoints_no_SCE = calo_no_SCE[0].XYZ();
-    //std::cout << "View 2 hits " << calo_dQdX.size() << std::endl;
-
-    //std::vector< size_t > calo_hit_indices;
-    for( size_t i = 0; i < calo_dQdX_no_SCE.size(); ++i ){
-      reco_beam_dQdX_no_SCE.push_back( calo_dQdX_no_SCE[i] );
-      reco_beam_dEdX_no_SCE.push_back( calo_dEdX_no_SCE[i] );
-      reco_beam_resRange_no_SCE.push_back( calo_range_no_SCE[i] );
-      reco_beam_TrkPitch_no_SCE.push_back( calo_no_SCE[0].TrkPitchVec()[i] );
-
-      const recob::Hit & theHit = (*allHits)[ TpIndices_no_SCE[i] ];
-      reco_beam_calo_TPC_no_SCE.push_back(theHit.WireID().TPC);
-      if (theHit.WireID().TPC == 1) {
-        reco_beam_calo_wire_no_SCE.push_back( theHit.WireID().Wire );
-      }
-      else if (theHit.WireID().TPC == 5) {
-        reco_beam_calo_wire_no_SCE.push_back( theHit.WireID().Wire + 479);
+        TVector3 dir((theXYZPoints.back().X() - theXYZPoints[0].X()),
+                     (theXYZPoints.back().Y() - theXYZPoints[0].Y()),
+                     (theXYZPoints.back().Z() - theXYZPoints[0].Z()));
+        reco_beam_calo_startDirX.push_back(dir.Unit().X());
+        reco_beam_calo_endDirX.push_back(dir.Unit().X());
+        reco_beam_calo_startDirY.push_back(dir.Unit().Y());
+        reco_beam_calo_endDirY.push_back(dir.Unit().Y());
+        reco_beam_calo_startDirZ.push_back(dir.Unit().Z());
+        reco_beam_calo_endDirZ.push_back(dir.Unit().Z());
       }
       else {
-        reco_beam_calo_wire_no_SCE.push_back(theHit.WireID().Wire );
+        reco_beam_calo_startDirX.push_back(-1.);
+        reco_beam_calo_endDirX.push_back(-1.);
+        reco_beam_calo_startDirY.push_back(-1.);
+        reco_beam_calo_endDirY.push_back(-1.);
+        reco_beam_calo_startDirZ.push_back(-1.);
+        reco_beam_calo_endDirZ.push_back(-1.);
       }
-      reco_beam_calo_tick_no_SCE.push_back( theHit.PeakTime() );
-      //calo_hit_indices_no_SCE.push_back( TpIndices[i] );
 
-      reco_beam_calo_wire_z_no_SCE.push_back(
-          geom->Wire(theHit.WireID()).GetCenter().Z());
+      if (theXYZPoints.size() > 1) {
+        TVector3 start_p1(theXYZPoints[0].X(),
+            theXYZPoints[0].Y(), theXYZPoints[0].Z());
+        TVector3 start_p2(theXYZPoints[1].X(),
+            theXYZPoints[1].Y(), theXYZPoints[1].Z());
+        TVector3 start_diff = start_p2 - start_p1;
+
+        reco_beam_calo_startDirX.push_back(start_diff.Unit().X());
+        reco_beam_calo_startDirY.push_back(start_diff.Unit().Y());
+        reco_beam_calo_startDirZ.push_back(start_diff.Unit().Z());
+
+        size_t nPoints = theXYZPoints.size();
+        TVector3 end_p1(theXYZPoints[nPoints - 2].X(),
+            theXYZPoints[nPoints - 2].Y(), theXYZPoints[nPoints - 2].Z());
+        TVector3 end_p2(theXYZPoints[nPoints - 1].X(),
+            theXYZPoints[nPoints - 1].Y(), theXYZPoints[nPoints - 1].Z());
+        TVector3 end_diff = end_p2 - end_p1;
+
+        reco_beam_calo_endDirX.push_back(end_diff.Unit().X());
+        reco_beam_calo_endDirY.push_back(end_diff.Unit().Y());
+        reco_beam_calo_endDirZ.push_back(end_diff.Unit().Z());
+      }
+      else {
+        reco_beam_calo_startDirX.push_back(-1.);
+        reco_beam_calo_endDirX.push_back(-1.);
+        reco_beam_calo_startDirY.push_back(-1.);
+        reco_beam_calo_endDirY.push_back(-1.);
+        reco_beam_calo_startDirZ.push_back(-1.);
+        reco_beam_calo_endDirZ.push_back(-1.);
+      }
+
+      if (theXYZPoints.size() > 2) {
+        std::vector<TVector3> input;
+        for (size_t iP = 0; iP < 3; ++iP) {
+          input.push_back(TVector3(theXYZPoints[iP].X(),
+                                   theXYZPoints[iP].Y(),
+                                   theXYZPoints[iP].Z()));
+        }
+
+        TVector3 startDiff = FitLine(input);
+        reco_beam_calo_startDirX.push_back(startDiff.Unit().X());
+        reco_beam_calo_startDirY.push_back(startDiff.Unit().Y());
+        reco_beam_calo_startDirZ.push_back(startDiff.Unit().Z());
+
+        std::vector<TVector3> end_input;
+        size_t nPoints = theXYZPoints.size();
+        for (size_t iP = nPoints - 3; iP < nPoints; ++iP) {
+          end_input.push_back(TVector3(theXYZPoints[iP].X(),
+                                       theXYZPoints[iP].Y(),
+                                       theXYZPoints[iP].Z()));
+        }
+
+        TVector3 endDiff = FitLine(end_input);
+        reco_beam_calo_endDirX.push_back(endDiff.Unit().X());
+        reco_beam_calo_endDirY.push_back(endDiff.Unit().Y());
+        reco_beam_calo_endDirZ.push_back(endDiff.Unit().Z());
+      }
+      else {
+        reco_beam_calo_startDirX.push_back(-1.);
+        reco_beam_calo_endDirX.push_back(-1.);
+        reco_beam_calo_startDirY.push_back(-1.);
+        reco_beam_calo_endDirY.push_back(-1.);
+        reco_beam_calo_startDirZ.push_back(-1.);
+        reco_beam_calo_endDirZ.push_back(-1.);
+      }
+
+      if (theXYZPoints.size() > 3) {
+        std::vector<TVector3> input;
+        for (size_t iP = 0; iP < 4; ++iP) {
+          input.push_back(TVector3(theXYZPoints[iP].X(),
+                                   theXYZPoints[iP].Y(),
+                                   theXYZPoints[iP].Z()));
+        }
+
+        TVector3 startDiff = FitLine(input);
+        reco_beam_calo_startDirX.push_back(startDiff.Unit().X());
+        reco_beam_calo_startDirY.push_back(startDiff.Unit().Y());
+        reco_beam_calo_startDirZ.push_back(startDiff.Unit().Z());
+
+        std::vector<TVector3> end_input;
+        size_t nPoints = theXYZPoints.size();
+        for (size_t iP = nPoints - 4; iP < nPoints; ++iP) {
+          end_input.push_back(TVector3(theXYZPoints[iP].X(),
+                                       theXYZPoints[iP].Y(),
+                                       theXYZPoints[iP].Z()));
+        }
+
+        TVector3 endDiff = FitLine(end_input);
+        reco_beam_calo_endDirX.push_back(endDiff.Unit().X());
+        reco_beam_calo_endDirY.push_back(endDiff.Unit().Y());
+        reco_beam_calo_endDirZ.push_back(endDiff.Unit().Z());
+
+      }
+      else {
+        reco_beam_calo_startDirX.push_back(-1.);
+        reco_beam_calo_endDirX.push_back(-1.);
+        reco_beam_calo_startDirY.push_back(-1.);
+        reco_beam_calo_endDirY.push_back(-1.);
+        reco_beam_calo_startDirZ.push_back(-1.);
+        reco_beam_calo_endDirZ.push_back(-1.);
+      }
+      ////////////////////////////////////////////
+
+      //New Calibration
+      std::cout << "Getting reco beam calo" << std::endl;
+      std::vector< float > new_dEdX = calibration.GetCalibratedCalorimetry(  *thisTrack, evt, fTrackerTag, fCalorimetryTag, 2, -1.);
+      std::cout << new_dEdX.size() << " " << reco_beam_resRange.size() << std::endl;
+      for( size_t i = 0; i < new_dEdX.size(); ++i ){ reco_beam_calibrated_dEdX.push_back( new_dEdX[i] ); }
+      std::cout << "got calibrated dedx" << std::endl;
+      ////////////////////////////////////////////
+
+      std::pair< double, int > pid_chi2_ndof = trackUtil.Chi2PID( reco_beam_calibrated_dEdX, reco_beam_resRange, templates[ 2212 ] );
+      std::cout << "got chi2" << std::endl;
+      reco_beam_Chi2_proton = pid_chi2_ndof.first;
+      reco_beam_Chi2_ndof = pid_chi2_ndof.second;
 
       if (fVerbose)
-        std::cout << theXYZPoints_no_SCE[i].X() << " " << theXYZPoints_no_SCE[i].Y() << " " <<
-                     theXYZPoints_no_SCE[i].Z() << " " << theHit.WireID().Wire << " " <<
-                     geom->Wire(theHit.WireID()).GetCenter().Z() << " " <<
-                     theHit.WireID().TPC << " " << std::endl;
-    }
-    std::vector< float > new_dEdX_no_SCE = calibration.GetCalibratedCalorimetry(  *thisTrack, evt, fTrackerTag, "pandoracalo", 2, -1.);
-    for( size_t i = 0; i < new_dEdX_no_SCE.size(); ++i ){ reco_beam_calibrated_dEdX_no_SCE.push_back( new_dEdX_no_SCE[i] ); }
-    */
-    ///////////////////////////////////////////
-
-    std::pair< double, int > pid_chi2_ndof = trackUtil.Chi2PID( reco_beam_calibrated_dEdX, reco_beam_resRange, templates[ 2212 ] );
-    std::cout << "got chi2" << std::endl;
-    reco_beam_Chi2_proton = pid_chi2_ndof.first;
-    reco_beam_Chi2_ndof = pid_chi2_ndof.second;
-
-std::cout << "here" << std::endl;
-    //std::cout << "Proton chi2: " << reco_beam_Chi2_proton << std::endl;
-
-    if (fVerbose)
-      std::cout << "Calo check: " << reco_beam_calibrated_dEdX.size() << " " <<
-                   reco_beam_TrkPitch.size() << std::endl;
-    if (fCalorimetryTag != "pandoracali") {
+        std::cout << "Calo check: " << reco_beam_calibrated_dEdX.size() << " " <<
+                     reco_beam_TrkPitch.size() << std::endl;
       std::vector< calo_point > reco_beam_calo_points;
       //Doing thin slice
       if (reco_beam_calibrated_dEdX.size() &&
@@ -2543,7 +2487,6 @@ std::cout << "here" << std::endl;
         }
 
 
-//mo  ve
         //slice up the view2_IDEs up by the wire pitch
         auto view2_IDEs = bt_serv->TrackIdToSimIDEs_Ps( true_beam_ID, geo::View_t(2) );
 
@@ -2981,49 +2924,57 @@ std::cout << "here" << std::endl;
 
           std::cout << "Getting calo for " << pandora2Track->ID() << std::endl;
 
-          /*std::vector<anab::Calorimetry>*/ auto dummy_caloSCE =
+          auto dummy_caloSCE =
               trackUtil.GetRecoTrackCalorimetry(
                   *pandora2Track, evt, "pandora2Track", fPandora2CaloSCE);
           std::cout << dummy_caloSCE.size() << std::endl;
+          bool found_calo = false;
           size_t index = 0;
           for ( index = 0; index < dummy_caloSCE.size(); ++index) {
             if (dummy_caloSCE[index].PlaneID().Plane == 2) {
+              found_calo = true;
               break; 
             }
           }
           std::cout << index << std::endl;
 
-          auto dummy_dEdx_SCE = dummy_caloSCE[index].dEdx();
-          auto dummy_dQdx_SCE = dummy_caloSCE[index].dQdx();
-          auto dummy_Range_SCE = dummy_caloSCE[index].ResidualRange();
-
-          reco_daughter_allTrack_momByRange_alt_proton.push_back( track_p_calc.GetTrackMomentum( dummy_caloSCE[index].Range(), 2212 ) );
-          reco_daughter_allTrack_momByRange_alt_muon.push_back(   track_p_calc.GetTrackMomentum( dummy_caloSCE[index].Range(), 13  ) );
-          reco_daughter_allTrack_alt_len.push_back(    dummy_caloSCE[index].Range() );
-
-          std::vector<float> cali_dEdX_SCE = calibration.GetCalibratedCalorimetry(*pandora2Track, evt, "pandora2Track", fPandora2CaloSCE, 2);
-
           reco_daughter_allTrack_resRange_SCE.push_back( std::vector<double>() );
           reco_daughter_allTrack_dEdX_SCE.push_back( std::vector<double>() );
           reco_daughter_allTrack_dQdX_SCE.push_back( std::vector<double>() );
-
-          for( size_t j = 0; j < dummy_dEdx_SCE.size(); ++j ){
-            reco_daughter_allTrack_resRange_SCE.back().push_back( dummy_Range_SCE[j] );
-            reco_daughter_allTrack_dEdX_SCE.back().push_back( dummy_dEdx_SCE[j] );
-            reco_daughter_allTrack_dQdX_SCE.back().push_back( dummy_dQdx_SCE[j] );
-          }
-
           reco_daughter_allTrack_calibrated_dEdX_SCE.push_back( std::vector<double>() );
-          for( size_t j = 0; j < cali_dEdX_SCE.size(); ++j ){
-            reco_daughter_allTrack_calibrated_dEdX_SCE.back().push_back( cali_dEdX_SCE[j] );
+
+          if (found_calo) {
+            auto dummy_dEdx_SCE = dummy_caloSCE[index].dEdx();
+            auto dummy_dQdx_SCE = dummy_caloSCE[index].dQdx();
+            auto dummy_Range_SCE = dummy_caloSCE[index].ResidualRange();
+
+            reco_daughter_allTrack_momByRange_alt_proton.push_back( track_p_calc.GetTrackMomentum( dummy_caloSCE[index].Range(), 2212 ) );
+            reco_daughter_allTrack_momByRange_alt_muon.push_back(   track_p_calc.GetTrackMomentum( dummy_caloSCE[index].Range(), 13  ) );
+            reco_daughter_allTrack_alt_len.push_back(    dummy_caloSCE[index].Range() );
+
+            std::vector<float> cali_dEdX_SCE = calibration.GetCalibratedCalorimetry(*pandora2Track, evt, "pandora2Track", fPandora2CaloSCE, 2);
+
+            for( size_t j = 0; j < dummy_dEdx_SCE.size(); ++j ){
+              reco_daughter_allTrack_resRange_SCE.back().push_back( dummy_Range_SCE[j] );
+              reco_daughter_allTrack_dEdX_SCE.back().push_back( dummy_dEdx_SCE[j] );
+              reco_daughter_allTrack_dQdX_SCE.back().push_back( dummy_dQdx_SCE[j] );
+            }
+
+            for( size_t j = 0; j < cali_dEdX_SCE.size(); ++j ){
+              reco_daughter_allTrack_calibrated_dEdX_SCE.back().push_back( cali_dEdX_SCE[j] );
+            }
+
+            std::pair<double, int> this_chi2_ndof = trackUtil.Chi2PID(
+                reco_daughter_allTrack_calibrated_dEdX_SCE.back(),
+                reco_daughter_allTrack_resRange_SCE.back(), templates[2212]);
+
+            reco_daughter_allTrack_Chi2_proton.push_back(this_chi2_ndof.first);
+            reco_daughter_allTrack_Chi2_ndof.push_back(this_chi2_ndof.second);
           }
-
-          std::pair<double, int> this_chi2_ndof = trackUtil.Chi2PID(
-              reco_daughter_allTrack_calibrated_dEdX_SCE.back(),
-              reco_daughter_allTrack_resRange_SCE.back(), templates[2212]);
-
-          reco_daughter_allTrack_Chi2_proton.push_back(this_chi2_ndof.first);
-          reco_daughter_allTrack_Chi2_ndof.push_back(this_chi2_ndof.second);
+          else {
+            reco_daughter_allTrack_Chi2_proton.push_back(-999.);
+            reco_daughter_allTrack_Chi2_ndof.push_back(-999);
+          }
 
           //Calorimetry + chi2 for planes 0 and 1
           size_t plane0_index = 0;
@@ -3049,10 +3000,13 @@ std::cout << "here" << std::endl;
                            plane1_index << std::endl;
 
 
+          reco_daughter_allTrack_calibrated_dEdX_SCE_plane0.push_back(
+              std::vector<double>());
+          reco_daughter_allTrack_resRange_plane0.push_back(
+              std::vector<double>());
+
           if (found_plane0) {
             auto resRange_plane0 = dummy_caloSCE[plane0_index].ResidualRange();
-            reco_daughter_allTrack_resRange_plane0.push_back(
-                std::vector<double>());
             for (size_t j = 0; j < resRange_plane0.size(); ++j) {
               reco_daughter_allTrack_resRange_plane0.back().push_back(
                   resRange_plane0[j]);
@@ -3060,8 +3014,6 @@ std::cout << "here" << std::endl;
 
             std::vector<float> dEdX_plane0 = calibration.GetCalibratedCalorimetry(
                 *pandora2Track, evt, "pandora2Track", fPandora2CaloSCE, 0);
-            reco_daughter_allTrack_calibrated_dEdX_SCE_plane0.push_back(
-                std::vector<double>());
             for (size_t j = 0; j < dEdX_plane0.size(); ++j) {
               reco_daughter_allTrack_calibrated_dEdX_SCE_plane0.back().push_back(
                   dEdX_plane0[j]);
@@ -3073,23 +3025,31 @@ std::cout << "here" << std::endl;
                 plane0_chi2_ndof.first);
             reco_daughter_allTrack_Chi2_ndof_plane0.push_back(
                 plane0_chi2_ndof.second);
-            }
+          }
+          else {
+            reco_daughter_allTrack_Chi2_proton_plane0.push_back(
+                -999.);
+            reco_daughter_allTrack_Chi2_ndof_plane0.push_back(
+                -999);
+          }
 
+
+          reco_daughter_allTrack_calibrated_dEdX_SCE_plane1.push_back(
+              std::vector<double>());
+
+          reco_daughter_allTrack_resRange_plane1.push_back(
+              std::vector<double>());
 
           if (found_plane1) {
             auto resRange_plane1 = dummy_caloSCE[plane1_index].ResidualRange();
             std::vector<float> dEdX_plane1 = calibration.GetCalibratedCalorimetry(
                 *pandora2Track, evt, "pandora2Track", fPandora2CaloSCE, 1);
 
-            reco_daughter_allTrack_resRange_plane1.push_back(
-                std::vector<double>());
             for (size_t j = 0; j < resRange_plane1.size(); ++j) {
               reco_daughter_allTrack_resRange_plane1.back().push_back(
                   resRange_plane1[j]);
             }
 
-            reco_daughter_allTrack_calibrated_dEdX_SCE_plane1.push_back(
-                std::vector<double>());
             for (size_t j = 0; j < dEdX_plane1.size(); ++j) {
               reco_daughter_allTrack_calibrated_dEdX_SCE_plane1.back().push_back(
                   dEdX_plane1[j]);
@@ -3102,6 +3062,12 @@ std::cout << "here" << std::endl;
                 plane1_chi2_ndof.first);
             reco_daughter_allTrack_Chi2_ndof_plane1.push_back(
                 plane1_chi2_ndof.second);
+          }
+          else {
+            reco_daughter_allTrack_Chi2_proton_plane1.push_back(
+                -999.);
+            reco_daughter_allTrack_Chi2_ndof_plane1.push_back(
+                -999);
           }
           //////////////////////////////////////
  
