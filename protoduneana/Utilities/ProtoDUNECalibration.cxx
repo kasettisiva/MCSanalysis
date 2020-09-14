@@ -220,6 +220,7 @@ double protoana::ProtoDUNECalibration::HitToEnergy(
 
 TFile * protoana::ProtoDUNECalibration::OpenFile(const std::string filename) {
   TFile * theFile = 0x0;
+  mf::LogInfo("protoana::ProtoDUNECalibration::OpenFile") << "Searching for " << filename;
   if (cet::file_exists(filename)) {
     mf::LogInfo("protoana::ProtoDUNECalibration::OpenFile") << "File exists. Opening " << filename;
     theFile = new TFile(filename.c_str());
