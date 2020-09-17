@@ -65,5 +65,5 @@ physics.analyzers.pionana.Verbose: true
 physics.analyzers.pionana.DoReweight: false 
 physics.analyzers.pionana.DoProtReweight: false 
 physics.analyzers.pionana.CalibrationPars: @local::CalorimetryParameters_SPProd3_MC_SCE
-services.ParticleInventoryService.ParticleInventory.EveIdCalculator: "EveIdCalculator"
+services.ParticleInventoryService.ParticleInventory.EveIdCalculator: "EmEveIdCalculator"
 #physics.analyzers.pionana.SaveHits: true

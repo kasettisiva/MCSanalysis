@@ -2972,6 +2972,9 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
             reco_daughter_allTrack_Chi2_ndof.push_back(this_chi2_ndof.second);
           }
           else {
+            reco_daughter_allTrack_momByRange_alt_proton.push_back(-999.);
+            reco_daughter_allTrack_momByRange_alt_muon.push_back(-999.);
+            reco_daughter_allTrack_alt_len.push_back(-999.);
             reco_daughter_allTrack_Chi2_proton.push_back(-999.);
             reco_daughter_allTrack_Chi2_ndof.push_back(-999);
           }
@@ -4797,12 +4800,6 @@ bool pionana::PionAnalyzer::CreateRWTraj(
     const TGeoMaterial * test_material = geo_serv->Material(test_point);
 
     if (!strcmp(test_material->GetName(), "LAr")) {
-      if (fVerbose) {
-        std::cout  << "LAr: " << test_material->GetDensity() << " " <<
-                      test_material->GetA() << " " << test_material->GetZ() <<
-                      " " << x << " " << y << " " << z << " " << part.P(i) <<
-                      std::endl;
-      }
       traj_X.push_back(x);
       traj_Y.push_back(y);
       traj_Z.push_back(z);
@@ -4815,13 +4812,24 @@ bool pionana::PionAnalyzer::CreateRWTraj(
       if (itProc != proc_map.end() && itProc->second == "hadElastic") {
         elastic_indices.push_back(i);
       }
+      if (fVerbose) {
+        std::cout  << "LAr: " << test_material->GetDensity() << " " <<
+                      test_material->GetA() << " " << test_material->GetZ() <<
+                      " " << x << " " << y << " " << z << " " << part.P(i);
+        if (itProc != proc_map.end())
+          std::cout << " " << itProc->second;
+        std::cout << std::endl;
+      }
     }
     else if (fVerbose) {
+      auto itProc = proc_map.find(i);
       std::cout << test_material->GetName() << " " <<
                    test_material->GetDensity() << " " <<
                    test_material->GetA() << " " << test_material->GetZ() <<
-                   " " << x << " " << y << " " << z << 
-                   std::endl;
+                   " " << x << " " << y << " " << z;
+      if (itProc != proc_map.end())
+        std::cout << " " << itProc->second;
+      std::cout << std::endl;
     }
 
     if (i == part.NumberTrajectoryPoints() - 1)
