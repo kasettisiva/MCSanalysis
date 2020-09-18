@@ -28,6 +28,7 @@ table_fragment_begin
 #    pathPrepend(FW_SEARCH_PATH, ${PROTODUNEANA_DIR}/scripts)
 #    pathPrepend(FW_SEARCH_PATH, ${PROTODUNEANA_DIR}/gdml)
 #    pathPrepend(FW_SEARCH_PATH, ${DUNE_PARDATA_DIR}/FieldResponse)
+     pathPrepend(FW_SEARCH_PATH, /cvmfs/dune.opensciencegrid.org/products/dune/)
     # Add StashCache to the FW_SEARCH_PATH
 #    pathPrepend(FW_SEARCH_PATH, /cvmfs/dune.osgstorage.org/pnfs/fnal.gov/usr/dune/persistent/stash/)
 #    pathPrepend(FHICL_FILE_PATH, .:./job)
