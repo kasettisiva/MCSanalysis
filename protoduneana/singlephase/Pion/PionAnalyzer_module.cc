@@ -822,6 +822,9 @@ private:
   std::vector< double > reco_daughter_allTrack_dR;
   std::vector< double > reco_daughter_allTrack_len, reco_daughter_allTrack_alt_len;
   std::vector< double > reco_daughter_allTrack_to_vertex;
+
+  std::vector<double> reco_daughter_allTrack_vertex_michel_score;
+  std::vector<int> reco_daughter_allTrack_vertex_nHits;
   //
 
   std::vector<int>    reco_daughter_allShower_ID;
@@ -1691,6 +1694,12 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
       if (fVerbose) std::cout << "Daughter " << i << " ID: " << daughterID << std::endl;
       auto part = plist[ daughterID ];
       int pid = part->PdgCode();
+
+      std::string process = part->Process();
+
+      if (process == "muIoni" || process == "hIoni")
+        continue;
+
       true_beam_daughter_PDG.push_back(pid);
       true_beam_daughter_ID.push_back( part->TrackId() );
 
@@ -3085,6 +3094,18 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
           reco_daughter_allTrack_endY.push_back(   pandora2Track->Trajectory().End().Y() );
           reco_daughter_allTrack_endZ.push_back(   pandora2Track->Trajectory().End().Z() );
 
+          //Using new michel tagging
+          std::pair<double, int> vertex_results =
+              trackUtil.GetVertexMichelScore(
+                  *pandora2Track, evt, fTrackerTag, fHitTag,
+                  0., -500., 500., 0., 500., 0., false,
+                  reco_beam_endX, reco_beam_endY, reco_beam_endZ);
+
+          reco_daughter_allTrack_vertex_michel_score.push_back(
+              vertex_results.first);
+          reco_daughter_allTrack_vertex_nHits.push_back(
+              vertex_results.second);
+
           if (fVerbose) std::cout << "pandora2Length " << pandora2Track->Length() << std::endl;
           reco_daughter_allTrack_momByRange_proton.push_back( track_p_calc.GetTrackMomentum( pandora2Track->Length(), 2212 ) );
           reco_daughter_allTrack_momByRange_muon.push_back(   track_p_calc.GetTrackMomentum( pandora2Track->Length(), 13  ) );
@@ -3205,6 +3226,9 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
 
           reco_daughter_allTrack_momByRange_alt_proton.push_back(-999.);
           reco_daughter_allTrack_momByRange_alt_muon.push_back(-999.);
+
+          reco_daughter_allTrack_vertex_michel_score.push_back(-999.);
+          reco_daughter_allTrack_vertex_nHits.push_back(-999);
 
         }
       }
@@ -3880,6 +3904,11 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("reco_daughter_allTrack_endZ", &reco_daughter_allTrack_endZ);
   fTree->Branch("reco_daughter_allTrack_dR", &reco_daughter_allTrack_dR);
   fTree->Branch("reco_daughter_allTrack_to_vertex", &reco_daughter_allTrack_to_vertex);
+
+  fTree->Branch("reco_daughter_allTrack_vertex_michel_score",
+                &reco_daughter_allTrack_vertex_michel_score);
+  fTree->Branch("reco_daughter_allTrack_vertex_nHits",
+                &reco_daughter_allTrack_vertex_nHits);
   //////
 
   fTree->Branch("reco_daughter_allShower_ID", &reco_daughter_allShower_ID);
@@ -4725,6 +4754,8 @@ void pionana::PionAnalyzer::reset()
   reco_daughter_allTrack_endZ.clear();
   reco_daughter_allTrack_dR.clear();
   reco_daughter_allTrack_to_vertex.clear();
+  reco_daughter_allTrack_vertex_michel_score.clear();
+  reco_daughter_allTrack_vertex_nHits.clear();
 
   reco_daughter_allShower_ID.clear();
   reco_daughter_allShower_len.clear();

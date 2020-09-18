@@ -75,7 +75,8 @@ namespace protoana {
     const std::string trackModule, const std::string hitModule,
     double min_length = 5., double min_x = -200.,
     double max_x = 0., double min_y = 200., double max_y = 500.,
-    double min_z = 25.);
+    double min_z = 25., bool check_wire = true, double check_x = 0,
+    double check_y = 0., double check_z = 0.);
 
   private:
 

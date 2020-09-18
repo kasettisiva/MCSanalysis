@@ -650,13 +650,14 @@ std::pair<double, int> protoana::ProtoDUNETrackUtils::GetVertexMichelScore(
     const recob::Track & track, const art::Event & evt,
     const std::string trackModule, const std::string hitModule,
     double min_length, double min_x,
-    double max_x, double min_y, double max_y, double min_z) {
+    double max_x, double min_y, double max_y, double min_z, bool check_wire,
+    double check_x, double check_y, double check_z) {
 
   art::ServiceHandle<geo::Geometry> geom;
   anab::MVAReader<recob::Hit, 4> hitResults(evt, "emtrkmichelid:emtrkmichel");
 
   //Skip short tracks
-  //Skip tracks that end outside of interesting volume
+  //Skip tracks that start/end outside of interesting volume
   auto start = track.Vertex();
   auto end = track.End();
   if ((TMath::Max(start.X(), end.X()) > max_x) ||
@@ -673,10 +674,12 @@ std::pair<double, int> protoana::ProtoDUNETrackUtils::GetVertexMichelScore(
   std::map<size_t, const recob::Hit *>
       hits_from_traj = GetRecoHitsFromTrajPoints(track, evt, trackModule);
   std::vector<const recob::Hit *> hits_from_traj_view2;
+  std::vector<size_t> index_from_traj_view2;
 
   for (auto it = hits_from_traj.begin(); it != hits_from_traj.end(); ++it) {
     if (it->second->View() != 2) continue;
     hits_from_traj_view2.push_back(it->second); 
+    index_from_traj_view2.push_back(it->first);
   }
 
   //Find the vertex hit & info to compare to later
@@ -684,13 +687,38 @@ std::pair<double, int> protoana::ProtoDUNETrackUtils::GetVertexMichelScore(
   int vertex_tpc = -1;
   int vertex_wire = -1;
   float vertex_peak_time = -1.;
-  for (const auto * hit : hits_from_traj_view2) {
-    double wire_z = geom->Wire(hit->WireID()).GetCenter().Z();
-    if (wire_z > highest_z) {
-      highest_z = wire_z;
-      vertex_tpc = hit->WireID().TPC;
-      vertex_peak_time = hit->PeakTime();
-      vertex_wire = hit->WireID().Wire;
+
+  if (check_z) {
+    for (const auto * hit : hits_from_traj_view2) {
+      double wire_z = geom->Wire(hit->WireID()).GetCenter().Z();
+      if (wire_z > highest_z) {
+        highest_z = wire_z;
+        vertex_tpc = hit->WireID().TPC;
+        vertex_peak_time = hit->PeakTime();
+        vertex_wire = hit->WireID().Wire;
+      }
+    }
+  }
+  else {
+    const recob::TrackTrajectory & traj = track.Trajectory();
+    double highest_diff = -1.;
+    for (size_t i = 0; i < hits_from_traj_view2.size(); ++i) {
+      const recob::Hit * hit = hits_from_traj_view2[i];
+      size_t traj_index = index_from_traj_view2[i];
+      
+      double traj_x = traj.LocationAtPoint(traj_index).X();
+      double traj_y = traj.LocationAtPoint(traj_index).Y();
+      double traj_z = traj.LocationAtPoint(traj_index).Z();
+
+      double diff = sqrt(std::pow((traj_x - check_x), 2) + 
+                         std::pow((traj_y - check_y), 2) + 
+                         std::pow((traj_z - check_z), 2));
+      if (diff > highest_diff) {
+        highest_diff = diff;
+        vertex_tpc = hit->WireID().TPC;
+        vertex_peak_time = hit->PeakTime();
+        vertex_wire = hit->WireID().Wire;
+      }
     }
   }
   
