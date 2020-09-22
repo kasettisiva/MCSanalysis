@@ -2945,7 +2945,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
               break; 
             }
           }
-          std::cout << index << std::endl;
+          std::cout << index << " " << found_calo << std::endl;
 
           reco_daughter_allTrack_resRange_SCE.push_back( std::vector<double>() );
           reco_daughter_allTrack_dEdX_SCE.push_back( std::vector<double>() );
@@ -3094,10 +3094,11 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
           reco_daughter_allTrack_endY.push_back(   pandora2Track->Trajectory().End().Y() );
           reco_daughter_allTrack_endZ.push_back(   pandora2Track->Trajectory().End().Z() );
 
+          std::cout << "Getting michel" << std::endl;
           //Using new michel tagging
           std::pair<double, int> vertex_results =
               trackUtil.GetVertexMichelScore(
-                  *pandora2Track, evt, fTrackerTag, fHitTag,
+                  *pandora2Track, evt, "pandora2Track", fHitTag,
                   0., -500., 500., 0., 500., 0., false,
                   reco_beam_endX, reco_beam_endY, reco_beam_endZ);
 
