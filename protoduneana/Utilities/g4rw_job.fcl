@@ -42,7 +42,7 @@ physics:
 outputs: {}
 
 physics.analyzers.rwexample.XSecFile: "/dune/data2/users/calcuttj/GeantReweight/FlatTree/cross_section_with_decay.root"
-physics.analyzers.pionana.ParameterSet: [
+physics.analyzers.rwexample.ParameterSet: [
                                           { 
                                             Cut:    "reac"
                                             Name: "fReac1"
@@ -109,6 +109,13 @@ physics.analyzers.pionana.ParameterSet: [
                                           {
                                             Cut:    "reac"
                                             Name: "fReac10"
+                                            Range: [000., 1200.]
+                                            Nominal: 1.0 
+                                            Sigma: .5
+                                          },
+                                          {
+                                            Cut:    "elast"
+                                            Name: "fElast"
                                             Range: [000., 1200.]
                                             Nominal: 1.0 
                                             Sigma: .5

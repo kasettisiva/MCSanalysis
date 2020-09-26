@@ -65,6 +65,7 @@ private:
   int true_beam_PDG;
   int true_beam_ID;
   double true_beam_len;
+  std::string true_beam_endProcess;
   int true_beam_nElasticScatters;
   std::vector<double> g4rw_primary_plus_sigma_weight;
   std::vector<double> g4rw_primary_minus_sigma_weight;
@@ -80,9 +81,11 @@ private:
   //Geant4Reweight stuff
   int RW_PDG;
   TFile FracsFile, XSecFile;
+  TFile ProtFracsFile, ProtXSecFile;
   std::vector<fhicl::ParameterSet> ParSet;
   G4ReweightParameterMaker ParMaker;
   G4MultiReweighter MultiRW;
+  //G4MultiReweighter ProtMultiRW;
   G4ReweighterFactory RWFactory;
   G4Reweighter * theRW;
 
@@ -96,13 +99,17 @@ protoana::G4RWExampleAnalyzer::G4RWExampleAnalyzer(
       RW_PDG(p.get<int>("RW_PDG")),
       FracsFile( (p.get< std::string >( "FracsFile" )).c_str(), "OPEN" ),
       XSecFile( (p.get< std::string >( "XSecFile" )).c_str(), "OPEN"),
+      //ProtFracsFile( (p.get< std::string >( "ProtFracsFile" )).c_str(), "OPEN" ),
+      //ProtXSecFile( (p.get< std::string >( "ProtXSecFile" )).c_str(), "OPEN"),
       ParSet(p.get<std::vector<fhicl::ParameterSet>>("ParameterSet")),
       ParMaker(ParSet, RW_PDG),
-      MultiRW(RW_PDG, XSecFile, FracsFile, ParSet) {
+      MultiRW(RW_PDG, XSecFile, FracsFile, ParSet) {//,
+      //ProtMultiRW(2212, ProtXSecFile, ProtFracsFile, ParSet) {
 
   theRW = RWFactory.BuildReweighter(RW_PDG, &XSecFile, &FracsFile,
                                     ParMaker.GetFSHists(),
                                     ParMaker.GetElasticHist()/*, true*/ );
+  std::cout << "done" << std::endl;
 }
 
 void protoana::G4RWExampleAnalyzer::analyze(art::Event const& e) {
@@ -128,6 +135,7 @@ void protoana::G4RWExampleAnalyzer::analyze(art::Event const& e) {
   true_beam_PDG = true_beam_particle->PdgCode();
   true_beam_ID = true_beam_particle->TrackId();
   true_beam_len = true_beam_particle->Trajectory().TotalLength();
+  true_beam_endProcess = true_beam_particle->EndProcess();
 
   const simb::MCTrajectory & true_beam_trajectory =
       true_beam_particle->Trajectory();
@@ -147,9 +155,10 @@ void protoana::G4RWExampleAnalyzer::analyze(art::Event const& e) {
   run = e.run();
   subrun = e.subRun();
 
-  std::cout << "Doing reweight" << std::endl;
   if (true_beam_PDG == RW_PDG) {
+  std::cout << "Doing reweight" << std::endl;
     G4ReweightTraj theTraj(true_beam_ID, true_beam_PDG, 0, event, {0,0});
+    /*
     bool created = CreateRWTraj(*true_beam_particle, plist,
                                 fGeometryService, event, &theTraj);
     if (created && theTraj.GetNSteps()) {
@@ -188,6 +197,7 @@ void protoana::G4RWExampleAnalyzer::analyze(art::Event const& e) {
 
 
     }
+    */
 
     std::vector<G4ReweightTraj *> trajs = CreateNRWTrajs(
         *true_beam_particle, plist,
@@ -215,6 +225,7 @@ void protoana::G4RWExampleAnalyzer::analyze(art::Event const& e) {
         added = true;
       }
     }
+    
   }
 
   fTree->Fill();
@@ -230,6 +241,7 @@ void protoana::G4RWExampleAnalyzer::beginJob() {
   fTree->Branch("true_beam_ID", &true_beam_ID);
   fTree->Branch("true_beam_PDG", &true_beam_PDG);
   fTree->Branch("true_beam_len", &true_beam_len);
+  fTree->Branch("true_beam_endProcess", &true_beam_endProcess);
   fTree->Branch("true_beam_nElasticScatters", &true_beam_nElasticScatters);
 
   fTree->Branch("g4rw_primary_weights", &g4rw_primary_weights);
@@ -248,6 +260,7 @@ void protoana::G4RWExampleAnalyzer::reset() {
   true_beam_PDG = -1;
   true_beam_ID = -1;
   true_beam_len = -1.;
+  true_beam_endProcess = "";
   true_beam_nElasticScatters = 0.;
   
   g4rw_primary_weights.clear();

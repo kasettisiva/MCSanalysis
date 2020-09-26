@@ -70,6 +70,14 @@ namespace protoana {
    bool IsBeamlike( const recob::Track & track, art::Event const & evt, const fhicl::ParameterSet & BeamPars, bool flip=false );
 
 
+  std::pair<double, int> GetVertexMichelScore(
+    const recob::Track & track, const art::Event & evt,
+    const std::string trackModule, const std::string hitModule,
+    double min_length = 5., double min_x = -200.,
+    double max_x = 0., double min_y = 200., double max_y = 500.,
+    double min_z = 25., bool check_wire = true, double check_x = 0,
+    double check_y = 0., double check_z = 0.);
+
   private:
 
 

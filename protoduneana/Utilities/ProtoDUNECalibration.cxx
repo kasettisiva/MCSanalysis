@@ -1,4 +1,7 @@
 #include "ProtoDUNECalibration.h"
+#include "cetlib/search_path.h"
+#include "cetlib/filesystem.h"
+#include "messagefacility/MessageLogger/MessageLogger.h"
 
 
 protoana::ProtoDUNECalibration::ProtoDUNECalibration(const fhicl::ParameterSet & pset) 
@@ -13,9 +16,15 @@ protoana::ProtoDUNECalibration::ProtoDUNECalibration(const fhicl::ParameterSet &
       YZ_correction_name(pset.get<std::string>("YZ_correction")),
       E_field_correction_name(pset.get<std::string>("E_field_correction")) {
 
+  
+  /*
   X_correction_file = new TFile(X_correction_name.c_str(), "OPEN");
   YZ_correction_file = new TFile(YZ_correction_name.c_str(), "OPEN");
   E_field_file = new TFile(E_field_correction_name.c_str(), "OPEN");
+  */
+  X_correction_file = OpenFile(X_correction_name);
+  YZ_correction_file = OpenFile(YZ_correction_name);
+  E_field_file = OpenFile(E_field_correction_name);
 
   std::vector<fhicl::ParameterSet> PlaneParameters =
       pset.get<std::vector<fhicl::ParameterSet>>("PlaneParameters");
@@ -207,4 +216,36 @@ double protoana::ProtoDUNECalibration::HitToEnergy(
   
   return energy;
 
+}
+
+TFile * protoana::ProtoDUNECalibration::OpenFile(const std::string filename) {
+  TFile * theFile = 0x0;
+  mf::LogInfo("protoana::ProtoDUNECalibration::OpenFile") << "Searching for " << filename;
+  if (cet::file_exists(filename)) {
+    mf::LogInfo("protoana::ProtoDUNECalibration::OpenFile") << "File exists. Opening " << filename;
+    theFile = new TFile(filename.c_str());
+    if (!theFile ||theFile->IsZombie() || !theFile->IsOpen()) {
+      delete theFile;
+      theFile = 0x0;
+      throw cet::exception("ProtoDUNECalibration.cxx") << "Could not open " << filename;
+    }
+  }
+  else {
+    mf::LogInfo("protoana::ProtoDUNECalibration::OpenFile") << "File does not exist here. Searching FW_SEARCH_PATH";
+    cet::search_path sp{"FW_SEARCH_PATH"};
+    std::string found_filename;
+    auto found = sp.find_file(filename, found_filename);
+    if (!found) {
+      throw cet::exception("ProtoDUNECalibration.cxx") << "Could not find " << filename;
+    }
+
+    mf::LogInfo("protoana::ProtoDUNECalibration::OpenFile") << "Found file " << found_filename;
+    theFile = new TFile(found_filename.c_str());
+    if (!theFile ||theFile->IsZombie() || !theFile->IsOpen()) {
+      delete theFile;
+      theFile = 0x0;
+      throw cet::exception("ProtoDUNECalibration.cxx") << "Could not open " << found_filename;
+    }
+  }
+  return theFile;
 }

@@ -45,9 +45,11 @@ namespace protoana {
 
     // Get shared hits between reco objects and MCParticle.
     
-    std::vector< const recob::Hit * > FillSharedHits(detinfo::DetectorClocksData const& clockData,
-                                                     const simb::MCParticle & mcpart,
-      const std::vector< const recob::Hit * > & hitsVec, bool delta_ray ) const;
+    std::vector< const recob::Hit * > FillSharedHits(
+        detinfo::DetectorClocksData const& clockData,
+        const simb::MCParticle & mcpart,
+        const std::vector<const recob::Hit *> & hitsVec,
+        bool delta_ray, bool use_eve = true) const;
 
     std::vector<const recob::Hit*> GetSharedHits(detinfo::DetectorClocksData const& clockData,
                                                  const simb::MCParticle &mcpart,
@@ -60,9 +62,12 @@ namespace protoana {
       const recob::Shower &shower, const art::Event &evt, std::string showerModule, bool delta_ray = false) const;
 
     // Get hits associated with an MCParticle.
-    std::vector<const recob::Hit*> GetMCParticleHits(detinfo::DetectorClocksData const& clockData,
-                                                     const simb::MCParticle &mcpart,
-      const art::Event &evt, std::string hitModule) const;
+    std::vector<const recob::Hit*> GetMCParticleHits(
+        detinfo::DetectorClocksData const& clockData,
+        const simb::MCParticle &mcpart,
+        const art::Event &evt,
+        std::string hitModule,
+        bool use_eve = true) const;
     
     // Get completeness and purity of reconstructed objects.
     template <typename T>
@@ -85,7 +90,7 @@ namespace protoana {
     // Get MCParticle list from a hit vector depending on whether the hits came from a shower or track.
     std::vector<std::pair<const simb::MCParticle*, double>> GetMCParticleListFromTrackHits
       (detinfo::DetectorClocksData const& clockData,
-       const std::vector<const recob::Hit*>& hitVec) const;
+       const std::vector<const recob::Hit*>& hitVec, bool use_eve = true) const;
     std::vector<std::pair<const simb::MCParticle*, double>> GetMCParticleListFromShowerHits
       (detinfo::DetectorClocksData const& clockData,
        const std::vector<const recob::Hit*>& hitVec) const;
@@ -96,7 +101,8 @@ namespace protoana {
        const recob::PFParticle &pfpart, art::Event const &evt, std::string pfparticleModule) const;
     std::vector<std::pair<const recob::PFParticle*, double>> GetPFParticleListFromMCParticle
       (detinfo::DetectorClocksData const& clockData,
-       const simb::MCParticle &part, art::Event const &evt, std::string pfparticleModule) const;
+       const simb::MCParticle &part, art::Event const &evt,
+       std::string pfparticleModule, bool use_eve = true) const;
 
     // Contributions of MCParticles to tracks and vice versa
     std::vector<std::pair<const simb::MCParticle*, double>> GetMCParticleListFromRecoTrack

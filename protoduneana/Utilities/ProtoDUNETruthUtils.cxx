@@ -24,21 +24,36 @@ protoana::ProtoDUNETruthUtils::~ProtoDUNETruthUtils(){
 std::vector< const recob::Hit* > protoana::ProtoDUNETruthUtils::FillSharedHits
   (detinfo::DetectorClocksData const& clockData,
    const simb::MCParticle & mcpart, const std::vector< const recob::Hit * > & hitsVec,
-    bool delta_ray ) const {
+    bool delta_ray, bool use_eve ) const {
 
   std::vector<const recob::Hit*> outVec;
 
   // Push back all hits that are shared with this MCParticle
   art::ServiceHandle<cheat::BackTrackerService> bt_serv;
   for(const recob::Hit* hitp : hitsVec) {
-    for(const int& trackId : bt_serv->HitToTrackIds(clockData, *hitp)) {
-      if( !delta_ray && ( trackId == mcpart.TrackId() ) ){
-        outVec.push_back(hitp);
-        break;
+    if (use_eve) {
+      for(const sim::TrackIDE & ide : bt_serv->HitToEveTrackIDEs(clockData, *hitp)) {
+        int trackId = ide.trackID;
+        if( !delta_ray && ( trackId == mcpart.TrackId() ) ){
+          outVec.push_back(hitp);
+          break;
+        }
+        else if( delta_ray && ( trackId == (-1*mcpart.TrackId()) ) ) {
+          outVec.push_back(hitp);
+          break;
+        }
       }
-      else if( delta_ray && ( trackId == (-1*mcpart.TrackId()) ) ) {
-        outVec.push_back(hitp);
-        break;
+    }
+    else {
+      for(const int & trackId : bt_serv->HitToTrackIds(clockData, *hitp)) {
+        if( !delta_ray && ( trackId == mcpart.TrackId() ) ){
+          outVec.push_back(hitp);
+          break;
+        }
+        else if( delta_ray && ( trackId == (-1*mcpart.TrackId()) ) ) {
+          outVec.push_back(hitp);
+          break;
+        }
       }
     }
   }
@@ -85,12 +100,12 @@ std::vector<const recob::Hit*> protoana::ProtoDUNETruthUtils::GetSharedHits
 
 // Function that loops over all hits in an event and returns those that an MCParticle
 // contributed to.
-std::vector<const recob::Hit*>
-protoana::ProtoDUNETruthUtils::GetMCParticleHits(detinfo::DetectorClocksData const& clockData,
-                                                 const simb::MCParticle &mcpart,
-                                                 const art::Event &evt,
-                                                 std::string hitModule) const
-{
+std::vector<const recob::Hit*> protoana::ProtoDUNETruthUtils::GetMCParticleHits(
+    detinfo::DetectorClocksData const& clockData,
+    const simb::MCParticle &mcpart,
+    const art::Event &evt,
+    std::string hitModule,
+    bool use_eve) const {
   std::vector<const recob::Hit*> outVec;
   
   art::Handle<std::vector<recob::Hit>> hitHandle;
@@ -103,11 +118,23 @@ protoana::ProtoDUNETruthUtils::GetMCParticleHits(detinfo::DetectorClocksData con
   art::ServiceHandle<cheat::BackTrackerService> bt_serv;
   art::ServiceHandle<cheat::ParticleInventoryService> pi_serv;
   for(const recob::Hit& hit : *hitHandle) {
-    for(const int trackId : bt_serv->HitToTrackIds(clockData, hit)) {
-      if(pi_serv->TrackIdToParticle_P(trackId) == 
-         pi_serv->TrackIdToParticle_P(mcpart.TrackId())) {
-        outVec.push_back(&hit);
-        break;
+    if (use_eve) {
+      for(const sim::TrackIDE & ide : bt_serv->HitToEveTrackIDEs(clockData, hit)) {
+        int trackId = ide.trackID;
+        if(pi_serv->TrackIdToParticle_P(trackId) == 
+           pi_serv->TrackIdToParticle_P(mcpart.TrackId())) {
+          outVec.push_back(&hit);
+          break;
+        }
+      }
+    }
+    else {
+      for(const int trackId : bt_serv->HitToTrackIds(clockData, hit)) {
+        if(pi_serv->TrackIdToParticle_P(trackId) == 
+           pi_serv->TrackIdToParticle_P(mcpart.TrackId())) {
+          outVec.push_back(&hit);
+          break;
+        }
       }
     }
   }
@@ -209,7 +236,7 @@ double protoana::ProtoDUNETruthUtils::GetPurity(detinfo::DetectorClocksData cons
 std::vector<std::pair<const simb::MCParticle*, double>>
   protoana::ProtoDUNETruthUtils::GetMCParticleListFromTrackHits
   (detinfo::DetectorClocksData const& clockData,
-   const std::vector<const recob::Hit*>& hitVec) const {
+   const std::vector<const recob::Hit*>& hitVec, bool use_eve) const {
 
   using weightedMCPair = std::pair<const simb::MCParticle*, double>;
   std::vector<weightedMCPair> outVec;
@@ -220,10 +247,19 @@ std::vector<std::pair<const simb::MCParticle*, double>>
   std::unordered_map<const simb::MCParticle*, double> mcEMap;
   double hitTotalE = 0;
   for(const recob::Hit* hitp : hitVec) {
-    for(const sim::TrackIDE& ide : bt_serv->HitToTrackIDEs(clockData, *hitp)) {
-      const simb::MCParticle* curr_part = pi_serv->TrackIdToParticle_P(ide.trackID);
-      mcEMap[curr_part] += ide.energy;
-      hitTotalE += ide.energy;
+    if (use_eve) {
+      for(const sim::TrackIDE& ide : bt_serv->HitToEveTrackIDEs(clockData, *hitp)) {
+        const simb::MCParticle* curr_part = pi_serv->TrackIdToParticle_P(ide.trackID);
+        mcEMap[curr_part] += ide.energy;
+        hitTotalE += ide.energy;
+      }
+    }
+    else {
+      for(const sim::TrackIDE& ide : bt_serv->HitToTrackIDEs(clockData, *hitp)) {
+        const simb::MCParticle* curr_part = pi_serv->TrackIdToParticle_P(ide.trackID);
+        mcEMap[curr_part] += ide.energy;
+        hitTotalE += ide.energy;
+      }
     }
   }
 
@@ -311,7 +347,7 @@ std::vector<std::pair<const simb::MCParticle*, double>>
 std::vector<std::pair<const recob::PFParticle*, double>>
   protoana::ProtoDUNETruthUtils::GetPFParticleListFromMCParticle
   (detinfo::DetectorClocksData const& clockData,
-   const simb::MCParticle &part, art::Event const & evt, std::string pfparticleModule) const {
+   const simb::MCParticle &part, art::Event const & evt, std::string pfparticleModule, bool use_eve) const {
 
   using weightedPFPair = std::pair<const recob::PFParticle*, double>;
 
@@ -329,11 +365,21 @@ std::vector<std::pair<const recob::PFParticle*, double>>
   double pfpTotalE = 0;
   for(const recob::PFParticle& pfpart : *allPFParticles) {
     for(const recob::Hit* hitp : GetSharedHits(clockData, part, pfpart, evt, pfparticleModule)) {
-      for(const sim::TrackIDE& ide : bt_serv->HitToTrackIDEs(clockData, *hitp)) {
-        if(ide.trackID == part.TrackId()) {
-          pfpEMap[&pfpart] += ide.energy;
+      if (use_eve) {
+        for(const sim::TrackIDE& ide : bt_serv->HitToEveTrackIDEs(clockData, *hitp)) {
+          if(ide.trackID == part.TrackId()) {
+            pfpEMap[&pfpart] += ide.energy;
+          }
+          pfpTotalE += ide.energy;
         }
-        pfpTotalE += ide.energy;
+      }
+      else {
+        for(const sim::TrackIDE& ide : bt_serv->HitToTrackIDEs(clockData, *hitp)) {
+          if(ide.trackID == part.TrackId()) {
+            pfpEMap[&pfpart] += ide.energy;
+          }
+          pfpTotalE += ide.energy;
+        }
       }
     }
   }

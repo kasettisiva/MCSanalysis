@@ -59,7 +59,8 @@ ana:  [ hitrmsfinding ]
 
 physics.analyzers.hitrmsfinding.TrackModuleLabel:        "pandoraTrack"
 physics.analyzers.hitrmsfinding.CalorimetryModuleLabel:  "pandoracalo"
-physics.analyzers.hitrmsfinding.HitsModuleLabel:  "hitpdune"
-physics.analyzers.hitrmsfinding.SaveTrackInfo: true
-#physics.analyzers.hitrmsfinding.SelectEvents: [fpath]
+physics.analyzers.hitrmsfinding.HitsModuleLabel:         "hitpdune"
+physics.analyzers.hitrmsfinding.SaveTrackInfo:           true
+physics.analyzers.hitrmsfinding.DataUtils.RawDigitTag:   "caldata:dataprep"
+physics.analyzers.hitrmsfinding.SelectEvents: [fpath]
 services.PdspChannelMapService:        @local::pdspchannelmap
