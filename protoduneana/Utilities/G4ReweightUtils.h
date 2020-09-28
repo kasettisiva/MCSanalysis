@@ -5,6 +5,7 @@
 #include "larsim/MCCheater/ParticleInventoryService.h"
 #include "larcore/Geometry/Geometry.h"
 #include "geant4reweight/src/ReweightBase/G4ReweightTraj.hh"
+#include "geant4reweight/src/ReweightBase/G4MultiReweighter.hh"
 
 namespace protoana {
  namespace G4ReweightUtils {
@@ -20,6 +21,13 @@ namespace protoana {
       const sim::ParticleList & plist,
       art::ServiceHandle < geo::Geometry > geo_serv, int event,
       bool fVerbose=false);
+
+  double GetNTrajWeightFromSetPars(
+    const std::vector<G4ReweightTraj *> & trajs, G4MultiReweighter & rw);
+
+  std::pair<double, double> GetNTrajPMSigmaWeights(
+    const std::vector<G4ReweightTraj *> & trajs, G4MultiReweighter & rw,
+    size_t iPar);
  }
 }
 
