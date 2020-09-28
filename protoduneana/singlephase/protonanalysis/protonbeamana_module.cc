@@ -76,8 +76,8 @@
 #include "TLorentzVector.h"
 #include "TProfile.h" 
 
-const int kMaxTracks  = 1000;
-const int kMaxHits = 10000;
+//const int kMaxTracks  = 1000;
+//const int kMaxHits = 10000;
 
 using namespace std;
 

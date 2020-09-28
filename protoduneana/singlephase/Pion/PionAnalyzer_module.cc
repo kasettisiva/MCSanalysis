@@ -960,7 +960,7 @@ private:
   std::vector<fhicl::ParameterSet> ParSet;
   G4ReweightParameterMaker ParMaker;
   G4MultiReweighter * MultiRW, * ProtMultiRW;
-  G4ReweighterFactory RWFactory;
+  //G4ReweighterFactory RWFactory;
   //G4Reweighter * theRW;
 };
 
