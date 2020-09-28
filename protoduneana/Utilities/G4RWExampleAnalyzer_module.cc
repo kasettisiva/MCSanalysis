@@ -356,15 +356,15 @@ void protoana::G4RWExampleAnalyzer::analyze(art::Event const& e) {
       std::pair<double, double> temp_weights = GetNTrajPMSigmaWeights(trajs, MultiRW, i);
       g4rw_test_primary_plus_sigma_weight.push_back(temp_weights.first);
       g4rw_test_primary_minus_sigma_weight.push_back(temp_weights.second);
-
-      //Heng-Ye's weights
-      //for (ii reac loop)
-      //for (jj elast loop)
-      //  bool set_values = MultiRW.SetAllParameterValues(input_values);
-      //  if (!set_values) continue;
-      //  double temp_w = GetNTrajWeightFromSetPars(trajs, MultiRW);
-      //  g4rw_set_weights.push_back(temp_w);
     }
+
+    //Heng-Ye's weights
+    //for (ii reac loop)
+    //for (jj elast loop)
+    //  bool set_values = MultiRW.SetAllParameterValues(input_values);
+    //  if (!set_values) continue;
+    //  double temp_w = GetNTrajWeightFromSetPars(trajs, MultiRW);
+    //  g4rw_set_weights.push_back(temp_w);
 
     /*
     std::vector<int> to_create = {true_beam_ID};
