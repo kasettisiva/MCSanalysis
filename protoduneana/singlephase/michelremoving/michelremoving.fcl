@@ -58,8 +58,8 @@ ana:  [ michelremoving ]
 
 
 physics.analyzers.michelremoving.TrackModuleLabel:        "pandoraTrack"
-physics.analyzers.michelremoving.CalorimetryModuleLabel:  "pandoracaloSCE"
+physics.analyzers.michelremoving.CalorimetryModuleLabel:  "pandoracalo"
 #physics.analyzers.michelremoving.HitsModuleLabel:  "gaushit"
 physics.analyzers.michelremoving.HitsModuleLabel:  "hitpdune"
 physics.analyzers.michelremoving.SaveTrackInfo: true
-physics.analyzers.velocity.SelectEvents: [fpath]
+
