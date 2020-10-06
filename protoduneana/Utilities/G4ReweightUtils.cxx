@@ -135,6 +135,8 @@ std::vector<G4ReweightTraj *> protoana::G4ReweightUtils::CreateNRWTrajs(
   bool found_LAr = false;
   size_t start = 0, end = 0;
   //G4ReweightTraj theTraj(part.TrackId(), part.PdgCode(), 0, event, {0,0});
+  if (fVerbose) std::cout << "N traj pts: " <<
+                             part.NumberTrajectoryPoints() << std::endl;
   for (size_t i = 0; i < part.NumberTrajectoryPoints(); ++i) {
     double x = part.Position(i).X();
     double y = part.Position(i).Y();
@@ -142,7 +144,7 @@ std::vector<G4ReweightTraj *> protoana::G4ReweightUtils::CreateNRWTrajs(
 
     geo::Point_t test_point{x, y, z};
     const TGeoMaterial * test_material = geo_serv->Material(test_point);
-
+    if (!test_material) continue;
     if (!strcmp(test_material->GetName(), "LAr")) {
       if (fVerbose) {
         std::cout << i << " " << "LAr: " << test_material->GetDensity() << " " <<
@@ -202,6 +204,10 @@ std::vector<G4ReweightTraj *> protoana::G4ReweightUtils::CreateNRWTrajs(
       mass = 938.28;
       break;
     }
+    case 2112: {
+      mass = 939.57;
+      break;
+    }
     default: {
       return results;
       break;
@@ -232,12 +238,15 @@ std::vector<G4ReweightTraj *> protoana::G4ReweightUtils::CreateNRWTrajs(
         theTraj->SetEnergy(sqrt(p_squared + mass*mass));
       }
 
-      //prochere
-      auto itProc = proc_map.find(j);
       std::string proc = "default";
+      auto itProc = proc_map.find(j);
       if (itProc != proc_map.end() &&
           j != (part.NumberTrajectoryPoints() - 2)) {
         proc = itProc->second;
+
+        /*if (proc == "Unknown" ) {
+          proc = "CoulombScat";
+        }*/
       }
       //- 2 because the last element is the end of the last step
       else if (j == (part.NumberTrajectoryPoints() - 2)) {
@@ -267,43 +276,29 @@ std::vector<G4ReweightTraj *> protoana::G4ReweightUtils::CreateNRWTrajs(
     }
   }
   return results;
-  /*
+}
 
-  for (size_t i = 1; i < traj_X.size(); ++i) {
-    std::string proc = "default";
-    if (found_last && i == traj_X.size() - 1) {
-      proc = part.EndProcess();
-    }
-    else if (std::find(elastic_indices.begin(), elastic_indices.end(), i) !=
-             elastic_indices.end()){
-      proc = "hadElastic";
-    }
-
-    double dX = traj_X[i] - traj_X[i-1];
-    double dY = traj_Y[i] - traj_Y[i-1];
-    double dZ = traj_Z[i] - traj_Z[i-1];
-
-    double len = sqrt(dX*dX + dY*dY + dZ*dZ);
-
-    double preStepP[3] = {traj_PX[i-1]*1.e3,
-                          traj_PY[i-1]*1.e3,
-                          traj_PZ[i-1]*1.e3};
-
-    double postStepP[3] = {traj_PX[i]*1.e3,
-                           traj_PY[i]*1.e3,
-                           traj_PZ[i]*1.e3};
-    if (i == 1) {
-      double p_squared = preStepP[0]*preStepP[0] + preStepP[1]*preStepP[1] +
-                         preStepP[2]*preStepP[2];
-      theTraj->SetEnergy(sqrt(p_squared + mass*mass));
-    }
-
-    G4ReweightStep * step = new G4ReweightStep(part.TrackId(), part.PdgCode(),
-                                               0, event, preStepP, postStepP,
-                                               len, proc);
-    theTraj->AddStep(step);
+double protoana::G4ReweightUtils::GetNTrajWeightFromSetPars(
+    const std::vector<G4ReweightTraj *> & trajs, G4MultiReweighter & rw) {
+  double weight = 1.;
+  for (size_t i = 0; i < trajs.size(); ++i) {
+    if (trajs[i]->GetNSteps() > 0)
+      weight *= rw.GetWeightFromSetParameters(*trajs[i]); 
   }
+  return weight;
+}
 
-  return true;
-  */
+std::pair<double, double> protoana::G4ReweightUtils::GetNTrajPMSigmaWeights(
+    const std::vector<G4ReweightTraj *> & trajs, G4MultiReweighter & rw,
+    size_t iPar) {
+  std::pair<double, double> results = {1., 1.};
+  for (size_t i = 0; i < trajs.size(); ++i) {
+    if (trajs[i]->GetNSteps() > 0) {
+      std::pair<double, double> temp_weight
+          = rw.GetPlusMinusSigmaParWeight(*trajs[i], iPar);
+      results.first *= temp_weight.first;
+      results.second *= temp_weight.second;
+    }
+  }
+  return results;
 }

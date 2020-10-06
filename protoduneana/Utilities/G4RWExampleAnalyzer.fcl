@@ -3,6 +3,8 @@ BEGIN_PROLOG
 g4rwexample: {
   module_type: "G4RWExampleAnalyzer"
   GeneratorTag: "generator"
+  PFParticleTag: "pandora"
+  TrackerTag: "pandoraTrack"
 
   FracsFile: "/dune/data2/users/calcuttj/GeantReweight/FlatTree/LAr_PiPlus_cascade.root"
   XSecFile: "/dune/data2/users/calcuttj/GeantReweight/FlatTree/LAr_cross_section.root"

@@ -68,6 +68,19 @@ CalorimetryParameters_SPProd3_MC_SCE.PlaneParameters: [
 ]
 ##########################################
 
+##Prod3 MC SCE on -- use with electron lifetime-corrected pandoracali object
+CalorimetryParameters_SPProd3_MC_SCE_eLT: @local::CalorimetryParameters_SPProd2_MC_SCE
+CalorimetryParameters_SPProd3_MC_SCE_eLT.X_correction:       "/cvmfs/dune.opensciencegrid.org/products/dune/CalorimetryCalibration/ProtoDUNESP/RITM0986948/Xcalo_r34797968.root"
+CalorimetryParameters_SPProd3_MC_SCE_eLT.YZ_correction:      "/cvmfs/dune.opensciencegrid.org/products/dune/CalorimetryCalibration/ProtoDUNESP/RITM0986948/YZcalo_r34797968.root"
+CalorimetryParameters_SPProd3_MC_SCE_eLT.PlaneParameters: [
+  {
+    PlaneID: 2
+    norm_factor: 0.984
+    calib_factor: 5.03e-3
+  }
+]
+##########################################
+
 ##Prod3 MC SCE off 
 CalorimetryParameters_SPProd3_MC_35ms: @local::CalorimetryParameters_SPProd2_MC_SCE
 CalorimetryParameters_SPProd3_MC_35ms.X_correction:       "CalorimetryCalibration/ProtoDUNESP/Prod3_MC/Xcalo_r31186687.root"
