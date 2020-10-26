@@ -31,35 +31,54 @@ source:
   maxEvents:  -1            # Number of events to create
 }
 physics:
-{
- producers:{
-
-  }
-filters:	
- {
-#  filter:   @local::pdsp_fembfilter_all
-f1: @local::HVfilter
-   } 
-   fpath: [f1]
-
- analyzers:{
-   michelremoving:
-   {
-   module_type: "michelremoving"
- }
- }
+      {
+          producers:{
+              
+          }
+          filters:	
+          {
+              f1: @local::HVfilter
+              f2: @local::pdsp_fembfilter_all
+              
+          } 
+          fpath: [f1, f2]
+          
+          analyzers:{
+            michelremoving:
+              {
+                  module_type: "michelremoving"
+                  SelectEvents: [fpath]
+              }
+              michelremoving1:
+              {
+                  module_type: "michelremoving"
+                  SelectEvents: [fpath]
+              }
+              michelremoving2:
+              {
+                  module_type: "michelremoving"
+                  SelectEvents: [fpath]
+              }
+          }
  
-
-ana:  [ michelremoving ]
- end_paths:     [  ana ] 
+          
+          ana:  [ michelremoving, michelremoving1, michelremoving2 ]
+          end_paths:     [  ana ] 
 }
 
 # define the list of LArSoft modules to run through the simulate path
 
-
 physics.analyzers.michelremoving.TrackModuleLabel:        "pandoraTrack"
-physics.analyzers.michelremoving.CalorimetryModuleLabel:  "pandoracalo"
-#physics.analyzers.michelremoving.HitsModuleLabel:  "gaushit"
+physics.analyzers.michelremoving.CalorimetryModuleLabel:  "pandoracalonosce"
 physics.analyzers.michelremoving.HitsModuleLabel:  "hitpdune"
 physics.analyzers.michelremoving.SaveTrackInfo: true
 
+physics.analyzers.michelremoving1.TrackModuleLabel:        "pandoraTrack"
+physics.analyzers.michelremoving1.CalorimetryModuleLabel:  "pandoracalo"
+physics.analyzers.michelremoving1.HitsModuleLabel:  "hitpdune"
+physics.analyzers.michelremoving1.SaveTrackInfo: true
+
+physics.analyzers.michelremoving2.TrackModuleLabel:        "pandoraTrack"
+physics.analyzers.michelremoving2.CalorimetryModuleLabel:  "pandoracalinoxyzt"
+physics.analyzers.michelremoving2.HitsModuleLabel:  "hitpdune"
+physics.analyzers.michelremoving2.SaveTrackInfo: true
