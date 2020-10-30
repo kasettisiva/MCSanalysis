@@ -3,7 +3,7 @@
 # The *parent* line must the first non-commented line and defines this product and version
 # The version must be of the form vxx_yy_zz (e.g. v01_02_03).
 
-parent protoduneana v09_08_00
+parent protoduneana v09_09_00
 
 defaultqual e19
 
@@ -62,9 +62,9 @@ table_fragment_end
 # Add the dependent product and version
 
 product          version
-dunetpc          v09_08_00
+dunetpc          v09_09_00
 cetbuildtools	 v7_15_01	-	only_for_build
-geant4reweight   v01_04_00
+geant4reweight   v01_04_02
 end_product_list
 
 
@@ -75,10 +75,10 @@ end_product_list
 # Make a table by adding columns before "notes".
 # e15  - with gcc 6.4.0 and -std=c++14
 qualifier	dunetpc         geant4reweight          notes
-c7:debug	c7:debug	c7:debug:s97            -nq-
-c7:prof		c7:prof         c7:prof:s97             -nq-
-e19:debug	e19:debug       debug:e19:s97           -nq-
-e19:prof	e19:prof        e19:prof:s97            -nq-
+c7:debug	c7:debug	c7:debug:s102            -nq-
+c7:prof		c7:prof         c7:prof:s102             -nq-
+e19:debug	e19:debug       debug:e19:s102           -nq-
+e19:prof	e19:prof        e19:prof:s102            -nq-
 end_qualifier_list
 
 ### Below: something weird was going on with py2 builds so I removed those in above
