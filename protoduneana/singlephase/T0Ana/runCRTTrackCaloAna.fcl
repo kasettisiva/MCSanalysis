@@ -1,0 +1,89 @@
+#include "services_dune.fcl"
+#include "ProtoDUNEDataUtils.fcl"
+#include "ProtoDUNEBeamlineUtils.fcl"
+
+#include "ProtoDUNECalibration.fcl"
+
+process_name: CRTMatchTrackCaloAna
+
+services:
+{
+  #Load the service that manages root files for histograms.
+  TFileService: { fileName: "crtCalo.root" }
+  RandomNumberGenerator: {}                     #ART native random number generator
+  @table::protodune_services
+
+  message:              @local::dune_message_services_prod_debug
+  FileCatalogMetadata:  @local::art_file_catalog_mc
+                        @table::protodune_services
+}
+
+
+#source is now a root file
+source:
+{
+  module_type: RootInput
+  maxEvents:  -1            # Number of events to create
+}
+
+outputs:
+{
+}
+
+physics:
+{
+
+ analyzers:{
+   crtCalo:
+   {
+    module_type: "CRTMatchTrackCaloAna"
+ }
+ }
+ 
+ ana:  [ crtCalo ]
+
+
+
+ #end_paths is a keyword and contains the paths that do not modify the art::Event, 
+ #ie analyzers and output streams.  these all run simultaneously
+ #end_paths:     [ stream1, crtCalo ] 
+ end_paths:     [  ana ] 
+}
+
+# define the list of LArSoft modules to run through the simulate path
+
+
+physics.analyzers.crtCalo.CalorimetryParameters:  {
+  PlaneID:      2
+  betap:        0.212
+  Rho:          1.383
+  Wion:         23.6e-6
+  alpha:        0.93
+
+  PlaneParameters: [
+    {
+      PlaneID:      2
+      norm_factor:  0.9947
+      calib_factor: 4.86e-3
+    },
+    {
+      PlaneID:      1
+      norm_factor:  1.0082
+      calib_factor: 4.81e-3
+    },
+    {
+      PlaneID:      0
+      norm_factor:  1.0078
+      calib_factor: 4.81e-3
+    }
+  ]
+   X_correction:       "./Xcalo_r5770.root"
+   YZ_correction:      "./YZcalo_r5770.root"
+  E_field_correction: "./SCE_DataDriven_180kV_v3.root"
+}
+physics.analyzers.crtCalo.TrackModuleLabel:        "pandoraTrack"
+physics.analyzers.crtCalo.CalorimetryModuleLabel:  "pandoracaloSCE"
+physics.analyzers.crtCalo.DataUtils: @local::standard_protodunedatautils
+physics.analyzers.crtCalo.BeamlineUtils: @local::standard_protodunebeamlineutils
+
+
