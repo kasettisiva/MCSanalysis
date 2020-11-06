@@ -1,0 +1,59 @@
+MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_beamType.root"
+DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_beamType.root"
+TreeName: "pionana/beamana"
+
+SelectionIDs: [
+                [1, "Abs"],
+                [2, "Cex"],
+                [3, "Rejected"]
+               ]
+
+DefaultSignalBins: [0., 200., 400., 600., 800, 1200.]
+
+IncidentRecoBins: [-5000., 0., 200., 400., 600., 800., 1000., 1200.]
+SelectedRecoBins: [-5000., 0., 200., 400., 600., 800., 1000., 1200.]
+
+Samples: [
+  {
+    Name: "Abs"
+    ID: 1
+    IsSignal: true
+    SignalBins: @local::DefaultSignalBins 
+  },
+  {
+    Name: "Cex"
+    ID: 2
+    IsSignal: true
+    SignalBins: @local::DefaultSignalBins
+  },
+  {
+    Name: "OtherInel"
+    ID: 3
+    IsSignal: true
+    SignalBins: @local::DefaultSignalBins
+  },
+  {
+    Name: "UpstreamInt"
+    ID: 4
+    IsSignal: false
+    SignalBins: []
+  },
+  {
+    Name: "Muons"
+    ID: 5
+    IsSignal: false
+    SignalBins: []
+  },
+  {
+    Name: "PionPastFV"
+    ID: 6
+    IsSignal: false
+    SignalBins: []
+  },
+  {
+    Name: "Other"
+    ID: 7
+    IsSignal: false
+    SignalBins: []
+  }
+]
