@@ -6,10 +6,6 @@
 #include "math.h"
 #include "stdio.h"
 
-// ROOT includes
-#include "TFile.h"
-#include "THStack.h"
-
 // Framework includes
 #include "cetlib_except/exception.h"
 #include "messagefacility/MessageLogger/MessageLogger.h"
@@ -18,6 +14,10 @@
 #include "fhiclcpp/ParameterSet.h"
 #include "cetlib/filepath_maker.h"
 
+#include "TStyle.h"
+#include "TROOT.h"
+#include "TCanvas.h"
+#include "TList.h"
 
 #include "PDSPThinSliceFitter.h"
 
@@ -25,6 +25,8 @@ protoana::PDSPThinSliceFitter::PDSPThinSliceFitter(std::string fcl_file,
                                                    std::string output_file)
     : fOutputFile(output_file.c_str(), "RECREATE") {
   Configure(fcl_file);
+  gStyle->SetOptStat(0);
+  gROOT->SetBatch(1);
 }
 
 protoana::PDSPThinSliceFitter::~PDSPThinSliceFitter() {
@@ -67,7 +69,6 @@ void protoana::PDSPThinSliceFitter::BuildMCSamples() {
 
   int true_sample, selection_ID; 
   double true_beam_interactingEnergy, reco_beam_interactingEnergy;
-  //std::vector<double> * true_beam_incidentEnergies = 0x0
   std::vector<double> * reco_beam_incidentEnergies = 0x0;
   fMCTree->SetBranchAddress("new_interaction_topology", &true_sample);
   fMCTree->SetBranchAddress("selection_ID", &selection_ID);
@@ -75,8 +76,6 @@ void protoana::PDSPThinSliceFitter::BuildMCSamples() {
                             &true_beam_interactingEnergy);
   fMCTree->SetBranchAddress("reco_beam_interactingEnergy",
                             &reco_beam_interactingEnergy);
-  //fMCTree->SetBranchAddress("true_beam_incidentEnergies",
-  //                          &true_beam_incidentEnergies);
   fMCTree->SetBranchAddress("reco_beam_incidentEnergies",
                             &reco_beam_incidentEnergies);
 
@@ -88,8 +87,6 @@ void protoana::PDSPThinSliceFitter::BuildMCSamples() {
 
     std::vector<ThinSliceSample> & samples = fSamples[true_sample];
     bool is_signal = fIsSignalSample[true_sample];
-
-    //Get the selection
 
     if (!is_signal) {
       ThinSliceSample & sample = samples.at(0);
@@ -112,6 +109,50 @@ void protoana::PDSPThinSliceFitter::BuildMCSamples() {
       }
     }
   }
+  fMCFile.Close();
+}
+
+void protoana::PDSPThinSliceFitter::BuildDataHists() {
+
+  //Create the data hists
+  fIncidentDataHist = TH1D("Data_incident_hist", "",
+                           fIncidentRecoBins.size() - 1,
+                           &fIncidentRecoBins[0]);
+  for (auto it = fSelectionIDs.begin(); it != fSelectionIDs.end(); ++it) {
+    std::string sel_name = "Data_selected_" + it->second + "_hist";
+    fSelectedDataHists[it->first] = TH1D(sel_name.c_str(), "",
+                                        fSelectedRecoBins.size() - 1,
+                                        &fSelectedRecoBins[0]);
+  }
+
+  //Open the Data file and set branches
+  TFile fDataFile(fDataFileName.c_str(), "OPEN");
+  fDataTree = (TTree*)fDataFile.Get(fTreeName.c_str());
+
+  int selection_ID; 
+  double reco_beam_interactingEnergy;
+  std::vector<double> * reco_beam_incidentEnergies = 0x0;
+  fDataTree->SetBranchAddress("selection_ID", &selection_ID);
+  fDataTree->SetBranchAddress("reco_beam_interactingEnergy",
+                            &reco_beam_interactingEnergy);
+  fDataTree->SetBranchAddress("reco_beam_incidentEnergies",
+                            &reco_beam_incidentEnergies);
+
+  for (int i = 0; i < fDataTree->GetEntries(); ++i) {
+    fDataTree->GetEntry(i);
+    if (reco_beam_incidentEnergies->size()) {
+      for (size_t j = 0; j < reco_beam_incidentEnergies->size(); ++j) {
+        fIncidentDataHist.Fill((*reco_beam_incidentEnergies)[j]);
+      }
+      fSelectedDataHists[selection_ID].Fill(reco_beam_interactingEnergy);
+    }
+  }
+  fOutputFile.cd();
+  fIncidentDataHist.Write();
+  for (auto it = fSelectedDataHists.begin(); it != fSelectedDataHists.end();
+       ++it) {
+    it->second.Write();
+  }
 }
 
 void protoana::PDSPThinSliceFitter::SaveMCSamples() {
@@ -127,39 +168,63 @@ void protoana::PDSPThinSliceFitter::SaveMCSamples() {
   }
 }
 
-void protoana::PDSPThinSliceFitter::BuildAndSaveStacks() {
+void protoana::PDSPThinSliceFitter::BuildAndSaveNominalStacks() {
 
   //Incident
-  THStack sIncident("IncidentStack", "");
+  fNominalIncidentMCStack = new THStack("NominalIncidentStack", "");
   int iColor = 1;
   for (auto it = fSamples.begin(); it != fSamples.end(); ++it) {
     for (size_t i = 0; i < it->second.size(); ++i) {
       TH1D & inc_hist = it->second.at(i).GetIncidentHist();
       inc_hist.SetFillColor(iColor);
-      inc_hist.SetLineColor(iColor);
-      sIncident.Add(&inc_hist);
+      inc_hist.SetLineColor(kBlack);
+      fNominalIncidentMCStack->Add(&inc_hist);
       ++iColor;
     }
   }
 
   fOutputFile.cd();
-  sIncident.Write();
+  fNominalIncidentMCStack->Write();
 
   for (auto it1 = fSelectionIDs.begin(); it1 != fSelectionIDs.end(); ++it1) {
-    std::string s_name = it1->second + "Stack";
-    THStack sSelection(s_name.c_str(), "");
+    std::string s_name = "Nominal" + it1->second + "Stack";
+    fNominalSelectedMCStacks[it1->first] = new THStack(s_name.c_str(), "");
     iColor = 1;
     for (auto it2 = fSamples.begin(); it2 != fSamples.end(); ++it2) {
       for (size_t i = 0; i < it2->second.size(); ++i) {
         TH1D & sel_hist = it2->second.at(i).GetSelectionHist(it1->first);
-        sel_hist.SetFillColor(iColor);
+        sel_hist.SetFillColor(kBlack);
         sel_hist.SetLineColor(iColor);
-        sSelection.Add(&sel_hist);
+        fNominalSelectedMCStacks[it1->first]->Add(&sel_hist);
         ++iColor;
       }
     }
-    sSelection.Write();
+    fNominalSelectedMCStacks[it1->first]->Write();
   }
+}
+
+void protoana::PDSPThinSliceFitter::CompareDataMC() {
+  //Incident
+  fIncidentDataHist.SetLineColor(kBlack);
+  fIncidentDataHist.SetMarkerColor(kBlack);
+  fIncidentDataHist.SetMarkerStyle(20);
+
+  TCanvas cIncident("cIncident", "");
+  cIncident.SetTicks();
+  fNominalIncidentMCStack->Draw();
+  fIncidentDataHist.Draw("e1 same");
+  fOutputFile.cd();
+  cIncident.Write();
+
+  //Get the full incident hist from stack
+  TList * l = (TList*)fNominalIncidentMCStack->GetHists();
+  TH1D * hIncidentMC = (TH1D*)l->At(0)->Clone();
+  for (int i = 1; i < l->GetSize(); ++i) {
+    hIncidentMC->Add((TH1D*)l->At(i));
+  }
+  TH1D * hIncidentRatio = (TH1D*)fIncidentDataHist.Clone("IncidentRatio");
+  hIncidentRatio->Divide(hIncidentMC);
+  hIncidentRatio->Write(); 
 }
 
 void protoana::PDSPThinSliceFitter::Configure(std::string fcl_file) {

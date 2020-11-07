@@ -36,7 +36,9 @@ int main(int argc, char ** argv){
   fit->InitializeMCSamples();
   fit->BuildMCSamples();
   fit->SaveMCSamples();
-  fit->BuildAndSaveStacks();
+  fit->BuildAndSaveNominalStacks();
+  fit->BuildDataHists();
+  fit->CompareDataMC();
 
   return 0;
 }

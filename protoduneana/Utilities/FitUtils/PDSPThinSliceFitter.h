@@ -7,6 +7,7 @@
 
 #include "TTree.h"
 #include "TFile.h"
+#include "THStack.h"
 
 #include "ThinSliceSample.h"
 
@@ -17,8 +18,10 @@ class PDSPThinSliceFitter {
   PDSPThinSliceFitter(std::string fcl_file, std::string output_file);
   void BuildMCSamples();
   void SaveMCSamples();
-  void BuildAndSaveStacks();
+  void BuildAndSaveNominalStacks();
+  void BuildDataHists();
   void InitializeMCSamples();
+  void CompareDataMC();
   ~PDSPThinSliceFitter();
 
  private:
@@ -28,7 +31,15 @@ class PDSPThinSliceFitter {
   std::map<int, bool> fIsSignalSample;
   TFile fMCFile;
   TTree * fMCTree;
+  TFile fDataFile;
+  TTree * fDataTree;
   TFile fOutputFile;
+
+  std::map<int, TH1D> fSelectedDataHists;
+  TH1D fIncidentDataHist;
+
+  THStack * fNominalIncidentMCStack;
+  std::map<int, THStack *> fNominalSelectedMCStacks;
 
   //Configurable members
   std::string fMCFileName;
