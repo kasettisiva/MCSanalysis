@@ -18,6 +18,9 @@
 #include "TROOT.h"
 #include "TCanvas.h"
 #include "TList.h"
+#include "TMatrixD.h"
+#include "TDirectory.h"
+#include "TH2D.h"
 
 #include "PDSPThinSliceFitter.h"
 
@@ -33,33 +36,93 @@ protoana::PDSPThinSliceFitter::~PDSPThinSliceFitter() {
   fOutputFile.Close();
 }
 
+void protoana::PDSPThinSliceFitter::MakeMinimizer() {
+  fMinimizer = std::unique_ptr<ROOT::Math::Minimizer>
+    (ROOT::Math::Factory::CreateMinimizer("Minuit2", "Migrad"));
+  fMinimizer->SetMaxFunctionCalls(fMaxCalls);
+  fMinimizer->SetTolerance(fTolerance);
+
+  TH1D parsHist("preFitPars", "", fTotalSignalParameters, 0, fTotalSignalParameters);
+
+  size_t n_par = 0;
+  for (auto it = fSignalParameters.begin();
+       it != fSignalParameters.end(); ++it) {
+    for (size_t i = 0; i < it->second.size(); ++i) {
+      fMinimizer->SetVariable(n_par, fSignalParameterNames[it->first][i].c_str(),
+                              it->second[i], 0.01);
+      fMinimizer->SetVariableLimits(n_par, fLowerLimit, fUpperLimit);
+      parsHist.SetBinContent(n_par+1, it->second[i]);
+      parsHist.GetXaxis()->SetBinLabel(
+          n_par+1, fSignalParameterNames[it->first][i].c_str());
+      ++n_par;
+
+    }
+  }
+
+  for (auto it = fFluxParameters.begin();
+       it != fFluxParameters.end(); ++it) {
+    fMinimizer->SetVariable(n_par, fFluxParameterNames[it->first].c_str(),
+                            it->second, 0.01);
+    fMinimizer->SetVariableLimits(n_par, fLowerLimit, fUpperLimit);
+    parsHist.SetBinContent(n_par+1, it->second);
+    parsHist.GetXaxis()->SetBinLabel(
+        n_par+1, fFluxParameterNames[it->first].c_str());
+    ++n_par;
+  }
+
+  parsHist.SetMarkerColor(kBlue);
+  parsHist.SetMarkerStyle(20);
+  fOutputFile.cd();
+  parsHist.Write();
+
+}
+
 void protoana::PDSPThinSliceFitter::InitializeMCSamples() {
   for (size_t i = 0; i < fSampleSets.size(); ++i) {
     fhicl::ParameterSet sample_set = fSampleSets[i];
     std::string sample_name = sample_set.get<std::string>("Name");
     int sample_ID = sample_set.get<int>("ID");
 
-    if (fSamples.find(sample_set.get<int>("ID")) == fSamples.end()) {
+    if (fSamples.find(sample_ID) == fSamples.end()) {
       fSamples[sample_ID] = std::vector<ThinSliceSample>();
+      fFluxesBySample[sample_ID] = std::vector<double>();
     }
     fIsSignalSample[sample_ID] = sample_set.get<bool>("IsSignal");
 
-    if (sample_set.get<bool>("IsSignal")) {
-      std::vector<double> bins = sample_set.get<std::vector<double>>("SignalBins");
+    int flux_type = sample_set.get<int>("FluxType");
 
+    if (sample_set.get<bool>("IsSignal")) {
+      std::vector<double> bins
+          = sample_set.get<std::vector<double>>("SignalBins");
+      fSignalParameters[sample_ID] = std::vector<double>();
+      fSignalParameterNames[sample_ID] = std::vector<std::string>();
       for (size_t j = 1; j < bins.size(); ++j) {
-        ThinSliceSample sample(sample_name, fSelectionIDs, fIncidentRecoBins,
+        ThinSliceSample sample(sample_name, flux_type, fSelectionIDs,
+                               fIncidentRecoBins,
                                fSelectedRecoBins, true,
                                {bins[j-1], bins[j]});
         fSamples[sample_ID].push_back(sample);
+        //Here: make configurable for various statisical tests
+        fSignalParameters[sample_ID].push_back(1.);
+
+        std::string par_name = "par_" + sample_name + "_" +
+                               protoana::PreciseToString(bins[j-1]) + "_" +
+                               protoana::PreciseToString(bins[j]);
+        fSignalParameterNames[sample_ID].push_back(par_name);
+        ++fTotalSignalParameters;
+        fFluxesBySample[sample_ID].push_back(0.);
       }
     }
     else {
-      ThinSliceSample sample(sample_name, fSelectionIDs, fIncidentRecoBins,
+      ThinSliceSample sample(sample_name, flux_type, fSelectionIDs,
+                             fIncidentRecoBins,
                              fSelectedRecoBins);
       fSamples[sample_ID].push_back(sample);
+      fFluxesBySample[sample_ID].push_back(0.);
     }
   }
+
+  MakeMinimizer();
 }
 
 void protoana::PDSPThinSliceFitter::BuildMCSamples() {
@@ -90,6 +153,10 @@ void protoana::PDSPThinSliceFitter::BuildMCSamples() {
 
     if (!is_signal) {
       ThinSliceSample & sample = samples.at(0);
+      int flux_type = sample.GetFluxType();
+      fNominalFluxes[flux_type] += 1.;
+      fFluxesBySample[true_sample][0] += 1.;
+      sample.AddFlux();
       if (reco_beam_incidentEnergies->size()) {
         sample.FillIncidentHist(*reco_beam_incidentEnergies);
         sample.FillSelectionHist(selection_ID, reco_beam_interactingEnergy);
@@ -100,6 +167,10 @@ void protoana::PDSPThinSliceFitter::BuildMCSamples() {
       for (size_t j = 0; j < samples.size(); ++j) {
         ThinSliceSample & sample = samples.at(j);
         if (sample.CheckInSignalRange(true_beam_interactingEnergy)) {
+          int flux_type = sample.GetFluxType();
+          fNominalFluxes[flux_type] += 1.;
+          fFluxesBySample[true_sample][j] += 1.;
+          sample.AddFlux();
           if (reco_beam_incidentEnergies->size()) {
             sample.FillIncidentHist(*reco_beam_incidentEnergies);
             sample.FillSelectionHist(selection_ID, reco_beam_interactingEnergy);
@@ -110,6 +181,23 @@ void protoana::PDSPThinSliceFitter::BuildMCSamples() {
     }
   }
   fMCFile.Close();
+}
+
+void protoana::PDSPThinSliceFitter::ScaleMCToData() {
+  double total_nominal = 0.;
+  for (auto it = fNominalFluxes.begin(); it != fNominalFluxes.end(); ++it) {
+    total_nominal += it->second;
+  }
+  fMCDataScale = fDataFlux/total_nominal;
+  for (auto it = fNominalFluxes.begin(); it != fNominalFluxes.end(); ++it) {
+    it->second *= fMCDataScale;
+  }
+
+  for (auto it = fSamples.begin(); it != fSamples.end(); ++it) {
+    for (size_t i = 0; i < it->second.size(); ++i) {
+      it->second[i].SetDataMCScale(fMCDataScale);
+    }
+  }
 }
 
 void protoana::PDSPThinSliceFitter::BuildDataHists() {
@@ -138,16 +226,22 @@ void protoana::PDSPThinSliceFitter::BuildDataHists() {
   fDataTree->SetBranchAddress("reco_beam_incidentEnergies",
                             &reco_beam_incidentEnergies);
 
+  fDataFlux = fDataTree->GetEntries();
+
   for (int i = 0; i < fDataTree->GetEntries(); ++i) {
     fDataTree->GetEntry(i);
     if (reco_beam_incidentEnergies->size()) {
       for (size_t j = 0; j < reco_beam_incidentEnergies->size(); ++j) {
         fIncidentDataHist.Fill((*reco_beam_incidentEnergies)[j]);
       }
-      fSelectedDataHists[selection_ID].Fill(reco_beam_interactingEnergy);
+      if (fSelectionIDs.find(selection_ID) != fSelectionIDs.end()) {
+        fSelectedDataHists[selection_ID].Fill(reco_beam_interactingEnergy);
+      }
     }
   }
   fOutputFile.cd();
+  TDirectory * out = (TDirectory *)fOutputFile.mkdir("Data");
+  out->cd();
   fIncidentDataHist.Write();
   for (auto it = fSelectedDataHists.begin(); it != fSelectedDataHists.end();
        ++it) {
@@ -169,7 +263,6 @@ void protoana::PDSPThinSliceFitter::SaveMCSamples() {
 }
 
 void protoana::PDSPThinSliceFitter::BuildAndSaveNominalStacks() {
-
   //Incident
   fNominalIncidentMCStack = new THStack("NominalIncidentStack", "");
   int iColor = 1;
@@ -193,13 +286,47 @@ void protoana::PDSPThinSliceFitter::BuildAndSaveNominalStacks() {
     for (auto it2 = fSamples.begin(); it2 != fSamples.end(); ++it2) {
       for (size_t i = 0; i < it2->second.size(); ++i) {
         TH1D & sel_hist = it2->second.at(i).GetSelectionHist(it1->first);
-        sel_hist.SetFillColor(kBlack);
-        sel_hist.SetLineColor(iColor);
+        sel_hist.SetFillColor(iColor);
+        sel_hist.SetLineColor(kBlack);
         fNominalSelectedMCStacks[it1->first]->Add(&sel_hist);
         ++iColor;
       }
     }
     fNominalSelectedMCStacks[it1->first]->Write();
+  }
+}
+
+void protoana::PDSPThinSliceFitter::BuildAndSavePostFitStacks() {
+  //Incident
+  fPostFitIncidentMCStack = new THStack("PostFitIncidentStack", "");
+  int iColor = 1;
+  for (auto it = fSamples.begin(); it != fSamples.end(); ++it) {
+    for (size_t i = 0; i < it->second.size(); ++i) {
+      TH1D & inc_hist = it->second.at(i).GetIncidentHist();
+      inc_hist.SetFillColor(iColor);
+      inc_hist.SetLineColor(kBlack);
+      fPostFitIncidentMCStack->Add(&inc_hist);
+      ++iColor;
+    }
+  }
+
+  fOutputFile.cd();
+  fPostFitIncidentMCStack->Write();
+
+  for (auto it1 = fSelectionIDs.begin(); it1 != fSelectionIDs.end(); ++it1) {
+    std::string s_name = "PostFit" + it1->second + "Stack";
+    fPostFitSelectedMCStacks[it1->first] = new THStack(s_name.c_str(), "");
+    iColor = 1;
+    for (auto it2 = fSamples.begin(); it2 != fSamples.end(); ++it2) {
+      for (size_t i = 0; i < it2->second.size(); ++i) {
+        TH1D & sel_hist = it2->second.at(i).GetSelectionHist(it1->first);
+        sel_hist.SetFillColor(iColor);
+        sel_hist.SetLineColor(kBlack);
+        fPostFitSelectedMCStacks[it1->first]->Add(&sel_hist);
+        ++iColor;
+      }
+    }
+    fPostFitSelectedMCStacks[it1->first]->Write();
   }
 }
 
@@ -211,7 +338,7 @@ void protoana::PDSPThinSliceFitter::CompareDataMC() {
 
   TCanvas cIncident("cIncident", "");
   cIncident.SetTicks();
-  fNominalIncidentMCStack->Draw();
+  fNominalIncidentMCStack->Draw("hist");
   fIncidentDataHist.Draw("e1 same");
   fOutputFile.cd();
   cIncident.Write();
@@ -225,6 +352,284 @@ void protoana::PDSPThinSliceFitter::CompareDataMC() {
   TH1D * hIncidentRatio = (TH1D*)fIncidentDataHist.Clone("IncidentRatio");
   hIncidentRatio->Divide(hIncidentMC);
   hIncidentRatio->Write(); 
+
+  //Selected hists
+  for (auto it = fSelectionIDs.begin(); it != fSelectionIDs.end(); ++it) {
+    int selection_ID = it->first;
+    fSelectedDataHists[selection_ID].SetLineColor(kBlack);
+    fSelectedDataHists[selection_ID].SetMarkerColor(kBlack);
+    fSelectedDataHists[selection_ID].SetMarkerStyle(20);   
+
+    std::string canvas_name = "c" + it->second;
+    TCanvas cSelection(canvas_name.c_str(), "");
+    cSelection.SetTicks();
+    fNominalSelectedMCStacks[selection_ID]->Draw("hist");
+    fSelectedDataHists[selection_ID].Draw("e1 same");
+
+    fOutputFile.cd();
+    cSelection.Write();
+
+    //Get the full incident hist from stack
+    TList * l = (TList*)fNominalSelectedMCStacks[selection_ID]->GetHists();
+    TH1D * hMC = (TH1D*)l->At(0)->Clone();
+    for (int i = 1; i < l->GetSize(); ++i) {
+      hMC->Add((TH1D*)l->At(i));
+    }
+
+    std::string ratio_name = it->second + "Ratio";
+    TH1D * hRatio
+        = (TH1D*)fSelectedDataHists[selection_ID].Clone(ratio_name.c_str());
+    hRatio->Divide(hMC);
+    hRatio->Write(); 
+  }
+}
+
+void protoana::PDSPThinSliceFitter::RunFitAndSave() {
+  DefineFitFunction();
+  fMinimizer->SetFunction(fFitFunction);
+  int fit_status = fMinimizer->Minimize();
+
+  if (!fit_status) {
+    std::cout << "Failed to find minimum: " << std::endl;
+  }
+  else {
+    std::cout << "Found minimimum: " << std::endl;
+    for (size_t i = 0; i < fTotalSignalParameters; ++i) {
+      std::cout << fMinimizer->X()[i] << std::endl;
+    }
+
+    /*
+    TMatrixD * cov = new TMatrixD(fTotalSignalParameters,
+                                  fTotalSignalParameters);
+    //correlation matrix
+    TMatrixD * corr = new TMatrixD(fTotalSignalParameters,
+                                   fTotalSignalParameters);
+    */
+
+    size_t fTotalParameters = fTotalSignalParameters + fTotalFluxParameters;
+    TH2D covHist("covHist", "", fTotalParameters, 0,
+                 fTotalParameters, fTotalParameters, 0,
+                 fTotalParameters);
+    TH2D corrHist("corrHist", "", fTotalParameters, 0,
+                  fTotalParameters, fTotalParameters, 0,
+                  fTotalParameters);
+
+    TH1D parsHist("postFitPars", "", fTotalParameters, 0,
+                  fTotalParameters);
+
+    int n_par = 0;
+    for (auto it = fSignalParameters.begin();
+         it != fSignalParameters.end(); ++it) {
+      for (size_t i = 0; i < it->second.size(); ++i) {
+        parsHist.SetBinContent(n_par+1, fMinimizer->X()[n_par]);
+        parsHist.SetBinError(n_par+1,
+                             sqrt(fMinimizer->CovMatrix(n_par, n_par)));
+        parsHist.GetXaxis()->SetBinLabel(
+            n_par+1, fSignalParameterNames[it->first][i].c_str());
+
+        covHist.GetXaxis()->SetBinLabel(
+            n_par+1, fSignalParameterNames[it->first][i].c_str());
+        corrHist.GetXaxis()->SetBinLabel(
+            n_par+1, fSignalParameterNames[it->first][i].c_str());
+        covHist.GetYaxis()->SetBinLabel(
+            n_par+1, fSignalParameterNames[it->first][i].c_str());
+        corrHist.GetYaxis()->SetBinLabel(
+            n_par+1, fSignalParameterNames[it->first][i].c_str());
+
+        ++n_par;
+      }
+    }
+    for (auto it = fFluxParameters.begin();
+         it != fFluxParameters.end(); ++it) {
+      parsHist.SetBinContent(n_par+1, fMinimizer->X()[n_par]);
+      parsHist.SetBinError(n_par+1,
+                           sqrt(fMinimizer->CovMatrix(n_par, n_par)));
+      parsHist.GetXaxis()->SetBinLabel(
+          n_par+1, fFluxParameterNames[it->first].c_str());
+
+      covHist.GetXaxis()->SetBinLabel(
+          n_par+1, fFluxParameterNames[it->first].c_str());
+      corrHist.GetXaxis()->SetBinLabel(
+          n_par+1, fFluxParameterNames[it->first].c_str());
+      covHist.GetYaxis()->SetBinLabel(
+          n_par+1, fFluxParameterNames[it->first].c_str());
+      corrHist.GetYaxis()->SetBinLabel(
+          n_par+1, fFluxParameterNames[it->first].c_str());
+
+      ++n_par;
+    }
+
+    for (size_t i = 0; i < (fTotalSignalParameters + fTotalFluxParameters);
+         ++i) {
+      for (size_t j = 0; j < (fTotalSignalParameters + fTotalFluxParameters);
+           ++j) {
+        covHist.SetBinContent(i+1, j+1, fMinimizer->CovMatrix(i, j));
+        corrHist.SetBinContent(i+1, j+1, fMinimizer->Correlation(i, j));
+      }
+    }
+
+    fOutputFile.cd();
+    parsHist.SetFillColor(kRed);
+    parsHist.SetFillStyle(3144);
+    parsHist.SetMarkerColor(kBlack);
+    parsHist.SetMarkerStyle(20);
+    parsHist.Write();
+
+    covHist.Write();
+    corrHist.Write();
+  }
+}
+
+void protoana::PDSPThinSliceFitter::DefineFitFunction() {
+
+  fFitFunction = ROOT::Math::Functor(
+      [&](double const * coeffs) {
+
+        //Set all the parameters
+        //coeffs are ordered according to
+        //keys of signal par map
+        //----vector for given signal
+        //then keys of flux par map
+        size_t par_position = 0;
+        for (auto it = fSignalParameters.begin();
+             it != fSignalParameters.end(); ++it) {
+          for (size_t i = 0; i < it->second.size(); ++i) {
+            it->second.at(i) = coeffs[par_position];
+            ++par_position;
+          }
+        }
+        for (auto it = fFluxParameters.begin();
+             it != fFluxParameters.end(); ++it) {
+          it->second = coeffs[par_position];
+          ++par_position;
+        }
+
+        //Then go through and vary the fluxes by the flux parameters
+        //Remember: 1 less parameter than number of flux types
+        std::map<int, double> fluxes, scaled_fluxes;
+        double total_nominal_flux = 0.;
+        double total_varied_flux = 0.;
+        for (auto it = fNominalFluxes.begin();
+             it != fNominalFluxes.end(); ++it) {
+          int flux_id = it->first;
+          fluxes[flux_id]
+              = it->second * ((fFluxParameters.find(flux_id) != fFluxParameters.end()) ?
+                              fFluxParameters[flux_id] : 1.);
+
+          //Determine total of fluxes, both nominal and varied, in order to 
+          //rescale later on
+          total_nominal_flux += it->second;
+          total_varied_flux += fluxes[flux_id];
+
+          scaled_fluxes[flux_id] = 0.;
+        }
+
+        for (auto it = fluxes.begin(); it != fluxes.end(); ++it) {
+          it->second *= (total_nominal_flux/total_varied_flux);
+        }
+
+        //Go through and determine the scaled flux
+        for (auto it = fFluxesBySample.begin();
+             it != fFluxesBySample.end(); ++it) {
+          int sample_ID = it->first;
+          std::vector<ThinSliceSample> & samples
+              = fSamples[sample_ID];
+
+          for (size_t i = 0; i < samples.size(); ++i) {
+            ThinSliceSample & sample = samples.at(i);
+            int flux_type = sample.GetFluxType();
+            
+            if (fSignalParameters.find(sample_ID) == fSignalParameters.end()) {
+              scaled_fluxes[flux_type]
+                  += fFluxesBySample[sample_ID][i];
+            }
+            else {
+              //Scale the flux for this signal channel
+              scaled_fluxes[flux_type]
+                  += (fFluxesBySample[sample_ID][i] *
+                      fSignalParameters[sample_ID][i]);
+            }
+          }
+        }
+
+        //Use the fluxes from above to figure out the correct
+        //scaling factor for the signal bins, and use this to 
+        //scale the hists in the signal samples accordingly
+        //along with the parameter
+        for (auto it = fSignalParameters.begin();
+             it != fSignalParameters.end(); ++it) {
+          int sample_ID = it->first;
+          std::vector<ThinSliceSample> & samples
+              = fSamples[sample_ID];
+          for (size_t i = 0; i < it->second.size(); ++i) {
+            ThinSliceSample & sample = samples.at(i);
+            int flux_type = sample.GetFluxType();
+            double flux_factor = fluxes[flux_type]/scaled_fluxes[flux_type];
+            sample.SetFactorAndScale(flux_factor*it->second.at(i));
+          }
+        }
+
+        std::pair<double, size_t> chi2_points = CalculateChi2();
+        return (chi2_points.first/chi2_points.second);
+      },
+      fTotalSignalParameters + fTotalFluxParameters);
+
+}
+
+std::pair<double, size_t> protoana::PDSPThinSliceFitter::CalculateChi2() {
+  //Go through the selection hists and fit mc to data
+  double chi2 = 0.;
+  size_t nPoints = 0;
+
+  for (auto it = fSelectedDataHists.begin();
+       it != fSelectedDataHists.end(); ++it) {
+    TH1D & data_hist = it->second;
+    int selection_ID = it->first;
+    for (int i = 1; i <= data_hist.GetNbinsX(); ++i) {
+      double data_val = data_hist.GetBinContent(i);
+      double data_err = data_hist.GetBinError(i);
+
+      double mc_val = 0.;
+      //Go through all the samples and get the values from mc
+      for (auto it2 = fSamples.begin(); it2 != fSamples.end(); ++it2) {
+        std::vector<ThinSliceSample> & samples = it2->second;
+        for (size_t j = 0; j < samples.size(); ++j) {
+          ThinSliceSample & sample = samples[j];
+          mc_val += sample.GetSelectionHist(selection_ID).GetBinContent(i);
+        }
+      }
+      chi2 += (std::pow((data_val - mc_val), 2) / std::pow(data_err, 2));
+      ++nPoints;
+    }
+  }
+
+  //Go through the incident hist. Calculate it as its own point.
+  //Then add reduced incident chi2 to full chi2 
+  double incident_chi2 = 0.;
+  size_t incident_points = 0;
+  for (int i = 1; i <= fIncidentDataHist.GetNbinsX(); ++i) {
+    double data_val = fIncidentDataHist.GetBinContent(i);
+    double data_err = fIncidentDataHist.GetBinError(i);
+
+    double mc_val = 0.;
+    //Go through all the samples and get the values from mc
+    for (auto it = fSamples.begin(); it != fSamples.end(); ++it) {
+      std::vector<ThinSliceSample> & samples = it->second;
+      for (size_t j = 0; j < samples.size(); ++j) {
+        ThinSliceSample & sample = samples[j];
+        mc_val += sample.GetIncidentHist().GetBinContent(i);
+      }
+    }
+
+    incident_chi2 += (std::pow((data_val - mc_val), 2) / std::pow(data_err, 2));
+    ++incident_points;
+  }
+
+  //Add reduced incident chi2 to full chi2, increment total nPoints
+  chi2 += incident_chi2 / incident_points;
+  ++nPoints;
+
+  return {chi2, nPoints};
 }
 
 void protoana::PDSPThinSliceFitter::Configure(std::string fcl_file) {
@@ -258,4 +663,21 @@ void protoana::PDSPThinSliceFitter::Configure(std::string fcl_file) {
   fIncidentRecoBins = pset.get<std::vector<double>>("IncidentRecoBins");
   
   fSampleSets = pset.get<std::vector<fhicl::ParameterSet>>("Samples");
+
+  //fFluxTypes = pset.get<std::vector<int>>("FluxTypes");
+  temp_vec = pset.get<std::vector<std::pair<int, std::string>>>(
+      "FluxTypes");
+  fFluxTypes = std::map<int, std::string>(temp_vec.begin(), temp_vec.end());
+  for (size_t i = 0; i < temp_vec.size() - 1; ++i) {
+    fFluxParameterNames[temp_vec[i].first] = "par_" + temp_vec[i].second +
+                                             "_flux";
+    fFluxParameters[temp_vec[i].first] = 1.;
+  }
+  fTotalFluxParameters = temp_vec.size() - 1;
+
+  fMaxCalls = pset.get<int>("MaxCalls");
+  fTolerance = pset.get<double>("Tolerance");
+  fLowerLimit = pset.get<double>("LowerLimit");
+  fUpperLimit = pset.get<double>("UpperLimit");
+
 }

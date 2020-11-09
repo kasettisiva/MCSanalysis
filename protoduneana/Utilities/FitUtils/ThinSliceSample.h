@@ -1,14 +1,22 @@
-#ifndef THINSLICESAMPLE_hh
-#define THINSLICESAMPLE_hh
 #include "TH1D.h"
 
 #include <map>
+#include <sstream>
 
 namespace protoana {
+std::string PreciseToString(const double val, const int n = 2);/*{
+  std::ostringstream out;
+  out.precision(n);
+  out << std::fixed << val;
+  return out.str();
+};*/
 
+
+#ifndef THINSLICESAMPLE_hh
+#define THINSLICESAMPLE_hh
 class ThinSliceSample {
  public:
-  ThinSliceSample(std::string name,
+  ThinSliceSample(std::string name, int flux_type,
                   const std::map<int, std::string> & selections,
                   const std::vector<double> & incident_bins,
                   const std::vector<double> & selected_bins,
@@ -33,6 +41,18 @@ class ThinSliceSample {
     return fSampleName;
   };
 
+  const int & GetFluxType() const {
+    return fFluxType;
+  };
+
+  const double & GetNominalFlux() const {
+    return fNominalFlux;
+  };
+
+  void AddFlux(double val = 1.) {
+    fNominalFlux += val;
+  };
+
   void FillIncidentHist(const std::vector<double> & vals) {
     for (size_t i = 0; i < vals.size(); ++i) {
       fIncidentHist.Fill(vals.at(i));
@@ -43,7 +63,30 @@ class ThinSliceSample {
     if (fSelectionHists.find(id) != fSelectionHists.end()) {
       fSelectionHists.at(id).Fill(val);
     }
-  }
+  };
+
+  void ScaleHists(double val) {
+    fIncidentHist.Scale(val);
+    for (auto it = fSelectionHists.begin(); it != fSelectionHists.end(); ++it) {
+      it->second.Scale(val);
+    }
+  };
+
+  void SetDataMCScale(double val) {
+    fDataMCScale = val;
+    ScaleHists(fDataMCScale);
+  };
+
+  void SetFactorAndScale(double val) {
+    ResetFactor();
+    fFactor = val;
+    ScaleHists(val);
+  };
+
+  void ResetFactor() {
+    ScaleHists(1./fFactor);
+    fFactor = 1.;
+  };
 
   bool CheckIsSignal() {return fIsSignal;};
   bool CheckInSignalRange(double val) {return ((fRange.first < val) &&
@@ -55,6 +98,9 @@ class ThinSliceSample {
   std::map<int, TH1D> fSelectionHists;
   TH1D fIncidentHist;
   std::string fSampleName;
+  int fFluxType;
+  double fNominalFlux = 0.;
+  double fDataMCScale = 1.;
   bool fIsSignal;
   std::pair<double, double> fRange;
 };

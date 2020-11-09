@@ -35,10 +35,12 @@ int main(int argc, char ** argv){
       = new protoana::PDSPThinSliceFitter(fcl_file, output_file);
   fit->InitializeMCSamples();
   fit->BuildMCSamples();
+  fit->BuildDataHists();
+  fit->ScaleMCToData();
   fit->SaveMCSamples();
   fit->BuildAndSaveNominalStacks();
-  fit->BuildDataHists();
   fit->CompareDataMC();
+  fit->RunFitAndSave();
 
   return 0;
 }
