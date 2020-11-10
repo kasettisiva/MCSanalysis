@@ -22,7 +22,7 @@ protoana::ThinSliceSample::ThinSliceSample(
   std::string title = name + (is_signal ?
                               ("(" + protoana::PreciseToString(range.first) +
                                " " + protoana::PreciseToString(range.second) + ")") :
-                              "");
+                              "") + ";Reconstructed KE (MeV)";
   if (is_signal) {
     inc_name = "sample_" + name + "_" + protoana::PreciseToString(range.first) + "_" +
                protoana::PreciseToString(range.second) + "_incident_hist";
@@ -47,5 +47,60 @@ protoana::ThinSliceSample::ThinSliceSample(
     fSelectionHists[it->first] = TH1D(sel_name.c_str(), title.c_str(),
                                       selected_bins.size() - 1,
                                       &selected_bins[0]);
+  }
+  MakeRebinnedHists();
+}
+
+void protoana::ThinSliceSample::MakeRebinnedHists() {
+  if (!fMadeRebinned) {
+    std::string inc_name = fIncidentHist.GetName();
+    inc_name += "Rebinned";
+    fIncidentHistRebinned = TH1D(inc_name.c_str(), fIncidentHist.GetTitle(),
+                                 fIncidentHist.GetNbinsX(), 0, fIncidentHist.GetNbinsX());
+    for (int i = 1; i <= fIncidentHist.GetNbinsX(); ++i) {
+      fIncidentHistRebinned.SetBinContent(i, fIncidentHist.GetBinContent(i));
+
+      double low_edge = fIncidentHist.GetXaxis()->GetBinLowEdge(i);
+      double up_edge = fIncidentHist.GetXaxis()->GetBinUpEdge(i);
+      std::string bin_label = (low_edge < 0. ? "< 0." :
+                               (protoana::PreciseToString(low_edge, 0) + " - " +
+                                protoana::PreciseToString(up_edge, 0)));
+      fIncidentHistRebinned.GetXaxis()->SetBinLabel(i, bin_label.c_str());
+    }
+
+    for (auto it = fSelectionHists.begin(); it != fSelectionHists.end(); ++it) {
+      TH1D & sel_hist = it->second;
+      std::string name = sel_hist.GetName();
+      name += "Rebinned";
+      fSelectionHistsRebinned[it->first] = TH1D(
+          name.c_str(), sel_hist.GetTitle(), sel_hist.GetNbinsX(), 0,
+          sel_hist.GetNbinsX());
+      for (int i = 1; i <= sel_hist.GetNbinsX(); ++i) {
+        fSelectionHistsRebinned[it->first].SetBinContent(
+            i, sel_hist.GetBinContent(i));
+        double low_edge = sel_hist.GetXaxis()->GetBinLowEdge(i);
+        double up_edge = sel_hist.GetXaxis()->GetBinUpEdge(i);
+        std::string bin_label = (low_edge < 0. ? "< 0." :
+                                 (protoana::PreciseToString(low_edge, 0) + " - " +
+                                  protoana::PreciseToString(up_edge, 0)));
+        fSelectionHistsRebinned[it->first].GetXaxis()->SetBinLabel(
+            i, bin_label.c_str());
+      }
+    }
+
+    fMadeRebinned = true;
+  }
+}
+
+void protoana::ThinSliceSample::RefillRebinnedHists() {
+  for (int i = 1; i <= fIncidentHist.GetNbinsX(); ++i) {
+    fIncidentHistRebinned.SetBinContent(i, fIncidentHist.GetBinContent(i));
+  }
+
+  for (auto it = fSelectionHistsRebinned.begin();
+       it != fSelectionHistsRebinned.end(); ++it) {
+    for (int i = 1; i <= it->second.GetNbinsX(); ++i) {
+      it->second.SetBinContent(i, fSelectionHists[it->first].GetBinContent(i));
+    }
   }
 }

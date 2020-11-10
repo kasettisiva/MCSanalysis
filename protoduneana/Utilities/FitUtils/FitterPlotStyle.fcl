@@ -1,0 +1,20 @@
+BEGIN_PROLOG
+# Using the color wheel (https://root.cern.ch/doc/master/classTColor.html)
+# kWhite =0,   kBlack =1,   kGray=920,
+# kRed   =632, kGreen =416, kBlue=600, kYellow=400, kMagenta=616, kCyan=432,
+# kOrange=800, kSpring=820, kTeal=840, kAzure =860, kViolet =880, kPink=900 
+
+DefaultColorsStyle: [
+ [602, 1001],
+ [433, 1001],
+ [837, 1001],
+ [419, 1001],
+ [403, 1001],
+ [795, 1001],
+ [630, 1001],
+ [629, 1001],
+ [893, 1001],
+ [619, 1001]
+]
+
+END_PROLOG

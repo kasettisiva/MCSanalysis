@@ -38,7 +38,7 @@ int main(int argc, char ** argv){
   fit->BuildDataHists();
   fit->ScaleMCToData();
   fit->SaveMCSamples();
-  fit->BuildAndSaveNominalStacks();
+  fit->BuildAndSaveStacks();
   fit->CompareDataMC();
   fit->RunFitAndSave();
 

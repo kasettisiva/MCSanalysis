@@ -11,6 +11,7 @@
 #include "Math/Factory.h"
 #include "Math/Functor.h"
 #include "Math/Minimizer.h"
+#include "TRandom3.h"
 
 #include "ThinSliceSample.h"
 
@@ -21,12 +22,11 @@ class PDSPThinSliceFitter {
   PDSPThinSliceFitter(std::string fcl_file, std::string output_file);
   void BuildMCSamples();
   void SaveMCSamples();
-  void BuildAndSaveNominalStacks();
-  void BuildAndSavePostFitStacks();
+  void BuildAndSaveStacks(bool post_fit = false);
   void GetNominalFluxes();
   void BuildDataHists();
   void InitializeMCSamples();
-  void CompareDataMC();
+  void CompareDataMC(bool post_fit = false);
   void ScaleMCToData();
   void RunFitAndSave();
   ~PDSPThinSliceFitter();
@@ -36,6 +36,11 @@ class PDSPThinSliceFitter {
   std::pair<double, size_t> CalculateChi2();
   void DefineFitFunction();
   void MakeMinimizer();
+  void ParameterScans();
+  //int GetColor(size_t i);
+  std::pair<int, int> GetColorAndStyle(size_t i);
+  int GetFill(size_t i);
+  void MakeRebinnedDataHists();
 
   std::map<int, std::vector<ThinSliceSample>> fSamples;
   std::map<int, bool> fIsSignalSample;
@@ -48,7 +53,9 @@ class PDSPThinSliceFitter {
   std::unique_ptr<ROOT::Math::Minimizer> fMinimizer;
 
   std::map<int, TH1D> fSelectedDataHists;
+  std::map<int, TH1D> fRebinnedSelectedDataHists;
   TH1D fIncidentDataHist;
+  TH1D fRebinnedIncidentDataHist;
 
   THStack * fNominalIncidentMCStack;
   THStack * fPostFitIncidentMCStack;
@@ -68,6 +75,8 @@ class PDSPThinSliceFitter {
   std::map<int, std::string> fFluxParameterNames;
   size_t fTotalFluxParameters;
 
+  TRandom3 fRNG;
+
   //Configurable members
   std::string fMCFileName;
   std::string fDataFileName;
@@ -76,7 +85,12 @@ class PDSPThinSliceFitter {
   std::vector<fhicl::ParameterSet> fSampleSets;
   std::map<int, std::string> fFluxTypes;
   int fMaxCalls;
+  unsigned int fNScanSteps;
   double fTolerance, fLowerLimit, fUpperLimit;
+  bool fReducedIncidentChi2;
+  std::vector<std::pair<int, int>> fPlotStyle;
+  bool fPlotRebinned;
+  bool fRandomStart;
   
   std::vector<double> fSelectedRecoBins;
   std::vector<double> fIncidentRecoBins;

@@ -37,6 +37,14 @@ class ThinSliceSample {
     return fIncidentHist;
   };
 
+  TH1D & GetRebinnedIncidentHist() {
+    return fIncidentHistRebinned;
+  };
+
+  TH1D & GetRebinnedSelectionHist(int id) {
+    return fSelectionHistsRebinned.at(id);
+  };
+
   const std::string & GetName() const {
     return fSampleName;
   };
@@ -93,16 +101,22 @@ class ThinSliceSample {
                                                (val <= fRange.second));};
   const std::pair<double, double> & GetRange() const {return fRange;};
 
+  void MakeRebinnedHists();
+  void RefillRebinnedHists();
+
  private:
   double fFactor = 1.;
   std::map<int, TH1D> fSelectionHists;
   TH1D fIncidentHist;
+  std::map<int, TH1D> fSelectionHistsRebinned;
+  TH1D fIncidentHistRebinned;
   std::string fSampleName;
   int fFluxType;
   double fNominalFlux = 0.;
   double fDataMCScale = 1.;
   bool fIsSignal;
   std::pair<double, double> fRange;
+  bool fMadeRebinned = false;
 };
 
 }

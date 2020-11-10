@@ -1,3 +1,5 @@
+#include "FitterPlotStyle.fcl"
+
 MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_beamType.root"
 DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_beamType.root"
 TreeName: "pionana/beamana"
@@ -71,6 +73,11 @@ Samples: [
 
 ## Minimizer setup
 MaxCalls: 2000
+NScanSteps: 100
 Tolerance: 0.001
 UpperLimit: 10.0
 LowerLimit: 0.25
+ReducedIncidentChi2: false
+PlotStyle: @local::DefaultColorsStyle
+PlotRebinned: true
+RandomStart: false 
