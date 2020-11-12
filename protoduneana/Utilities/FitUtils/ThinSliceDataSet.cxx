@@ -1,81 +1,44 @@
+#include "ThinSliceDataSet.h"
 #include "ThinSliceSample.h"
 
-std::string protoana::PreciseToString(const double val, const int n) {
-  std::ostringstream out;
-  out.precision(n);
-  out << std::fixed << val;
-  return out.str();
-}
-
-protoana::ThinSliceSample::ThinSliceSample(
-    std::string name, int flux_type,
-    const std::vector<fhicl::ParameterSet> & selections,
+protoana::ThinSliceDataSet::ThinSliceDataSet(
     const std::vector<double> & incident_bins,
-    bool is_signal, std::pair<double, double> range)
-    : fSampleName(name),
-      fFluxType(flux_type),
-      fIsSignal(is_signal),
-      fRange(range) {
-
-  std::string inc_name = "";
-  std::string title = name +
-                      (is_signal ?
-                          ("(" + protoana::PreciseToString(range.first) + " "
-                           + protoana::PreciseToString(range.second) + ")") :
-                           "") +
-                      ";Reconstructed KE (MeV)";
-  if (is_signal) {
-    inc_name = "sample_" + name + "_" +
-               protoana::PreciseToString(range.first) + "_" +
-               protoana::PreciseToString(range.second) + "_incident_hist";
-  }
-  else {
-    inc_name = "sample_" + name + "_incident_hist";
-  }
-  fIncidentHist = TH1D(inc_name.c_str(), title.c_str(), incident_bins.size() - 1,
-                       &incident_bins[0]);
-
+    const std::vector<fhicl::ParameterSet> & selections) {
+  fIncidentHist = TH1D("Data_incident_hist",
+                           "Data;Reconstructed KE (MeV)",
+                           incident_bins.size() - 1,
+                           &incident_bins[0]);
   for (auto it = selections.begin(); it != selections.end(); ++it) {
-    std::string sel_name = "";
-    if (is_signal) {
-      sel_name = "sample_" + name + "_" +
-                 protoana::PreciseToString(range.first) + "_" +
-                 protoana::PreciseToString(range.second) + "_selected_" +
-                 it->get<std::string>("Name") + "_hist";
-    }
-    else {
-      sel_name = "sample_" + name + "_selected_" +
-                 it->get<std::string>("Name") + "_hist";
-    }
+    std::string sel_name = "Data_selected_" + it->get<std::string>("Name") +
+                           "_hist";
+    std::vector<std::vector<double>> selected_bins =
+        it->get<std::vector<std::vector<double>>>("RecoBins");
 
-    std::vector<std::vector<double>> selected_bins
-        = it->get<std::vector<std::vector<double>>>("RecoBins");
     if (selected_bins.size() == 1) {
       fSelectionHists[it->get<int>("ID")] = new TH1D(
-          sel_name.c_str(), title.c_str(), selected_bins[0].size() - 1,
-          &selected_bins[0][0]);
+          sel_name.c_str(), "Data;Reconstructed KE (MeV)",
+          selected_bins[0].size() - 1, &selected_bins[0][0]);
     }
     else if (selected_bins.size() == 2) {
       fSelectionHists[it->get<int>("ID")] = new TH2D(
-          sel_name.c_str(), title.c_str(),
+          sel_name.c_str(), "Data;Reconstructed KE (MeV)",
           selected_bins[0].size() - 1, &selected_bins[0][0],
           selected_bins[1].size() - 1, &selected_bins[1][0]);
     }
     else if (selected_bins.size() == 3) {
       fSelectionHists[it->get<int>("ID")] = new TH3D(
-          sel_name.c_str(), title.c_str(),
+          sel_name.c_str(), "Data;Reconstructed KE (MeV)",
           selected_bins[0].size() - 1, &selected_bins[0][0],
           selected_bins[1].size() - 1, &selected_bins[1][0],
           selected_bins[2].size() - 1, &selected_bins[2][0]);
     }
     /*else {
-      throw
-    }*/
+     * throw
+     * }*/
   }
-  MakeRebinnedHists();
 }
 
-void protoana::ThinSliceSample::MakeRebinnedHists() {
+void protoana::ThinSliceDataSet::MakeRebinnedHists() {
   if (!fMadeRebinned) {
     std::string inc_name = fIncidentHist.GetName();
     inc_name += "Rebinned";
@@ -128,7 +91,7 @@ void protoana::ThinSliceSample::MakeRebinnedHists() {
   }
 }
 
-void protoana::ThinSliceSample::Rebin1D(TH1 * sel_hist, TH1 * rebinned) {
+void protoana::ThinSliceDataSet::Rebin1D(TH1 * sel_hist, TH1 * rebinned) {
   for (int i = 1; i <= sel_hist->GetNbinsX(); ++i) {
     double low_x = sel_hist->GetXaxis()->GetBinLowEdge(i);
     double up_x = sel_hist->GetXaxis()->GetBinUpEdge(i);
@@ -141,7 +104,7 @@ void protoana::ThinSliceSample::Rebin1D(TH1 * sel_hist, TH1 * rebinned) {
   }
 }
 
-void protoana::ThinSliceSample::Rebin2D(TH1 * sel_hist, TH1 * rebinned) {
+void protoana::ThinSliceDataSet::Rebin2D(TH1 * sel_hist, TH1 * rebinned) {
   for (int i = 1; i <= sel_hist->GetNbinsX(); ++i) {
     double low_x = sel_hist->GetXaxis()->GetBinLowEdge(i);
     double up_x = sel_hist->GetXaxis()->GetBinUpEdge(i);
@@ -162,7 +125,7 @@ void protoana::ThinSliceSample::Rebin2D(TH1 * sel_hist, TH1 * rebinned) {
   }
 }
 
-void protoana::ThinSliceSample::Rebin3D(TH1 * sel_hist, TH1 * rebinned) {
+void protoana::ThinSliceDataSet::Rebin3D(TH1 * sel_hist, TH1 * rebinned) {
   for (int i = 1; i <= sel_hist->GetNbinsX(); ++i) {
     double low_x = sel_hist->GetXaxis()->GetBinLowEdge(i);
     double up_x = sel_hist->GetXaxis()->GetBinUpEdge(i);
@@ -188,19 +151,6 @@ void protoana::ThinSliceSample::Rebin3D(TH1 * sel_hist, TH1 * rebinned) {
 
         rebinned->SetBinContent(i, j, k, sel_hist->GetBinContent(i, j, k));
       }
-    }
-  }
-}
-
-void protoana::ThinSliceSample::RefillRebinnedHists() {
-  for (int i = 1; i <= fIncidentHist.GetNbinsX(); ++i) {
-    fIncidentHistRebinned.SetBinContent(i, fIncidentHist.GetBinContent(i));
-  }
-
-  for (auto it = fSelectionHistsRebinned.begin();
-       it != fSelectionHistsRebinned.end(); ++it) {
-    for (int i = 1; i <= it->second->GetNbinsX(); ++i) {
-      it->second->SetBinContent(i, fSelectionHists[it->first]->GetBinContent(i));
     }
   }
 }

@@ -19,10 +19,15 @@
 #include "TCanvas.h"
 #include "TList.h"
 #include "TDirectory.h"
+#include "TH3D.h"
 #include "TH2D.h"
+#include "TH1D.h"
 #include "TGraph.h"
 
 #include "PDSPThinSliceFitter.h"
+#include "AbsCexDriver.h"
+
+#include "ThinSliceDriverRegistry.h"
 
 protoana::PDSPThinSliceFitter::PDSPThinSliceFitter(std::string fcl_file,
                                                    std::string output_file)
@@ -30,12 +35,24 @@ protoana::PDSPThinSliceFitter::PDSPThinSliceFitter(std::string fcl_file,
   Configure(fcl_file);
   gStyle->SetOptStat(0);
   gROOT->SetBatch(1);
+
+  try {
+    fThinSliceDriver = protoana::ThinSliceDriverRegistry::Instance()->GetDriver(
+        fDriverName, fAnalysis);
+  }
+  catch (const std::runtime_error & e) {
+    protoana::ThinSliceDriverRegistry::Instance()->PrintAvailableDrivers();
+    throw e;
+  }
+
+  std::cout << fThinSliceDriver->GetAnalysis() << std::endl;
 }
 
 protoana::PDSPThinSliceFitter::~PDSPThinSliceFitter() {
   fOutputFile.Close();
 }
 
+//Good
 void protoana::PDSPThinSliceFitter::MakeMinimizer() {
   fMinimizer = std::unique_ptr<ROOT::Math::Minimizer>
     (ROOT::Math::Factory::CreateMinimizer("Minuit2", "Migrad"));
@@ -84,6 +101,7 @@ void protoana::PDSPThinSliceFitter::MakeMinimizer() {
 
 }
 
+//Good
 void protoana::PDSPThinSliceFitter::InitializeMCSamples() {
   for (size_t i = 0; i < fSampleSets.size(); ++i) {
     fhicl::ParameterSet sample_set = fSampleSets[i];
@@ -104,25 +122,24 @@ void protoana::PDSPThinSliceFitter::InitializeMCSamples() {
       fSignalParameters[sample_ID] = std::vector<double>();
       fSignalParameterNames[sample_ID] = std::vector<std::string>();
       for (size_t j = 1; j < bins.size(); ++j) {
-        ThinSliceSample sample(sample_name, flux_type, fSelectionIDs,
+        ThinSliceSample sample(sample_name, flux_type, fSelectionSets,
                                fIncidentRecoBins,
-                               fSelectedRecoBins, true,
+                               true,
                                {bins[j-1], bins[j]});
         fSamples[sample_ID].push_back(sample);
         fSignalParameters[sample_ID].push_back(1.);
 
         std::string par_name = "par_" + sample_name + "_" +
-                               protoana::PreciseToString(bins[j-1]) + "_" +
-                               protoana::PreciseToString(bins[j]);
+                               PreciseToString(bins[j-1]) + "_" +
+                               PreciseToString(bins[j]);
         fSignalParameterNames[sample_ID].push_back(par_name);
         ++fTotalSignalParameters;
         fFluxesBySample[sample_ID].push_back(0.);
       }
     }
     else {
-      ThinSliceSample sample(sample_name, flux_type, fSelectionIDs,
-                             fIncidentRecoBins,
-                             fSelectedRecoBins);
+      ThinSliceSample sample(sample_name, flux_type, fSelectionSets,
+                             fIncidentRecoBins);
       fSamples[sample_ID].push_back(sample);
       fFluxesBySample[sample_ID].push_back(0.);
     }
@@ -131,64 +148,17 @@ void protoana::PDSPThinSliceFitter::InitializeMCSamples() {
   MakeMinimizer();
 }
 
+//Good
 void protoana::PDSPThinSliceFitter::BuildMCSamples() {
   //Open the MC file and set branches
   TFile fMCFile(fMCFileName.c_str(), "OPEN");
   fMCTree = (TTree*)fMCFile.Get(fTreeName.c_str());
-
-  int true_sample, selection_ID; 
-  double true_beam_interactingEnergy, reco_beam_interactingEnergy;
-  std::vector<double> * reco_beam_incidentEnergies = 0x0;
-  fMCTree->SetBranchAddress("new_interaction_topology", &true_sample);
-  fMCTree->SetBranchAddress("selection_ID", &selection_ID);
-  fMCTree->SetBranchAddress("true_beam_interactingEnergy",
-                            &true_beam_interactingEnergy);
-  fMCTree->SetBranchAddress("reco_beam_interactingEnergy",
-                            &reco_beam_interactingEnergy);
-  fMCTree->SetBranchAddress("reco_beam_incidentEnergies",
-                            &reco_beam_incidentEnergies);
-
-  for (int i = 0; i < fMCTree->GetEntries(); ++i) {
-    fMCTree->GetEntry(i);
-
-    if (fSamples.find(true_sample) == fSamples.end())
-      continue;
-
-    std::vector<ThinSliceSample> & samples = fSamples[true_sample];
-    bool is_signal = fIsSignalSample[true_sample];
-
-    if (!is_signal) {
-      ThinSliceSample & sample = samples.at(0);
-      int flux_type = sample.GetFluxType();
-      fNominalFluxes[flux_type] += 1.;
-      fFluxesBySample[true_sample][0] += 1.;
-      sample.AddFlux();
-      if (reco_beam_incidentEnergies->size()) {
-        sample.FillIncidentHist(*reco_beam_incidentEnergies);
-        sample.FillSelectionHist(selection_ID, reco_beam_interactingEnergy);
-      }
-    }
-    else {
-      //Iterate through the true bins and find the correct one
-      for (size_t j = 0; j < samples.size(); ++j) {
-        ThinSliceSample & sample = samples.at(j);
-        if (sample.CheckInSignalRange(true_beam_interactingEnergy)) {
-          int flux_type = sample.GetFluxType();
-          fNominalFluxes[flux_type] += 1.;
-          fFluxesBySample[true_sample][j] += 1.;
-          sample.AddFlux();
-          if (reco_beam_incidentEnergies->size()) {
-            sample.FillIncidentHist(*reco_beam_incidentEnergies);
-            sample.FillSelectionHist(selection_ID, reco_beam_interactingEnergy);
-          }
-          break;
-        }
-      }
-    }
-  }
+  fThinSliceDriver->BuildMCSamples(fMCTree, fSamples, fIsSignalSample,
+                                   fNominalFluxes, fFluxesBySample);
   fMCFile.Close();
 }
 
+//Good
 void protoana::PDSPThinSliceFitter::ScaleMCToData() {
   double total_nominal = 0.;
   for (auto it = fNominalFluxes.begin(); it != fNominalFluxes.end(); ++it) {
@@ -206,71 +176,45 @@ void protoana::PDSPThinSliceFitter::ScaleMCToData() {
   }
 }
 
+//Implement in ThinSliceDataSet
 void protoana::PDSPThinSliceFitter::BuildDataHists() {
 
   //Create the data hists
-  fIncidentDataHist = TH1D("Data_incident_hist",
-                           "Data;Reconstructed KE (MeV)",
-                           fIncidentRecoBins.size() - 1,
-                           &fIncidentRecoBins[0]);
-  for (auto it = fSelectionIDs.begin(); it != fSelectionIDs.end(); ++it) {
-    std::string sel_name = "Data_selected_" + it->second + "_hist";
-    fSelectedDataHists[it->first] = TH1D(sel_name.c_str(),
-                                         "Data;Reconstructed KE (MeV)",
-                                         fSelectedRecoBins.size() - 1,
-                                         &fSelectedRecoBins[0]);
-  }
+  fDataSet = ThinSliceDataSet(fIncidentRecoBins, fSelectionSets);
 
   //Open the Data file and set branches
   TFile fDataFile(fDataFileName.c_str(), "OPEN");
   fDataTree = (TTree*)fDataFile.Get(fTreeName.c_str());
-
-  int selection_ID; 
-  double reco_beam_interactingEnergy;
-  std::vector<double> * reco_beam_incidentEnergies = 0x0;
-  fDataTree->SetBranchAddress("selection_ID", &selection_ID);
-  fDataTree->SetBranchAddress("reco_beam_interactingEnergy",
-                            &reco_beam_interactingEnergy);
-  fDataTree->SetBranchAddress("reco_beam_incidentEnergies",
-                            &reco_beam_incidentEnergies);
-
   fDataFlux = fDataTree->GetEntries();
-
-  for (int i = 0; i < fDataTree->GetEntries(); ++i) {
-    fDataTree->GetEntry(i);
-    if (reco_beam_incidentEnergies->size()) {
-      for (size_t j = 0; j < reco_beam_incidentEnergies->size(); ++j) {
-        fIncidentDataHist.Fill((*reco_beam_incidentEnergies)[j]);
-      }
-      if (fSelectionIDs.find(selection_ID) != fSelectionIDs.end()) {
-        fSelectedDataHists[selection_ID].Fill(reco_beam_interactingEnergy);
-      }
-    }
-  }
+  fThinSliceDriver->BuildDataHists(fDataTree, fDataSet.GetIncidentHist(),
+                                   fDataSet.GetSelectionHists());
   fOutputFile.cd();
   TDirectory * out = (TDirectory *)fOutputFile.mkdir("Data");
   out->cd();
-  fIncidentDataHist.Write();
-  for (auto it = fSelectedDataHists.begin(); it != fSelectedDataHists.end();
-       ++it) {
-    it->second.Write();
+  fDataSet.GetIncidentHist().Write();
+  std::map<int, TH1 *> & selected_hists = fDataSet.GetSelectionHists();
+  for (auto it = selected_hists.begin(); it != selected_hists.end(); ++it) {
+    it->second->Write();
   }
-  MakeRebinnedDataHists();
+
+  fDataSet.MakeRebinnedHists();
 }
 
+//Good
 void protoana::PDSPThinSliceFitter::SaveMCSamples() {
   fOutputFile.cd();
   for (auto it = fSamples.begin(); it != fSamples.end(); ++it) {
     for (size_t i = 0; i < it->second.size(); ++i) {
       it->second.at(i).GetIncidentHist().Write();
-      const std::map<int, TH1D> & hists = it->second.at(i).GetSelectionHists();
+      const std::map<int, TH1 *> & hists = it->second.at(i).GetSelectionHists();
       for (auto it2 = hists.begin(); it2 != hists.end(); ++it2) {
-        it2->second.Write();
+        it2->second->Write();
       }
     }
   }
 }
 
+//Implement in Driver
 void protoana::PDSPThinSliceFitter::BuildAndSaveStacks(bool post_fit) {
 
   THStack * incident_stack = new THStack(
@@ -310,16 +254,16 @@ void protoana::PDSPThinSliceFitter::BuildAndSaveStacks(bool post_fit) {
     iColor = 0;
     for (auto it2 = fSamples.begin(); it2 != fSamples.end(); ++it2) {
       for (size_t i = 0; i < it2->second.size(); ++i) {
-        TH1D & sel_hist = (fPlotRebinned ?
+        TH1D * sel_hist = (TH1D*)(fPlotRebinned ?
                            it2->second.at(i).GetRebinnedSelectionHist(
                                it1->first) :
                            it2->second.at(i).GetSelectionHist(it1->first));
 
         std::pair<int, int> color_fill = GetColorAndStyle(iColor);
-        sel_hist.SetFillColor(color_fill.first);
-        sel_hist.SetFillStyle(color_fill.second);
-        sel_hist.SetLineColor(kBlack);
-        selected_stack->Add(&sel_hist);
+        sel_hist->SetFillColor(color_fill.first);
+        sel_hist->SetFillStyle(color_fill.second);
+        sel_hist->SetLineColor(kBlack);
+        selected_stack->Add(sel_hist);
         ++iColor;
       }
     }
@@ -333,10 +277,14 @@ void protoana::PDSPThinSliceFitter::BuildAndSaveStacks(bool post_fit) {
   }
 }
 
+//Implement in Driver
 void protoana::PDSPThinSliceFitter::CompareDataMC(bool post_fit) {
   //Incident
-  TH1D & inc_data_hist = (fPlotRebinned ? fRebinnedIncidentDataHist :
-                                          fIncidentDataHist);
+  //TH1D & inc_data_hist = (fPlotRebinned ? fRebinnedIncidentDataHist :
+  //                                        fIncidentDataHist);
+  TH1D & inc_data_hist = (fPlotRebinned ?
+                          fDataSet.GetRebinnedIncidentHist() :
+                          fDataSet.GetIncidentHist());
   inc_data_hist.SetLineColor(kBlack);
   inc_data_hist.SetMarkerColor(kBlack);
   inc_data_hist.SetMarkerStyle(20);
@@ -370,12 +318,16 @@ void protoana::PDSPThinSliceFitter::CompareDataMC(bool post_fit) {
   //Selected hists
   for (auto it = fSelectionIDs.begin(); it != fSelectionIDs.end(); ++it) {
     int selection_ID = it->first;
-    TH1D & sel_data_hist = (fPlotRebinned ?
-                            fRebinnedSelectedDataHists[selection_ID] :
-                            fSelectedDataHists[selection_ID]);
-    sel_data_hist.SetLineColor(kBlack);
-    sel_data_hist.SetMarkerColor(kBlack);
-    sel_data_hist.SetMarkerStyle(20);   
+    //TH1D & sel_data_hist = (fPlotRebinned ?
+    //                        fRebinnedSelectedDataHists[selection_ID] :
+    //                        fSelectedDataHists[selection_ID]);
+    TH1D * sel_data_hist = 
+        (TH1D*)(fPlotRebinned ?
+                fDataSet.GetRebinnedSelectionHist(selection_ID) :
+                fDataSet.GetSelectionHist(selection_ID));
+    sel_data_hist->SetLineColor(kBlack);
+    sel_data_hist->SetMarkerColor(kBlack);
+    sel_data_hist->SetMarkerStyle(20);   
 
     std::string canvas_name = "c";
     canvas_name += (post_fit ? "PostFit" : "Nominal") + it->second;
@@ -389,7 +341,7 @@ void protoana::PDSPThinSliceFitter::CompareDataMC(bool post_fit) {
     selected_stack->SetTitle(title.c_str());
     selected_stack->GetHistogram()->SetTitleSize(.04, "X");
     selected_stack->Draw("hist");
-    sel_data_hist.Draw("e1 same");
+    sel_data_hist->Draw("e1 same");
 
     fOutputFile.cd();
     cSelection.Write();
@@ -404,12 +356,13 @@ void protoana::PDSPThinSliceFitter::CompareDataMC(bool post_fit) {
     std::string ratio_name = it->second + "Ratio" + (post_fit ? "PostFit" :
                                                                 "Nominal");
     TH1D * hRatio
-        = (TH1D*)sel_data_hist.Clone(ratio_name.c_str());
+        = (TH1D*)sel_data_hist->Clone(ratio_name.c_str());
     hRatio->Divide(hMC);
     hRatio->Write(); 
   }
 }
 
+//Good
 void protoana::PDSPThinSliceFitter::RunFitAndSave() {
   DefineFitFunction();
   fMinimizer->SetFunction(fFitFunction);
@@ -504,6 +457,7 @@ void protoana::PDSPThinSliceFitter::RunFitAndSave() {
   }
 }
 
+//Good
 void protoana::PDSPThinSliceFitter::ParameterScans() {
   fOutputFile.cd();
   TDirectory * out = (TDirectory *)fOutputFile.mkdir("Scans");
@@ -527,6 +481,7 @@ void protoana::PDSPThinSliceFitter::ParameterScans() {
   delete[] y;
 }
 
+//Good
 void protoana::PDSPThinSliceFitter::DefineFitFunction() {
 
   fFitFunction = ROOT::Math::Functor(
@@ -616,6 +571,7 @@ void protoana::PDSPThinSliceFitter::DefineFitFunction() {
           }
         }
 
+        //Replace with draver calculation
         std::pair<double, size_t> chi2_points = CalculateChi2();
         return (chi2_points.first/chi2_points.second);
       },
@@ -623,18 +579,20 @@ void protoana::PDSPThinSliceFitter::DefineFitFunction() {
 
 }
 
+//Implement in Driver
 std::pair<double, size_t> protoana::PDSPThinSliceFitter::CalculateChi2() {
   //Go through the selection hists and fit mc to data
   double chi2 = 0.;
   size_t nPoints = 0;
 
-  for (auto it = fSelectedDataHists.begin();
-       it != fSelectedDataHists.end(); ++it) {
-    TH1D & data_hist = it->second;
+  std::map<int, TH1 *> & selected_data_hists = fDataSet.GetSelectionHists();
+  for (auto it = selected_data_hists.begin();
+       it != selected_data_hists.end(); ++it) {
+    TH1D * data_hist = (TH1D*)it->second;
     int selection_ID = it->first;
-    for (int i = 1; i <= data_hist.GetNbinsX(); ++i) {
-      double data_val = data_hist.GetBinContent(i);
-      double data_err = data_hist.GetBinError(i);
+    for (int i = 1; i <= data_hist->GetNbinsX(); ++i) {
+      double data_val = data_hist->GetBinContent(i);
+      double data_err = data_hist->GetBinError(i);
 
       double mc_val = 0.;
       //Go through all the samples and get the values from mc
@@ -642,7 +600,7 @@ std::pair<double, size_t> protoana::PDSPThinSliceFitter::CalculateChi2() {
         std::vector<ThinSliceSample> & samples = it2->second;
         for (size_t j = 0; j < samples.size(); ++j) {
           ThinSliceSample & sample = samples[j];
-          mc_val += sample.GetSelectionHist(selection_ID).GetBinContent(i);
+          mc_val += sample.GetSelectionHist(selection_ID)->GetBinContent(i);
         }
       }
       chi2 += (std::pow((data_val - mc_val), 2) / std::pow(data_err, 2));
@@ -654,9 +612,10 @@ std::pair<double, size_t> protoana::PDSPThinSliceFitter::CalculateChi2() {
   //Then add reduced incident chi2 to full chi2 
   double incident_chi2 = 0.;
   size_t incident_points = 0;
-  for (int i = 1; i <= fIncidentDataHist.GetNbinsX(); ++i) {
-    double data_val = fIncidentDataHist.GetBinContent(i);
-    double data_err = fIncidentDataHist.GetBinError(i);
+  TH1D & inc_data_hist = fDataSet.GetIncidentHist();
+  for (int i = 1; i <= inc_data_hist.GetNbinsX(); ++i) {
+    double data_val = inc_data_hist.GetBinContent(i);
+    double data_err = inc_data_hist.GetBinError(i);
 
     double mc_val = 0.;
     //Go through all the samples and get the values from mc
@@ -685,6 +644,7 @@ std::pair<double, size_t> protoana::PDSPThinSliceFitter::CalculateChi2() {
   return {chi2, nPoints};
 }
 
+//Good
 void protoana::PDSPThinSliceFitter::Configure(std::string fcl_file) {
   fhicl::ParameterSet pset;
 
@@ -711,6 +671,7 @@ void protoana::PDSPThinSliceFitter::Configure(std::string fcl_file) {
   std::vector<std::pair<int, std::string>> temp_vec =
       pset.get<std::vector<std::pair<int, std::string>>>("SelectionIDs");
   fSelectionIDs = std::map<int, std::string>(temp_vec.begin(), temp_vec.end());
+  fSelectionSets = pset.get<std::vector<fhicl::ParameterSet>>("Selections");
 
   fSelectedRecoBins = pset.get<std::vector<double>>("SelectedRecoBins");
   fIncidentRecoBins = pset.get<std::vector<double>>("IncidentRecoBins");
@@ -737,48 +698,13 @@ void protoana::PDSPThinSliceFitter::Configure(std::string fcl_file) {
   fPlotStyle = pset.get<std::vector<std::pair<int,int>>>("PlotStyle");
   fPlotRebinned = pset.get<bool>("PlotRebinned");
   fRandomStart = pset.get<bool>("RandomStart");
+
+  fDriverName = pset.get<std::string>("DriverName");
+  fAnalysis = pset.get<std::string>("Analysis");
 }
 
+//Good
 std::pair<int, int> protoana::PDSPThinSliceFitter::GetColorAndStyle(size_t i) {
   return {fPlotStyle[i % fPlotStyle.size()].first,
           (i < fPlotStyle.size() ? 1001 : 3244)};
-  //return (i < fPlotStyle.size() ? fPlotStyle[i].first : i);
-}
-
-void protoana::PDSPThinSliceFitter::MakeRebinnedDataHists() {
-  fRebinnedIncidentDataHist = TH1D("Data_incident_hist_rebinned",
-                                   "Data;Reconstructed KE (MeV)",
-                                   fIncidentRecoBins.size() - 1, 0,
-                                   fIncidentRecoBins.size() - 1);
-  for (int i = 1; i <= fIncidentDataHist.GetNbinsX(); ++i) {
-    fRebinnedIncidentDataHist.SetBinContent(
-        i, fIncidentDataHist.GetBinContent(i));
-    double low_edge = fIncidentDataHist.GetXaxis()->GetBinLowEdge(i);
-    double up_edge = fIncidentDataHist.GetXaxis()->GetBinUpEdge(i);
-    std::string bin_label = (low_edge < 0. ?
-                             "< 0." :
-                             (PreciseToString(low_edge, 0) + " - " + 
-                              PreciseToString(up_edge, 0)));
-    fRebinnedIncidentDataHist.GetXaxis()->SetBinLabel(i, bin_label.c_str());
-  }
-  for (auto it = fSelectionIDs.begin(); it != fSelectionIDs.end(); ++it) {
-    TH1D & sel_hist = fSelectedDataHists[it->first];
-    std::string sel_name = "Data_selected_" + it->second + "_hist_rebinned";
-    fRebinnedSelectedDataHists[it->first] = TH1D(sel_name.c_str(),
-                                                 "Data;Reconstructed KE (MeV)",
-                                                 fSelectedRecoBins.size() - 1, 0,
-                                                 fSelectedRecoBins.size() - 1);
-    TH1D & sel_hist_rebinned = fRebinnedSelectedDataHists[it->first];
-    for (int i = 1; i <= sel_hist.GetNbinsX(); ++i) {
-      sel_hist_rebinned.SetBinContent(
-          i, sel_hist.GetBinContent(i));
-      double low_edge = sel_hist.GetXaxis()->GetBinLowEdge(i);
-      double up_edge = sel_hist.GetXaxis()->GetBinUpEdge(i);
-      std::string bin_label = (low_edge < 0. ?
-                               "< 0." :
-                               (PreciseToString(low_edge, 0) + " - " + 
-                                PreciseToString(up_edge, 0)));
-      sel_hist_rebinned.GetXaxis()->SetBinLabel(i, bin_label.c_str());
-    }
-  }
 }

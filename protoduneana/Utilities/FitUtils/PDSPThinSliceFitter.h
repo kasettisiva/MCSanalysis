@@ -14,6 +14,8 @@
 #include "TRandom3.h"
 
 #include "ThinSliceSample.h"
+#include "ThinSliceDataSet.h"
+#include "ThinSliceDriver.h"
 
 namespace protoana {
 
@@ -40,9 +42,11 @@ class PDSPThinSliceFitter {
   //int GetColor(size_t i);
   std::pair<int, int> GetColorAndStyle(size_t i);
   int GetFill(size_t i);
-  void MakeRebinnedDataHists();
+  //void MakeRebinnedDataHists();
 
+  ThinSliceDriver * fThinSliceDriver;
   std::map<int, std::vector<ThinSliceSample>> fSamples;
+  ThinSliceDataSet fDataSet;
   std::map<int, bool> fIsSignalSample;
   TFile fMCFile;
   TTree * fMCTree;
@@ -51,6 +55,7 @@ class PDSPThinSliceFitter {
   TFile fOutputFile;
   ROOT::Math::Functor fFitFunction;
   std::unique_ptr<ROOT::Math::Minimizer> fMinimizer;
+
 
   std::map<int, TH1D> fSelectedDataHists;
   std::map<int, TH1D> fRebinnedSelectedDataHists;
@@ -82,6 +87,7 @@ class PDSPThinSliceFitter {
   std::string fDataFileName;
   std::string fTreeName;
   std::map<int, std::string> fSelectionIDs;
+  std::vector<fhicl::ParameterSet> fSelectionSets;
   std::vector<fhicl::ParameterSet> fSampleSets;
   std::map<int, std::string> fFluxTypes;
   int fMaxCalls;
@@ -91,6 +97,8 @@ class PDSPThinSliceFitter {
   std::vector<std::pair<int, int>> fPlotStyle;
   bool fPlotRebinned;
   bool fRandomStart;
+  std::string fDriverName;
+  std::string fAnalysis;
   
   std::vector<double> fSelectedRecoBins;
   std::vector<double> fIncidentRecoBins;
