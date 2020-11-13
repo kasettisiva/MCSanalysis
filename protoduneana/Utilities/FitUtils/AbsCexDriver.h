@@ -5,8 +5,9 @@
 namespace protoana {
 class AbsCexDriver : public ThinSliceDriver {
  public:
-  AbsCexDriver(const std::string & analysis);
+  AbsCexDriver(const fhicl::ParameterSet & extra_options);
   virtual ~AbsCexDriver();
+
   void BuildDataHists(
       TTree * tree, TH1D & incident_hist,
       std::map<int, TH1 *> & selected_hists) override;
@@ -16,7 +17,16 @@ class AbsCexDriver : public ThinSliceDriver {
       const std::map<int, bool> & signal_sample_checks,
       std::map<int, double> & nominal_fluxes,
       std::map<int, std::vector<double>> & fluxes_by_sample) override;
-  //std::pair<double, size_t> CalculateChi2() override;
+  std::pair<double, size_t> CalculateChi2(
+      std::map<int, std::vector<ThinSliceSample>> & samples,
+      ThinSliceDataSet & data_set) override;
+  void CompareSelections(
+      std::map<int, std::vector<ThinSliceSample>> & samples,
+      ThinSliceDataSet & data_set,
+      TFile & output_file,
+      std::vector<std::pair<int, int>> plot_style,
+      bool plot_rebinned,
+      bool post_fit) override;
 };
 }
 #endif

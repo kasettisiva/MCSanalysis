@@ -24,7 +24,6 @@ class PDSPThinSliceFitter {
   PDSPThinSliceFitter(std::string fcl_file, std::string output_file);
   void BuildMCSamples();
   void SaveMCSamples();
-  void BuildAndSaveStacks(bool post_fit = false);
   void GetNominalFluxes();
   void BuildDataHists();
   void InitializeMCSamples();
@@ -35,14 +34,9 @@ class PDSPThinSliceFitter {
 
  private:
   void Configure(std::string fcl_file);
-  std::pair<double, size_t> CalculateChi2();
   void DefineFitFunction();
   void MakeMinimizer();
   void ParameterScans();
-  //int GetColor(size_t i);
-  std::pair<int, int> GetColorAndStyle(size_t i);
-  int GetFill(size_t i);
-  //void MakeRebinnedDataHists();
 
   ThinSliceDriver * fThinSliceDriver;
   std::map<int, std::vector<ThinSliceSample>> fSamples;
@@ -86,7 +80,6 @@ class PDSPThinSliceFitter {
   std::string fMCFileName;
   std::string fDataFileName;
   std::string fTreeName;
-  std::map<int, std::string> fSelectionIDs;
   std::vector<fhicl::ParameterSet> fSelectionSets;
   std::vector<fhicl::ParameterSet> fSampleSets;
   std::map<int, std::string> fFluxTypes;
@@ -99,8 +92,8 @@ class PDSPThinSliceFitter {
   bool fRandomStart;
   std::string fDriverName;
   std::string fAnalysis;
+  fhicl::ParameterSet fAnalysisOptions;
   
-  std::vector<double> fSelectedRecoBins;
   std::vector<double> fIncidentRecoBins;
   //////////////////////////
 };

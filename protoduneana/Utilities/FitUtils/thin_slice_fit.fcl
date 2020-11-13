@@ -5,7 +5,10 @@ DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc
 TreeName: "pionana/beamana"
 
 DriverName: "protoana::AbsCexDriver"
-Analysis: "asdf"
+Analysis: "Original"
+AnalysisOptions: {
+  ReducedChi2: true 
+}
 
 SelectionIDs: [
                 [1, "Abs"],

@@ -9,7 +9,8 @@
 namespace protoana {
 class BaseThinSliceDriverFactory {
  public:
-  virtual ThinSliceDriver * Instantiate(const std::string & analysis) = 0;
+  virtual ThinSliceDriver * Instantiate(
+      const fhicl::ParameterSet & extra_options) = 0;
 };
 
 template <typename T> class ThinSliceDriverFactory
@@ -20,8 +21,9 @@ template <typename T> class ThinSliceDriverFactory
     ThinSliceDriverRegistry::Instance()->AddFactory(name, this);
   }
 
-  virtual ThinSliceDriver * Instantiate(const std::string & analysis) {
-    return new T(analysis);
+  virtual ThinSliceDriver * Instantiate(
+      const fhicl::ParameterSet & extra_options) {
+    return new T(extra_options);
   }
 };
 }

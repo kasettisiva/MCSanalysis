@@ -40,13 +40,14 @@ void protoana::ThinSliceDriverRegistry::AddFactory(
 }
 
 protoana::ThinSliceDriver * protoana::ThinSliceDriverRegistry::GetDriver(
-    const std::string & name, const std::string & analysis) {
+    const std::string & name,
+    const fhicl::ParameterSet & extra_options) {
   if (fFactories.find(name) == fFactories.end()) {
     std::string message = "Could not find ThinSliceDriver of type: " +
                           name;
     throw std::runtime_error(message);
   }
   else {
-    return fFactories[name]->Instantiate(analysis);
+    return fFactories[name]->Instantiate(extra_options);
   }
 }

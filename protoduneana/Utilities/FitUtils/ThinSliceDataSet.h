@@ -18,8 +18,20 @@ class ThinSliceDataSet {
                    const std::vector<fhicl::ParameterSet> & selections);
   ~ThinSliceDataSet() {};
 
+  const std::map<int, std::string> & GetSelectionNames() const {
+    return fSelectionNames;
+  };
+
+  std::string & GetSelectionName(int id) {
+    return fSelectionNames.at(id);
+  }
+
   std::map<int, TH1 *> & GetSelectionHists() {
     return fSelectionHists;
+  };
+
+  std::map<int, TH1 *> & GetRebinnedSelectionHists() {
+    return fSelectionHistsRebinned;
   };
 
   TH1 * GetSelectionHist(int id) {
@@ -81,6 +93,7 @@ class ThinSliceDataSet {
   std::map<int, TH1 *> fSelectionHistsRebinned;
   TH1D fIncidentHistRebinned;
   bool fMadeRebinned = false;
+  std::map<int, std::string> fSelectionNames;
 
 };
 }

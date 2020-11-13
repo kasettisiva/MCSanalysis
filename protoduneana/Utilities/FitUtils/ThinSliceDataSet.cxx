@@ -9,6 +9,7 @@ protoana::ThinSliceDataSet::ThinSliceDataSet(
                            incident_bins.size() - 1,
                            &incident_bins[0]);
   for (auto it = selections.begin(); it != selections.end(); ++it) {
+    fSelectionNames[it->get<int>("ID")] = it->get<std::string>("Name");
     std::string sel_name = "Data_selected_" + it->get<std::string>("Name") +
                            "_hist";
     std::vector<std::vector<double>> selected_bins =

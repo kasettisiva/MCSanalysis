@@ -2,6 +2,7 @@
 #define THINSLICEDRIVERREGISTRY_h
 
 #include <map>
+#include "fhiclcpp/ParameterSet.h"
 
 namespace protoana {
 
@@ -15,7 +16,8 @@ class ThinSliceDriverRegistry {
   void AddFactory(std::string name, BaseThinSliceDriverFactory * factory);
   void PrintAvailableDrivers() const;
   ThinSliceDriver * GetDriver(
-      const std::string & name, const std::string & analysis);
+      const std::string & name,
+      const fhicl::ParameterSet & extra_options);
 
  private:
   ThinSliceDriverRegistry();
