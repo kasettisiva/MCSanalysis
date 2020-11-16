@@ -76,19 +76,6 @@ void protoana::ThinSliceDriver::CompareDataMC(
       post_fit);
 }
 
-/*
-void protoana::ThinSliceDriver::BuildAndSaveStacks(
-    std::map<int, std::vector<ThinSliceSample>> & samples,
-    ThinSliceDataSet & data_set,
-    TFile & output_file,
-    THStack * incident_stack, 
-    std::map<int, THStack *> * selection_stacks_x,
-    std::map<int, THStack *> * selection_stacks_y,
-    std::map<int, THStack *> * selection_stacks_z,
-    bool post_fit) {
-   
-}*/
-
 std::pair<int, int> protoana::ThinSliceDriver::GetColorAndStyle(
     size_t i,
     const std::vector<std::pair<int, int>> & plot_style) {

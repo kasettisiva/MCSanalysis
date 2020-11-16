@@ -70,10 +70,8 @@ void protoana::AbsCexDriver::BuildMCSamples(
   }
 }
 
-//switch to passing data set
-void protoana::AbsCexDriver::BuildDataHists/*Original*/(
-    TTree * tree, TH1D & incident_hist,
-    std::map<int, TH1 *> & selected_hists) {
+void protoana::AbsCexDriver::BuildDataHists(
+    TTree * tree, ThinSliceDataSet & data_set) {
   int selection_ID; 
   double reco_beam_interactingEnergy;
   std::vector<double> * reco_beam_incidentEnergies = 0x0;
@@ -82,6 +80,9 @@ void protoana::AbsCexDriver::BuildDataHists/*Original*/(
                         &reco_beam_interactingEnergy);
   tree->SetBranchAddress("reco_beam_incidentEnergies",
                         &reco_beam_incidentEnergies);
+
+  TH1D & incident_hist = data_set.GetIncidentHist();
+  std::map<int, TH1 *> & selected_hists = data_set.GetSelectionHists();
 
   for (int i = 0; i < tree->GetEntries(); ++i) {
     tree->GetEntry(i);
@@ -128,35 +129,37 @@ std::pair<double, size_t> protoana::AbsCexDriver::CalculateChi2(
 
   //Go through the incident hist. Calculate it as its own point.
   //Then add reduced incident chi2 to full chi2 
-  double incident_chi2 = 0.;
-  size_t incident_points = 0;
-  TH1D & incident_data_hist = data_set.GetIncidentHist();
-  for (int i = 1; i <= incident_data_hist.GetNbinsX(); ++i) {
-    double data_val = incident_data_hist.GetBinContent(i);
-    double data_err = incident_data_hist.GetBinError(i);
+  if (!fExtraOptions.get<bool>("SkipIncidentChi2")) {
+    double incident_chi2 = 0.;
+    size_t incident_points = 0;
+    TH1D & incident_data_hist = data_set.GetIncidentHist();
+    for (int i = 1; i <= incident_data_hist.GetNbinsX(); ++i) {
+      double data_val = incident_data_hist.GetBinContent(i);
+      double data_err = incident_data_hist.GetBinError(i);
 
-    double mc_val = 0.;
-    //Go through all the samples and get the values from mc
-    for (auto it = samples.begin(); it != samples.end(); ++it) {
-      std::vector<ThinSliceSample> & samples_vec = it->second;
-      for (size_t j = 0; j < samples_vec.size(); ++j) {
-        ThinSliceSample & sample = samples_vec[j];
-        mc_val += sample.GetIncidentHist().GetBinContent(i);
+      double mc_val = 0.;
+      //Go through all the samples and get the values from mc
+      for (auto it = samples.begin(); it != samples.end(); ++it) {
+        std::vector<ThinSliceSample> & samples_vec = it->second;
+        for (size_t j = 0; j < samples_vec.size(); ++j) {
+          ThinSliceSample & sample = samples_vec[j];
+          mc_val += sample.GetIncidentHist().GetBinContent(i);
+        }
       }
+
+      incident_chi2 += (std::pow((data_val - mc_val), 2) / std::pow(data_err, 2));
+      ++incident_points;
     }
 
-    incident_chi2 += (std::pow((data_val - mc_val), 2) / std::pow(data_err, 2));
-    ++incident_points;
-  }
-
-  if (fExtraOptions.get<bool>("ReducedChi2")) {
-    //Add reduced incident chi2 to full chi2, increment total nPoints
-    chi2 += incident_chi2 / incident_points;
-    ++nPoints;
-  }
-  else {
-    chi2 += incident_chi2;
-    nPoints += incident_points;
+    if (fExtraOptions.get<bool>("ReducedChi2")) {
+      //Add reduced incident chi2 to full chi2, increment total nPoints
+      chi2 += incident_chi2 / incident_points;
+      ++nPoints;
+    }
+    else {
+      chi2 += incident_chi2;
+      nPoints += incident_points;
+    }
   }
 
   return {chi2, nPoints};

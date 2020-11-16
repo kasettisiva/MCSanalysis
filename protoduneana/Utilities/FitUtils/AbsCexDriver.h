@@ -9,8 +9,7 @@ class AbsCexDriver : public ThinSliceDriver {
   virtual ~AbsCexDriver();
 
   void BuildDataHists(
-      TTree * tree, TH1D & incident_hist,
-      std::map<int, TH1 *> & selected_hists) override;
+    TTree * tree, ThinSliceDataSet & data_set) override;
   void BuildMCSamples(
       TTree * tree,
       std::map<int, std::vector<ThinSliceSample>> & samples,

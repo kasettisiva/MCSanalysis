@@ -19,8 +19,7 @@ class ThinSliceDriver {
   ThinSliceDriver(const fhicl::ParameterSet & extra_options);
   virtual ~ThinSliceDriver();
   virtual void BuildDataHists(
-      TTree * tree, TH1D & incident_hist,
-      std::map<int, TH1 *> & selected_hists) = 0;
+    TTree * tree, ThinSliceDataSet & data_set) = 0;
   virtual void BuildMCSamples(
       TTree * tree,
       std::map<int, std::vector<ThinSliceSample>> & samples,
@@ -46,15 +45,6 @@ class ThinSliceDriver {
       std::vector<std::pair<int, int>> plot_style,
       bool plot_rebinned = false,
       bool post_fit = false);
-  /*virtual void BuildAndSaveStacks(
-      std::map<int, std::vector<ThinSliceSample>> & samples,
-      ThinSliceDataSet & data_set,
-      TFile & output_file,
-      THStack * incident_stack, 
-      std::map<int, THStack *> * selection_stacks_x,
-      std::map<int, THStack *> * selection_stacks_y = 0x0,
-      std::map<int, THStack *> * selection_stacks_z = 0x0,
-      bool post_fit = false) = 0;*/
 
   std::pair<int, int> GetColorAndStyle(
       size_t i, const std::vector<std::pair<int, int>> & plot_style);

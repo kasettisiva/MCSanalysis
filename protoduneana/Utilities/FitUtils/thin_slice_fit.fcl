@@ -8,6 +8,7 @@ DriverName: "protoana::AbsCexDriver"
 Analysis: "Original"
 AnalysisOptions: {
   ReducedChi2: true 
+  SkipIncidentChi2: true
 }
 
 SelectionIDs: [

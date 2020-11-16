@@ -45,7 +45,6 @@ protoana::PDSPThinSliceFitter::PDSPThinSliceFitter(std::string fcl_file,
     throw e;
   }
 
-  //std::cout << fThinSliceDriver->GetAnalysis() << std::endl;
 }
 
 protoana::PDSPThinSliceFitter::~PDSPThinSliceFitter() {
@@ -185,8 +184,7 @@ void protoana::PDSPThinSliceFitter::BuildDataHists() {
   TFile fDataFile(fDataFileName.c_str(), "OPEN");
   fDataTree = (TTree*)fDataFile.Get(fTreeName.c_str());
   fDataFlux = fDataTree->GetEntries();
-  fThinSliceDriver->BuildDataHists(fDataTree, fDataSet.GetIncidentHist(),
-                                   fDataSet.GetSelectionHists());
+  fThinSliceDriver->BuildDataHists(fDataTree, fDataSet);
   fOutputFile.cd();
   TDirectory * out = (TDirectory *)fOutputFile.mkdir("Data");
   out->cd();
