@@ -143,6 +143,9 @@ void protoana::PDSPThinSliceFitter::InitializeMCSamples() {
                              fIncidentRecoBins);
       fSamples[sample_ID].push_back(sample);
       fFluxesBySample[sample_ID].push_back(0.);
+      if (fFluxParameters.find(flux_type) != fFluxParameters.end()) {
+        fFluxParsToSamples[flux_type].push_back(sample_ID);
+      }
     }
   }
 
@@ -399,29 +402,8 @@ void protoana::PDSPThinSliceFitter::DefineFitFunction() {
           ++par_position;
         }
 
-        //Then go through and vary the fluxes by the flux parameters
-        //Remember: 1 less parameter than number of flux types
-        std::map<int, double> fluxes, scaled_fluxes;
-        double total_nominal_flux = 0.;
-        double total_varied_flux = 0.;
-        for (auto it = fNominalFluxes.begin();
-             it != fNominalFluxes.end(); ++it) {
-          int flux_id = it->first;
-          fluxes[flux_id]
-              = it->second * ((fFluxParameters.find(flux_id) != fFluxParameters.end()) ?
-                              fFluxParameters[flux_id] : 1.);
-
-          //Determine total of fluxes, both nominal and varied, in order to 
-          //rescale later on
-          total_nominal_flux += it->second;
-          total_varied_flux += fluxes[flux_id];
-
-          scaled_fluxes[flux_id] = 0.;
-        }
-
-        for (auto it = fluxes.begin(); it != fluxes.end(); ++it) {
-          it->second *= (total_nominal_flux/total_varied_flux);
-        }
+        double varied_flux = 0.;
+        double nominal_flux = 0.;
 
         //Go through and determine the scaled flux
         for (auto it = fFluxesBySample.begin();
@@ -433,34 +415,63 @@ void protoana::PDSPThinSliceFitter::DefineFitFunction() {
           for (size_t i = 0; i < samples.size(); ++i) {
             ThinSliceSample & sample = samples.at(i);
             int flux_type = sample.GetFluxType();
+            nominal_flux += fFluxesBySample[sample_ID][i];
             
-            if (fSignalParameters.find(sample_ID) == fSignalParameters.end()) {
-              scaled_fluxes[flux_type]
-                  += fFluxesBySample[sample_ID][i];
-            }
-            else {
+            if (fSignalParameters.find(sample_ID) != fSignalParameters.end()) {
               //Scale the flux for this signal channel
-              scaled_fluxes[flux_type]
+              varied_flux
                   += (fFluxesBySample[sample_ID][i] *
                       fSignalParameters[sample_ID][i]);
+            }
+            else if (fFluxParameters.find(flux_type) != fFluxParameters.end()) {
+              varied_flux
+                  += (fFluxesBySample[sample_ID][i] *
+                      fFluxParameters[flux_type]);
+            }
+            else {
+              varied_flux
+                  += fFluxesBySample[sample_ID][i];
             }
           }
         }
 
-        //Use the fluxes from above to figure out the correct
-        //scaling factor for the signal bins, and use this to 
-        //scale the hists in the signal samples accordingly
-        //along with the parameter
-        for (auto it = fSignalParameters.begin();
-             it != fSignalParameters.end(); ++it) {
+        double flux_factor = nominal_flux / varied_flux;
+
+        for (auto it = fSamples.begin(); it != fSamples.end(); ++it) {
+          //Check if it's a signal
           int sample_ID = it->first;
-          std::vector<ThinSliceSample> & samples
-              = fSamples[sample_ID];
-          for (size_t i = 0; i < it->second.size(); ++i) {
-            ThinSliceSample & sample = samples.at(i);
-            int flux_type = sample.GetFluxType();
-            double flux_factor = fluxes[flux_type]/scaled_fluxes[flux_type];
-            sample.SetFactorAndScale(flux_factor*it->second.at(i));
+          std::vector<ThinSliceSample> & samples = it->second;
+          if (fSignalParameters.find(sample_ID) != fSignalParameters.end()) {
+            for (size_t i = 0; i < it->second.size(); ++i) {
+              double val = fSignalParameters[sample_ID][i];
+              ThinSliceSample & sample = samples.at(i);
+              sample.SetFactorAndScale(flux_factor*val);
+            }
+          }
+          else {
+            bool flux_sample = false; 
+            //Check if this is a sample that should be scaled by a flux parameter
+            for (auto it2 = fFluxParsToSamples.begin();
+                 it2 != fFluxParsToSamples.end(); ++it2) {
+              int flux_type = it2->first;
+              std::vector<int> flux_samples = it2->second;
+              double val = fFluxParameters[flux_type];
+              if (std::find(flux_samples.begin(), flux_samples.end(),
+                            sample_ID) != flux_samples.end()) {
+                for (size_t i = 0; i < it->second.size(); ++i) {
+                  ThinSliceSample & sample = samples.at(i);
+                  sample.SetFactorAndScale(flux_factor*val);
+                }
+                flux_sample = true;
+                break;
+              }
+            }
+            if (!flux_sample) {
+              for (size_t i = 0; i < it->second.size(); ++i) {
+                ThinSliceSample & sample = samples.at(i);
+                sample.SetFactorAndScale(flux_factor);
+              }
+            }
           }
         }
 

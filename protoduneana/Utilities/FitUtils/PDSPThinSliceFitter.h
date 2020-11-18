@@ -63,6 +63,7 @@ class PDSPThinSliceFitter {
 
   std::map<int, double> fNominalFluxes;
   std::map<int, std::vector<double>> fFluxesBySample;
+  std::map<int, std::vector<int>> fFluxParsToSamples;
   double fDataFlux;
   double fMCDataScale = 1.;
 

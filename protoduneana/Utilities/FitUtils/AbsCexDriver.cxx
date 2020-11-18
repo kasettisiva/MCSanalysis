@@ -27,8 +27,7 @@ void protoana::AbsCexDriver::BuildMCSamples(
                             &true_beam_interactingEnergy);
   tree->SetBranchAddress("reco_beam_interactingEnergy",
                             &reco_beam_interactingEnergy);
-  tree->SetBranchAddress("reco_beam_endZ",
-                            &reco_beam_endZ);
+  tree->SetBranchAddress("reco_beam_endZ", &reco_beam_endZ);
   tree->SetBranchAddress("reco_beam_incidentEnergies",
                             &reco_beam_incidentEnergies);
 
@@ -143,6 +142,8 @@ void protoana::AbsCexDriver::FakeDataSampleScales(
   int sample_ID, selection_ID; 
   double true_beam_interactingEnergy, reco_beam_interactingEnergy;
   std::vector<double> * reco_beam_incidentEnergies = 0x0;
+  double reco_beam_endZ;
+  tree->SetBranchAddress("reco_beam_endZ", &reco_beam_endZ);
   tree->SetBranchAddress("new_interaction_topology", &sample_ID);
   tree->SetBranchAddress("selection_ID", &selection_ID);
   tree->SetBranchAddress("true_beam_interactingEnergy",
@@ -171,7 +172,12 @@ void protoana::AbsCexDriver::FakeDataSampleScales(
         incident_hist.Fill((*reco_beam_incidentEnergies)[j], scale);
       }
       if (selected_hists.find(selection_ID) != selected_hists.end()) {
-        selected_hists[selection_ID]->Fill(reco_beam_interactingEnergy, scale);
+        if (selection_ID != 4) {
+          selected_hists[selection_ID]->Fill(reco_beam_interactingEnergy, scale);
+        }
+        else {
+          selected_hists[selection_ID]->Fill(reco_beam_endZ, scale);
+        }
       }
     }
   }
