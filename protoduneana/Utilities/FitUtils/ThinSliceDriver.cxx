@@ -50,8 +50,15 @@ void protoana::ThinSliceDriver::CompareDataMC(
   //THStack * incident_stack = (post_fit ? fPostFitIncidentMCStack :
   //                                       fNominalIncidentMCStack);
   incident_stack.Draw("hist");
+
+  double max_mc = incident_stack.GetHistogram()->GetMaximum();
+  int max_data_bin = inc_data_hist.GetMaximumBin();
+  double max_data = inc_data_hist.GetBinContent(max_data_bin) +
+                    inc_data_hist.GetBinError(max_data_bin);
+
   incident_stack.SetTitle("Incident Sample;Reconstructed KE (MeV)");
   incident_stack.GetHistogram()->SetTitleSize(.04, "X");
+  incident_stack.SetMaximum((max_data > max_mc ? max_data : max_mc));
   incident_stack.Draw("hist");
   inc_data_hist.Draw("e1 same");
   output_file.cd();

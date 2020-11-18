@@ -72,7 +72,7 @@ class PDSPThinSliceFitter {
 
   std::map<int, double> fFluxParameters;
   std::map<int, std::string> fFluxParameterNames;
-  size_t fTotalFluxParameters;
+  size_t fTotalFluxParameters = 0;
 
   TRandom3 fRNG;
 
@@ -93,6 +93,8 @@ class PDSPThinSliceFitter {
   std::string fDriverName;
   std::string fAnalysis;
   fhicl::ParameterSet fAnalysisOptions;
+  bool fDoFakeData;
+  bool fFitFlux;
   
   std::vector<double> fIncidentRecoBins;
   //////////////////////////

@@ -17,7 +17,9 @@
 #include "TStyle.h"
 #include "TROOT.h"
 #include "TCanvas.h"
+#include "TLine.h"
 #include "TList.h"
+#include "TLegend.h"
 #include "TDirectory.h"
 #include "TH3D.h"
 #include "TH2D.h"
@@ -163,6 +165,20 @@ void protoana::PDSPThinSliceFitter::ScaleMCToData() {
   for (auto it = fNominalFluxes.begin(); it != fNominalFluxes.end(); ++it) {
     total_nominal += it->second;
   }
+
+  /*
+  std::cout << "Fluxes: " << std::endl;
+  for (auto it = fFluxesBySample.begin(); it != fFluxesBySample.end(); ++it) {
+    for (size_t i = 0; i < it->second.size(); ++i) {
+      std::cout << "\t" << it->first << " " << i << " " << it->second[i] <<
+                   std::endl;
+    }
+  }
+
+  std::cout << "Total MC: " << total_nominal << std::endl;
+  std::cout << "Total Data: " << fDataFlux << std::endl;
+  */
+
   fMCDataScale = fDataFlux/total_nominal;
   for (auto it = fNominalFluxes.begin(); it != fNominalFluxes.end(); ++it) {
     it->second *= fMCDataScale;
@@ -181,10 +197,21 @@ void protoana::PDSPThinSliceFitter::BuildDataHists() {
   fDataSet = ThinSliceDataSet(fIncidentRecoBins, fSelectionSets);
 
   //Open the Data file and set branches
-  TFile fDataFile(fDataFileName.c_str(), "OPEN");
-  fDataTree = (TTree*)fDataFile.Get(fTreeName.c_str());
-  fDataFlux = fDataTree->GetEntries();
-  fThinSliceDriver->BuildDataHists(fDataTree, fDataSet);
+  //fDataFlux = fDataTree->GetEntries();
+
+  if (!fDoFakeData) {
+    TFile fDataFile(fDataFileName.c_str(), "OPEN");
+    fDataTree = (TTree*)fDataFile.Get(fTreeName.c_str());
+    fThinSliceDriver->BuildDataHists(fDataTree, fDataSet, fDataFlux);
+  }
+  else {
+    TFile fMCFile(fMCFileName.c_str(), "OPEN");
+    fMCTree = (TTree*)fMCFile.Get(fTreeName.c_str());
+    fThinSliceDriver->BuildFakeData(fMCTree, fSamples, fDataSet, fDataFlux);
+  }
+
+
+
   fOutputFile.cd();
   TDirectory * out = (TDirectory *)fOutputFile.mkdir("Data");
   out->cd();
@@ -199,6 +226,8 @@ void protoana::PDSPThinSliceFitter::BuildDataHists() {
 
 void protoana::PDSPThinSliceFitter::SaveMCSamples() {
   fOutputFile.cd();
+  fOutputFile.mkdir("MC_Samples");
+  fOutputFile.cd("MC_Samples");
   for (auto it = fSamples.begin(); it != fSamples.end(); ++it) {
     for (size_t i = 0; i < it->second.size(); ++i) {
       it->second.at(i).GetIncidentHist().Write();
@@ -298,6 +327,21 @@ void protoana::PDSPThinSliceFitter::RunFitAndSave() {
     parsHist.SetMarkerColor(kBlack);
     parsHist.SetMarkerStyle(20);
     parsHist.Write();
+
+    //Drawing pre + post fit pars
+    TCanvas cPars("cParameters", "");
+    cPars.SetTicks();
+    parsHist.Draw("e2");
+    TH1D * preFitParsHist = (TH1D*)fOutputFile.Get("preFitPars");
+    preFitParsHist->Draw("p same");
+    TLine l(0., 1., parsHist.GetXaxis()->GetBinUpEdge(parsHist.GetNbinsX()), 1.);
+    l.SetLineColor(kBlack);
+    l.Draw("same");
+    TLegend leg(.15, .65, .45, .85);
+    leg.AddEntry(preFitParsHist, "Pre-Fit", "p");
+    leg.AddEntry(&parsHist, "Post-Fit", "lp");
+    leg.Draw();
+    cPars.Write();
 
     covHist.Write();
     corrHist.Write();
@@ -459,12 +503,16 @@ void protoana::PDSPThinSliceFitter::Configure(std::string fcl_file) {
   std::vector<std::pair<int, std::string>> temp_vec
       = pset.get<std::vector<std::pair<int, std::string>>>("FluxTypes");
   fFluxTypes = std::map<int, std::string>(temp_vec.begin(), temp_vec.end());
-  for (size_t i = 0; i < temp_vec.size() - 1; ++i) {
-    fFluxParameterNames[temp_vec[i].first] = "par_" + temp_vec[i].second +
-                                             "_flux";
-    fFluxParameters[temp_vec[i].first] = 1.;
+
+  fFitFlux = pset.get<bool>("FitFlux");
+  if (fFitFlux) {
+    for (size_t i = 0; i < temp_vec.size() - 1; ++i) {
+      fFluxParameterNames[temp_vec[i].first] = "par_" + temp_vec[i].second +
+                                               "_flux";
+      fFluxParameters[temp_vec[i].first] = 1.;
+    }
+    fTotalFluxParameters = temp_vec.size() - 1;
   }
-  fTotalFluxParameters = temp_vec.size() - 1;
 
   fMaxCalls = pset.get<int>("MaxCalls");
   fNScanSteps = pset.get<unsigned int>("NScanSteps") + 1;
@@ -478,5 +526,6 @@ void protoana::PDSPThinSliceFitter::Configure(std::string fcl_file) {
 
   fDriverName = pset.get<std::string>("DriverName");
   fAnalysisOptions = pset.get<fhicl::ParameterSet>("AnalysisOptions");
+  fDoFakeData = pset.get<bool>("DoFakeData");
 }
 

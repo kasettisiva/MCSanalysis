@@ -19,7 +19,10 @@ class ThinSliceDriver {
   ThinSliceDriver(const fhicl::ParameterSet & extra_options);
   virtual ~ThinSliceDriver();
   virtual void BuildDataHists(
-    TTree * tree, ThinSliceDataSet & data_set) = 0;
+    TTree * tree, ThinSliceDataSet & data_set, double & flux) = 0;
+  virtual void BuildFakeData(
+    TTree * tree, std::map<int, std::vector<ThinSliceSample>> & samples,
+    ThinSliceDataSet & data_set, double & flux) = 0;
   virtual void BuildMCSamples(
       TTree * tree,
       std::map<int, std::vector<ThinSliceSample>> & samples,

@@ -19,6 +19,7 @@ void protoana::AbsCexDriver::BuildMCSamples(
     std::map<int, std::vector<double>> & fluxes_by_sample) {
   int sample_ID, selection_ID; 
   double true_beam_interactingEnergy, reco_beam_interactingEnergy;
+  double reco_beam_endZ;
   std::vector<double> * reco_beam_incidentEnergies = 0x0;
   tree->SetBranchAddress("new_interaction_topology", &sample_ID);
   tree->SetBranchAddress("selection_ID", &selection_ID);
@@ -26,6 +27,8 @@ void protoana::AbsCexDriver::BuildMCSamples(
                             &true_beam_interactingEnergy);
   tree->SetBranchAddress("reco_beam_interactingEnergy",
                             &reco_beam_interactingEnergy);
+  tree->SetBranchAddress("reco_beam_endZ",
+                            &reco_beam_endZ);
   tree->SetBranchAddress("reco_beam_incidentEnergies",
                             &reco_beam_incidentEnergies);
 
@@ -46,8 +49,14 @@ void protoana::AbsCexDriver::BuildMCSamples(
       sample.AddFlux();
       if (reco_beam_incidentEnergies->size()) {
         sample.FillIncidentHist(*reco_beam_incidentEnergies);
-        double energy[1] = {reco_beam_interactingEnergy};
-        sample.FillSelectionHist(selection_ID, energy);
+        if (selection_ID != 4) {
+          double energy[1] = {reco_beam_interactingEnergy};
+          sample.FillSelectionHist(selection_ID, energy);
+        }
+        else {
+          double endZ[1] = {reco_beam_endZ};
+          sample.FillSelectionHist(selection_ID, endZ);
+        }
       }
     }
     else {
@@ -61,7 +70,14 @@ void protoana::AbsCexDriver::BuildMCSamples(
           sample.AddFlux();
           if (reco_beam_incidentEnergies->size()) {
             sample.FillIncidentHist(*reco_beam_incidentEnergies);
-            sample.FillSelectionHist(selection_ID, reco_beam_interactingEnergy);
+            if (selection_ID != 4) {
+              double energy[1] = {reco_beam_interactingEnergy};
+              sample.FillSelectionHist(selection_ID, energy);
+            }
+            else {
+              double endZ[1] = {reco_beam_endZ};
+              sample.FillSelectionHist(selection_ID, endZ);
+            }
           }
           break;
         }
@@ -71,18 +87,21 @@ void protoana::AbsCexDriver::BuildMCSamples(
 }
 
 void protoana::AbsCexDriver::BuildDataHists(
-    TTree * tree, ThinSliceDataSet & data_set) {
+    TTree * tree, ThinSliceDataSet & data_set, double & flux) {
   int selection_ID; 
-  double reco_beam_interactingEnergy;
+  double reco_beam_interactingEnergy, reco_beam_endZ;
   std::vector<double> * reco_beam_incidentEnergies = 0x0;
   tree->SetBranchAddress("selection_ID", &selection_ID);
   tree->SetBranchAddress("reco_beam_interactingEnergy",
                         &reco_beam_interactingEnergy);
+  tree->SetBranchAddress("reco_beam_endZ", &reco_beam_endZ);
   tree->SetBranchAddress("reco_beam_incidentEnergies",
                         &reco_beam_incidentEnergies);
 
   TH1D & incident_hist = data_set.GetIncidentHist();
   std::map<int, TH1 *> & selected_hists = data_set.GetSelectionHists();
+
+  flux = tree->GetEntries();
 
   for (int i = 0; i < tree->GetEntries(); ++i) {
     tree->GetEntry(i);
@@ -91,7 +110,68 @@ void protoana::AbsCexDriver::BuildDataHists(
         incident_hist.Fill((*reco_beam_incidentEnergies)[j]);
       }
       if (selected_hists.find(selection_ID) != selected_hists.end()) {
-        selected_hists[selection_ID]->Fill(reco_beam_interactingEnergy);
+        if (selection_ID != 4) {
+          selected_hists[selection_ID]->Fill(reco_beam_interactingEnergy);
+        }
+        else {
+          selected_hists[selection_ID]->Fill(reco_beam_endZ);
+        }
+      }
+    }
+  }
+}
+
+void protoana::AbsCexDriver::BuildFakeData(
+    TTree * tree, std::map<int, std::vector<ThinSliceSample>> & samples,
+    ThinSliceDataSet & data_set, double & flux) {
+  std::string routine = fExtraOptions.get<std::string>("FakeDataRoutine");
+  if (routine == "SampleScales") {
+    FakeDataSampleScales(tree, samples, data_set, flux);
+  }
+}
+
+void protoana::AbsCexDriver::FakeDataSampleScales(
+    TTree * tree, std::map<int, std::vector<ThinSliceSample>> & samples,
+    ThinSliceDataSet & data_set, double & flux) {
+
+  //Build the map for fake data scales
+  std::vector<std::pair<int, double>> temp_vec
+      = fExtraOptions.get<std::vector<std::pair<int, double>>>(
+          "FakeDataScales");
+  std::map<int, double> fake_data_scales(temp_vec.begin(), temp_vec.end()); 
+
+  int sample_ID, selection_ID; 
+  double true_beam_interactingEnergy, reco_beam_interactingEnergy;
+  std::vector<double> * reco_beam_incidentEnergies = 0x0;
+  tree->SetBranchAddress("new_interaction_topology", &sample_ID);
+  tree->SetBranchAddress("selection_ID", &selection_ID);
+  tree->SetBranchAddress("true_beam_interactingEnergy",
+                            &true_beam_interactingEnergy);
+  tree->SetBranchAddress("reco_beam_interactingEnergy",
+                            &reco_beam_interactingEnergy);
+  tree->SetBranchAddress("reco_beam_incidentEnergies",
+                            &reco_beam_incidentEnergies);
+
+  TH1D & incident_hist = data_set.GetIncidentHist();
+  std::map<int, TH1 *> & selected_hists = data_set.GetSelectionHists();
+
+  flux = 0.;
+
+  for (int i = 0; i < tree->GetEntries(); ++i) {
+    tree->GetEntry(i);
+
+    if (samples.find(sample_ID) == samples.end())
+      continue;
+
+    double scale = (fake_data_scales.find(sample_ID) != fake_data_scales.end() ?
+                    fake_data_scales.at(sample_ID) : 1.);
+    flux += scale; //1 or scaled
+    if (reco_beam_incidentEnergies->size()) {
+      for (size_t j = 0; j < reco_beam_incidentEnergies->size(); ++j) {
+        incident_hist.Fill((*reco_beam_incidentEnergies)[j], scale);
+      }
+      if (selected_hists.find(selection_ID) != selected_hists.end()) {
+        selected_hists[selection_ID]->Fill(reco_beam_interactingEnergy, scale);
       }
     }
   }
@@ -215,10 +295,16 @@ void protoana::AbsCexDriver::CompareSelections(
 
 
     mc_stack.Draw("hist");
+    double max_mc = mc_stack.GetHistogram()->GetMaximum();
+    int max_data_bin = data_hist->GetMaximumBin();
+    double max_data = data_hist->GetBinContent(max_data_bin) +
+                      data_hist->GetBinError(max_data_bin);
     std::string title = data_set.GetSelectionName(selection_ID) +
-                        ";Reconstructed KE (MeV)";
+                        (selection_ID != 4 ? ";Reconstructed KE (MeV)" :
+                                             ";Reconstructed End Z (cm)");
     mc_stack.SetTitle(title.c_str());
     mc_stack.GetHistogram()->SetTitleSize(.04, "X");
+    mc_stack.SetMaximum((max_data > max_mc ? max_data : max_mc));
     mc_stack.Draw("hist");
     data_hist->Draw("e1 same");
 
