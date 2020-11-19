@@ -124,7 +124,7 @@ void protoana::PDSPThinSliceFitter::InitializeMCSamples() {
       fSignalParameterNames[sample_ID] = std::vector<std::string>();
       for (size_t j = 1; j < bins.size(); ++j) {
         ThinSliceSample sample(sample_name, flux_type, fSelectionSets,
-                               fIncidentRecoBins,
+                               fIncidentRecoBins, fTrueIncidentBins,
                                true,
                                {bins[j-1], bins[j]});
         fSamples[sample_ID].push_back(sample);
@@ -137,10 +137,17 @@ void protoana::PDSPThinSliceFitter::InitializeMCSamples() {
         ++fTotalSignalParameters;
         fFluxesBySample[sample_ID].push_back(0.);
       }
+
+      std::string total_name = sample_name + "_total";
+      std::string passed_name = sample_name + "_passed";
+      //fSignalEffParts[sample_ID] = {TH1D(total_name.c_str(), "",
+      //                                   bins.size() - 1, &bins[0]),
+      //                              TH1D(passed_name.c_str(), "",
+      //                                   bins.size() - 1, &bins[0])};
     }
     else {
       ThinSliceSample sample(sample_name, flux_type, fSelectionSets,
-                             fIncidentRecoBins);
+                             fIncidentRecoBins, fTrueIncidentBins);
       fSamples[sample_ID].push_back(sample);
       fFluxesBySample[sample_ID].push_back(0.);
       if (fFluxParameters.find(flux_type) != fFluxParameters.end()) {
@@ -158,7 +165,11 @@ void protoana::PDSPThinSliceFitter::BuildMCSamples() {
   TFile fMCFile(fMCFileName.c_str(), "OPEN");
   fMCTree = (TTree*)fMCFile.Get(fTreeName.c_str());
   fThinSliceDriver->BuildMCSamples(fMCTree, fSamples, fIsSignalSample,
-                                   fNominalFluxes, fFluxesBySample);
+                                   fNominalFluxes, fFluxesBySample/*,
+                                   fSignalEffParts*/);
+  /*for (auto it = fSignalEffParts.begin(); it != fSignalEffParts.end(); ++it) {
+    fSignalEfficiencies[it->first] = TGraphAsymmErrors(&it->second.second, &it->second.first);
+  }*/
   fMCFile.Close();
 }
 
@@ -240,11 +251,70 @@ void protoana::PDSPThinSliceFitter::SaveMCSamples() {
       }
     }
   }
+  /*
+  fOutputFile.cd();
+  fOutputFile.mkdir("Efficiencies");
+  fOutputFile.cd("Efficiencies");
+  for (auto it = fSignalEffParts.begin(); it != fSignalEffParts.end(); ++it) {
+    TGraphAsymmErrors & eff = fSignalEfficiencies[it->first];
+    eff.Write();
+
+    it->second.first.Write();
+    it->second.second.Write();
+  }*/
 }
 
 void protoana::PDSPThinSliceFitter::CompareDataMC(bool post_fit) {
   fThinSliceDriver->CompareDataMC(fSamples, fDataSet, fOutputFile,
                                   fPlotStyle, fPlotRebinned, post_fit);
+  std::string inc_name = "TotalIncident";
+  if (!post_fit) {
+    fOutputFile.mkdir("PreFitXSec");
+    fOutputFile.cd("PreFitXSec");
+    inc_name = "PreFit" + inc_name;
+  }
+  else {
+    fOutputFile.mkdir("PostFitXSec");
+    fOutputFile.cd("PostFitXSec");
+    inc_name = "PostFit" + inc_name;
+  }
+
+  //Get the incident histogram from all of the relevant samples
+  TH1D total_incident_hist(inc_name.c_str(), "",
+                           fTrueIncidentBins.size() - 1,
+                           &fTrueIncidentBins[0]);
+  for (size_t i = 0; i < fIncidentSamples.size(); ++i) {
+    std::vector<ThinSliceSample> & samples_vec = fSamples[fIncidentSamples[i]];
+    for (size_t j = 0; j < samples_vec.size(); ++j) {
+      total_incident_hist.Add(&samples_vec[j].GetTrueIncidentHist());
+    }
+  }
+  total_incident_hist.Write();
+
+  //Go through the signal samples and determine the number of interactions
+  for (size_t i = 0; i < fMeasurementSamples.size(); ++i) {
+    std::vector<ThinSliceSample> & samples_vec
+        = fSamples[fMeasurementSamples[i]]; 
+
+    std::string signal_name = (post_fit ? "PostFit" : "PreFit") +
+                              samples_vec[0].GetName() + "Hist";
+    TH1D signal_hist(signal_name.c_str(), "", fTrueIncidentBins.size() - 1,
+                     &fTrueIncidentBins[0]);
+
+    for (size_t j = 0; j < samples_vec.size(); ++j) {
+      ThinSliceSample & sample = samples_vec[j];
+      signal_hist.SetBinContent(j+1, sample.GetNominalFlux());
+    }
+    signal_hist.Write();
+
+    std::string xsec_name = (post_fit ? "PostFit" : "PreFit") +
+                             samples_vec[0].GetName() + "XSec";
+    TH1D * xsec_hist = (TH1D*)signal_hist.Clone(xsec_name.c_str());
+    xsec_hist->Divide(&total_incident_hist);
+    xsec_hist->Scale(1.E27/ (fAnalysisOptions.get<double>("WirePitch") * 1.4 *
+                    6.022E23 / 39.948 ));
+    xsec_hist->Write();
+  }
 }
 
 void protoana::PDSPThinSliceFitter::RunFitAndSave() {
@@ -509,6 +579,9 @@ void protoana::PDSPThinSliceFitter::Configure(std::string fcl_file) {
   fSelectionSets = pset.get<std::vector<fhicl::ParameterSet>>("Selections");
 
   fIncidentRecoBins = pset.get<std::vector<double>>("IncidentRecoBins");
+  fTrueIncidentBins = pset.get<std::vector<double>>("TrueIncidentBins");
+  fIncidentSamples = pset.get<std::vector<int>>("IncidentSamples");
+  fMeasurementSamples = pset.get<std::vector<int>>("MeasurementSamples");
   
   fSampleSets = pset.get<std::vector<fhicl::ParameterSet>>("Samples");
   std::vector<std::pair<int, std::string>> temp_vec

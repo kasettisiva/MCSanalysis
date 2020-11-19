@@ -28,7 +28,8 @@ class ThinSliceDriver {
       std::map<int, std::vector<ThinSliceSample>> & samples,
       const std::map<int, bool> & signal_sample_checks,
       std::map<int, double> & nominal_fluxes,
-      std::map<int, std::vector<double>> & fluxes_by_sample) = 0;
+      std::map<int, std::vector<double>> & fluxes_by_sample/*,
+      std::map<int, std::pair<TH1D, TH1D>> & signal_eff_parts*/) = 0;
   virtual std::pair<double, size_t> CalculateChi2(
       std::map<int, std::vector<ThinSliceSample>> & samples,
       ThinSliceDataSet & data_set) = 0;

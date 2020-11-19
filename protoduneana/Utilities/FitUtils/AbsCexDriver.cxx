@@ -16,26 +16,51 @@ void protoana::AbsCexDriver::BuildMCSamples(
     std::map<int, std::vector<ThinSliceSample>> & samples,
     const std::map<int, bool> & signal_sample_checks,
     std::map<int, double> & nominal_fluxes,
-    std::map<int, std::vector<double>> & fluxes_by_sample) {
+    std::map<int, std::vector<double>> & fluxes_by_sample/*,
+    std::map<int, std::pair<TH1D, TH1D>> & signal_eff_parts*/) {
+
   int sample_ID, selection_ID; 
   double true_beam_interactingEnergy, reco_beam_interactingEnergy;
   double reco_beam_endZ;
-  std::vector<double> * reco_beam_incidentEnergies = 0x0;
+  std::vector<double> * reco_beam_incidentEnergies = 0x0,
+                      * true_beam_incidentEnergies = 0x0;
+  std::vector< int > * true_beam_slices = 0x0;
   tree->SetBranchAddress("new_interaction_topology", &sample_ID);
   tree->SetBranchAddress("selection_ID", &selection_ID);
   tree->SetBranchAddress("true_beam_interactingEnergy",
-                            &true_beam_interactingEnergy);
+                         &true_beam_interactingEnergy);
   tree->SetBranchAddress("reco_beam_interactingEnergy",
-                            &reco_beam_interactingEnergy);
+                         &reco_beam_interactingEnergy);
   tree->SetBranchAddress("reco_beam_endZ", &reco_beam_endZ);
   tree->SetBranchAddress("reco_beam_incidentEnergies",
-                            &reco_beam_incidentEnergies);
+                         &reco_beam_incidentEnergies);
+  tree->SetBranchAddress("true_beam_incidentEnergies",
+                         &true_beam_incidentEnergies);
+  tree->SetBranchAddress("true_beam_slices",
+                         &true_beam_slices);
+
+  //Determine the slice cut
+  //based on the endZ cut and wire pitch 
+  double pitch = fExtraOptions.get<double>("WirePitch");
+  double z0 = fExtraOptions.get<double>("Z0");
+  double endZ_cut = fExtraOptions.get<double>("EndZCut");
+  int slice_cut = std::floor((endZ_cut - (z0 - pitch/2.))/pitch);
 
   for (int i = 0; i < tree->GetEntries(); ++i) {
     tree->GetEntry(i);
 
-    if (samples.find(sample_ID) == samples.end())
+    if (samples.find(sample_ID) == samples.end()) {
+      std::cout << "Warning: skipping sample " << sample_ID << std::endl;
       continue;
+    }
+
+    //Build the true incident energy vector based on the slice cut
+    std::vector<double> good_true_incEnergies;
+    for (size_t j = 0; j < true_beam_incidentEnergies->size(); ++j) {
+      int slice = (*true_beam_slices)[j]; 
+      if (slice > slice_cut) continue;
+      good_true_incEnergies.push_back((*true_beam_incidentEnergies)[j]);
+    }
 
     std::vector<ThinSliceSample> & samples_vec = samples.at(sample_ID);
     bool is_signal = signal_sample_checks.at(sample_ID);
@@ -57,6 +82,10 @@ void protoana::AbsCexDriver::BuildMCSamples(
           sample.FillSelectionHist(selection_ID, endZ);
         }
       }
+
+      //Fill the total incident hist with truth info
+      //sample.FillTrueIncidentHist(*true_beam_incidentEnergies);
+      sample.FillTrueIncidentHist(good_true_incEnergies);
     }
     else {
       //Iterate through the true bins and find the correct one
@@ -78,11 +107,35 @@ void protoana::AbsCexDriver::BuildMCSamples(
               sample.FillSelectionHist(selection_ID, endZ);
             }
           }
+
+          //Fill the total incident hist with truth info
+         //sample.FillTrueIncidentHist(*true_beam_incidentEnergies);
+          sample.FillTrueIncidentHist(good_true_incEnergies);
+
           break;
         }
       }
+      
+      //Fill the total hist with truth info
+      //signal_eff_parts[sample_ID].first.Fill(true_beam_interactingEnergy);
     }
+
   }
+
+  /*
+  //Determine the efficiencies for the signals
+  for (auto it = signal_eff_parts.begin(); it != signal_eff_parts.end(); ++it) {
+    int sample_ID = it->first;
+    //TH1D & total = it->second.first;
+    TH1D & passed = it->second.second;
+
+    //Fill the passed with the hist contents from above
+    std::vector<ThinSliceSample> & samples_vec = samples.at(sample_ID);
+    for (size_t i = 0; i < samples_vec.size(); ++i) {
+      //Need to worry bout over/underflow?
+      passed.SetBinContent(i+1, samples_vec[i].GetNominalFlux());
+    }
+  }*/
 }
 
 void protoana::AbsCexDriver::BuildDataHists(
@@ -147,11 +200,11 @@ void protoana::AbsCexDriver::FakeDataSampleScales(
   tree->SetBranchAddress("new_interaction_topology", &sample_ID);
   tree->SetBranchAddress("selection_ID", &selection_ID);
   tree->SetBranchAddress("true_beam_interactingEnergy",
-                            &true_beam_interactingEnergy);
+                         &true_beam_interactingEnergy);
   tree->SetBranchAddress("reco_beam_interactingEnergy",
-                            &reco_beam_interactingEnergy);
+                         &reco_beam_interactingEnergy);
   tree->SetBranchAddress("reco_beam_incidentEnergies",
-                            &reco_beam_incidentEnergies);
+                         &reco_beam_incidentEnergies);
 
   TH1D & incident_hist = data_set.GetIncidentHist();
   std::map<int, TH1 *> & selected_hists = data_set.GetSelectionHists();

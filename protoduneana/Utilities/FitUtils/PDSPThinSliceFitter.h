@@ -12,6 +12,7 @@
 #include "Math/Functor.h"
 #include "Math/Minimizer.h"
 #include "TRandom3.h"
+#include "TGraphAsymmErrors.h"
 
 #include "ThinSliceSample.h"
 #include "ThinSliceDataSet.h"
@@ -50,16 +51,21 @@ class PDSPThinSliceFitter {
   ROOT::Math::Functor fFitFunction;
   std::unique_ptr<ROOT::Math::Minimizer> fMinimizer;
 
+  //std::map<int, TGraphAsymmErrors> fSignalEfficiencies;
+  //std::map<int, std::pair<TH1D, TH1D>> fSignalEffParts;
 
-  std::map<int, TH1D> fSelectedDataHists;
-  std::map<int, TH1D> fRebinnedSelectedDataHists;
-  TH1D fIncidentDataHist;
-  TH1D fRebinnedIncidentDataHist;
+  //TGraphAsymmErrors fIncidentEfficiency;
+  //TH1D fIncidentTotal, ;
 
-  THStack * fNominalIncidentMCStack;
-  THStack * fPostFitIncidentMCStack;
-  std::map<int, THStack *> fNominalSelectedMCStacks;
-  std::map<int, THStack *> fPostFitSelectedMCStacks;
+  //std::map<int, TH1D> fSelectedDataHists;
+  //std::map<int, TH1D> fRebinnedSelectedDataHists;
+  //TH1D fIncidentDataHist;
+  //TH1D fRebinnedIncidentDataHist;
+
+  //THStack * fNominalIncidentMCStack;
+  //THStack * fPostFitIncidentMCStack;
+  //std::map<int, THStack *> fNominalSelectedMCStacks;
+  //std::map<int, THStack *> fPostFitSelectedMCStacks;
 
   std::map<int, double> fNominalFluxes;
   std::map<int, std::vector<double>> fFluxesBySample;
@@ -97,7 +103,8 @@ class PDSPThinSliceFitter {
   bool fDoFakeData;
   bool fFitFlux;
   
-  std::vector<double> fIncidentRecoBins;
+  std::vector<double> fIncidentRecoBins, fTrueIncidentBins;
+  std::vector<int> fIncidentSamples, fMeasurementSamples;
   //////////////////////////
 };
 

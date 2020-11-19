@@ -11,6 +11,7 @@ protoana::ThinSliceSample::ThinSliceSample(
     std::string name, int flux_type,
     const std::vector<fhicl::ParameterSet> & selections,
     const std::vector<double> & incident_bins,
+    const std::vector<double> & true_incident_bins,
     bool is_signal, std::pair<double, double> range)
     : fSampleName(name),
       fFluxType(flux_type),
@@ -34,6 +35,11 @@ protoana::ThinSliceSample::ThinSliceSample(
   }
   fIncidentHist = TH1D(inc_name.c_str(), title.c_str(), incident_bins.size() - 1,
                        &incident_bins[0]);
+
+  inc_name += "_true";
+  fTrueIncidentHist = TH1D(inc_name.c_str(), title.c_str(),
+                           true_incident_bins.size() - 1,
+                           &true_incident_bins[0]);
 
   for (auto it = selections.begin(); it != selections.end(); ++it) {
     std::string sel_name = "";

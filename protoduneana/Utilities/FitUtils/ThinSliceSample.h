@@ -20,6 +20,7 @@ class ThinSliceSample {
   ThinSliceSample(std::string name, int flux_type,
                   const std::vector<fhicl::ParameterSet> & selections,
                   const std::vector<double> & incident_bins,
+                  const std::vector<double> & true_incident_bins,
                   bool is_signal = false, std::pair<double, double> range = {0., 0.});
 
   ~ThinSliceSample(){};
@@ -36,6 +37,10 @@ class ThinSliceSample {
 
   TH1D & GetIncidentHist() {
     return fIncidentHist;
+  };
+
+  TH1D & GetTrueIncidentHist() {
+    return fTrueIncidentHist;
   };
 
   TH1D & GetRebinnedIncidentHist() {
@@ -65,6 +70,12 @@ class ThinSliceSample {
   void FillIncidentHist(const std::vector<double> & vals) {
     for (size_t i = 0; i < vals.size(); ++i) {
       fIncidentHist.Fill(vals.at(i));
+    }
+  };
+
+  void FillTrueIncidentHist(const std::vector<double> & vals) {
+    for (size_t i = 0; i < vals.size(); ++i) {
+      fTrueIncidentHist.Fill(vals.at(i));
     }
   };
 
@@ -99,21 +110,26 @@ class ThinSliceSample {
     for (auto it = fSelectionHists.begin(); it != fSelectionHists.end(); ++it) {
       it->second->Scale(val);
     }
+
+    fTrueIncidentHist.Scale(val);
   };
 
   void SetDataMCScale(double val) {
     fDataMCScale = val;
     ScaleHists(fDataMCScale);
+    fNominalFlux *= val;
   };
 
   void SetFactorAndScale(double val) {
     ResetFactor();
     fFactor = val;
+    fNominalFlux *= val;
     ScaleHists(val);
   };
 
   void ResetFactor() {
     ScaleHists(1./fFactor);
+    fNominalFlux *= (1./fFactor);
     fFactor = 1.;
   };
 
@@ -139,6 +155,7 @@ class ThinSliceSample {
   void Rebin3D(TH1 * sel_hist, TH1 * rebinned);
   std::map<int, TH1 *> fSelectionHists;
   TH1D fIncidentHist;
+  TH1D fTrueIncidentHist;
   std::map<int, TH1 *> fSelectionHistsRebinned;
   TH1D fIncidentHistRebinned;
   bool fMadeRebinned = false;
