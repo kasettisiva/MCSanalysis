@@ -210,21 +210,18 @@ void protoana::PDSPThinSliceFitter::BuildDataHists() {
   //Create the data hists
   fDataSet = ThinSliceDataSet(fIncidentRecoBins, fSelectionSets);
 
-  //Open the Data file and set branches
-  //fDataFlux = fDataTree->GetEntries();
-
+  TFile inputFile((!fDoFakeData ? fDataFileName.c_str() : fMCFileName.c_str()),
+                  "OPEN");
+  TTree * tree = (TTree*)inputFile.Get(fTreeName.c_str());
   if (!fDoFakeData) {
-    TFile fDataFile(fDataFileName.c_str(), "OPEN");
-    fDataTree = (TTree*)fDataFile.Get(fTreeName.c_str());
-    fThinSliceDriver->BuildDataHists(fDataTree, fDataSet, fDataFlux);
+    fThinSliceDriver->BuildDataHists(tree, fDataSet, fDataFlux);
   }
   else {
-    TFile fMCFile(fMCFileName.c_str(), "OPEN");
-    fMCTree = (TTree*)fMCFile.Get(fTreeName.c_str());
-    fThinSliceDriver->BuildFakeData(fMCTree, fSamples, fDataSet, fDataFlux);
+    fThinSliceDriver->BuildFakeData(tree, fSamples, fDataSet, fDataFlux);
   }
 
 
+  inputFile.Close();
 
   fOutputFile.cd();
   TDirectory * out = (TDirectory *)fOutputFile.mkdir("Data");
