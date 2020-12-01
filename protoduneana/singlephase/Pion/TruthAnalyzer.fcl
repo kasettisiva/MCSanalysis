@@ -1,0 +1,6 @@
+BEGIN_PROLOG
+truthanalyzer: {
+  module_type: "TruthAnalyzer"
+  GeneratorTag: "generator"
+}
+END_PROLOG
