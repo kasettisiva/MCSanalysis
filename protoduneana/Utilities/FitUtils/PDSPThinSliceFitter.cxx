@@ -238,6 +238,14 @@ void protoana::PDSPThinSliceFitter::BuildDataHists() {
   fDataSet.MakeRebinnedHists();
 }
 
+
+/*
+void protoana::PDSPThinSliceFitter::BuildSystSamples() {
+  TFile fMCFile(fMCFileName.c_str(), "OPEN");
+  fMCTree = (TTree*)fMCFile.Get(fTreeName.c_str());
+  fThinSliceDriver->BuildSystSamples(fMCTree, 
+}*/
+
 void protoana::PDSPThinSliceFitter::SaveMCSamples() {
   fOutputFile.cd();
   fOutputFile.mkdir("MC_Samples");

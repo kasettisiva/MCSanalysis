@@ -138,6 +138,36 @@ void protoana::AbsCexDriver::BuildMCSamples(
   }*/
 }
 
+void protoana::AbsCexDriver::BuildSystSamples(
+    TTree * tree,
+    std::map<int, std::vector<ThinSliceSample>> & samples,
+    const std::map<int, bool> & signal_sample_checks/*,
+    std::map<int, double> & nominal_fluxes,
+    std::map<int, std::vector<double>> & fluxes_by_sample*/) {
+  std::vector<fhicl::ParameterSet> routines
+      = fExtraOptions.get<std::vector<fhicl::ParameterSet>>("Systematics");
+  for (size_t i = 0; i < routines.size(); ++i) {
+    fhicl::ParameterSet routine = routines[i];
+    std::string name = routine.get<std::string>("Name");
+    if (name == "G4RW") {
+      SystRoutineG4RW(tree, samples, signal_sample_checks, routine);
+    }
+    else {
+      std::string message = "Could not find systematics routine named " +
+                            name;
+      throw std::runtime_error(message);
+    }
+  }
+}
+
+void protoana::AbsCexDriver::SystRoutineG4RW(
+    TTree * tree,
+    std::map<int, std::vector<ThinSliceSample>> & samples,
+    const std::map<int, bool> & signal_sample_checks,
+    const fhicl::ParameterSet & routine) {
+  return;
+}
+
 void protoana::AbsCexDriver::BuildDataHists(
     TTree * tree, ThinSliceDataSet & data_set, double & flux) {
   int selection_ID; 

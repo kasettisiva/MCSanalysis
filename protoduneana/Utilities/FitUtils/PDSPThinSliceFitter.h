@@ -27,6 +27,7 @@ class PDSPThinSliceFitter {
   void SaveMCSamples();
   void GetNominalFluxes();
   void BuildDataHists();
+  //void BuildSystSamples();
   void InitializeMCSamples();
   void CompareDataMC(bool post_fit = false);
   void ScaleMCToData();

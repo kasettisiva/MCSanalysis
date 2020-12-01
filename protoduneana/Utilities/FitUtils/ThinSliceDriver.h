@@ -18,18 +18,26 @@ class ThinSliceDriver {
  public:
   ThinSliceDriver(const fhicl::ParameterSet & extra_options);
   virtual ~ThinSliceDriver();
+
   virtual void BuildDataHists(
     TTree * tree, ThinSliceDataSet & data_set, double & flux) = 0;
+
   virtual void BuildFakeData(
     TTree * tree, std::map<int, std::vector<ThinSliceSample>> & samples,
     ThinSliceDataSet & data_set, double & flux) = 0;
+
   virtual void BuildMCSamples(
       TTree * tree,
       std::map<int, std::vector<ThinSliceSample>> & samples,
       const std::map<int, bool> & signal_sample_checks,
       std::map<int, double> & nominal_fluxes,
-      std::map<int, std::vector<double>> & fluxes_by_sample/*,
-      std::map<int, std::pair<TH1D, TH1D>> & signal_eff_parts*/) = 0;
+      std::map<int, std::vector<double>> & fluxes_by_sample) = 0;
+
+  virtual void BuildSystSamples(
+      TTree * tree,
+      std::map<int, std::vector<ThinSliceSample>> & samples,
+      const std::map<int, bool> & signal_sample_checks) = 0;
+
   virtual std::pair<double, size_t> CalculateChi2(
       std::map<int, std::vector<ThinSliceSample>> & samples,
       ThinSliceDataSet & data_set) = 0;
