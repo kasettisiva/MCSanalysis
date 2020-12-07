@@ -63,5 +63,7 @@ physics:
 }
 
 outputs: {}
-physics.filters.fTruth.PDG: [211, -13]
-physics.analyzers.truthana.SelectEvents: []
+physics.filters.fTruth.PDG: [211, -13 , 2212]
+physics.analyzers.truthana.SelectEvents: [fpath]
+physics.analyzers.truthana.View: 2
+services.ParticleInventoryService.ParticleInventory.EveIdCalculator: "EmEveIdCalculator"

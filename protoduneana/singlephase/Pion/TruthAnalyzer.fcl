@@ -2,5 +2,6 @@ BEGIN_PROLOG
 truthanalyzer: {
   module_type: "TruthAnalyzer"
   GeneratorTag: "generator"
+  View: 2
 }
 END_PROLOG
