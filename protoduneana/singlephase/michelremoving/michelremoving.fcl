@@ -23,7 +23,7 @@ services:
   message:      @local::standard_info
   FileCatalogMetadata: @local::art_file_catalog_mc
 }
-
+services.PdspChannelMapService:      @local::pdspchannelmap
 #source is now a root file
 source:
 {
@@ -67,7 +67,7 @@ physics:
 }
 
 # define the list of LArSoft modules to run through the simulate path
-
+physics.filters.f2.DataUtils.RawDigitTimeStampTag:        "caldata:dataprep"
 physics.analyzers.michelremoving.TrackModuleLabel:        "pandoraTrack"
 physics.analyzers.michelremoving.CalorimetryModuleLabel:  "pandoracalonosce"
 physics.analyzers.michelremoving.HitsModuleLabel:  "hitpdune"
