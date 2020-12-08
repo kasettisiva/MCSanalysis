@@ -60,6 +60,7 @@
 #include "geant4reweight/src/ReweightBase/G4ReweightStep.hh"
 #include "geant4reweight/src/PropBase/G4ReweightParameterMaker.hh"
 #include "geant4reweight/src/ReweightBase/G4MultiReweighter.hh"
+#include "geant4reweight/src/ReweightBase/G4ReweightManager.hh"
 
 
 
@@ -674,11 +675,12 @@ private:
   bool fMCHasBI;
 
   //Geant4Reweight stuff
-  TFile * FracsFile, * XSecFile;
-  TFile * ProtFracsFile, * ProtXSecFile;
+  TFile * FracsFile;
+  TFile * ProtFracsFile;
   std::vector<fhicl::ParameterSet> ParSet;
   G4ReweightParameterMaker ParMaker;
   G4MultiReweighter * MultiRW, * ProtMultiRW;
+  G4ReweightManager * RWManager;
   //G4ReweighterFactory RWFactory;
   //G4Reweighter * theRW;
 };
@@ -717,23 +719,26 @@ pionana::PionAnalyzer::PionAnalyzer(fhicl::ParameterSet const& p)
   //calibration = protoana::ProtoDUNECalibration( CalibrationPars );
   beam_cuts = protoana::ProtoDUNEBeamCuts( BeamCuts );
 
+  if (fDoReweight || fDoProtReweight) {
+    RWManager = new G4ReweightManager({p.get<fhicl::ParameterSet>("Material")});
+  }
 
   if (fDoReweight) {
     FracsFile =  new TFile((p.get< std::string >( "FracsFile" )).c_str(), "OPEN" );
-    XSecFile = new TFile((p.get< std::string >( "XSecFile" )).c_str(), "OPEN");
     ParSet = p.get<std::vector<fhicl::ParameterSet>>("ParameterSet");
     ParMaker = G4ReweightParameterMaker(ParSet);
-    MultiRW = new G4MultiReweighter(211, *XSecFile, *FracsFile, ParSet/*, 100, 0*/);
+    MultiRW = new G4MultiReweighter(211, *FracsFile, ParSet,
+                                    p.get<fhicl::ParameterSet>("Material"),
+                                    RWManager);
   }
   if (fDoProtReweight) {
     ProtFracsFile =  new TFile((p.get<std::string>("ProtFracsFile")).c_str(),
                                "OPEN");
-    ProtXSecFile = new TFile((p.get<std::string>("ProtXSecFile")).c_str(),
-                             "OPEN");
     ParSet = p.get<std::vector<fhicl::ParameterSet>>("ParameterSet");
     ParMaker = G4ReweightParameterMaker(ParSet);
-    ProtMultiRW = new G4MultiReweighter(2212, *ProtXSecFile, *ProtFracsFile,
-                                        ParSet);
+    ProtMultiRW = new G4MultiReweighter(2212, *ProtFracsFile, ParSet,
+                                    p.get<fhicl::ParameterSet>("Material"),
+                                    RWManager);
   }
 
 }

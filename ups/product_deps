@@ -64,7 +64,7 @@ table_fragment_end
 product          version
 dunetpc          v09_09_01
 cetbuildtools	 v7_15_01	-	only_for_build
-geant4reweight   v01_04_02
+geant4reweight   v01_06_00
 end_product_list
 
 

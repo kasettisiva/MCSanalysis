@@ -25,6 +25,7 @@
 #include "geant4reweight/src/ReweightBase/G4ReweightTraj.hh"
 #include "geant4reweight/src/PropBase/G4ReweightParameterMaker.hh"
 #include "geant4reweight/src/ReweightBase/G4MultiReweighter.hh"
+#include "geant4reweight/src/ReweightBase/G4ReweightManager.hh"
 #include "G4ReweightUtils.h"
 
 #include "protoduneana/Utilities/ProtoDUNETruthUtils.h"
@@ -100,14 +101,15 @@ private:
   std::string fGeneratorTag, fPFParticleTag, fTrackerTag;
   //Geant4Reweight stuff
   int RW_PDG;
-  TFile FracsFile, XSecFile;
-  TFile ProtFracsFile, ProtXSecFile;
+  TFile FracsFile;
+  TFile ProtFracsFile;
   std::vector<fhicl::ParameterSet> ParSet;
   G4ReweightParameterMaker ParMaker;
+  G4ReweightManager RWManager;
   G4MultiReweighter MultiRW;
   //G4MultiReweighter ProtMultiRW;
-  G4ReweighterFactory RWFactory;
-  G4Reweighter * theRW;
+  //G4ReweighterFactory RWFactory;
+  //G4Reweighter * theRW;
 
 };
 
@@ -120,17 +122,18 @@ protoana::G4RWExampleAnalyzer::G4RWExampleAnalyzer(
       fTrackerTag(p.get<std::string>("TrackerTag")),
       RW_PDG(p.get<int>("RW_PDG")),
       FracsFile( (p.get< std::string >( "FracsFile" )).c_str(), "OPEN" ),
-      XSecFile( (p.get< std::string >( "XSecFile" )).c_str(), "OPEN"),
       //ProtFracsFile( (p.get< std::string >( "ProtFracsFile" )).c_str(), "OPEN" ),
-      //ProtXSecFile( (p.get< std::string >( "ProtXSecFile" )).c_str(), "OPEN"),
       ParSet(p.get<std::vector<fhicl::ParameterSet>>("ParameterSet")),
       ParMaker(ParSet, RW_PDG),
-      MultiRW(RW_PDG, XSecFile, FracsFile, ParSet) {//,
+      RWManager({p.get<fhicl::ParameterSet>("Material")}),
+      MultiRW(RW_PDG, FracsFile, ParSet,
+              p.get<fhicl::ParameterSet>("Material"),
+              &RWManager) {//,
       //ProtMultiRW(2212, ProtXSecFile, ProtFracsFile, ParSet) {
 
-  theRW = RWFactory.BuildReweighter(RW_PDG, &XSecFile, &FracsFile,
-                                    ParMaker.GetFSHists(),
-                                    ParMaker.GetElasticHist()/*, true*/ );
+  //theRW = RWFactory.BuildReweighter(RW_PDG, &XSecFile, &FracsFile,
+  //                                  ParMaker.GetFSHists(),
+  //                                  ParMaker.GetElasticHist()/*, true*/ );
   std::cout << "done" << std::endl;
 }
 
@@ -356,6 +359,13 @@ void protoana::G4RWExampleAnalyzer::analyze(art::Event const& e) {
       std::pair<double, double> temp_weights = GetNTrajPMSigmaWeights(trajs, MultiRW, i);
       g4rw_test_primary_plus_sigma_weight.push_back(temp_weights.first);
       g4rw_test_primary_minus_sigma_weight.push_back(temp_weights.second);
+    }
+
+    std::cout << "Testing setting pars" << std::endl;
+    std::vector<double> input(ParSet.size(), 1.);
+    bool set_values = MultiRW.SetAllParameterValues(input);
+    if (set_values) {
+      std::cout << GetNTrajWeightFromSetPars(trajs, MultiRW);
     }
 
     //Heng-Ye's weights

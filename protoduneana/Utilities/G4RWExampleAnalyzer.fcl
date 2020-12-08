@@ -7,7 +7,13 @@ g4rwexample: {
   TrackerTag: "pandoraTrack"
 
   FracsFile: "/dune/data2/users/calcuttj/GeantReweight/FlatTree/LAr_PiPlus_cascade.root"
-  XSecFile: "/dune/data2/users/calcuttj/GeantReweight/FlatTree/LAr_cross_section.root"
+  Material: {
+    Name: "liquidArgon"
+    Z:    18
+    Mass: 39.948
+    Density: 1.400
+  }
+
 
   RW_PDG: 211
 
