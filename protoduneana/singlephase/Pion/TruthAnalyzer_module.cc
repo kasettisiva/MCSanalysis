@@ -19,6 +19,7 @@
 #include "larcore/Geometry/Geometry.h"
 #include "larsim/MCCheater/BackTrackerService.h"
 #include "larsim/MCCheater/ParticleInventoryService.h"
+#include "lardataobj/Simulation/SimEnergyDeposit.h"
 
 #include "protoduneana/Utilities/ProtoDUNETruthUtils.h"
 
@@ -29,8 +30,99 @@
 
 namespace pionana {
   class TruthAnalyzer;
+
+  std::map<size_t, double> GetEDepByTraj(
+      const simb::MCParticle * part, int id,
+      const std::vector<sim::SimEnergyDeposit> & dep_vec,
+      const sim::ParticleList & plist);
+  
+  std::map<size_t, std::vector<int>> GetEMDaughterByTraj(
+      const simb::MCParticle * part,
+      const sim::ParticleList & plist);
 }
 
+std::map<size_t, double> pionana::GetEDepByTraj(
+    const simb::MCParticle * part, int id,
+    const std::vector<sim::SimEnergyDeposit> & dep_vec,
+    const sim::ParticleList & plist) {
+
+  const simb::MCTrajectory & traj = part->Trajectory();
+  
+  //First build up the trajectory points
+  std::map<size_t, double> results;
+  for (size_t i = 0; i < traj.size() - 1; ++i) {
+    results[i] = 0.;
+  }
+
+  std::map<size_t, std::vector<int>> daughters_by_traj
+      = GetEMDaughterByTraj(part, plist);
+  
+  //Iterate over the deposits
+  for (const sim::SimEnergyDeposit & dep : dep_vec) {
+    if (dep.TrackID() == id) {
+      for (size_t i = 1; i < traj.size(); ++i) {
+        if (traj.Z(i-1) <= dep.MidPointZ() && traj.Z(i) > dep.MidPointZ()) {
+          results[i-1] += dep.Energy();
+          break;
+        }
+      }
+    }
+    else {
+      for (auto it = daughters_by_traj.begin();
+           it != daughters_by_traj.end(); ++it) {
+        for (size_t i = 0; i < it->second.size(); ++i) {
+          if (it->second[i] == dep.TrackID()) {
+            results[it->first] += dep.Energy();
+          }
+        }
+      }
+    }
+  }
+  return results;
+}
+
+std::map<size_t, std::vector<int>> pionana::GetEMDaughterByTraj(
+    const simb::MCParticle * part,
+    const sim::ParticleList & plist) {
+
+  const simb::MCTrajectory & traj = part->Trajectory();
+  std::map<size_t, std::vector<int>> results;
+
+  for (int i = 0; i < part->NumberDaughters(); ++i) {
+    int id = part->Daughter(i);
+    auto daughter = plist[id];   
+    std::string process = daughter->Process();
+
+    if ((process.find("Ioni") == std::string::npos) &&
+        (process.find("Brem") == std::string::npos) &&
+        (process.find("annihil") == std::string::npos)) {
+      continue;
+    }
+
+    for (size_t j = 1; j < traj.size(); ++j) {
+      if (traj.Z(j-1) < daughter->Position().Z() &&
+          daughter->Position().Z() < traj.Z(j)) {
+        //results[j-1].push_back(id);
+        std::deque<int> downstream; 
+        downstream.push_back(id);
+
+
+        while (!downstream.empty()) {
+          int d_id = downstream.front();
+          auto d_part = plist[d_id];
+          results[j-1].push_back(d_id);
+          for (int k = 0; k < d_part->NumberDaughters(); ++k) {
+            downstream.push_back(d_part->Daughter(k));
+          }
+          downstream.pop_front();
+        }
+        break; 
+      }
+    }
+  }
+
+  return results;
+}
 
 class pionana::TruthAnalyzer : public art::EDAnalyzer {
 public:
@@ -52,6 +144,7 @@ private:
   // Declare member data here.
   art::InputTag fGeneratorTag;
   int fView;
+  art::InputTag fSimEDepTag;
 
 };
 
@@ -59,7 +152,8 @@ private:
 pionana::TruthAnalyzer::TruthAnalyzer(fhicl::ParameterSet const& p)
     : EDAnalyzer{p},
       fGeneratorTag(p.get<art::InputTag>("GeneratorTag")),
-      fView(p.get<int>("View")) {
+      fView(p.get<int>("View")),
+      fSimEDepTag(p.get<art::InputTag>("SimEDepTag")) {
 }
 
 void pionana::TruthAnalyzer::analyze(art::Event const& e)
@@ -208,7 +302,7 @@ void pionana::TruthAnalyzer::analyze(art::Event const& e)
     std::cout << "Total edep: " << total_edep << std::endl;
     std::cout << "From daughters: " << total_d_edep << std::endl;
     std::cout << "Combined: " << total_edep + total_d_edep << std::endl;
-    std::cout << init_KE - (1.e3*true_beam_trajectory.E(true_beam_trajectory.size()-2)) << std::endl;
+    std::cout << "DeltaE: " << init_KE - (1.e3*true_beam_trajectory.E(true_beam_trajectory.size()-2)) << std::endl;
     std::cout << "IDE - traj: " << total_edep + total_d_edep - (init_KE - (1.e3*true_beam_trajectory.E(true_beam_trajectory.size()-2))) << std::endl;
     std::cout << "Energies: " << (1.e3*true_beam_trajectory.E(0)) << " " << init_KE << " " <<
                  (1.e3*true_beam_trajectory.E(true_beam_trajectory.size()-2)) << " " << (1.e3*true_beam_trajectory.E(true_beam_trajectory.size()-1))
@@ -224,6 +318,96 @@ void pionana::TruthAnalyzer::analyze(art::Event const& e)
       }
     }
     std::cout << "N Elastics " << n_elast << std::endl;
+  }
+
+  try{
+    auto sim_edep_vec
+        = e.getValidHandle<std::vector<sim::SimEnergyDeposit>>(fSimEDepTag);
+    double total_sim_edep = 0.;
+    double dep_min_z = std::numeric_limits<double>::max();
+    for (const sim::SimEnergyDeposit & dep : (*sim_edep_vec)) {
+      if (dep.TrackID() != true_beam_ID) continue;
+      total_sim_edep += dep.Energy();
+      if (dep.MidPointZ() < dep_min_z) dep_min_z = dep.StartZ();
+    }
+    std::cout << "Min dep z: " << dep_min_z << std::endl;
+
+    to_check.clear();
+    for (int i = 0; i < true_beam_particle->NumberDaughters(); ++i) {
+      int id = true_beam_particle->Daughter(i);
+      auto part = plist[id];
+      std::string process = part->Process();
+      if ((process.find("Ioni") == std::string::npos) &&
+          (process.find("Brem") == std::string::npos) &&
+          (process.find("annihil") == std::string::npos)) {
+        std::cout << "Skipping " << process << std::endl;
+        continue;
+      }
+      to_check.push_back(id);
+    }
+
+    while (!to_check.empty()) {
+      const int id = to_check.front();
+      to_check.pop_front();
+
+      for (const sim::SimEnergyDeposit & dep : (*sim_edep_vec)) {
+        if (dep.TrackID() != id) continue;
+        total_sim_edep += dep.Energy();
+      }
+
+      //Get the daughters of this one
+      auto part = plist[id];
+      for (int i = 0; i < part->NumberDaughters(); ++i) {
+        to_check.push_back(part->Daughter(i));
+      }
+    }
+    std::cout << "Total Sim EDep: " << total_sim_edep << " " << true_beam_PDG << std::endl;
+
+    for (size_t i = 1; i < true_beam_trajectory.size(); ++i) {
+      double z0 = true_beam_trajectory.Z(i-1);
+      double x0 = true_beam_trajectory.X(i-1);
+      double y0 = true_beam_trajectory.Y(i-1);
+      geo::Point_t test_point{x0, y0, z0};
+      const TGeoMaterial * mat = geom->Material(test_point);
+      double z1 = true_beam_trajectory.Z(i);
+      std::cout << "checking " << z0 << " " << dep_min_z << " " << z1 << " " <<
+                   1.e3*(true_beam_trajectory.E(i-1) -
+                         true_beam_trajectory.E(true_beam_trajectory.size()-2)) <<
+                   std::endl;
+      if (z0 <= dep_min_z && z1 > dep_min_z) {
+        init_KE = 1.e3 * true_beam_trajectory.E(i-1);
+        std::cout << "Found matching position " << z0 << " " << dep_min_z <<
+                     " " << z1 << " " << mat->GetName() << std::endl;
+        std::cout << "init KE: " << init_KE << std::endl;
+        //init_pt = i - 1;
+
+        std::cout << "energies: " << 1.e3 * true_beam_trajectory.E(i-1) <<
+                     " " << 1.e3 * true_beam_trajectory.E(i) << std::endl;
+        std::cout << "Second to last, last point -- (Z, E): " << "(" <<
+                     true_beam_trajectory.Z(true_beam_trajectory.size()-2) << ", " <<
+                     1.e3*true_beam_trajectory.E(true_beam_trajectory.size()-2) << "), (" <<
+                     true_beam_trajectory.Z(true_beam_trajectory.size()-1) << ", " <<
+                     1.e3*true_beam_trajectory.E(true_beam_trajectory.size()-1) << ")" <<
+                     std::endl;
+        break;
+      }
+    }
+    std::cout << "SimEDep Delta E: " << init_KE - 1.e3*true_beam_trajectory.E(true_beam_trajectory.size()-2) << std::endl;
+    std::cout << "SimEDep Diff: " <<
+                 total_sim_edep - (init_KE - 1.e3*true_beam_trajectory.E(true_beam_trajectory.size()-2)) << " " <<
+                 (total_sim_edep - (init_KE - 1.e3*true_beam_trajectory.E(true_beam_trajectory.size()-2)))/total_sim_edep << std::endl;
+
+    std::map<size_t, double> edep_by_traj
+        = GetEDepByTraj(true_beam_particle, true_beam_ID, (*sim_edep_vec), plist);
+    for (auto it = edep_by_traj.begin(); it != edep_by_traj.end(); ++it) {
+      if (it->second == 0.) continue;
+      std::cout << it->second << " " <<
+                   1.e3*(true_beam_trajectory.E(it->first) -
+                         true_beam_trajectory.E(it->first + 1)) << std::endl;
+    }
+  }
+  catch(const std::exception & e) {
+    std::cout << "can't get sim edep. Moving on" << std::endl;
   }
 
 }

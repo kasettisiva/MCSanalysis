@@ -668,6 +668,7 @@ private:
   fhicl::ParameterSet CalibrationPars;
   protoana::ProtoDUNECalibration calibration;
   bool fSaveHits;
+  bool fSkipMVA;
   bool fTrueToReco;
   bool fDoReweight;
   bool fDoProtReweight;
@@ -706,6 +707,7 @@ pionana::PionAnalyzer::PionAnalyzer(fhicl::ParameterSet const& p)
   CalibrationPars(p.get<fhicl::ParameterSet>("CalibrationPars")),
   calibration(p.get<fhicl::ParameterSet>("CalibrationPars")),
   fSaveHits( p.get<bool>( "SaveHits" ) ),
+  fSkipMVA( p.get<bool>( "SkipMVA" ) ),
   fTrueToReco( p.get<bool>( "TrueToReco" ) ),
   fDoReweight(p.get<bool>("DoReweight")),
   fDoProtReweight(p.get<bool>("DoProtReweight")),
@@ -765,46 +767,46 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
   protoana::ProtoDUNETrackUtils                         trackUtil;
   art::ServiceHandle<geo::Geometry> geom;
 
-  if (fGetTrackMichel) {
-  for (const recob::PFParticle & pfp : (*pfpVec)) {
-    //const recob::PFParticle * pfp =  
-    //std::cout << pfp.Self() << std::endl;
-    const recob::Track* tempTrack = pfpUtil.GetPFParticleTrack(pfp, evt,
-                                                               fPFParticleTag,
-                                                               fTrackerTag);
-    if (tempTrack) {
-      double startX = tempTrack->Start().X();
-      double startY = tempTrack->Start().Y();
-      double startZ = tempTrack->Start().Z();
+  if (fGetTrackMichel && !fSkipMVA) {
+    for (const recob::PFParticle & pfp : (*pfpVec)) {
+      //const recob::PFParticle * pfp =  
+      //std::cout << pfp.Self() << std::endl;
+      const recob::Track* tempTrack = pfpUtil.GetPFParticleTrack(pfp, evt,
+                                                                 fPFParticleTag,
+                                                                 fTrackerTag);
+      if (tempTrack) {
+        double startX = tempTrack->Start().X();
+        double startY = tempTrack->Start().Y();
+        double startZ = tempTrack->Start().Z();
 
-      double endX = tempTrack->End().X();
-      double endY = tempTrack->End().Y();
-      double endZ = tempTrack->End().Z();
+        double endX = tempTrack->End().X();
+        double endY = tempTrack->End().Y();
+        double endZ = tempTrack->End().Z();
 
-      double start[3] = {startX, startY, startZ};
-      double end[3] = {endX, endY, endZ};
-      int end_tpc = geom->FindTPCAtPosition(end).TPC;
-      int start_tpc = geom->FindTPCAtPosition(start).TPC;
+        double start[3] = {startX, startY, startZ};
+        double end[3] = {endX, endY, endZ};
+        int end_tpc = geom->FindTPCAtPosition(end).TPC;
+        int start_tpc = geom->FindTPCAtPosition(start).TPC;
 
-      if (!((end_tpc == 1 || end_tpc == 5) &&
-            (start_tpc == 1 || start_tpc == 5)))
-        continue;
+        if (!((end_tpc == 1 || end_tpc == 5) &&
+              (start_tpc == 1 || start_tpc == 5)))
+          continue;
 
-      std::pair<double, int> vertex_michel_score =
-          trackUtil.GetVertexMichelScore(*tempTrack, evt, fTrackerTag,
-                                         fHitTag);
+        std::pair<double, int> vertex_michel_score =
+            trackUtil.GetVertexMichelScore(*tempTrack, evt, fTrackerTag,
+                                           fHitTag);
 
-      reco_track_michel_score.push_back(vertex_michel_score.first);
-      reco_track_nHits.push_back(vertex_michel_score.second);
-      reco_track_ID.push_back(tempTrack->ID());
-      reco_track_startX.push_back(startX);
-      reco_track_startY.push_back(startY);
-      reco_track_startZ.push_back(startZ);
-      reco_track_endX.push_back(endX);
-      reco_track_endY.push_back(endY);
-      reco_track_endZ.push_back(endZ);
+        reco_track_michel_score.push_back(vertex_michel_score.first);
+        reco_track_nHits.push_back(vertex_michel_score.second);
+        reco_track_ID.push_back(tempTrack->ID());
+        reco_track_startX.push_back(startX);
+        reco_track_startY.push_back(startY);
+        reco_track_startZ.push_back(startZ);
+        reco_track_endX.push_back(endX);
+        reco_track_endY.push_back(endY);
+        reco_track_endZ.push_back(endZ);
+      }
     }
-  }
   }
 
   protoana::ProtoDUNEShowerUtils                        showerUtil;
@@ -974,7 +976,16 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
   // Helper to get hits and the 4 associated CNN outputs
   // CNN Outputs: EM, Track, Michel, Empty
   // outputNames: track, em, none, michel
-  anab::MVAReader<recob::Hit,4> hitResults(evt, "emtrkmichelid:emtrkmichel" );
+  std::cout << "About to MVA: " << std::endl;
+  anab::MVAReader<recob::Hit,4> * hitResults = 0x0;
+  std::cout << "MVA: " << std::endl;
+  if (!fSkipMVA) { 
+  std::cout << "Not skipping" << std::endl;
+    hitResults = new anab::MVAReader<recob::Hit, 4>(evt, "emtrkmichelid:emtrkmichel" );
+  }
+  else {
+    std::cout << "Skipping MVA" << std::endl;
+  }
 
   auto allHits = evt.getValidHandle<std::vector<recob::Hit> >(fHitTag);
 
@@ -1466,8 +1477,16 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
                 pfpUtil.GetPFParticleHits_Ptrs( *thePFP, evt, fPFParticleTag ).size()
               );
 
-              cnnOutput2D theCNNResults = GetCNNOutputFromPFParticle( *thePFP, evt, hitResults, pfpUtil, fPFParticleTag );
-              true_beam_Pi0_decay_reco_byHits_PFP_trackScore.back().push_back( ( ( theCNNResults.nHits > 0 ) ? ( theCNNResults.track / theCNNResults.nHits ) : -999. ) );
+              if (fSkipMVA) {
+                cnnOutput2D theCNNResults = GetCNNOutputFromPFParticle( *thePFP, evt, *hitResults, pfpUtil, fPFParticleTag );
+                double track_score = ((theCNNResults.nHits > 0) ? 
+                                      (theCNNResults.track / theCNNResults.nHits) :
+                                      -999.);
+                true_beam_Pi0_decay_reco_byHits_PFP_trackScore.back().push_back(track_score);
+              }
+              else {
+                true_beam_Pi0_decay_reco_byHits_PFP_trackScore.back().push_back(-999.);
+              }
 
               const recob::Track* pandora2Track = 0x0;
               try{
@@ -1568,8 +1587,19 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
             pfpUtil.GetPFParticleHits_Ptrs( *thePFP, evt, fPFParticleTag ).size()
           );
 
-          cnnOutput2D theCNNResults = GetCNNOutputFromPFParticle( *thePFP, evt, hitResults, pfpUtil, fPFParticleTag );
-          true_beam_daughter_reco_byHits_PFP_trackScore.back().push_back( ( ( theCNNResults.nHits > 0 ) ? ( theCNNResults.track / theCNNResults.nHits ) : -999. ) );
+          if (fSkipMVA) {
+            cnnOutput2D theCNNResults = GetCNNOutputFromPFParticle( *thePFP, evt, *hitResults, pfpUtil, fPFParticleTag );
+            double track_score = ((theCNNResults.nHits > 0) ? 
+                                  (theCNNResults.track / theCNNResults.nHits) :
+                                  -999.);
+            true_beam_daughter_reco_byHits_PFP_trackScore.back().push_back(track_score);
+          }
+          else {
+            true_beam_daughter_reco_byHits_PFP_trackScore.back().push_back(-999.);
+          }
+
+          //cnnOutput2D theCNNResults = GetCNNOutputFromPFParticle( *thePFP, evt, *hitResults, pfpUtil, fPFParticleTag );
+          //true_beam_daughter_reco_byHits_PFP_trackScore.back().push_back( ( ( theCNNResults.nHits > 0 ) ? ( theCNNResults.track / theCNNResults.nHits ) : -999. ) );
 
           const recob::Track* pandora2Track = 0x0;
           try{
@@ -1637,43 +1667,48 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
   reco_beam_PFP_ID = particle->Self();
   const std::vector< art::Ptr< recob::Hit > > beamPFP_hits = pfpUtil.GetPFParticleHits_Ptrs( *particle, evt, fPFParticleTag );
   reco_beam_PFP_nHits = beamPFP_hits.size();
+  if (fSkipMVA) {
+    cnnOutput2D cnn = GetCNNOutputFromPFParticle( *particle, evt, *hitResults, pfpUtil, fPFParticleTag );
+    reco_beam_PFP_trackScore = (cnn.nHits > 0 ?
+                                (cnn.track / cnn.nHits) : -999.);
+    reco_beam_PFP_emScore = (cnn.nHits > 0 ?
+                             (cnn.em / cnn.nHits) : -999.);
+    reco_beam_PFP_michelScore = (cnn.nHits > 0 ?
+                                 (cnn.michel / cnn.nHits) : -999.);
 
-  cnnOutput2D cnn = GetCNNOutputFromPFParticle( *particle, evt, hitResults, pfpUtil, fPFParticleTag );
-  if( cnn.nHits > 0 ){
-    reco_beam_PFP_trackScore = (cnn.track / cnn.nHits);
-    reco_beam_PFP_emScore = (cnn.em / cnn.nHits);
-    reco_beam_PFP_michelScore = (cnn.michel / cnn.nHits);
+    cnnOutput2D cnn_collection = GetCNNOutputFromPFParticleFromPlane( *particle, evt, *hitResults, pfpUtil, fPFParticleTag, 2 );
+    reco_beam_PFP_trackScore_collection = (cnn_collection.nHits > 0 ?
+                                           cnn_collection.track / cnn_collection.nHits : -999.);
+    reco_beam_PFP_emScore_collection = (cnn_collection.nHits > 0 ?
+                                        cnn_collection.em / cnn_collection.nHits : -999.);
+    reco_beam_PFP_michelScore_collection = (cnn_collection.nHits > 0 ?
+                                            cnn_collection.michel / cnn_collection.nHits : -999.);
   }
   else{
     reco_beam_PFP_trackScore =  -999.;
     reco_beam_PFP_emScore = -999.;
     reco_beam_PFP_michelScore = -999.;
-  }
-
-  cnnOutput2D cnn_collection = GetCNNOutputFromPFParticleFromPlane( *particle, evt, hitResults, pfpUtil, fPFParticleTag, 2 );
-  if( cnn_collection.nHits > 0 ){
-    reco_beam_PFP_trackScore_collection = (cnn_collection.track / cnn_collection.nHits);
-    reco_beam_PFP_emScore_collection = (cnn_collection.em / cnn_collection.nHits);
-    reco_beam_PFP_michelScore_collection = (cnn_collection.michel / cnn_collection.nHits);
-  }
-  else{
     reco_beam_PFP_trackScore_collection =  -999.;
     reco_beam_PFP_emScore_collection = -999.;
     reco_beam_PFP_michelScore_collection = -999.;
   }
 
 
-
-
   // Determine if the beam particle is track-like or shower-like
   const recob::Track* thisTrack = pfpUtil.GetPFParticleTrack(*particle,evt,fPFParticleTag,fTrackerTag);
   const recob::Shower* thisShower = pfpUtil.GetPFParticleShower(*particle,evt,fPFParticleTag,fShowerTag);
   if( thisTrack ){
-    std::pair<double, int> vertex_michel_score =
-        trackUtil.GetVertexMichelScore(*thisTrack, evt, fTrackerTag, fHitTag/*,
-                                       0., -500., 500., 0., 500., 0.*/);
-    reco_beam_vertex_nHits = vertex_michel_score.second;
-    reco_beam_vertex_michel_score = vertex_michel_score.first;
+    if (!fSkipMVA) {
+      std::pair<double, int> vertex_michel_score =
+          trackUtil.GetVertexMichelScore(*thisTrack, evt, fTrackerTag, fHitTag/*,
+                                         0., -500., 500., 0., 500., 0.*/);
+      reco_beam_vertex_nHits = vertex_michel_score.second;
+      reco_beam_vertex_michel_score = vertex_michel_score.first;
+    }
+    else {
+      reco_beam_vertex_nHits = -999;
+      reco_beam_vertex_michel_score = -999.;
+    }
     //std::cout << vertex_michel_score.first << " " << vertex_michel_score.second << std::endl;
 
     if (fVerbose) std::cout << "Beam particle is track-like " << thisTrack->ID() << std::endl;
@@ -2302,20 +2337,21 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
       }
       reco_daughter_PFP_nHits_collection.push_back(nHits_coll);
 
+/*
       double track_total = 0.;
       double em_total = 0.;
       double michel_total = 0.;
       double none_total = 0.;
       for( size_t h = 0; h < daughterPFP_hits.size(); ++h ){
-        std::array<float,4> cnn_out = hitResults.getOutput( daughterPFP_hits[h] );
-        track_total  += cnn_out[ hitResults.getIndex("track") ];
-        em_total     += cnn_out[ hitResults.getIndex("em") ];
-        michel_total += cnn_out[ hitResults.getIndex("michel") ];
-        none_total   += cnn_out[ hitResults.getIndex("none") ];
+        std::array<float,4> cnn_out = *hitResults.getOutput( daughterPFP_hits[h] );
+        track_total  += cnn_out[ *hitResults.getIndex("track") ];
+        em_total     += cnn_out[ *hitResults.getIndex("em") ];
+        michel_total += cnn_out[ *hitResults.getIndex("michel") ];
+        none_total   += cnn_out[ *hitResults.getIndex("none") ];
 
       }
 
-      cnnOutput2D theCNNResults = GetCNNOutputFromPFParticle( *daughterPFP, evt, hitResults, pfpUtil, fPFParticleTag );
+      cnnOutput2D theCNNResults = GetCNNOutputFromPFParticle( *daughterPFP, evt, *hitResults, pfpUtil, fPFParticleTag );
       if (fVerbose) {
         std::cout << "Testing new CNN: " << std::endl;
         std::cout << track_total << " " << theCNNResults.track << std::endl;
@@ -2325,7 +2361,6 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
       }
 
 
-      const std::vector< const recob::SpacePoint* > spVec = pfpUtil.GetPFParticleSpacePoints( *daughterPFP, evt, fPFParticleTag );
 
       if( daughterPFP_hits.size() > 0 ){
         reco_daughter_PFP_trackScore.push_back( track_total / daughterPFP_hits.size() );
@@ -2338,7 +2373,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
         reco_daughter_PFP_michelScore.push_back( -999. );
       }
 
-      cnnOutput2D cnn_collection = GetCNNOutputFromPFParticleFromPlane( *daughterPFP, evt, hitResults, pfpUtil, fPFParticleTag, 2 );
+      cnnOutput2D cnn_collection = GetCNNOutputFromPFParticleFromPlane( *daughterPFP, evt, *hitResults, pfpUtil, fPFParticleTag, 2 );
       if( cnn_collection.nHits > 0 ){
         reco_daughter_PFP_trackScore_collection.push_back( cnn_collection.track / cnn_collection.nHits );
         reco_daughter_PFP_emScore_collection.push_back( cnn_collection.em / cnn_collection.nHits );
@@ -2349,8 +2384,48 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
         reco_daughter_PFP_emScore_collection.push_back( -999. );
         reco_daughter_PFP_michelScore_collection.push_back( -999. );
       }
+*/
+      if (fSkipMVA) {
+        cnnOutput2D theCNNResults = GetCNNOutputFromPFParticle(
+            *daughterPFP, evt, *hitResults, pfpUtil, fPFParticleTag);
+        double track_score = (theCNNResults.nHits > 0 ?
+                              (theCNNResults.track / theCNNResults.nHits) :
+                              -999.);
+        double em_score = (theCNNResults.nHits > 0 ?
+                              (theCNNResults.em / theCNNResults.nHits) :
+                              -999.);
+        double michel_score = (theCNNResults.nHits > 0 ?
+                              (theCNNResults.michel / theCNNResults.nHits) :
+                              -999.);
+        reco_daughter_PFP_trackScore.push_back(track_score);
+        reco_daughter_PFP_emScore.push_back(em_score);
+        reco_daughter_PFP_michelScore.push_back(michel_score);
 
+        cnnOutput2D cnn_collection = GetCNNOutputFromPFParticleFromPlane(
+            *daughterPFP, evt, *hitResults, pfpUtil, fPFParticleTag, 2);
+        double track_score_collection = (cnn_collection.nHits > 0 ?
+                              (cnn_collection.track / cnn_collection.nHits) :
+                              -999.);
+        double em_score_collection = (cnn_collection.nHits > 0 ?
+                              (cnn_collection.em / cnn_collection.nHits) :
+                              -999.);
+        double michel_score_collection = (cnn_collection.nHits > 0 ?
+                              (cnn_collection.michel / cnn_collection.nHits) :
+                              -999.);
+        reco_daughter_PFP_trackScore_collection.push_back(track_score_collection);
+        reco_daughter_PFP_emScore_collection.push_back(em_score_collection);
+        reco_daughter_PFP_michelScore_collection.push_back(michel_score_collection);
+      }
+      else{
+        reco_daughter_PFP_trackScore.push_back( -999. );
+        reco_daughter_PFP_emScore.push_back( -999. );
+        reco_daughter_PFP_michelScore.push_back( -999. );
+        reco_daughter_PFP_trackScore_collection.push_back( -999. );
+        reco_daughter_PFP_emScore_collection.push_back( -999. );
+        reco_daughter_PFP_michelScore_collection.push_back( -999. );
+      }
 
+      //const std::vector< const recob::SpacePoint* > spVec = pfpUtil.GetPFParticleSpacePoints( *daughterPFP, evt, fPFParticleTag );
 
       if( !evt.isRealData() ){
         //Matching by hits
@@ -2629,16 +2704,24 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
 
           std::cout << "Getting michel" << std::endl;
           //Using new michel tagging
-          std::pair<double, int> vertex_results =
-              trackUtil.GetVertexMichelScore(
-                  *pandora2Track, evt, "pandora2Track", fHitTag,
-                  0., -500., 500., 0., 500., 0., false,
-                  reco_beam_endX, reco_beam_endY, reco_beam_endZ);
+          if (!fSkipMVA) {
+            std::pair<double, int> vertex_results =
+                trackUtil.GetVertexMichelScore(
+                    *pandora2Track, evt, "pandora2Track", fHitTag,
+                    0., -500., 500., 0., 500., 0., false,
+                    reco_beam_endX, reco_beam_endY, reco_beam_endZ);
 
-          reco_daughter_allTrack_vertex_michel_score.push_back(
-              vertex_results.first);
-          reco_daughter_allTrack_vertex_nHits.push_back(
-              vertex_results.second);
+            reco_daughter_allTrack_vertex_michel_score.push_back(
+                vertex_results.first);
+            reco_daughter_allTrack_vertex_nHits.push_back(
+                vertex_results.second);
+          }
+          else {
+            reco_daughter_allTrack_vertex_michel_score.push_back(
+                -999.);
+            reco_daughter_allTrack_vertex_nHits.push_back(
+                -999);
+          }
 
           if (fVerbose) std::cout << "pandora2Length " << pandora2Track->Length() << std::endl;
           reco_daughter_allTrack_momByRange_proton.push_back( track_p_calc.GetTrackMomentum( pandora2Track->Length(), 2212 ) );
