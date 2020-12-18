@@ -13,7 +13,8 @@ pionanalysis:
   TrackModuleLabel:       "pandoraTrack"
   TimeDecoderModuleLabel: "timingrawdecoder:daq"
 
-  CalorimetryTag:         "pandoracalo"
+  CalorimetryTagSCE:      "pandoracalo"
+  CalorimetryTagNoSCE:    "pandoracalonosce"
   Pandora2CaloSCE:        "pandora2caloSCE"
   TrackerTag:             "pandoraTrack"
   HitTag:                 "gaushit"
@@ -30,7 +31,8 @@ pionanalysis:
   BeamPars: @local::BeamCuts_MCC11
   BeamCuts: @local::Prod2BeamCuts 
 
-  CalibrationPars: @local::CalorimetryParameters_SPProd2_MC_SCE
+  CalibrationParsSCE: @local::CalorimetryParameters_SPProd2_MC_SCE
+  CalibrationParsSCE: @local::CalorimetryParameters_SPProd2_MC_35ms
   SaveHits: false
   SkipMVA: false
   TrueToReco: false
