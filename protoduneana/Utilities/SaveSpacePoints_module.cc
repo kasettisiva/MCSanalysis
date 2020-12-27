@@ -135,46 +135,48 @@ void proto::SaveSpacePoints::analyze(art::Event const & evt)
   beamDirz.clear();
   beamMomentum.clear();
 
-  if (fBeamlineUtils.IsGoodBeamlineTrigger(evt)){
+  if (evt.isRealData()){
+    if (fBeamlineUtils.IsGoodBeamlineTrigger(evt)){
 
-    //Access the Beam Event
-    auto beamHandle = evt.getValidHandle<std::vector<beam::ProtoDUNEBeamEvent>>("beamevent");
-    
-    std::vector<art::Ptr<beam::ProtoDUNEBeamEvent>> beamVec;
-    if( beamHandle.isValid()){
-      art::fill_ptr_vector(beamVec, beamHandle);
+      //Access the Beam Event
+      auto beamHandle = evt.getValidHandle<std::vector<beam::ProtoDUNEBeamEvent>>("beamevent");
+      
+      std::vector<art::Ptr<beam::ProtoDUNEBeamEvent>> beamVec;
+      if( beamHandle.isValid()){
+        art::fill_ptr_vector(beamVec, beamHandle);
+      }
+      
+      const beam::ProtoDUNEBeamEvent & beamEvent = *(beamVec.at(0)); //Should just have one
+      
+      //Access momentum
+      const std::vector< double > & the_momenta = beamEvent.GetRecoBeamMomenta();
+      std::cout << "Number of reconstructed momenta: " << the_momenta.size() << std::endl;
+      
+      beamMomentum.insert( beamMomentum.end(), the_momenta.begin(), the_momenta.end() );
+      
+      tof = -1;
+      ckov0status = -1;
+      ckov1status = -1;
+      
+      //Access time of flight
+      const std::vector< double > & the_tofs  = beamEvent.GetTOFs();
+      
+      if( the_tofs.size() > 0){
+        tof = the_tofs[0];
+      }
+      ckov0status = beamEvent.GetCKov0Status();
+      ckov1status = beamEvent.GetCKov1Status();
     }
+  
+    trigger = -1;
+    art::ValidHandle<std::vector<raw::RDTimeStamp>> timeStamps = evt.getValidHandle<std::vector<raw::RDTimeStamp>>(fTimeDecoderModuleLabel);
 
-    const beam::ProtoDUNEBeamEvent & beamEvent = *(beamVec.at(0)); //Should just have one
-
-    //Access momentum
-    const std::vector< double > & the_momenta = beamEvent.GetRecoBeamMomenta();
-    std::cout << "Number of reconstructed momenta: " << the_momenta.size() << std::endl;
-
-    beamMomentum.insert( beamMomentum.end(), the_momenta.begin(), the_momenta.end() );
-
-    tof = -1;
-    ckov0status = -1;
-    ckov1status = -1;
-
-    //Access time of flight
-    const std::vector< double > & the_tofs  = beamEvent.GetTOFs();
-    
-    if( the_tofs.size() > 0){
-      tof = the_tofs[0];
+    // Check that we have good information
+    if(timeStamps.isValid() && timeStamps->size() == 1){
+      // Access the trigger information. Beam trigger flag = 0xc
+      const raw::RDTimeStamp& timeStamp = timeStamps->at(0);
+      trigger = timeStamp.GetFlags();
     }
-    ckov0status = beamEvent.GetCKov0Status();
-    ckov1status = beamEvent.GetCKov1Status();
-  }
-
-  trigger = -1;
-  art::ValidHandle<std::vector<raw::RDTimeStamp>> timeStamps = evt.getValidHandle<std::vector<raw::RDTimeStamp>>(fTimeDecoderModuleLabel);
-
-  // Check that we have good information
-  if(timeStamps.isValid() && timeStamps->size() == 1){
-    // Access the trigger information. Beam trigger flag = 0xc
-    const raw::RDTimeStamp& timeStamp = timeStamps->at(0);
-    trigger = timeStamp.GetFlags();
   }
 
   art::Handle< std::vector<recob::SpacePoint> > spsHandle;
