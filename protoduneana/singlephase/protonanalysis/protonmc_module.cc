@@ -448,6 +448,7 @@ class protoana::protonmc : public art::EDAnalyzer {
 		TFile FracsFile, XSecFile;
 		std::vector<fhicl::ParameterSet> ParSet;
 		G4ReweightParameterMaker ParMaker;
+                G4ReweightManager RWManager;
 		G4MultiReweighter MultiRW;
 		G4ReweighterFactory RWFactory;
 		G4Reweighter * theRW;
@@ -477,9 +478,14 @@ protoana::protonmc::protonmc(fhicl::ParameterSet const & p)
 		XSecFile( (p.get< std::string >( "XSecFile" )).c_str(), "OPEN"),
 		ParSet(p.get<std::vector<fhicl::ParameterSet>>("ParameterSet")),
 		ParMaker(ParSet, RW_PDG),
-		MultiRW(RW_PDG, XSecFile, FracsFile, ParSet) {
-			theRW = RWFactory.BuildReweighter(RW_PDG, &XSecFile, &FracsFile,
+                RWManager({p.get<fhicl::ParameterSet>("Material")}),
+		MultiRW(RW_PDG, FracsFile, ParSet,
+                        p.get<fhicl::ParameterSet>("Material"),
+                        &RWManager) {
+			theRW = RWFactory.BuildReweighter(RW_PDG, &FracsFile,
 					ParMaker.GetFSHists(),
+                                        p.get<fhicl::ParameterSet>("Material"),
+                                        &RWManager,
 					ParMaker.GetElasticHist()/*, true*/ );
 		}
 

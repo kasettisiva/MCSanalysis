@@ -41,6 +41,11 @@ art_make_exec( NAME Geant4ReweightSysts
 	       LIBRARIES protodune_fitutils
 	    )
 
+art_make_exec( NAME runPDSPThinSliceFit
+	       SOURCE runPDSPThinSliceFit.c++
+	       LIBRARIES protodune_fitutils
+	     )
+
 install_headers()
 install_fhicl()
 install_source()

@@ -23,6 +23,7 @@ art_make( LIBRARY_NAME ProtoDUNEUtilities
                         larsim_MCCheater_ParticleInventoryService_service
                         nug4_ParticleNavigation 
                         nusimdata_SimulationBase
+                        ${CLHEP}
                         ${ART_FRAMEWORK_CORE}
                         ${ART_FRAMEWORK_PRINCIPAL}
                         ${ART_FRAMEWORK_SERVICES_REGISTRY}

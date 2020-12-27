@@ -94,10 +94,39 @@ CalorimetryParameters_SPProd3_MC_35ms.PlaneParameters: [
 ]
 ##########################################
 
+##Prod4 MC SCE on -- use with calorimetry object pandoracalinoxyzt
+CalorimetryParameters_SPProd4_MC_SCE: @local::CalorimetryParameters_SPProd2_MC_SCE
+CalorimetryParameters_SPProd4_MC_SCE.X_correction:       "CalorimetryCalibration/ProtoDUNESP/Prod4_MC/Xcalo_prod4_sceon.root"
+CalorimetryParameters_SPProd4_MC_SCE.YZ_correction:      "CalorimetryCalibration/ProtoDUNESP/Prod4_MC/YZcalo_prod4_sceon.root"
+CalorimetryParameters_SPProd4_MC_SCE.E_field_correction: "SpaceChargeProtoDUNE/SCE_DataDriven_180kV_v4.root"
+CalorimetryParameters_SPProd4_MC_SCE.PlaneParameters: [
+  {
+    PlaneID: 2
+    norm_factor: 0.989 
+    calib_factor: 1.011e-3
+  }
+]
+##########################################
+
+##Prod4 Data Run 5387 -- use with calorimetry object pandoracalinoxyzt
+CalorimetryParameters_SPProd4_Data_r5387: @local::CalorimetryParameters_SPProd2_MC_SCE
+CalorimetryParameters_SPProd4_Data_r5387.X_correction:       "CalorimetryCalibration/ProtoDUNESP/Prod4_Data/Xcalo_r5387.root"
+CalorimetryParameters_SPProd4_Data_r5387.YZ_correction:      "CalorimetryCalibration/ProtoDUNESP/Prod4_Data/YZcalo_r5387.root"
+CalorimetryParameters_SPProd4_Data_r5387.E_field_correction: "SpaceChargeProtoDUNE/SCE_DataDriven_180kV_v4.root"
+CalorimetryParameters_SPProd4_Data_r5387.PlaneParameters: [
+  {
+    PlaneID: 2
+    norm_factor: 0.977 
+    calib_factor: 1.029e-3
+  }
+]
+##########################################
+
+
 ##Data run 5387
 CalorimetryParameters_SPProd2_Data_r5387: @local::CalorimetryParameters_SPProd2_MC_SCE
-CalorimetryParameters_SPProd2_Data_r5387.X_correction:       "CalorimetryCalibration/ProtoDUNESP/Data/Xcalo_r5387.root"
-CalorimetryParameters_SPProd2_Data_r5387.YZ_correction:      "CalorimetryCalibration/ProtoDUNESP/Data/YZcalo_r5387.root"
+CalorimetryParameters_SPProd2_Data_r5387.X_correction:       "CalorimetryCalibration/ProtoDUNESP/Prod2_Data/Xcalo_r5387.root"
+CalorimetryParameters_SPProd2_Data_r5387.YZ_correction:      "CalorimetryCalibration/ProtoDUNESP/Prod2_Data/YZcalo_r5387.root"
 CalorimetryParameters_SPProd2_Data_r5387.PlaneParameters: [
   {
     PlaneID: 2
@@ -109,8 +138,8 @@ CalorimetryParameters_SPProd2_Data_r5387.PlaneParameters: [
 
 ##Data run 5809
 CalorimetryParameters_SPProd2_Data_r5809: @local::CalorimetryParameters_SPProd2_MC_SCE
-CalorimetryParameters_SPProd2_Data_r5809.X_correction:       "CalorimetryCalibration/ProtoDUNESP/Data/Xcalo_r5809.root"
-CalorimetryParameters_SPProd2_Data_r5809.YZ_correction:      "CalorimetryCalibration/ProtoDUNESP/Data/YZcalo_r5809.root"
+CalorimetryParameters_SPProd2_Data_r5809.X_correction:       "CalorimetryCalibration/ProtoDUNESP/Prod2_Data/Xcalo_r5809.root"
+CalorimetryParameters_SPProd2_Data_r5809.YZ_correction:      "CalorimetryCalibration/ProtoDUNESP/Prod2_Data/YZcalo_r5809.root"
 CalorimetryParameters_SPProd2_Data_r5809.PlaneParameters: [
   {
     PlaneID: 2
@@ -122,8 +151,8 @@ CalorimetryParameters_SPProd2_Data_r5809.PlaneParameters: [
 
 ##Data run 5770
 CalorimetryParameters_SPProd2_Data_r5770: @local::CalorimetryParameters_SPProd2_MC_SCE
-CalorimetryParameters_SPProd2_Data_r5770.X_correction:       "CalorimetryCalibration/ProtoDUNESP/Data/Xcalo_r5770.root"
-CalorimetryParameters_SPProd2_Data_r5770.YZ_correction:      "CalorimetryCalibration/ProtoDUNESP/Data/YZcalo_r5770.root"
+CalorimetryParameters_SPProd2_Data_r5770.X_correction:       "CalorimetryCalibration/ProtoDUNESP/Prod2_Data/Xcalo_r5770.root"
+CalorimetryParameters_SPProd2_Data_r5770.YZ_correction:      "CalorimetryCalibration/ProtoDUNESP/Prod2_Data/YZcalo_r5770.root"
 CalorimetryParameters_SPProd2_Data_r5770.PlaneParameters: [
   {
     PlaneID: 2

@@ -32,16 +32,20 @@ pionanalysis:
 
   CalibrationPars: @local::CalorimetryParameters_SPProd2_MC_SCE
   SaveHits: false
-  CheckCosmics: false
+  SkipMVA: false
   TrueToReco: false
-  DoReweight: true
-  DoProtReweight: true
+  DoReweight: false
+  DoProtReweight: false 
+  GetTrackMichel: true
 
   FracsFile: "/dune/data2/users/calcuttj/GeantReweight/FlatTree/LAr_PiPlus_cascade.root"
-  #XSecFile: "/dune/data2/users/calcuttj/GeantReweight/FlatTree/LAr_cross_section.root"
-  XSecFile: "/dune/data2/users/calcuttj/GeantReweight/FlatTree/cross_section_with_decay.root"
   ProtFracsFile: "/dune/data2/users/calcuttj/GeantReweight/FlatTree/proton_cascade.root"
-  ProtXSecFile: "/dune/data2/users/calcuttj/GeantReweight/FlatTree/proton_cross_section.root"
+  Material: {
+    Name: "liquidArgon"
+    Z:    18
+    Mass: 39.948
+    Density: 1.400
+  }
 
   ParameterSet: [
     { 

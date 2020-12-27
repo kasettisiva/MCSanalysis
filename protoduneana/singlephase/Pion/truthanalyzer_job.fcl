@@ -1,6 +1,7 @@
-#include "PionAnalyzer.fcl"
+#include "TruthAnalyzer.fcl"
+
 #include "services_dune.fcl"
-#include "missingproductfilter.fcl"
+#include "ProtoDUNETruthBeamFilter.fcl"
 
 
 process_name: PionAna
@@ -17,6 +18,13 @@ services:
                                 @table::protodune_services
   PdspChannelMapService:        @local::pdspchannelmap
   ChannelStatusService:         @local::pdsp_channel_status
+  BackTrackerService: {
+    BackTracker: {
+      SimChannelModuleLabel: "tpcrawdecoder:simpleSC"
+      G4ModuleLabel: "largeant"
+      MinimumHitEnergyFraction: 1e-1
+    }
+  }
 }
 services.message.destinations.LogStandardOut.threshold: "INFO"
 #services.Geometry: @local::protodunev6_geo
@@ -35,17 +43,18 @@ physics:
  
  }
 
- filters: {
-   fMissingProds: @local::standard_missingproductfilter
+ filters: { 
+   fTruth: @local::beam_filter
  }
- fpath: [fMissingProds]
+
+ fpath: [fTruth]
 
  analyzers:
  {
-  pionana:          @local::pionanalysis
+  truthana:          @local::truthanalyzer
  }
  
- ana:  [ pionana ]
+ ana:  [ truthana ]
 
  #stream1: [ out1 ]
  
@@ -54,9 +63,7 @@ physics:
 }
 
 outputs: {}
-physics.analyzers.pionana.SelectEvents: ["fpath"]
-physics.analyzers.pionana.CalorimetryTag: "pandoracalo"
-physics.analyzers.pionana.HitTag: "hitpdune"
-physics.analyzers.pionana.Verbose: true
-#physics.analyzers.pionana.SaveHits: true
-physics.analyzers.pionana.SkipMVA: true
+physics.filters.fTruth.PDG: [211, -13 , 2212]
+physics.analyzers.truthana.SelectEvents: [fpath]
+physics.analyzers.truthana.View: 2
+services.ParticleInventoryService.ParticleInventory.EveIdCalculator: "EmEveIdCalculator"

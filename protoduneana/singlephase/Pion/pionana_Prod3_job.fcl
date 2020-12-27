@@ -57,13 +57,14 @@ physics:
 outputs: {}
 physics.analyzers.pionana.SelectEvents: []
 #physics.analyzers.pionana.CalorimetryTag: "pandoracalonosce" ##For no-SCE sample
-physics.analyzers.pionana.CalorimetryTag: "pandoracali"
+physics.analyzers.pionana.CalorimetryTag: "pandoracalinoxyzt"
 #physics.analyzers.pionana.Pandora2CaloSCE: "pandora2calo"
-physics.analyzers.pionana.Pandora2CaloSCE: "pandora2cali"
+physics.analyzers.pionana.Pandora2CaloSCE: "pandora2calinoxyzt"
 physics.analyzers.pionana.HitTag: "hitpdune"
 physics.analyzers.pionana.Verbose: true
 physics.analyzers.pionana.DoReweight: false 
 physics.analyzers.pionana.DoProtReweight: false 
-physics.analyzers.pionana.CalibrationPars: @local::CalorimetryParameters_SPProd3_MC_SCE_eLT
+physics.analyzers.pionana.CalibrationPars: @local::CalorimetryParameters_SPProd3_MC_SCE #_eLT
+physics.analyzers.pionana.CalibrationPars.E_field_correction: "SpaceChargeProtoDUNE/SCE_DataDriven_180kV_v4.root"
 services.ParticleInventoryService.ParticleInventory.EveIdCalculator: "EmEveIdCalculator"
 #physics.analyzers.pionana.SaveHits: true

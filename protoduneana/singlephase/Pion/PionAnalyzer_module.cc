@@ -38,6 +38,7 @@
 #include "protoduneana/Utilities/ProtoDUNEPFParticleUtils.h"
 #include "protoduneana/Utilities/ProtoDUNEBeamlineUtils.h"
 #include "protoduneana/Utilities/ProtoDUNEBeamCuts.h"
+#include "protoduneana/Utilities/G4ReweightUtils.h"
 //#include "dune/Protodune/singlephase/DataUtils/ProtoDUNEDataUtils.h"
 
 //#include "dune/Protodune/singlephase/DataUtils/ProtoDUNECalibration.h"
@@ -59,6 +60,7 @@
 #include "geant4reweight/src/ReweightBase/G4ReweightStep.hh"
 #include "geant4reweight/src/PropBase/G4ReweightParameterMaker.hh"
 #include "geant4reweight/src/ReweightBase/G4MultiReweighter.hh"
+#include "geant4reweight/src/ReweightBase/G4ReweightManager.hh"
 
 
 
@@ -111,76 +113,6 @@ namespace pionana {
     return results;
   }
 
-  // const sim::IDE * getMatchedIDEFromHit( const recob::Hit & hit, art::ServiceHandle<cheat::BackTrackerService> bt ){
-
-  //   const sim::IDE * result = 0x0;
-
-  //   auto ides = bt->HitToSimIDEs_Ps(hit);
-  //   if( ides.size() ){
-  //     std::sort( ides.begin(), ides.end(), []( const sim::IDE * a, const sim::IDE * b ){return (a->numElectrons > b->numElectrons);} );
-  //     //std::sort( reco_beam_calo_points.begin(), reco_beam_calo_points.end(), [](calo_point a, calo_point b) {return ( a.wire < b.wire );} );
-  //     result = ides[0];
-  //   }
-
-  //   return result;
-  // }
-
-  // std::pair< int, double > getTrueSliceFromRecoHit_electrons( const recob::Hit & hit, art::ServiceHandle<cheat::BackTrackerService> bt, const std::map< int, std::vector< const sim::IDE* > > & true_slices, int beam_id ){
-
-  //   std::pair< int, double > result(-999,-999.);
-
-
-  //   auto ides = bt->HitToSimIDEs_Ps(hit);
-
-  //   std::map< int, double > ID_to_IDE_electrons;
-
-  //   //First, check if the hit is matched to the beam id
-  //   for( size_t i = 0; i < ides.size(); ++i ){
-  //     ID_to_IDE_electrons[ abs( ides[i]->trackID ) ] += ides[i]->numElectrons;
-  //   }
-
-  //   int max_id = -999;
-  //   double prev_max_electrons = -999.;
-  //   for( auto it = ID_to_IDE_electrons.begin(); it != ID_to_IDE_electrons.end(); ++it ){
-  //     if( it->second > prev_max_electrons ){
-  //       max_id = it->first;
-  //       prev_max_electrons = it->second;
-  //     }
-  //   }
-  //   //If it's not matched to beam, return default
-  //   if( max_id != beam_id ) return result;
-
-  //   std::map< int, double > slice_to_nElectrons;
-  //   //Now, count the number of electrons from ides in this hit ordered by slice number
-  //   for( size_t i = 0; i < ides.size(); ++i ){
-  //     const sim::IDE * theIDE = ides[i];
-  //     for( auto it = true_slices.begin(); it != true_slices.end(); ++it ){
-  //       if( std::find( it->second.begin(), it->second.end(), theIDE ) != it->second.end() ){
-  //         slice_to_nElectrons[it->first] += theIDE->numElectrons;
-  //         break;
-  //       }
-  //     }
-  //   }
-
-  //   //Find the slice with the max number of ides
-  //   double prev_max = 0;
-  //   int max_index = -999;
-  //   for( auto it = slice_to_nElectrons.begin(); it != slice_to_nElectrons.end(); ++it ){
-  //     if( it->second > prev_max ){
-  //       max_index = it->first;
-  //       prev_max = it->second;
-  //     }
-  //     else if( it->second > 0 && it->second == prev_max ){
-  //       MF_LOG_WARNING("PionAnalyzer")  << "Found double match " << max_index << " " << it->first << std::endl;
-  //     }
-  //   }
-  //   if( max_index > -999 ) result = { max_index, prev_max };
-
-
-
-  //   return result;
-  // }
-
   std::vector< std::pair< int, double > > getTrueSliceListFromRecoHit_electrons(detinfo::DetectorClocksData const& clockData,
                                                                                 const recob::Hit & hit, art::ServiceHandle<cheat::BackTrackerService> bt, const std::map< int, std::vector< const sim::IDE* > > & true_slices, int beam_id ){
 
@@ -228,62 +160,6 @@ namespace pionana {
     return pair_vec;
   }
 
-  // std::pair< int,size_t > getTrueSliceFromRecoHit( const recob::Hit & hit, art::ServiceHandle<cheat::BackTrackerService> bt, const std::map< int, std::vector< const sim::IDE* > > & true_slices, int beam_id ){
-
-  //   std::pair< int,size_t > result(-999,9999);
-
-  //   std::map< int, size_t > slice_to_nMatched;
-
-  //   auto ides = bt->HitToSimIDEs_Ps(hit);
-
-  //   std::map< int, double > ID_to_IDE_electrons;
-
-  //   //First, check if the hit is matched to the beam id
-  //   for( size_t i = 0; i < ides.size(); ++i ){
-  //     ID_to_IDE_electrons[ abs( ides[i]->trackID ) ] += ides[i]->numElectrons;
-  //   }
-
-  //   int max_id = -999;
-  //   double prev_max_electrons = -999.;
-  //   for( auto it = ID_to_IDE_electrons.begin(); it != ID_to_IDE_electrons.end(); ++it ){
-  //     if( it->second > prev_max_electrons ){
-  //       max_id = it->first;
-  //       prev_max_electrons = it->second;
-  //     }
-  //   }
-  //   //If it's not matched to beam, return default
-  //   if( max_id != beam_id ) return result;
-
-  //   //Now, count the number of ides in this hit ordered by slice number
-  //   for( size_t i = 0; i < ides.size(); ++i ){
-  //     const sim::IDE * theIDE = ides[i];
-  //     for( auto it = true_slices.begin(); it != true_slices.end(); ++it ){
-  //       if( std::find( it->second.begin(), it->second.end(), theIDE ) != it->second.end() ){
-  //         slice_to_nMatched[it->first]++;
-  //         break;
-  //       }
-  //     }
-  //   }
-
-  //   //Find the slice with the max number of ides
-  //   size_t prev_max = 0;
-  //   int max_index = -999;
-  //   for( auto it = slice_to_nMatched.begin(); it != slice_to_nMatched.end(); ++it ){
-  //     if( it->second > prev_max ){
-  //       max_index = it->first;
-  //       prev_max = it->second;
-  //     }
-  //     else if( it->second > 0 && it->second == prev_max ){
-  //       MF_LOG_WARNING("PionAnalyzer")  << "Found double match " << max_index << " " << it->first << std::endl;
-  //     }
-  //   }
-  //   if( max_index > -999 ) result = { max_index, prev_max };
-
-
-
-  //   return result;
-  // }
-
   double total_electrons( std::vector< const sim::IDE* > ides ){
     double result = 0.;
     for( size_t i = 0; i < ides.size(); ++i ){
@@ -316,14 +192,6 @@ namespace pionana {
 
     return max_id;
   }
-
-  enum RecoVertexType{
-    kUnmatched,
-    kInelastic,
-    kElastic,
-    kBoth,
-    kOther
-  };
 
   struct cnnOutput2D{
 
@@ -389,6 +257,9 @@ namespace pionana {
   }
 }
 
+using protoana::G4ReweightUtils::CreateRWTraj;
+using protoana::G4ReweightUtils::CreateNRWTrajs;
+
 pionana::cnnOutput2D::cnnOutput2D() : track(0), em(0), michel(0), none(0), nHits(0) { }
 
 class pionana::PionAnalyzer : public art::EDAnalyzer {
@@ -427,19 +298,15 @@ private:
   int MC;
 
   //functions
-  bool CreateRWTraj(const simb::MCParticle & part,
+  /*bool CreateRWTraj(const simb::MCParticle & part,
                     const sim::ParticleList & plist,
                     art::ServiceHandle < geo::Geometry > geo_serv, int event,
-                    G4ReweightTraj * theTraj);
+                    G4ReweightTraj * theTraj);*/
 
-  std::vector<G4ReweightTraj *> CreateNRWTrajs(
+  /*std::vector<G4ReweightTraj *> CreateNRWTrajs(
       const simb::MCParticle & part,
       const sim::ParticleList & plist,
-      art::ServiceHandle < geo::Geometry > geo_serv, int event);
-
-  //void line(double t, double * p, double & x, double & y, double & z);
-  //const void SumDistance2(int &, double *, double & sum, double * par, int);
-  //double distance2(double x, double y, double z, double * p);
+      art::ServiceHandle < geo::Geometry > geo_serv, int event);*/
 
   /////////////////////////////////////////////
   //Truth level info of the primary beam particle
@@ -466,7 +333,7 @@ private:
   double true_beam_endPx;
   double true_beam_endPy;
   double true_beam_endPz;
-  double true_beam_endP;
+  double true_beam_endP, true_beam_endP2, true_beam_last_len;
 
   int  true_beam_nElasticScatters;
   int  true_beam_nHits;
@@ -475,11 +342,7 @@ private:
                         true_beam_elastic_deltaE, true_beam_elastic_IDE_edep;
 
   double true_beam_IDE_totalDep;
-  bool true_beam_IDE_found_in_recoVtx;
   std::vector< std::string > true_beam_processes;
-  std::vector< int > true_beam_process_dSlice;
-  std::vector< int > true_beam_process_slice;
-  std::vector< int > true_beam_process_matched;
 
 
   std::vector< std::vector< int > > true_beam_reco_byHits_PFP_ID, true_beam_reco_byHits_PFP_nHits,
@@ -546,7 +409,6 @@ private:
   //EDIT: STANDARDIZE
   double reco_beam_startX, reco_beam_startY, reco_beam_startZ;
   double reco_beam_endX, reco_beam_endY, reco_beam_endZ;
-  double reco_beam_vtxX, reco_beam_vtxY, reco_beam_vtxZ;
   double reco_beam_len, reco_beam_alt_len;
   double reco_beam_vertex_michel_score;
   int reco_beam_vertex_nHits;
@@ -562,6 +424,7 @@ private:
   double reco_beam_trackEndDirX, reco_beam_trackEndDirY, reco_beam_trackEndDirZ;
   std::vector< double > reco_beam_dEdX, reco_beam_dQdX, reco_beam_resRange, reco_beam_TrkPitch;
   std::vector< double > reco_beam_calo_wire, reco_beam_calo_tick, reco_beam_calo_wire_z;
+  std::vector<std::vector<double>> reco_beam_calo_IDE_Zs;
   std::vector<int> reco_beam_calo_TPC;
   std::vector< double > reco_beam_calibrated_dEdX;
 
@@ -572,17 +435,10 @@ private:
   //fix
   bool reco_beam_passes_beam_cuts;              
 
-  int reco_beam_nTrackDaughters, reco_beam_nShowerDaughters;
   int reco_beam_type;
   double reco_beam_Chi2_proton;
   int    reco_beam_Chi2_ndof;
 
-  std::vector< double > reco_beam_cosmic_candidate_upper_hits;
-  std::vector< double > reco_beam_cosmic_candidate_lower_hits;
-  std::vector< int > reco_beam_cosmic_candidate_ID;
-  bool beam_has_cosmic_IDE;
-  std::vector< int > cosmic_has_beam_IDE;
-  int n_cosmics_with_beam_IDE;
   ////////////////////////
 
   //For all track info 
@@ -631,10 +487,10 @@ private:
 
   std::vector< double > reco_beam_incidentEnergies;
   double reco_beam_interactingEnergy;
-  std::vector< double > true_beam_incidentEnergies/*, new_true_beam_incidentEnergies*/;
-  std::vector< int >    true_beam_slices, true_beam_slices_found, true_beam_slices_nIDEs;
+  std::vector< double > true_beam_incidentEnergies;
+  std::vector< int >    true_beam_slices, true_beam_slices_found;
   std::vector< double > true_beam_slices_deltaE;
-  double true_beam_interactingEnergy/*, new_true_beam_interactingEnergy*/;
+  double true_beam_interactingEnergy;
   double em_energy;
   std::vector<double> true_beam_traj_X;
   std::vector<double> true_beam_traj_Y;
@@ -665,80 +521,14 @@ private:
   /////////////////////////////////////////////////////
   //Info from the BI if using Real Data
   /////////////////////////////////////////////////////
-  double data_BI_P;
-  std::vector<double> data_BI_TOF;
-  std::vector< int > data_BI_PDG_candidates, data_BI_TOF_Chan;
-  double data_BI_X, data_BI_Y, data_BI_Z;
-  double data_BI_dirX, data_BI_dirY, data_BI_dirZ;
-  int data_BI_nFibersP1, data_BI_nFibersP2, data_BI_nFibersP3;
-  int data_BI_nTracks, data_BI_nMomenta;
+  double beam_inst_P;
+  std::vector<double> beam_inst_TOF;
+  std::vector< int > beam_inst_PDG_candidates, beam_inst_TOF_Chan;
+  double beam_inst_X, beam_inst_Y, beam_inst_Z;
+  double beam_inst_dirX, beam_inst_dirY, beam_inst_dirZ;
+  int beam_inst_nFibersP1, beam_inst_nFibersP2, beam_inst_nFibersP3;
+  int beam_inst_nTracks, beam_inst_nMomenta;
   ////////////////////////////////////////////////////
-
-
-
-  //EDIT: quality_reco_xxx
-  bool quality_reco_view_0_hits_in_TPC5, quality_reco_view_1_hits_in_TPC5, quality_reco_view_2_hits_in_TPC5;
-  ///BR-MS
-  std::vector< double > quality_reco_view_0_wire, quality_reco_view_0_tick;
-  std::vector< double > quality_reco_view_1_wire, quality_reco_view_1_tick;
-  std::vector< double > quality_reco_view_2_wire, quality_reco_view_2_tick;
-  std::vector< double > quality_reco_view_2_z;
-  double quality_reco_view_0_max_segment, quality_reco_view_1_max_segment, quality_reco_view_2_max_segment;
-  double quality_reco_view_0_wire_backtrack, quality_reco_view_1_wire_backtrack, quality_reco_view_2_wire_backtrack;
-
-  double quality_reco_max_lateral, quality_reco_max_segment;
-  //////
-
-
-
-
-
-
-  //Reco-level info of the reconstructed daughters coming out of the
-  //reconstructed beam tracl
-  //
-  //
-  //EDIT: daughter_xxx --> daughter_trk_xxx
-  //
-  //quality_reco_daughter_trk_byY_completeness...
-  /*
-  std::vector< double > reco_daughter_true_byE_completeness;
-
-  //EDIT: truth --> true_byY_xxx
-  std::vector< int > reco_daughter_true_byE_PDG;
-  std::vector< int > reco_daughter_true_byE_ID;
-  std::vector< int > reco_daughter_true_byE_origin;
-  std::vector< int > reco_daughter_true_byE_parID;
-  std::vector< int > reco_daughter_true_byE_parPDG;
-  std::vector< std::string > reco_daughter_true_byE_process;
-  std::vector< double > reco_daughter_true_byE_purity;
-
-  std::vector< int > reco_daughter_true_byHits_PDG;
-  std::vector< int > reco_daughter_true_byHits_ID;
-  std::vector< int > reco_daughter_true_byHits_origin;
-  std::vector< int > reco_daughter_true_byHits_parID;
-  std::vector< int > reco_daughter_true_byHits_parPDG;
-  std::vector< std::string > reco_daughter_true_byHits_process;
-  std::vector< double > reco_daughter_true_byHits_purity;
-  std::vector< size_t > reco_daughter_true_byHits_sharedHits, reco_daughter_true_byHits_emHits;
-
-  std::vector< double > reco_daughter_true_byHits_len;
-  std::vector< double > reco_daughter_true_byHits_startX;
-  std::vector< double > reco_daughter_true_byHits_startY;
-  std::vector< double > reco_daughter_true_byHits_startZ;
-  std::vector< double > reco_daughter_true_byHits_endX;
-  std::vector< double > reco_daughter_true_byHits_endY;
-  std::vector< double > reco_daughter_true_byHits_endZ;
-  std::vector< double > reco_daughter_true_byHits_startPx;
-  std::vector< double > reco_daughter_true_byHits_startPy;
-  std::vector< double > reco_daughter_true_byHits_startPz;
-  std::vector< double > reco_daughter_true_byHits_startP;
-  std::vector< double > reco_daughter_true_byHits_startE;
-
-  //EDIT: reco_daughter_true_byXXX_isPrimary
-  bool reco_daughter_true_byE_isPrimary;
-  */
-  /// Add by hits?
 
 
   //Alternative Reco values
@@ -838,59 +628,6 @@ private:
                       reco_daughter_allShower_energy;
 
 
-  //EDIT: STANDARDIZE
-  //
-  //EDIT: reco_daughter_show_true_byHits_PDG
-  /*
-  std::vector< int > reco_daughter_shower_true_byHits_PDG;
-  std::vector< int > reco_daughter_shower_true_byHits_ID;
-  std::vector< int > reco_daughter_shower_true_byHits_origin;
-  std::vector< int > reco_daughter_shower_true_byHits_parID;
-  std::vector< int > reco_daughter_shower_true_byHits_parPDG;
-  std::vector< std::string > reco_daughter_shower_true_byHits_process;
-  std::vector< double > reco_daughter_shower_true_byHits_purity;
-  std::vector< double > reco_daughter_shower_true_byHits_startPx;
-  std::vector< double > reco_daughter_shower_true_byHits_startPy;
-  std::vector< double > reco_daughter_shower_true_byHits_startPz;
-  std::vector< double > reco_daughter_shower_true_byHits_startP;
-  std::vector< std::string>  reco_daughter_shower_true_byHits_endProcess;
-  //EDIT: reco_daughter_show_ID
-  std::vector< int > reco_daughter_showerID;
-  std::vector< int > reco_daughter_shower_true_byE_PDG;
-  std::vector< int > reco_daughter_shower_true_byE_ID;
-  std::vector< int > reco_daughter_shower_true_byE_origin;
-  std::vector< int > reco_daughter_shower_true_byE_parID;
-  std::vector< int > reco_daughter_shower_true_byE_parPDG;
-  std::vector< double > reco_daughter_shower_true_byE_startPx;
-  std::vector< double > reco_daughter_shower_true_byE_startPy;
-  std::vector< double > reco_daughter_shower_true_byE_startPz;
-  std::vector< double > reco_daughter_shower_true_byE_startP;
-  std::vector< std::string>  reco_daughter_shower_true_byE_endProcess;
-  std::vector< std::vector< double > > reco_daughter_dEdX, reco_daughter_dQdX, reco_daughter_resRange;
-  */
-
-
-  ///Reconstructed Daughter Info
-  //  --- Tracks
-  /*
-  std::vector< int > reco_daughter_trackID;
-  std::vector< double > reco_daughter_startX, reco_daughter_endX;
-  std::vector< double > reco_daughter_startY, reco_daughter_endY;
-  std::vector< double > reco_daughter_startZ, reco_daughter_endZ;
-  std::vector< double > reco_daughter_deltaR;
-  std::vector< double > reco_daughter_dR;
-  std::vector< double > reco_daughter_to_vertex;
-  std::vector< int >    reco_daughter_slice;
-  std::vector< double > reco_daughter_len;
-  std::vector< double > reco_daughter_trackScore;
-  std::vector< double > reco_daughter_emScore;
-  std::vector< double > reco_daughter_michelScore;
-  std::vector< double > reco_daughter_Chi2_proton;
-  std::vector< int >    reco_daughter_Chi2_ndof;
-
-  std::vector< double > reco_daughter_momByRange_proton;
-  std::vector< double > reco_daughter_momByRange_muon;
-  */
   std::vector<double> reco_daughter_allTrack_momByRange_proton;
   std::vector<double> reco_daughter_allTrack_momByRange_muon;
   double reco_beam_momByRange_proton;
@@ -901,25 +638,8 @@ private:
   double reco_beam_momByRange_alt_proton;
   double reco_beam_momByRange_alt_muon;
 
-  ///Reconstructed Daughter Info
-  //  --- Showers
-  /*
-  std::vector< double > reco_daughter_shower_startX;
-  std::vector< double > reco_daughter_shower_startY;
-  std::vector< double > reco_daughter_shower_startZ;
-  std::vector< double > reco_daughter_shower_len;
-  std::vector< double > reco_daughter_shower_to_vertex;
-  std::vector< std::vector< double > > reco_daughter_shower_dEdX, reco_daughter_shower_dQdX, reco_daughter_shower_resRange;
-  std::vector< double > reco_daughter_shower_trackScore;
-  std::vector< double > reco_daughter_shower_emScore;
-  std::vector< double > reco_daughter_shower_michelScore;
-  std::vector< double > reco_daughter_shower_Chi2_proton;
-  std::vector< int >    reco_daughter_shower_Chi2_ndof;
-  */
-
   //New hits info
   std::vector< double > reco_beam_spacePts_X, reco_beam_spacePts_Y, reco_beam_spacePts_Z;
-  //reco_daughter_(trk/show)_spacePts_(X,Y,Z)
   std::vector< std::vector< double > > reco_daughter_spacePts_X, reco_daughter_spacePts_Y, reco_daughter_spacePts_Z;
   std::vector< std::vector< double > > reco_daughter_shower_spacePts_X, reco_daughter_shower_spacePts_Y, reco_daughter_shower_spacePts_Z;
 
@@ -948,18 +668,20 @@ private:
   fhicl::ParameterSet CalibrationPars;
   protoana::ProtoDUNECalibration calibration;
   bool fSaveHits;
-  bool fCheckCosmics;
+  bool fSkipMVA;
   bool fTrueToReco;
   bool fDoReweight;
   bool fDoProtReweight;
+  bool fGetTrackMichel;
   bool fMCHasBI;
 
   //Geant4Reweight stuff
-  TFile * FracsFile, * XSecFile;
-  TFile * ProtFracsFile, * ProtXSecFile;
+  TFile * FracsFile;
+  TFile * ProtFracsFile;
   std::vector<fhicl::ParameterSet> ParSet;
   G4ReweightParameterMaker ParMaker;
   G4MultiReweighter * MultiRW, * ProtMultiRW;
+  G4ReweightManager * RWManager;
   //G4ReweighterFactory RWFactory;
   //G4Reweighter * theRW;
 };
@@ -968,7 +690,6 @@ private:
 pionana::PionAnalyzer::PionAnalyzer(fhicl::ParameterSet const& p)
   : EDAnalyzer{p}  ,
   fTrackModuleLabel(p.get< art::InputTag >("TrackModuleLabel")),
-
   fCalorimetryTag(p.get<std::string>("CalorimetryTag")),
   fPandora2CaloSCE(p.get<std::string>("Pandora2CaloSCE")),
   fTrackerTag(p.get<std::string>("TrackerTag")),
@@ -986,10 +707,11 @@ pionana::PionAnalyzer::PionAnalyzer(fhicl::ParameterSet const& p)
   CalibrationPars(p.get<fhicl::ParameterSet>("CalibrationPars")),
   calibration(p.get<fhicl::ParameterSet>("CalibrationPars")),
   fSaveHits( p.get<bool>( "SaveHits" ) ),
-  fCheckCosmics( p.get<bool>( "CheckCosmics" ) ),
+  fSkipMVA( p.get<bool>( "SkipMVA" ) ),
   fTrueToReco( p.get<bool>( "TrueToReco" ) ),
   fDoReweight(p.get<bool>("DoReweight")),
-  fDoProtReweight(p.get<bool>("DoProtReweight")) {
+  fDoProtReweight(p.get<bool>("DoProtReweight")),
+  fGetTrackMichel(p.get<bool>("GetTrackMichel")) {
 
   templates[ 211 ]  = (TProfile*)dEdX_template_file.Get( "dedx_range_pi"  );
   templates[ 321 ]  = (TProfile*)dEdX_template_file.Get( "dedx_range_ka"  );
@@ -999,34 +721,28 @@ pionana::PionAnalyzer::PionAnalyzer(fhicl::ParameterSet const& p)
   //calibration = protoana::ProtoDUNECalibration( CalibrationPars );
   beam_cuts = protoana::ProtoDUNEBeamCuts( BeamCuts );
 
-
-  //FracsFile( (p.get< std::string >( "FracsFile" )).c_str(), "OPEN" ),
-  //XSecFile( (p.get< std::string >( "XSecFile" )).c_str(), "OPEN"),
-  //ParSet(p.get<std::vector<fhicl::ParameterSet>>("ParameterSet")),
-  //ParMaker(ParSet),
-  //MultiRW(211, XSecFile, FracsFile, ParSet)
+  if (fDoReweight || fDoProtReweight) {
+    RWManager = new G4ReweightManager({p.get<fhicl::ParameterSet>("Material")});
+  }
 
   if (fDoReweight) {
     FracsFile =  new TFile((p.get< std::string >( "FracsFile" )).c_str(), "OPEN" );
-    XSecFile = new TFile((p.get< std::string >( "XSecFile" )).c_str(), "OPEN");
     ParSet = p.get<std::vector<fhicl::ParameterSet>>("ParameterSet");
     ParMaker = G4ReweightParameterMaker(ParSet);
-    MultiRW = new G4MultiReweighter(211, *XSecFile, *FracsFile, ParSet/*, 100, 0*/);
-
-    //theRW = RWFactory.BuildReweighter( 211, XSecFile, FracsFile, ParMaker.GetFSHists(), ParMaker.GetElasticHist()/*, true*/ );
+    MultiRW = new G4MultiReweighter(211, *FracsFile, ParSet,
+                                    p.get<fhicl::ParameterSet>("Material"),
+                                    RWManager);
   }
   if (fDoProtReweight) {
     ProtFracsFile =  new TFile((p.get<std::string>("ProtFracsFile")).c_str(),
                                "OPEN");
-    ProtXSecFile = new TFile((p.get<std::string>("ProtXSecFile")).c_str(),
-                             "OPEN");
     ParSet = p.get<std::vector<fhicl::ParameterSet>>("ParameterSet");
     ParMaker = G4ReweightParameterMaker(ParSet);
-    ProtMultiRW = new G4MultiReweighter(2212, *ProtXSecFile, *ProtFracsFile,
-                                        ParSet);
+    ProtMultiRW = new G4MultiReweighter(2212, *ProtFracsFile, ParSet,
+                                    p.get<fhicl::ParameterSet>("Material"),
+                                    RWManager);
   }
 
-  // Call appropriate consumes<>() for any products to be retrieved by this module.
 }
 
 void pionana::PionAnalyzer::analyze(art::Event const & evt) {
@@ -1048,88 +764,48 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
   auto pfpVec = evt.getValidHandle< std::vector< recob::PFParticle > >( fPFParticleTag );
   protoana::ProtoDUNETruthUtils                         truthUtil;
 
-/* //For attempting to get the beam PFParticle by-hand
-  std::cout << "Got " << pfpVec->size() << " PFPs" << std::endl;
-  //for (size_t i = 0; i < pfpVec->size(); ++i) {
-  for (const recob::PFParticle & pfp : (*pfpVec)) {
-    //const recob::PFParticle * pfp =  
-    std::cout << pfp.Self() << std::endl;
-    const recob::Track* tempTrack = pfpUtil.GetPFParticleTrack(pfp, evt,
-                                                               fPFParticleTag,
-                                                               fTrackerTag);
-    if (tempTrack) {
-      double startX = tempTrack->Start().X();
-      double startY = tempTrack->Start().Y();
-      double startZ = tempTrack->Start().Z();
-
-      double endX = tempTrack->End().X();
-      double endY = tempTrack->End().Y();
-      double endZ = tempTrack->End().Z();
-
-      //Flipped
-      if (startZ < endZ) {
-        if (startZ < 40. && startZ > 20. &&
-            startY < 475. && startY > 375. && 
-            startX < 0. && startX > -40.) {
-          std::cout << startX << " " << startY << " " << startZ << std::endl;
-          protoana::MCParticleSharedHits match =
-              truthUtil.GetMCParticleByHits( pfp, evt, fPFParticleTag, fHitTag );
-          std::cout << match.particle->TrackId() << std::endl;
-        }
-      }
-      else {
-        if (endZ < 40. && endZ > 20. &&
-            endY < 475. && endY > 375. && 
-            endX < 0. && endX > -40.) {
-          std::cout << endX << " " << endY << " " << endZ << std::endl;
-          protoana::MCParticleSharedHits match =
-              truthUtil.GetMCParticleByHits( pfp, evt, fPFParticleTag, fHitTag );
-          std::cout << match.particle->TrackId() << std::endl;
-        }
-      }
-    }
-  }
-  */
-
   protoana::ProtoDUNETrackUtils                         trackUtil;
   art::ServiceHandle<geo::Geometry> geom;
-  for (const recob::PFParticle & pfp : (*pfpVec)) {
-    //const recob::PFParticle * pfp =  
-    //std::cout << pfp.Self() << std::endl;
-    const recob::Track* tempTrack = pfpUtil.GetPFParticleTrack(pfp, evt,
-                                                               fPFParticleTag,
-                                                               fTrackerTag);
-    if (tempTrack) {
-      double startX = tempTrack->Start().X();
-      double startY = tempTrack->Start().Y();
-      double startZ = tempTrack->Start().Z();
 
-      double endX = tempTrack->End().X();
-      double endY = tempTrack->End().Y();
-      double endZ = tempTrack->End().Z();
+  if (fGetTrackMichel && !fSkipMVA) {
+    for (const recob::PFParticle & pfp : (*pfpVec)) {
+      //const recob::PFParticle * pfp =  
+      //std::cout << pfp.Self() << std::endl;
+      const recob::Track* tempTrack = pfpUtil.GetPFParticleTrack(pfp, evt,
+                                                                 fPFParticleTag,
+                                                                 fTrackerTag);
+      if (tempTrack) {
+        double startX = tempTrack->Start().X();
+        double startY = tempTrack->Start().Y();
+        double startZ = tempTrack->Start().Z();
 
-      double start[3] = {startX, startY, startZ};
-      double end[3] = {endX, endY, endZ};
-      int end_tpc = geom->FindTPCAtPosition(end).TPC;
-      int start_tpc = geom->FindTPCAtPosition(start).TPC;
+        double endX = tempTrack->End().X();
+        double endY = tempTrack->End().Y();
+        double endZ = tempTrack->End().Z();
 
-      if (!((end_tpc == 1 || end_tpc == 5) &&
-            (start_tpc == 1 || start_tpc == 5)))
-        continue;
+        double start[3] = {startX, startY, startZ};
+        double end[3] = {endX, endY, endZ};
+        int end_tpc = geom->FindTPCAtPosition(end).TPC;
+        int start_tpc = geom->FindTPCAtPosition(start).TPC;
 
-      std::pair<double, int> vertex_michel_score =
-          trackUtil.GetVertexMichelScore(*tempTrack, evt, fTrackerTag,
-                                         fHitTag);
+        if (!((end_tpc == 1 || end_tpc == 5) &&
+              (start_tpc == 1 || start_tpc == 5)))
+          continue;
 
-      reco_track_michel_score.push_back(vertex_michel_score.first);
-      reco_track_nHits.push_back(vertex_michel_score.second);
-      reco_track_ID.push_back(tempTrack->ID());
-      reco_track_startX.push_back(startX);
-      reco_track_startY.push_back(startY);
-      reco_track_startZ.push_back(startZ);
-      reco_track_endX.push_back(endX);
-      reco_track_endY.push_back(endY);
-      reco_track_endZ.push_back(endZ);
+        std::pair<double, int> vertex_michel_score =
+            trackUtil.GetVertexMichelScore(*tempTrack, evt, fTrackerTag,
+                                           fHitTag);
+
+        reco_track_michel_score.push_back(vertex_michel_score.first);
+        reco_track_nHits.push_back(vertex_michel_score.second);
+        reco_track_ID.push_back(tempTrack->ID());
+        reco_track_startX.push_back(startX);
+        reco_track_startY.push_back(startY);
+        reco_track_startZ.push_back(startZ);
+        reco_track_endX.push_back(endX);
+        reco_track_endY.push_back(endY);
+        reco_track_endZ.push_back(endZ);
+      }
     }
   }
 
@@ -1202,34 +878,34 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
     int nMomenta = momenta.size();
 
     if( nMomenta > 0 )
-      data_BI_P = momenta[0];
+      beam_inst_P = momenta[0];
 
     const std::vector<double> the_tofs = beamEvent.GetTOFs();
     const std::vector<int> the_chans = beamEvent.GetTOFChans();
     for (size_t iTOF = 0; iTOF < the_tofs.size(); ++iTOF) {
-      data_BI_TOF.push_back(the_tofs[iTOF]);
-      data_BI_TOF_Chan.push_back(the_chans[iTOF]);
+      beam_inst_TOF.push_back(the_tofs[iTOF]);
+      beam_inst_TOF_Chan.push_back(the_chans[iTOF]);
     }
 
     if( nTracks > 0 ){
-      data_BI_X = beamEvent.GetBeamTracks()[0].Trajectory().End().X();
-      data_BI_Y = beamEvent.GetBeamTracks()[0].Trajectory().End().Y();
-      data_BI_Z = beamEvent.GetBeamTracks()[0].Trajectory().End().Z();
+      beam_inst_X = beamEvent.GetBeamTracks()[0].Trajectory().End().X();
+      beam_inst_Y = beamEvent.GetBeamTracks()[0].Trajectory().End().Y();
+      beam_inst_Z = beamEvent.GetBeamTracks()[0].Trajectory().End().Z();
 
-      data_BI_dirX = beamEvent.GetBeamTracks()[0].Trajectory().EndDirection().X();
-      data_BI_dirY = beamEvent.GetBeamTracks()[0].Trajectory().EndDirection().Y();
-      data_BI_dirZ = beamEvent.GetBeamTracks()[0].Trajectory().EndDirection().Z();
+      beam_inst_dirX = beamEvent.GetBeamTracks()[0].Trajectory().EndDirection().X();
+      beam_inst_dirY = beamEvent.GetBeamTracks()[0].Trajectory().EndDirection().Y();
+      beam_inst_dirZ = beamEvent.GetBeamTracks()[0].Trajectory().EndDirection().Z();
     }
 
-    data_BI_nTracks = nTracks;
-    data_BI_nMomenta = nMomenta;
+    beam_inst_nTracks = nTracks;
+    beam_inst_nMomenta = nMomenta;
 
     std::vector< int > pdg_cands = fBeamlineUtils.GetPID( beamEvent, 1. );
-    data_BI_PDG_candidates.insert( data_BI_PDG_candidates.end(), pdg_cands.begin(), pdg_cands.end() );
+    beam_inst_PDG_candidates.insert( beam_inst_PDG_candidates.end(), pdg_cands.begin(), pdg_cands.end() );
 
-    data_BI_nFibersP1 = beamEvent.GetActiveFibers( "XBPF022697" ).size();
-    data_BI_nFibersP2 = beamEvent.GetActiveFibers( "XBPF022701" ).size();
-    data_BI_nFibersP3 = beamEvent.GetActiveFibers( "XBPF022702" ).size();
+    beam_inst_nFibersP1 = beamEvent.GetActiveFibers( "XBPF022697" ).size();
+    beam_inst_nFibersP2 = beamEvent.GetActiveFibers( "XBPF022701" ).size();
+    beam_inst_nFibersP3 = beamEvent.GetActiveFibers( "XBPF022702" ).size();
   }
   else{ //For MC events
     try{
@@ -1254,38 +930,38 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
       }
 
       if( nMomenta > 0 ){
-        data_BI_P = momenta[0];
-        if (fVerbose) std::cout << "reco P " << data_BI_P << std::endl;
+        beam_inst_P = momenta[0];
+        if (fVerbose) std::cout << "reco P " << beam_inst_P << std::endl;
       }
 
       const std::vector<double> the_tofs = beamEvent.GetTOFs();
       const std::vector<int> the_chans = beamEvent.GetTOFChans();
       for (size_t iTOF = 0; iTOF < the_tofs.size(); ++iTOF) {
-        data_BI_TOF.push_back(the_tofs[iTOF]);
-        data_BI_TOF_Chan.push_back(the_tofs[iTOF]);
+        beam_inst_TOF.push_back(the_tofs[iTOF]);
+        beam_inst_TOF_Chan.push_back(the_tofs[iTOF]);
       }
 
       if( nTracks > 0 ){
-        data_BI_X = beamEvent.GetBeamTracks()[0].Trajectory().End().X();
-        data_BI_Y = beamEvent.GetBeamTracks()[0].Trajectory().End().Y();
-        data_BI_Z = beamEvent.GetBeamTracks()[0].Trajectory().End().Z();
+        beam_inst_X = beamEvent.GetBeamTracks()[0].Trajectory().End().X();
+        beam_inst_Y = beamEvent.GetBeamTracks()[0].Trajectory().End().Y();
+        beam_inst_Z = beamEvent.GetBeamTracks()[0].Trajectory().End().Z();
 
-        data_BI_dirX = beamEvent.GetBeamTracks()[0].Trajectory().EndDirection().X();
-        data_BI_dirY = beamEvent.GetBeamTracks()[0].Trajectory().EndDirection().Y();
-        data_BI_dirZ = beamEvent.GetBeamTracks()[0].Trajectory().EndDirection().Z();
+        beam_inst_dirX = beamEvent.GetBeamTracks()[0].Trajectory().EndDirection().X();
+        beam_inst_dirY = beamEvent.GetBeamTracks()[0].Trajectory().EndDirection().Y();
+        beam_inst_dirZ = beamEvent.GetBeamTracks()[0].Trajectory().EndDirection().Z();
       }
 
-      data_BI_nTracks = nTracks;
-      data_BI_nMomenta = nMomenta;
+      beam_inst_nTracks = nTracks;
+      beam_inst_nMomenta = nMomenta;
 
       /*
       std::vector< int > pdg_cands = fBeamlineUtils.GetPID( beamEvent, 1. );
-      data_BI_PDG_candidates.insert( data_BI_PDG_candidates.end(), pdg_cands.begin(), pdg_cands.end() );
+      beam_inst_PDG_candidates.insert( beam_inst_PDG_candidates.end(), pdg_cands.begin(), pdg_cands.end() );
       */
 
-      data_BI_nFibersP1 = beamEvent.GetActiveFibers( "XBPF022697" ).size();
-      data_BI_nFibersP2 = beamEvent.GetActiveFibers( "XBPF022701" ).size();
-      data_BI_nFibersP3 = beamEvent.GetActiveFibers( "XBPF022702" ).size();
+      beam_inst_nFibersP1 = beamEvent.GetActiveFibers( "XBPF022697" ).size();
+      beam_inst_nFibersP2 = beamEvent.GetActiveFibers( "XBPF022701" ).size();
+      beam_inst_nFibersP3 = beamEvent.GetActiveFibers( "XBPF022702" ).size();
 
       fMCHasBI = true;
     }
@@ -1300,7 +976,16 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
   // Helper to get hits and the 4 associated CNN outputs
   // CNN Outputs: EM, Track, Michel, Empty
   // outputNames: track, em, none, michel
-  anab::MVAReader<recob::Hit,4> hitResults(evt, "emtrkmichelid:emtrkmichel" );
+  std::cout << "About to MVA: " << std::endl;
+  anab::MVAReader<recob::Hit,4> * hitResults = 0x0;
+  std::cout << "MVA: " << std::endl;
+  if (!fSkipMVA) { 
+  std::cout << "Not skipping" << std::endl;
+    hitResults = new anab::MVAReader<recob::Hit, 4>(evt, "emtrkmichelid:emtrkmichel" );
+  }
+  else {
+    std::cout << "Skipping MVA" << std::endl;
+  }
 
   auto allHits = evt.getValidHandle<std::vector<recob::Hit> >(fHitTag);
 
@@ -1446,6 +1131,15 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
     true_beam_endPy    = true_beam_particle->Py(true_np-2);
     true_beam_endPz    = true_beam_particle->Pz(true_np-2);
     true_beam_endP     = true_beam_particle->P(true_np-2);
+    true_beam_endP2     = true_beam_particle->P(true_np-1);
+
+    true_beam_last_len
+        = sqrt(std::pow((true_beam_particle->Position(true_np-2).X() -
+                         true_beam_particle->Position(true_np-1).X()), 2) +
+               std::pow((true_beam_particle->Position(true_np-2).Y() -
+                         true_beam_particle->Position(true_np-1).Y()), 2) +
+               std::pow((true_beam_particle->Position(true_np-2).Z() -
+                         true_beam_particle->Position(true_np-1).Z()), 2));
 
     true_beam_startDirX  = true_beam_startPx / true_beam_startP;
     true_beam_startDirY  = true_beam_startPy / true_beam_startP;
@@ -1558,6 +1252,14 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
 
     if (fVerbose) std::cout << "N view2 IDEs: " << view2_IDEs.size() << std::endl;
 
+    true_beam_IDE_totalDep = 0.;
+    for (size_t i = 0; i < view2_IDEs.size(); ++i) {
+      const sim::IDE * ide = view2_IDEs[i];
+      std::cout << " " << ide->trackID << " " << ide->z << " " << ide->energy <<
+                   std::endl;
+
+      true_beam_IDE_totalDep += ide->energy;
+    }
     //Sort based on ide z-position
     std::sort( view2_IDEs.begin(), view2_IDEs.end(), sort_IDEs );
     std::cout << "Sorted" << std::endl;
@@ -1597,30 +1299,6 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
     else if( abs(true_beam_PDG) == 13 )  mass = 105.66;
 
     double init_KE = sqrt( 1.e6 * true_beam_startP*true_beam_startP + mass*mass ) - mass;
-    /* Old style of creating the Thin slices with the incident particle momentum
-    true_beam_incidentEnergies.push_back( init_KE );
-
-    double slice_end = pitch;
-    double slice_edep = 0.;
-    for( size_t i = 0; i < view2_IDEs.size(); ++i ){
-
-      auto theIDE = view2_IDEs[i];
-
-      if( theIDE->z < 0. ) continue;
-
-      if( theIDE->z > slice_end ){
-        true_beam_incidentEnergies.push_back( true_beam_incidentEnergies.back() - slice_edep );
-        slice_edep = 0.;
-        slice_end += pitch;
-      }
-
-      slice_edep += theIDE->energy;
-    }
-
-    //Remove the last. It's not considered an 'experiment'
-    true_beam_incidentEnergies.pop_back();
-    if( true_beam_incidentEnergies.size() ) true_beam_interactingEnergy = true_beam_incidentEnergies.back();
-    */
 
     //slice up the view2_IDEs up by the wire pitch
     auto sliced_ides = slice_IDEs( view2_IDEs, z0, pitch, true_beam_endZ);
@@ -1645,12 +1323,27 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
           double z0 = true_beam_trajectory.Z(i-1);
           double z1 = true_beam_trajectory.Z(i);
 
+          double x0 = true_beam_trajectory.X(i-1);
+          double y0 = true_beam_trajectory.Y(i-1);
+          double x1 = true_beam_trajectory.X(i);
+          double y1 = true_beam_trajectory.Y(i);
+          geo::Point_t test_point{x0, y0, z0};
+          geo::Point_t test_point_1{x1, y1, z1};
+          const TGeoMaterial * mat = geom->Material(test_point);
+          std::cout << "Point " << i-1 << " (" << x0 << ", " << y0 <<
+                       ", " << z0 << ") Material " << mat->GetName() <<
+                       std::endl;
           if (z0 < ide_z && z1 > ide_z) {
+            const TGeoMaterial * mat1 = geom->Material(test_point_1);
+            std::cout << "Point " << i << " (" << x1 << ", " << y1 <<
+                         ", " << z1 << ") Material " << mat1->GetName() <<
+                         std::endl;
             init_KE = 1.e3 * true_beam_trajectory.E(i-1) - mass;
             if (fVerbose) {
               std::cout << "Found matching position" << z0 << " " << ide_z <<
                            " " << z1 << std::endl;
-              std::cout << "init KE: " << init_KE << std::endl;
+              std::cout << "init KE: " << init_KE << " " <<
+                           (1.e3*true_beam_trajectory.E(i) - mass) << std::endl;
             }
             break;
           }
@@ -1665,7 +1358,6 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
       auto theIDEs = it->second;
 
       true_beam_slices.push_back( it->first );
-      true_beam_slices_nIDEs.push_back( theIDEs.size() );
 
       double deltaE = 0.;
       for( size_t i = 0; i < theIDEs.size(); ++i ){
@@ -1785,8 +1477,16 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
                 pfpUtil.GetPFParticleHits_Ptrs( *thePFP, evt, fPFParticleTag ).size()
               );
 
-              cnnOutput2D theCNNResults = GetCNNOutputFromPFParticle( *thePFP, evt, hitResults, pfpUtil, fPFParticleTag );
-              true_beam_Pi0_decay_reco_byHits_PFP_trackScore.back().push_back( ( ( theCNNResults.nHits > 0 ) ? ( theCNNResults.track / theCNNResults.nHits ) : -999. ) );
+              if (fSkipMVA) {
+                cnnOutput2D theCNNResults = GetCNNOutputFromPFParticle( *thePFP, evt, *hitResults, pfpUtil, fPFParticleTag );
+                double track_score = ((theCNNResults.nHits > 0) ? 
+                                      (theCNNResults.track / theCNNResults.nHits) :
+                                      -999.);
+                true_beam_Pi0_decay_reco_byHits_PFP_trackScore.back().push_back(track_score);
+              }
+              else {
+                true_beam_Pi0_decay_reco_byHits_PFP_trackScore.back().push_back(-999.);
+              }
 
               const recob::Track* pandora2Track = 0x0;
               try{
@@ -1887,8 +1587,19 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
             pfpUtil.GetPFParticleHits_Ptrs( *thePFP, evt, fPFParticleTag ).size()
           );
 
-          cnnOutput2D theCNNResults = GetCNNOutputFromPFParticle( *thePFP, evt, hitResults, pfpUtil, fPFParticleTag );
-          true_beam_daughter_reco_byHits_PFP_trackScore.back().push_back( ( ( theCNNResults.nHits > 0 ) ? ( theCNNResults.track / theCNNResults.nHits ) : -999. ) );
+          if (fSkipMVA) {
+            cnnOutput2D theCNNResults = GetCNNOutputFromPFParticle( *thePFP, evt, *hitResults, pfpUtil, fPFParticleTag );
+            double track_score = ((theCNNResults.nHits > 0) ? 
+                                  (theCNNResults.track / theCNNResults.nHits) :
+                                  -999.);
+            true_beam_daughter_reco_byHits_PFP_trackScore.back().push_back(track_score);
+          }
+          else {
+            true_beam_daughter_reco_byHits_PFP_trackScore.back().push_back(-999.);
+          }
+
+          //cnnOutput2D theCNNResults = GetCNNOutputFromPFParticle( *thePFP, evt, *hitResults, pfpUtil, fPFParticleTag );
+          //true_beam_daughter_reco_byHits_PFP_trackScore.back().push_back( ( ( theCNNResults.nHits > 0 ) ? ( theCNNResults.track / theCNNResults.nHits ) : -999. ) );
 
           const recob::Track* pandora2Track = 0x0;
           try{
@@ -1956,52 +1667,48 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
   reco_beam_PFP_ID = particle->Self();
   const std::vector< art::Ptr< recob::Hit > > beamPFP_hits = pfpUtil.GetPFParticleHits_Ptrs( *particle, evt, fPFParticleTag );
   reco_beam_PFP_nHits = beamPFP_hits.size();
+  if (fSkipMVA) {
+    cnnOutput2D cnn = GetCNNOutputFromPFParticle( *particle, evt, *hitResults, pfpUtil, fPFParticleTag );
+    reco_beam_PFP_trackScore = (cnn.nHits > 0 ?
+                                (cnn.track / cnn.nHits) : -999.);
+    reco_beam_PFP_emScore = (cnn.nHits > 0 ?
+                             (cnn.em / cnn.nHits) : -999.);
+    reco_beam_PFP_michelScore = (cnn.nHits > 0 ?
+                                 (cnn.michel / cnn.nHits) : -999.);
 
-  cnnOutput2D cnn = GetCNNOutputFromPFParticle( *particle, evt, hitResults, pfpUtil, fPFParticleTag );
-  if( cnn.nHits > 0 ){
-    reco_beam_PFP_trackScore = (cnn.track / cnn.nHits);
-    reco_beam_PFP_emScore = (cnn.em / cnn.nHits);
-    reco_beam_PFP_michelScore = (cnn.michel / cnn.nHits);
+    cnnOutput2D cnn_collection = GetCNNOutputFromPFParticleFromPlane( *particle, evt, *hitResults, pfpUtil, fPFParticleTag, 2 );
+    reco_beam_PFP_trackScore_collection = (cnn_collection.nHits > 0 ?
+                                           cnn_collection.track / cnn_collection.nHits : -999.);
+    reco_beam_PFP_emScore_collection = (cnn_collection.nHits > 0 ?
+                                        cnn_collection.em / cnn_collection.nHits : -999.);
+    reco_beam_PFP_michelScore_collection = (cnn_collection.nHits > 0 ?
+                                            cnn_collection.michel / cnn_collection.nHits : -999.);
   }
   else{
     reco_beam_PFP_trackScore =  -999.;
     reco_beam_PFP_emScore = -999.;
     reco_beam_PFP_michelScore = -999.;
-  }
-
-  cnnOutput2D cnn_collection = GetCNNOutputFromPFParticleFromPlane( *particle, evt, hitResults, pfpUtil, fPFParticleTag, 2 );
-  if( cnn_collection.nHits > 0 ){
-    reco_beam_PFP_trackScore_collection = (cnn_collection.track / cnn_collection.nHits);
-    reco_beam_PFP_emScore_collection = (cnn_collection.em / cnn_collection.nHits);
-    reco_beam_PFP_michelScore_collection = (cnn_collection.michel / cnn_collection.nHits);
-  }
-  else{
     reco_beam_PFP_trackScore_collection =  -999.;
     reco_beam_PFP_emScore_collection = -999.;
     reco_beam_PFP_michelScore_collection = -999.;
   }
 
 
-
-
   // Determine if the beam particle is track-like or shower-like
   const recob::Track* thisTrack = pfpUtil.GetPFParticleTrack(*particle,evt,fPFParticleTag,fTrackerTag);
   const recob::Shower* thisShower = pfpUtil.GetPFParticleShower(*particle,evt,fPFParticleTag,fShowerTag);
   if( thisTrack ){
-    // Now we can look for the interaction point of the particle if one exists, i.e where the particle
-    // scatters off an argon nucleus. Shower-like objects won't have an interaction point, so we can
-    // check this by making sure we get a sensible position
-    const TVector3 interactionVtx = pfpUtil.GetPFParticleSecondaryVertex(*particle,evt,fPFParticleTag,fTrackerTag);
-    reco_beam_vtxX = interactionVtx.X();
-    reco_beam_vtxY = interactionVtx.Y();
-    reco_beam_vtxZ = interactionVtx.Z();
-    ////////////////////////////////////////////
-
-    std::pair<double, int> vertex_michel_score =
-        trackUtil.GetVertexMichelScore(*thisTrack, evt, fTrackerTag, fHitTag/*,
-                                       0., -500., 500., 0., 500., 0.*/);
-    reco_beam_vertex_nHits = vertex_michel_score.second;
-    reco_beam_vertex_michel_score = vertex_michel_score.first;
+    if (!fSkipMVA) {
+      std::pair<double, int> vertex_michel_score =
+          trackUtil.GetVertexMichelScore(*thisTrack, evt, fTrackerTag, fHitTag/*,
+                                         0., -500., 500., 0., 500., 0.*/);
+      reco_beam_vertex_nHits = vertex_michel_score.second;
+      reco_beam_vertex_michel_score = vertex_michel_score.first;
+    }
+    else {
+      reco_beam_vertex_nHits = -999;
+      reco_beam_vertex_michel_score = -999.;
+    }
     //std::cout << vertex_michel_score.first << " " << vertex_michel_score.second << std::endl;
 
     if (fVerbose) std::cout << "Beam particle is track-like " << thisTrack->ID() << std::endl;
@@ -2059,32 +1766,6 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
     ////////////////////////////////////////////////////////////////
 
 
-    //An old attempt at determining if the reco failed
-    //and if we should cut out this event
-    //
-    //Might throw this out
-    TVector3 start( reco_beam_startX, reco_beam_startY, reco_beam_startZ );
-    TVector3 dir( reco_beam_trackDirX, reco_beam_trackDirY, reco_beam_trackDirZ );
-    for( size_t i = 0; i < thisTrack->NumberTrajectoryPoints(); ++i ){
-      auto pt = thisTrack->Trajectory().LocationAtPoint(i);
-      if( ( pt.X() - -999. ) < 1.e-6 ) continue;
-
-      TVector3 p( pt.X(), pt.Y(), pt.Z() );
-      double dist = lateralDist( dir, start, p );
-
-      if( dist > quality_reco_max_lateral ) quality_reco_max_lateral = dist;
-
-      if( i < thisTrack->NumberTrajectoryPoints() - 1 ){
-        auto next_pt = thisTrack->Trajectory().LocationAtPoint(i+1);
-        if( ( next_pt.X() - -999. ) > 1.e-6 ){
-
-          TVector3 next_p( next_pt.X(), next_pt.Y(), next_pt.Z() );
-          double segment = ( next_p - p ).Mag();
-          if( segment > quality_reco_max_segment ) quality_reco_max_segment = segment;
-        }
-      }
-    }
-
     std::map< const recob::Hit *, int > hitsToSlices;
     std::map< int, std::vector< const recob::Hit * > > slicesToHits;
 
@@ -2124,64 +1805,6 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
         max_Z = z;
         max_X = y;
         max_Y = x;
-      }
-
-      //Some more attempts at checking reconstruction quality
-      switch( theHit->View() ){
-        case 0:
-          if( theHit->WireID().TPC == 5 )
-            quality_reco_view_0_hits_in_TPC5 = true;
-          quality_reco_view_0_wire.push_back( theHit->WireID().Wire );
-          quality_reco_view_0_tick.push_back( theHit->PeakTime() );
-          view_0_TPC.push_back( theHit->WireID().TPC );
-          break;
-        case 1:
-          if( theHit->WireID().TPC == 5 )
-            quality_reco_view_1_hits_in_TPC5 = true;
-          quality_reco_view_1_wire.push_back( theHit->WireID().Wire );
-          quality_reco_view_1_tick.push_back( theHit->PeakTime() );
-          view_1_TPC.push_back( theHit->WireID().TPC );
-          break;
-        case 2:
-          if( theHit->WireID().TPC == 5 )
-            quality_reco_view_2_hits_in_TPC5 = true;
-          quality_reco_view_2_wire.push_back( theHit->WireID().Wire );
-          quality_reco_view_2_z.push_back( thisTrack->Trajectory().LocationAtPoint(i).Z() );
-          quality_reco_view_2_tick.push_back( theHit->PeakTime() );
-          view_2_TPC.push_back( theHit->WireID().TPC );
-          break;
-        default:
-          break;
-      }
-    }
-
-    for( size_t i = 1; i < quality_reco_view_0_wire.size(); ++i ){
-      double segment = sqrt( (quality_reco_view_0_wire[i] - quality_reco_view_0_wire[i-1])*(quality_reco_view_0_wire[i] - quality_reco_view_0_wire[i-1])
-                           + (quality_reco_view_0_tick[i] - quality_reco_view_0_tick[i-1])*(quality_reco_view_0_tick[i] - quality_reco_view_0_tick[i-1]) );
-      if( segment > quality_reco_view_0_max_segment ) quality_reco_view_0_max_segment = segment;                  
-
-      if( quality_reco_view_0_wire[i] < quality_reco_view_0_wire[i-1] && ( view_0_TPC[i] != 5 && view_0_TPC[i-1] != 5)  ){
-        quality_reco_view_0_wire_backtrack += (quality_reco_view_0_wire[i-1] - quality_reco_view_0_wire[i]);
-      }
-    }
-
-    for( size_t i = 1; i < quality_reco_view_1_wire.size(); ++i ){
-      double segment = sqrt( (quality_reco_view_1_wire[i] - quality_reco_view_1_wire[i-1])*(quality_reco_view_1_wire[i] - quality_reco_view_1_wire[i-1])
-                           + (quality_reco_view_1_tick[i] - quality_reco_view_1_tick[i-1])*(quality_reco_view_1_tick[i] - quality_reco_view_1_tick[i-1]) );
-      if( segment > quality_reco_view_1_max_segment ) quality_reco_view_1_max_segment = segment;                  
-
-      if( quality_reco_view_1_wire[i] > quality_reco_view_1_wire[i-1]  && ( view_1_TPC[i] != 5 && view_1_TPC[i-1] != 5)){
-        quality_reco_view_1_wire_backtrack += (quality_reco_view_1_wire[i] - quality_reco_view_1_wire[i-1]);
-      }
-    }
-
-    for( size_t i = 1; i < quality_reco_view_2_wire.size(); ++i ){
-      double segment = sqrt( (quality_reco_view_2_wire[i] - quality_reco_view_2_wire[i-1])*(quality_reco_view_2_wire[i] - quality_reco_view_2_wire[i-1])
-                           + (quality_reco_view_2_tick[i] - quality_reco_view_2_tick[i-1])*(quality_reco_view_2_tick[i] - quality_reco_view_2_tick[i-1]) );
-      if( segment > quality_reco_view_2_max_segment ) quality_reco_view_2_max_segment = segment;                  
-
-      if( quality_reco_view_2_wire[i] < quality_reco_view_2_wire[i-1]  && ( view_2_TPC[i] != 5 && view_2_TPC[i-1] != 5)){
-        quality_reco_view_2_wire_backtrack += (quality_reco_view_2_wire[i-1] - quality_reco_view_2_wire[i]);
       }
     }
 
@@ -2448,7 +2071,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
         if (evt.isRealData() || fMCHasBI) {
           mass = 139.57;
 
-          init_KE =  sqrt( 1.e6*data_BI_P*data_BI_P + mass*mass ) - mass;
+          init_KE =  sqrt( 1.e6*beam_inst_P*beam_inst_P + mass*mass ) - mass;
          // std::cout << "MC has BI: " << init_KE << std::endl;
         }
         else{
@@ -2678,70 +2301,15 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
             if (reco_beam_hit_to_true_slice[thePoint.hit_index] > max_slice_found)
               max_slice_found = reco_beam_hit_to_true_slice[thePoint.hit_index];
           }
+
+          auto theHit = (*allHits)[thePoint.hit_index];
+          std::vector<const sim::IDE *> ides = bt_serv->HitToSimIDEs_Ps(clockData, theHit);
+          reco_beam_calo_IDE_Zs.push_back(std::vector<double>());
+          for (size_t j = 0; j < ides.size(); ++j) {
+            reco_beam_calo_IDE_Zs.back().push_back(ides[j]->z);
+          }
         }
         if (fVerbose) std::cout << "Max slice found: " << max_slice_found << std::endl;
-
-
-        //Used to find which true slice a process was in.. kinda useless
-        if (fVerbose) std::cout << "Comparing max slice to processes" << std::endl;
-        const simb::MCTrajectory & true_beam_trajectory = true_beam_particle->Trajectory();
-        auto true_beam_proc_map = true_beam_trajectory.TrajectoryProcesses();
-        for( auto itProc = true_beam_proc_map.begin(); itProc != true_beam_proc_map.end(); ++itProc ){
-          int index = itProc->first;
-          std::string process = true_beam_trajectory.KeyToProcess(itProc->second);
-
-          double process_X = true_beam_trajectory.X( index );
-          double process_Y = true_beam_trajectory.Y( index );
-          double process_Z = true_beam_trajectory.Z( index );
-
-          int slice_num = std::floor( ( process_Z - z0 ) / pitch );
-
-          if (fVerbose) {
-            std::cout << "Process " << index << ", " << process << "(" << process_X <<","<< process_Y <<","<< process_Z <<")" << " at slice " << slice_num << std::endl;
-            std::cout << "d(Slice) to max slice found: " <<  slice_num - max_slice_found << std::endl;
-          }
-          true_beam_process_slice.push_back( slice_num );
-          true_beam_process_dSlice.push_back( slice_num - max_slice_found );
-        }
-
-        if( true_beam_endProcess.find( "Inelastic" ) == std::string::npos ){
-          double process_X = true_beam_endX;
-          double process_Y = true_beam_endY;
-          double process_Z = true_beam_endZ;
-          int slice_num = std::floor( ( process_Z - z0 ) / pitch );
-
-          if (fVerbose) {
-            std::cout << "Process " << -1 << ", " << true_beam_endProcess << "(" << process_X <<","<< process_Y <<","<< process_Z <<")" << " at slice " << slice_num << std::endl;
-            std::cout << "d(Slice) to max slice found: " <<  slice_num - max_slice_found << std::endl;
-          }
-          true_beam_process_slice.push_back( slice_num );
-          true_beam_process_dSlice.push_back( slice_num - max_slice_found );
-        }
-        //Check the last process as well
-
-        if (fVerbose) {
-        std::cout << "N Procs, Slice, dSlice: " << true_beam_processes.size() << ", " << true_beam_process_slice.size() << ", "
-                  << true_beam_process_dSlice.size() << std::endl;
-        }
-
-        for( size_t i = 0; i < true_beam_processes.size(); ++i ){
-          if (fVerbose) {
-            std::cout << "Process " << i << true_beam_processes[i] << " At slice " << true_beam_process_slice[i] << std::endl;
-            std::cout << "Is " << true_beam_process_dSlice[i] << " slices away from the max found" << std::endl;
-          }
-
-          //Everything before the last process
-          if( i < true_beam_processes.size() - 1 ){
-            //Look before and after this process
-            if( abs(true_beam_process_dSlice[i]) <= 5 ) true_beam_process_matched.push_back(1);
-            else true_beam_process_matched.push_back(0);
-          }
-          else{//Last process -- just look before it (in this matching, it can't be above)
-            if( true_beam_process_dSlice[i] <= 5 ) true_beam_process_matched.push_back(1);
-            else true_beam_process_matched.push_back(0);
-          }
-        }
-
       }
     }
 
@@ -2769,20 +2337,21 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
       }
       reco_daughter_PFP_nHits_collection.push_back(nHits_coll);
 
+/*
       double track_total = 0.;
       double em_total = 0.;
       double michel_total = 0.;
       double none_total = 0.;
       for( size_t h = 0; h < daughterPFP_hits.size(); ++h ){
-        std::array<float,4> cnn_out = hitResults.getOutput( daughterPFP_hits[h] );
-        track_total  += cnn_out[ hitResults.getIndex("track") ];
-        em_total     += cnn_out[ hitResults.getIndex("em") ];
-        michel_total += cnn_out[ hitResults.getIndex("michel") ];
-        none_total   += cnn_out[ hitResults.getIndex("none") ];
+        std::array<float,4> cnn_out = *hitResults.getOutput( daughterPFP_hits[h] );
+        track_total  += cnn_out[ *hitResults.getIndex("track") ];
+        em_total     += cnn_out[ *hitResults.getIndex("em") ];
+        michel_total += cnn_out[ *hitResults.getIndex("michel") ];
+        none_total   += cnn_out[ *hitResults.getIndex("none") ];
 
       }
 
-      cnnOutput2D theCNNResults = GetCNNOutputFromPFParticle( *daughterPFP, evt, hitResults, pfpUtil, fPFParticleTag );
+      cnnOutput2D theCNNResults = GetCNNOutputFromPFParticle( *daughterPFP, evt, *hitResults, pfpUtil, fPFParticleTag );
       if (fVerbose) {
         std::cout << "Testing new CNN: " << std::endl;
         std::cout << track_total << " " << theCNNResults.track << std::endl;
@@ -2792,7 +2361,6 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
       }
 
 
-      const std::vector< const recob::SpacePoint* > spVec = pfpUtil.GetPFParticleSpacePoints( *daughterPFP, evt, fPFParticleTag );
 
       if( daughterPFP_hits.size() > 0 ){
         reco_daughter_PFP_trackScore.push_back( track_total / daughterPFP_hits.size() );
@@ -2805,7 +2373,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
         reco_daughter_PFP_michelScore.push_back( -999. );
       }
 
-      cnnOutput2D cnn_collection = GetCNNOutputFromPFParticleFromPlane( *daughterPFP, evt, hitResults, pfpUtil, fPFParticleTag, 2 );
+      cnnOutput2D cnn_collection = GetCNNOutputFromPFParticleFromPlane( *daughterPFP, evt, *hitResults, pfpUtil, fPFParticleTag, 2 );
       if( cnn_collection.nHits > 0 ){
         reco_daughter_PFP_trackScore_collection.push_back( cnn_collection.track / cnn_collection.nHits );
         reco_daughter_PFP_emScore_collection.push_back( cnn_collection.em / cnn_collection.nHits );
@@ -2816,8 +2384,48 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
         reco_daughter_PFP_emScore_collection.push_back( -999. );
         reco_daughter_PFP_michelScore_collection.push_back( -999. );
       }
+*/
+      if (fSkipMVA) {
+        cnnOutput2D theCNNResults = GetCNNOutputFromPFParticle(
+            *daughterPFP, evt, *hitResults, pfpUtil, fPFParticleTag);
+        double track_score = (theCNNResults.nHits > 0 ?
+                              (theCNNResults.track / theCNNResults.nHits) :
+                              -999.);
+        double em_score = (theCNNResults.nHits > 0 ?
+                              (theCNNResults.em / theCNNResults.nHits) :
+                              -999.);
+        double michel_score = (theCNNResults.nHits > 0 ?
+                              (theCNNResults.michel / theCNNResults.nHits) :
+                              -999.);
+        reco_daughter_PFP_trackScore.push_back(track_score);
+        reco_daughter_PFP_emScore.push_back(em_score);
+        reco_daughter_PFP_michelScore.push_back(michel_score);
 
+        cnnOutput2D cnn_collection = GetCNNOutputFromPFParticleFromPlane(
+            *daughterPFP, evt, *hitResults, pfpUtil, fPFParticleTag, 2);
+        double track_score_collection = (cnn_collection.nHits > 0 ?
+                              (cnn_collection.track / cnn_collection.nHits) :
+                              -999.);
+        double em_score_collection = (cnn_collection.nHits > 0 ?
+                              (cnn_collection.em / cnn_collection.nHits) :
+                              -999.);
+        double michel_score_collection = (cnn_collection.nHits > 0 ?
+                              (cnn_collection.michel / cnn_collection.nHits) :
+                              -999.);
+        reco_daughter_PFP_trackScore_collection.push_back(track_score_collection);
+        reco_daughter_PFP_emScore_collection.push_back(em_score_collection);
+        reco_daughter_PFP_michelScore_collection.push_back(michel_score_collection);
+      }
+      else{
+        reco_daughter_PFP_trackScore.push_back( -999. );
+        reco_daughter_PFP_emScore.push_back( -999. );
+        reco_daughter_PFP_michelScore.push_back( -999. );
+        reco_daughter_PFP_trackScore_collection.push_back( -999. );
+        reco_daughter_PFP_emScore_collection.push_back( -999. );
+        reco_daughter_PFP_michelScore_collection.push_back( -999. );
+      }
 
+      //const std::vector< const recob::SpacePoint* > spVec = pfpUtil.GetPFParticleSpacePoints( *daughterPFP, evt, fPFParticleTag );
 
       if( !evt.isRealData() ){
         //Matching by hits
@@ -3096,16 +2704,24 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
 
           std::cout << "Getting michel" << std::endl;
           //Using new michel tagging
-          std::pair<double, int> vertex_results =
-              trackUtil.GetVertexMichelScore(
-                  *pandora2Track, evt, "pandora2Track", fHitTag,
-                  0., -500., 500., 0., 500., 0., false,
-                  reco_beam_endX, reco_beam_endY, reco_beam_endZ);
+          if (!fSkipMVA) {
+            std::pair<double, int> vertex_results =
+                trackUtil.GetVertexMichelScore(
+                    *pandora2Track, evt, "pandora2Track", fHitTag,
+                    0., -500., 500., 0., 500., 0., false,
+                    reco_beam_endX, reco_beam_endY, reco_beam_endZ);
 
-          reco_daughter_allTrack_vertex_michel_score.push_back(
-              vertex_results.first);
-          reco_daughter_allTrack_vertex_nHits.push_back(
-              vertex_results.second);
+            reco_daughter_allTrack_vertex_michel_score.push_back(
+                vertex_results.first);
+            reco_daughter_allTrack_vertex_nHits.push_back(
+                vertex_results.second);
+          }
+          else {
+            reco_daughter_allTrack_vertex_michel_score.push_back(
+                -999.);
+            reco_daughter_allTrack_vertex_nHits.push_back(
+                -999);
+          }
 
           if (fVerbose) std::cout << "pandora2Length " << pandora2Track->Length() << std::endl;
           reco_daughter_allTrack_momByRange_proton.push_back( track_p_calc.GetTrackMomentum( pandora2Track->Length(), 2212 ) );
@@ -3333,146 +2949,6 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
 
 
     }
-
-
-
-    if( fCheckCosmics ){
-      if( quality_reco_view_2_wire.size() ){
-
-        std::map< int, std::pair< double, double > > UpperCosmicROILimits, LowerCosmicROILimits;
-        std::map< int, int > wire_to_n_ticks;
-        std::map< int, double > wire_to_avg_ticks;
-        bool inTPC1 = false;
-        for( size_t i = 0; i < quality_reco_view_2_wire.size(); ++i ){
-          if( view_2_TPC[i] != 1 ) continue;
-          else inTPC1 = true;
-          wire_to_n_ticks[ int(quality_reco_view_2_wire[i]) ]++;
-          wire_to_avg_ticks[ int(quality_reco_view_2_wire[i]) ] += quality_reco_view_2_tick[i];
-
-        }
-
-        if( inTPC1 ){
-
-          double max_tick = 0.;
-          double min_tick = 99999.;
-          for( auto it = wire_to_n_ticks.begin(); it != wire_to_n_ticks.end(); ++it ){
-            wire_to_avg_ticks[ it->first ] /= it->second;
-
-            if( wire_to_avg_ticks[ it->first ] > max_tick ){
-              max_tick = wire_to_avg_ticks[ it->first ];
-            }
-            if( wire_to_avg_ticks[ it->first ] < min_tick ){
-              min_tick = wire_to_avg_ticks[ it->first ];
-            }
-          }
-
-          min_tick -= 100;
-          max_tick += 100;
-
-          std::vector< double > these_wires, these_ticks;
-
-          for( auto it = wire_to_avg_ticks.begin(); it != wire_to_avg_ticks.end(); ++it ){
-            these_wires.push_back( it->first );
-            these_ticks.push_back( it->second );
-          }
-          TGraph gr_wire_ticks( these_wires.size(), &these_wires[0], &these_ticks[0] );
-
-
-          //1st Get all the reco tracks -- or PFP?
-          //for( size_t i = 0; i < recoTracks->size(); ++i ){
-          for( size_t i = 0; i < pfpVec->size(); ++i ){
-
-            //if( (*recoTracks)[i].ID() == thisTrack->ID() ) continue;
-            if( &(*pfpVec)[i] == particle ) continue; // Check if the same pointer
-
-            int nUpperCosmicROI = 0;
-            int nLowerCosmicROI = 0;
-            //std::cout << "Checking Track " << (*recoTracks)[i].ID() << std::endl;
-
-            //auto planeHits = trackUtil.GetRecoTrackHitsFromPlane( (*recoTracks)[i], evt, fTrackerTag, 2 );
-            auto planeHits = pfpUtil.GetPFParticleHitsFromPlane( (*pfpVec)[i], evt, fPFParticleTag, 2 );
-            bool found_new = false;
-
-            protoana::MCParticleSharedHits match = protoana::MCParticleSharedHits();
-            if( !evt.isRealData() )
-              match = truthUtil.GetMCParticleByHits( clockData, (*pfpVec)[i], evt, fPFParticleTag, fHitTag );
-
-
-            for( size_t j = 0; j < planeHits.size(); ++j ){
-              auto theHit = planeHits[j];
-              if( theHit->WireID().TPC == 1 ){           
-       
-                if( int(theHit->WireID().Wire) > wire_to_avg_ticks.begin()->first && int(theHit->WireID().Wire) < wire_to_avg_ticks.rbegin()->first &&
-                    theHit->PeakTime() > min_tick && theHit->PeakTime() < max_tick ){
-
-                  if (fVerbose) {
-                    std::cout << "Checking " << theHit->WireID().Wire << " " << theHit->PeakTime() << std::endl;
-                    std::cout << "\tBeam: " << gr_wire_ticks.Eval( theHit->WireID().Wire ) << std::endl;
-                  }
-         
-                  if( theHit->PeakTime() > gr_wire_ticks.Eval( theHit->WireID().Wire ) ){
-                    ++nUpperCosmicROI;
-                  }
-                  else{
-                    ++nLowerCosmicROI;
-                  }
-
-                }
-       
-                if( !found_new && !evt.isRealData() ){
-                  if( match.particle ){
-                    if( pi_serv->TrackIdToMCTruth_P(match.particle->TrackId())->Origin() == 2 ){
-                      std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( clockData, *theHit );
-                      for( size_t j = 0; j < ides.size(); ++j ){
-                        if( true_beam_ID == ides[j]->trackID ){
-                          //cosmic_has_beam_IDE.push_back( (*recoTracks)[i].ID() );
-                          cosmic_has_beam_IDE.push_back( i );
-                          found_new = true;
-                          break;
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-
-            n_cosmics_with_beam_IDE = cosmic_has_beam_IDE.size();
-   
-            if (fVerbose) {
-              std::cout << "NHits in Upper ROI: " << nUpperCosmicROI << std::endl;
-              std::cout << "NHits in Lower ROI: " << nLowerCosmicROI << std::endl;
-            }
-
-            if( nLowerCosmicROI || nUpperCosmicROI ){
-              reco_beam_cosmic_candidate_lower_hits.push_back( nLowerCosmicROI );
-              reco_beam_cosmic_candidate_upper_hits.push_back( nUpperCosmicROI );
-              reco_beam_cosmic_candidate_ID.push_back( i );
-            }
-
-          }
-        }
-      }
-
-      if( !evt.isRealData() ){
-        auto planeHits = trackUtil.GetRecoTrackHitsFromPlane( *thisTrack, evt, fTrackerTag, 2 );
-        for( size_t i = 0; i < planeHits.size(); ++i ){
-          auto theHit = planeHits[i];
-          //std::cout << theHit->WireID().TPC << std::endl;
-          if( theHit->WireID().TPC == 1 ){
-            std::vector< const sim::IDE * > ides = bt_serv->HitToSimIDEs_Ps( clockData, *theHit );
-            for( size_t j = 0; j < ides.size(); ++j ){
-              if( pi_serv->TrackIdToMCTruth_P( ides[j]->trackID )->Origin() == 2 ){
-                beam_has_cosmic_IDE = true;
-                break;
-              }
-            }
-          }
-          if( beam_has_cosmic_IDE ) break;
-        }
-      }
-    }
-
   }
   else if( thisShower ){
     reco_beam_type = 11;
@@ -3730,9 +3206,6 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("reco_beam_trackEndDirX", &reco_beam_trackEndDirX);
   fTree->Branch("reco_beam_trackEndDirY", &reco_beam_trackEndDirY);
   fTree->Branch("reco_beam_trackEndDirZ", &reco_beam_trackEndDirZ);
-  fTree->Branch("reco_beam_vtxX", &reco_beam_vtxX);
-  fTree->Branch("reco_beam_vtxY", &reco_beam_vtxY);
-  fTree->Branch("reco_beam_vtxZ", &reco_beam_vtxZ);
   fTree->Branch("reco_beam_vertex_nHits", &reco_beam_vertex_nHits);
   fTree->Branch("reco_beam_vertex_michel_score", &reco_beam_vertex_michel_score);
   fTree->Branch("reco_beam_trackID", &reco_beam_trackID);
@@ -3743,14 +3216,13 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("reco_beam_TrkPitch", &reco_beam_TrkPitch);
   fTree->Branch("reco_beam_calo_wire", &reco_beam_calo_wire);
   fTree->Branch("reco_beam_calo_wire_z", &reco_beam_calo_wire_z);
+  fTree->Branch("reco_beam_calo_IDE_Zs", &reco_beam_calo_IDE_Zs);
   fTree->Branch("reco_beam_calo_tick", &reco_beam_calo_tick);
   fTree->Branch("reco_beam_calo_TPC", &reco_beam_calo_TPC);
 
   fTree->Branch("reco_beam_hit_true_ID", &reco_beam_hit_true_ID);
   fTree->Branch("reco_beam_hit_true_slice", &reco_beam_hit_true_slice);
   fTree->Branch("reco_beam_hit_true_origin", &reco_beam_hit_true_origin);
-  fTree->Branch("reco_beam_nTrackDaughters", &reco_beam_nTrackDaughters);
-  fTree->Branch("reco_beam_nShowerDaughters", &reco_beam_nShowerDaughters);
   fTree->Branch("reco_beam_flipped", &reco_beam_flipped);
   fTree->Branch("reco_beam_passes_beam_cuts", &reco_beam_passes_beam_cuts);
 
@@ -3794,42 +3266,6 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("reco_track_ID", &reco_track_ID);
   fTree->Branch("reco_track_nHits", &reco_track_nHits);
 
-  //Reconstructed info -- daughters
-  /*
-  fTree->Branch("reco_daughter_trackID", &reco_daughter_trackID);
-  fTree->Branch("reco_daughter_true_byE_completeness", &reco_daughter_true_byE_completeness);
-  fTree->Branch("reco_daughter_true_byE_purity", &reco_daughter_true_byE_purity);
-  fTree->Branch("reco_daughter_true_byE_PDG", &reco_daughter_true_byE_PDG);
-  fTree->Branch("reco_daughter_true_byE_ID", &reco_daughter_true_byE_ID);
-  fTree->Branch("reco_daughter_true_byE_origin", &reco_daughter_true_byE_origin);
-  fTree->Branch("reco_daughter_true_byE_parID", &reco_daughter_true_byE_parID);
-  fTree->Branch("reco_daughter_true_byE_parPDG", &reco_daughter_true_byE_parPDG);
-  fTree->Branch("reco_daughter_true_byE_process", &reco_daughter_true_byE_process);
-
-  fTree->Branch("reco_daughter_true_byHits_PDG", &reco_daughter_true_byHits_PDG);
-  fTree->Branch("reco_daughter_true_byHits_ID", &reco_daughter_true_byHits_ID);
-  fTree->Branch("reco_daughter_true_byHits_origin", &reco_daughter_true_byHits_origin);
-  fTree->Branch("reco_daughter_true_byHits_parID", &reco_daughter_true_byHits_parID);
-  fTree->Branch("reco_daughter_true_byHits_parPDG", &reco_daughter_true_byHits_parPDG);
-  fTree->Branch("reco_daughter_true_byHits_process", &reco_daughter_true_byHits_process);
-  fTree->Branch("reco_daughter_true_byHits_purity", &reco_daughter_true_byHits_purity);
-  fTree->Branch("reco_daughter_true_byHits_sharedHits", &reco_daughter_true_byHits_sharedHits);
-  fTree->Branch("reco_daughter_true_byHits_emHits", &reco_daughter_true_byHits_emHits);
-
-  fTree->Branch("reco_daughter_true_byHits_len", &reco_daughter_true_byHits_len);
-  fTree->Branch("reco_daughter_true_byHits_startX", &reco_daughter_true_byHits_startX);
-  fTree->Branch("reco_daughter_true_byHits_startY", &reco_daughter_true_byHits_startY);
-  fTree->Branch("reco_daughter_true_byHits_startZ", &reco_daughter_true_byHits_startZ);
-  fTree->Branch("reco_daughter_true_byHits_endX", &reco_daughter_true_byHits_endX);
-  fTree->Branch("reco_daughter_true_byHits_endY", &reco_daughter_true_byHits_endY);
-  fTree->Branch("reco_daughter_true_byHits_endZ", &reco_daughter_true_byHits_endZ);
-
-  fTree->Branch("reco_daughter_true_byHits_startPx", &reco_daughter_true_byHits_startPx);
-  fTree->Branch("reco_daughter_true_byHits_startPy", &reco_daughter_true_byHits_startPy);
-  fTree->Branch("reco_daughter_true_byHits_startPz", &reco_daughter_true_byHits_startPz);
-  fTree->Branch("reco_daughter_true_byHits_startP", &reco_daughter_true_byHits_startP);
-  fTree->Branch("reco_daughter_true_byHits_startE", &reco_daughter_true_byHits_startE);
-  */
   //Alternative reco
   fTree->Branch("reco_daughter_PFP_true_byHits_PDG", &reco_daughter_PFP_true_byHits_PDG);
   fTree->Branch("reco_daughter_PFP_true_byHits_ID", &reco_daughter_PFP_true_byHits_ID);
@@ -3923,66 +3359,6 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("reco_daughter_allShower_energy", &reco_daughter_allShower_energy);
 
 
-/*
-  fTree->Branch("reco_daughter_shower_true_byE_PDG", &reco_daughter_shower_true_byE_PDG);
-  fTree->Branch("reco_daughter_shower_true_byE_ID", &reco_daughter_shower_true_byE_ID);
-  fTree->Branch("reco_daughter_shower_true_byE_origin", &reco_daughter_shower_true_byE_origin);
-  fTree->Branch("reco_daughter_shower_true_byE_parID", &reco_daughter_shower_true_byE_parID);
-  fTree->Branch("reco_daughter_shower_true_byE_parPDG", &reco_daughter_shower_true_byE_parPDG);
-
-  fTree->Branch("reco_daughter_shower_true_byE_startPx", &reco_daughter_shower_true_byE_startPx);
-  fTree->Branch("reco_daughter_shower_true_byE_startPy", &reco_daughter_shower_true_byE_startPy);
-  fTree->Branch("reco_daughter_shower_true_byE_startPz", &reco_daughter_shower_true_byE_startPz);
-  fTree->Branch("reco_daughter_shower_true_byE_startP", &reco_daughter_shower_true_byE_startP);
-  fTree->Branch("reco_daughter_shower_true_byE_endProcess", &reco_daughter_shower_true_byE_endProcess);
-
-
-  fTree->Branch("reco_daughter_shower_true_byHits_PDG", &reco_daughter_shower_true_byHits_PDG);
-  fTree->Branch("reco_daughter_shower_true_byHits_ID", &reco_daughter_shower_true_byHits_ID);
-  fTree->Branch("reco_daughter_shower_true_byHits_origin", &reco_daughter_shower_true_byHits_origin);
-  fTree->Branch("reco_daughter_shower_true_byHits_parID", &reco_daughter_shower_true_byHits_parID);
-  fTree->Branch("reco_daughter_shower_true_byHits_parPDG", &reco_daughter_shower_true_byHits_parPDG);
-  fTree->Branch("reco_daughter_shower_true_byHits_process", &reco_daughter_shower_true_byHits_process);
-  fTree->Branch("reco_daughter_shower_true_byHits_purity", &reco_daughter_shower_true_byHits_purity);
-
-  fTree->Branch("reco_daughter_shower_true_byHits_startPx", &reco_daughter_shower_true_byHits_startPx);
-  fTree->Branch("reco_daughter_shower_true_byHits_startPy", &reco_daughter_shower_true_byHits_startPy);
-  fTree->Branch("reco_daughter_shower_true_byHits_startPz", &reco_daughter_shower_true_byHits_startPz);
-  fTree->Branch("reco_daughter_shower_true_byHits_startP", &reco_daughter_shower_true_byHits_startP);
-  fTree->Branch("reco_daughter_shower_true_byHits_endProcess", &reco_daughter_shower_true_byHits_endProcess);
-  */
-
-
-  ///Reconstructed info -- daughter
-  /*
-  fTree->Branch("reco_daughter_showerID", &reco_daughter_showerID);
-  fTree->Branch("reco_daughter_dQdX", &reco_daughter_dQdX);
-  fTree->Branch("reco_daughter_dEdX", &reco_daughter_dEdX);
-  fTree->Branch("reco_daughter_resRange", &reco_daughter_resRange);
-  fTree->Branch("reco_daughter_shower_dQdX", &reco_daughter_shower_dQdX);
-  fTree->Branch("reco_daughter_shower_dEdX", &reco_daughter_shower_dEdX);
-  fTree->Branch("reco_daughter_shower_resRange", &reco_daughter_shower_resRange);
-  fTree->Branch("reco_daughter_len", &reco_daughter_len);
-  fTree->Branch("reco_daughter_startX", &reco_daughter_startX);
-  fTree->Branch("reco_daughter_startY", &reco_daughter_startY);
-  fTree->Branch("reco_daughter_startZ", &reco_daughter_startZ);
-  fTree->Branch("reco_daughter_endX", &reco_daughter_endX);
-  fTree->Branch("reco_daughter_endY", &reco_daughter_endY);
-  fTree->Branch("reco_daughter_endZ", &reco_daughter_endZ);
-  fTree->Branch("reco_daughter_deltaR", &reco_daughter_deltaR);
-
-  fTree->Branch("reco_daughter_dR", &reco_daughter_dR);
-  fTree->Branch("reco_daughter_to_vertex", &reco_daughter_to_vertex);
-  fTree->Branch("reco_daughter_slice", &reco_daughter_slice);
-
-  fTree->Branch("reco_daughter_shower_to_vertex", &reco_daughter_shower_to_vertex);
-
-  fTree->Branch("reco_daughter_shower_startX", &reco_daughter_shower_startX);
-  fTree->Branch("reco_daughter_shower_startY", &reco_daughter_shower_startY);
-  fTree->Branch("reco_daughter_shower_startZ", &reco_daughter_shower_startZ);
-  fTree->Branch("reco_daughter_shower_len", &reco_daughter_shower_len);
-  */
-
 
   fTree->Branch("reco_daughter_PFP_ID", &reco_daughter_PFP_ID);
   fTree->Branch("reco_daughter_PFP_nHits", &reco_daughter_PFP_nHits);
@@ -4017,6 +3393,8 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("true_beam_endPy", &true_beam_endPy);
   fTree->Branch("true_beam_endPz", &true_beam_endPz);
   fTree->Branch("true_beam_endP", &true_beam_endP);
+  fTree->Branch("true_beam_endP2", &true_beam_endP2);
+  fTree->Branch("true_beam_last_len", &true_beam_last_len);
 
   fTree->Branch("true_beam_startDirX", &true_beam_startDirX);
   fTree->Branch("true_beam_startDirY", &true_beam_startDirY);
@@ -4030,7 +3408,6 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("true_beam_elastic_deltaE", &true_beam_elastic_deltaE);
   fTree->Branch("true_beam_elastic_IDE_edep", &true_beam_elastic_IDE_edep);
   fTree->Branch("true_beam_IDE_totalDep",    &true_beam_IDE_totalDep);
-  fTree->Branch("true_beam_IDE_found_in_recoVtx",    &true_beam_IDE_found_in_recoVtx);
 
   fTree->Branch("true_beam_nHits", &true_beam_nHits);
   fTree->Branch("true_beam_reco_byHits_PFP_ID", &true_beam_reco_byHits_PFP_ID);
@@ -4138,61 +3515,28 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("reco_beam_true_byHits_purity", &reco_beam_true_byHits_purity);
 
   fTree->Branch("true_beam_processes", &true_beam_processes);
-  fTree->Branch("true_beam_process_slice", &true_beam_process_slice);
-  fTree->Branch("true_beam_process_dSlice", &true_beam_process_dSlice);
-  fTree->Branch("true_beam_process_matched", &true_beam_process_matched);
-  //fTree->Branch("reco_daughter_true_byE_isPrimary", &reco_daughter_true_byE_isPrimary);
 
-  fTree->Branch("data_BI_P", &data_BI_P);
-  fTree->Branch("data_BI_TOF", &data_BI_TOF);
-  fTree->Branch("data_BI_TOF_Chan", &data_BI_TOF_Chan);
-  fTree->Branch("data_BI_X", &data_BI_X);
-  fTree->Branch("data_BI_Y", &data_BI_Y);
-  fTree->Branch("data_BI_Z", &data_BI_Z);
-  fTree->Branch("data_BI_dirX", &data_BI_dirX);
-  fTree->Branch("data_BI_dirY", &data_BI_dirY);
-  fTree->Branch("data_BI_dirZ", &data_BI_dirZ);
+  fTree->Branch("beam_inst_P", &beam_inst_P);
+  fTree->Branch("beam_inst_TOF", &beam_inst_TOF);
+  fTree->Branch("beam_inst_TOF_Chan", &beam_inst_TOF_Chan);
+  fTree->Branch("beam_inst_X", &beam_inst_X);
+  fTree->Branch("beam_inst_Y", &beam_inst_Y);
+  fTree->Branch("beam_inst_Z", &beam_inst_Z);
+  fTree->Branch("beam_inst_dirX", &beam_inst_dirX);
+  fTree->Branch("beam_inst_dirY", &beam_inst_dirY);
+  fTree->Branch("beam_inst_dirZ", &beam_inst_dirZ);
 
-  fTree->Branch("data_BI_nFibersP1", &data_BI_nFibersP1);
-  fTree->Branch("data_BI_nFibersP2", &data_BI_nFibersP2);
-  fTree->Branch("data_BI_nFibersP3", &data_BI_nFibersP3);
-  fTree->Branch("data_BI_PDG_candidates", &data_BI_PDG_candidates);
-  fTree->Branch("data_BI_nTracks", &data_BI_nTracks);
-  fTree->Branch("data_BI_nMomenta", &data_BI_nMomenta);
+  fTree->Branch("beam_inst_nFibersP1", &beam_inst_nFibersP1);
+  fTree->Branch("beam_inst_nFibersP2", &beam_inst_nFibersP2);
+  fTree->Branch("beam_inst_nFibersP3", &beam_inst_nFibersP3);
+  fTree->Branch("beam_inst_PDG_candidates", &beam_inst_PDG_candidates);
+  fTree->Branch("beam_inst_nTracks", &beam_inst_nTracks);
+  fTree->Branch("beam_inst_nMomenta", &beam_inst_nMomenta);
 
-
-  fTree->Branch("quality_reco_view_0_hits_in_TPC5", &quality_reco_view_0_hits_in_TPC5);
-  fTree->Branch("quality_reco_view_1_hits_in_TPC5", &quality_reco_view_1_hits_in_TPC5);
-  fTree->Branch("quality_reco_view_2_hits_in_TPC5", &quality_reco_view_2_hits_in_TPC5);
-  fTree->Branch("quality_reco_max_lateral", &quality_reco_max_lateral);
-  fTree->Branch("quality_reco_max_segment", &quality_reco_max_segment);
-  fTree->Branch("quality_reco_view_0_max_segment", &quality_reco_view_0_max_segment);
-  fTree->Branch("quality_reco_view_1_max_segment", &quality_reco_view_1_max_segment);
-  fTree->Branch("quality_reco_view_2_max_segment", &quality_reco_view_2_max_segment);
-
-  fTree->Branch("quality_reco_view_0_wire_backtrack", &quality_reco_view_0_wire_backtrack);
-  fTree->Branch("quality_reco_view_1_wire_backtrack", &quality_reco_view_1_wire_backtrack);
-  fTree->Branch("quality_reco_view_2_wire_backtrack", &quality_reco_view_2_wire_backtrack);
-
-  fTree->Branch("quality_reco_view_0_wire", &quality_reco_view_0_wire);
-  fTree->Branch("quality_reco_view_1_wire", &quality_reco_view_1_wire);
-  fTree->Branch("quality_reco_view_2_wire", &quality_reco_view_2_wire);
-
-  fTree->Branch("quality_reco_view_2_z", &quality_reco_view_2_z);
-
-  fTree->Branch("quality_reco_view_0_tick", &quality_reco_view_0_tick);
-  fTree->Branch("quality_reco_view_1_tick", &quality_reco_view_1_tick);
-  fTree->Branch("quality_reco_view_2_tick", &quality_reco_view_2_tick);
 
   fTree->Branch("reco_beam_Chi2_proton", &reco_beam_Chi2_proton);
   fTree->Branch("reco_beam_Chi2_ndof", &reco_beam_Chi2_ndof);
 
-  fTree->Branch("reco_beam_cosmic_candidate_lower_hits", &reco_beam_cosmic_candidate_lower_hits);
-  fTree->Branch("reco_beam_cosmic_candidate_upper_hits", &reco_beam_cosmic_candidate_upper_hits);
-  fTree->Branch("reco_beam_cosmic_candidate_ID", &reco_beam_cosmic_candidate_ID);
-  fTree->Branch("beam_has_cosmic_IDE", &beam_has_cosmic_IDE);
-  fTree->Branch("cosmic_has_beam_IDE", &cosmic_has_beam_IDE);
-  fTree->Branch("n_cosmics_with_beam_IDE", &n_cosmics_with_beam_IDE);
 
   fTree->Branch("reco_daughter_allTrack_momByRange_proton", &reco_daughter_allTrack_momByRange_proton);
   fTree->Branch("reco_daughter_allTrack_momByRange_muon", &reco_daughter_allTrack_momByRange_muon);
@@ -4203,23 +3547,6 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("reco_daughter_allTrack_momByRange_alt_muon", &reco_daughter_allTrack_momByRange_alt_muon);
   fTree->Branch("reco_beam_momByRange_alt_proton", &reco_beam_momByRange_alt_proton);
   fTree->Branch("reco_beam_momByRange_alt_muon", &reco_beam_momByRange_alt_muon);
-  /*
-  fTree->Branch("reco_daughter_Chi2_proton", &reco_daughter_Chi2_proton);
-  fTree->Branch("reco_daughter_Chi2_ndof", &reco_daughter_Chi2_ndof);
-  fTree->Branch("reco_daughter_momByRange_proton", &reco_daughter_momByRange_proton);
-  fTree->Branch("reco_daughter_momByRange_muon", &reco_daughter_momByRange_muon);
-
-  fTree->Branch("reco_daughter_shower_Chi2_proton", &reco_daughter_shower_Chi2_proton);
-  fTree->Branch("reco_daughter_shower_Chi2_ndof", &reco_daughter_shower_Chi2_ndof);
-
-  fTree->Branch("reco_daughter_trackScore", &reco_daughter_trackScore);
-  fTree->Branch("reco_daughter_emScore", &reco_daughter_emScore);
-  fTree->Branch("reco_daughter_michelScore", &reco_daughter_michelScore);
-
-  fTree->Branch("reco_daughter_shower_trackScore", &reco_daughter_shower_trackScore);
-  fTree->Branch("reco_daughter_shower_emScore", &reco_daughter_shower_emScore);
-  fTree->Branch("reco_daughter_shower_michelScore", &reco_daughter_shower_michelScore);
-  */
 
   fTree->Branch("reco_beam_true_byE_endPx", &reco_beam_true_byE_endPx);
   fTree->Branch("reco_beam_true_byE_endPy", &reco_beam_true_byE_endPy);
@@ -4252,10 +3579,7 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("true_beam_interactingEnergy", &true_beam_interactingEnergy);
   fTree->Branch("true_beam_slices", &true_beam_slices);
   fTree->Branch("true_beam_slices_found", &true_beam_slices_found);
-  fTree->Branch("true_beam_slices_nIDEs", &true_beam_slices_nIDEs);
   fTree->Branch("true_beam_slices_deltaE", &true_beam_slices_deltaE);
-  //fTree->Branch("new_true_beam_incidentEnergies", &new_true_beam_incidentEnergies);
-  //fTree->Branch("new_true_beam_interactingEnergy", &new_true_beam_interactingEnergy);
   fTree->Branch("em_energy", &em_energy);
   fTree->Branch("true_beam_traj_X", &true_beam_traj_X);
   fTree->Branch("true_beam_traj_Y", &true_beam_traj_Y);
@@ -4267,7 +3591,6 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("g4rw_primary_minus_sigma_weight", &g4rw_primary_minus_sigma_weight);
   fTree->Branch("g4rw_primary_var", &g4rw_primary_var);
 
-  //fTree->Branch("g4rw_alt_primary_weights", &g4rw_alt_primary_weights);
   fTree->Branch("g4rw_alt_primary_plus_sigma_weight",
                 &g4rw_alt_primary_plus_sigma_weight);
   fTree->Branch("g4rw_alt_primary_minus_sigma_weight",
@@ -4376,6 +3699,8 @@ void pionana::PionAnalyzer::reset()
   true_beam_endPy   = 0.;
   true_beam_endPz   = 0.;
   true_beam_endP    = 0.;
+  true_beam_endP2    = 0.;
+  true_beam_last_len    = 0.;
 
   true_beam_startDirX = 0.;
   true_beam_startDirY = 0.;
@@ -4384,9 +3709,6 @@ void pionana::PionAnalyzer::reset()
 
 
   true_beam_processes.clear();
-  true_beam_process_slice.clear();
-  true_beam_process_dSlice.clear();
-  true_beam_process_matched.clear();
   true_beam_nElasticScatters = 0;
   true_beam_elastic_costheta.clear();
   true_beam_elastic_X.clear();
@@ -4395,7 +3717,6 @@ void pionana::PionAnalyzer::reset()
   true_beam_elastic_deltaE.clear();
   true_beam_elastic_IDE_edep.clear();
   true_beam_IDE_totalDep = 0.;
-  true_beam_IDE_found_in_recoVtx = false;
 
   true_beam_reco_byHits_PFP_ID.clear();
   true_beam_reco_byHits_PFP_nHits.clear();
@@ -4441,54 +3762,23 @@ void pionana::PionAnalyzer::reset()
   //reco_daughter_true_byE_isPrimary = false;
   reco_beam_Chi2_proton = 999.;
 
-  reco_beam_cosmic_candidate_lower_hits.clear();
-  reco_beam_cosmic_candidate_upper_hits.clear();
-  reco_beam_cosmic_candidate_ID.clear();
-  beam_has_cosmic_IDE = false;
-  cosmic_has_beam_IDE.clear();
-  n_cosmics_with_beam_IDE = -1;
 
 
-  data_BI_P = 0.;
-  data_BI_X = 0.;
-  data_BI_Y = 0.;
-  data_BI_Z = 0.;
-  data_BI_dirX = 0.;
-  data_BI_dirY = 0.;
-  data_BI_dirZ = 0.;
-  data_BI_nFibersP1 = 0;
-  data_BI_nFibersP2 = 0;
-  data_BI_nFibersP3 = 0;
-  data_BI_PDG_candidates.clear();
-  data_BI_TOF.clear();
-  data_BI_TOF_Chan.clear();
-  data_BI_nTracks = -1;
-  data_BI_nMomenta = -1;
-
-
-  quality_reco_view_0_hits_in_TPC5 = false;
-  quality_reco_view_1_hits_in_TPC5 = false;
-  quality_reco_view_2_hits_in_TPC5 = false;
-  quality_reco_max_lateral = -999.;
-  quality_reco_max_segment = -999.;
-
-  quality_reco_view_0_max_segment = -999.;
-  quality_reco_view_1_max_segment = -999.;
-  quality_reco_view_2_max_segment = -999.;
-
-  quality_reco_view_0_wire.clear();
-  quality_reco_view_1_wire.clear();
-  quality_reco_view_2_wire.clear();
-
-  quality_reco_view_2_z.clear();
-
-  quality_reco_view_0_tick.clear();
-  quality_reco_view_1_tick.clear();
-  quality_reco_view_2_tick.clear();
-
-  quality_reco_view_0_wire_backtrack = 0.;
-  quality_reco_view_1_wire_backtrack = 0.;
-  quality_reco_view_2_wire_backtrack = 0.;
+  beam_inst_P = 0.;
+  beam_inst_X = 0.;
+  beam_inst_Y = 0.;
+  beam_inst_Z = 0.;
+  beam_inst_dirX = 0.;
+  beam_inst_dirY = 0.;
+  beam_inst_dirZ = 0.;
+  beam_inst_nFibersP1 = 0;
+  beam_inst_nFibersP2 = 0;
+  beam_inst_nFibersP3 = 0;
+  beam_inst_PDG_candidates.clear();
+  beam_inst_TOF.clear();
+  beam_inst_TOF_Chan.clear();
+  beam_inst_nTracks = -1;
+  beam_inst_nMomenta = -1;
 
   reco_beam_Chi2_ndof = -1;
 
@@ -4576,9 +3866,6 @@ void pionana::PionAnalyzer::reset()
   true_beam_grand_daughter_endProcess.clear();
   true_beam_daughter_ID.clear();
 
-  reco_beam_nTrackDaughters = -1;
-  reco_beam_nShowerDaughters = -1;
-
   reco_daughter_PFP_ID.clear();
   reco_daughter_PFP_nHits.clear();
   reco_daughter_PFP_nHits_collection.clear();
@@ -4625,36 +3912,14 @@ void pionana::PionAnalyzer::reset()
   reco_beam_dQdX.clear();
   reco_beam_dEdX.clear();
   reco_beam_calibrated_dEdX.clear();
-  reco_beam_vtxX = -1.;
-  reco_beam_vtxY = -1.;
-  reco_beam_vtxZ = -1.;
   reco_beam_vertex_nHits = -1;
   reco_beam_vertex_michel_score = -1.;
-  /*
-  reco_daughter_startX.clear();
-  reco_daughter_startY.clear();
-  reco_daughter_startZ.clear();
-  reco_daughter_endX.clear();
-  reco_daughter_endY.clear();
-  reco_daughter_endZ.clear();
-  reco_daughter_deltaR.clear();
-  reco_daughter_dR.clear();
-  reco_daughter_to_vertex.clear();
-  reco_daughter_slice.clear();
-
-  reco_daughter_shower_to_vertex.clear();
-
-  reco_daughter_shower_startX.clear();
-  reco_daughter_shower_startY.clear();
-  reco_daughter_shower_startZ.clear();
-
-  reco_daughter_shower_len.clear();
-  */
 
   reco_beam_resRange.clear();
   reco_beam_TrkPitch.clear();
   reco_beam_calo_wire.clear();
   reco_beam_calo_wire_z.clear();
+  reco_beam_calo_IDE_Zs.clear();
   reco_beam_calo_tick.clear();
   reco_beam_calo_TPC.clear();
   reco_beam_hit_true_ID.clear();
@@ -4666,13 +3931,10 @@ void pionana::PionAnalyzer::reset()
   reco_beam_incidentEnergies.clear();
   reco_beam_interactingEnergy = -999.;
   true_beam_incidentEnergies.clear();
-  //new_true_beam_incidentEnergies.clear();
   true_beam_slices.clear();
   true_beam_slices_found.clear();
-  true_beam_slices_nIDEs.clear();
   true_beam_slices_deltaE.clear();
   true_beam_interactingEnergy = -999.;
-  //new_true_beam_interactingEnergy = -999.;
   em_energy = 0.;
   true_beam_traj_X.clear();
   true_beam_traj_Y.clear();
@@ -4714,9 +3976,6 @@ void pionana::PionAnalyzer::reset()
 
 
   reco_daughter_allTrack_ID.clear();
-  //reco_daughter_allTrack_dEdX.clear();
-  //reco_daughter_allTrack_dQdX.clear();
-  //reco_daughter_allTrack_resRange.clear();
   reco_daughter_allTrack_dEdX_SCE.clear();
   reco_daughter_allTrack_dQdX_SCE.clear();
   reco_daughter_allTrack_resRange_SCE.clear();
@@ -4791,294 +4050,6 @@ void pionana::PionAnalyzer::reset()
   g4rw_primary_var.clear();
   g4rw_alt_primary_plus_sigma_weight.clear();
   g4rw_alt_primary_minus_sigma_weight.clear();
-}
-
-bool pionana::PionAnalyzer::CreateRWTraj(
-    const simb::MCParticle & part, const sim::ParticleList & plist,
-    art::ServiceHandle < geo::Geometry > geo_serv, int event,
-    G4ReweightTraj * theTraj) {
-
-  //Loop over daughters
-  for (int i = 0; i < part.NumberDaughters(); ++i) {
-    int d_index = part.Daughter(i);
-    auto d_part = plist[d_index];
-
-    int d_PDG = d_part->PdgCode();
-    int d_ID = d_part->TrackId();
-
-    theTraj->AddChild(new G4ReweightTraj(d_ID, d_PDG, part.TrackId(),
-                      event, {0,0}));
-  }
-
-  //Create process map
-  auto procs = part.Trajectory().TrajectoryProcesses();
-  std::map<size_t, std::string> proc_map;
-  for (auto it = procs.begin(); it != procs.end(); ++it) {
-    proc_map[it->first] = part.Trajectory().KeyToProcess(it->second);
-  }
-
-  std::vector<double> traj_X, traj_Y, traj_Z;
-  std::vector<double> traj_PX, traj_PY, traj_PZ;
-  std::vector<size_t> elastic_indices;
-
-  bool found_last = false;
-  //G4ReweightTraj theTraj(part.TrackId(), part.PdgCode(), 0, event, {0,0});
-  for (size_t i = 0; i < part.NumberTrajectoryPoints(); ++i) {
-    double x = part.Position(i).X();
-    double y = part.Position(i).Y();
-    double z = part.Position(i).Z();
-
-    geo::Point_t test_point{x, y, z};
-    const TGeoMaterial * test_material = geo_serv->Material(test_point);
-
-    if (!strcmp(test_material->GetName(), "LAr")) {
-      traj_X.push_back(x);
-      traj_Y.push_back(y);
-      traj_Z.push_back(z);
-
-      traj_PX.push_back(part.Px(i));
-      traj_PY.push_back(part.Py(i));
-      traj_PZ.push_back(part.Pz(i));
-
-      auto itProc = proc_map.find(i);
-      if (itProc != proc_map.end() && itProc->second == "hadElastic") {
-        elastic_indices.push_back(i);
-      }
-      if (fVerbose) {
-        std::cout  << "LAr: " << test_material->GetDensity() << " " <<
-                      test_material->GetA() << " " << test_material->GetZ() <<
-                      " " << x << " " << y << " " << z << " " << part.P(i);
-        if (itProc != proc_map.end())
-          std::cout << " " << itProc->second;
-        std::cout << std::endl;
-      }
-    }
-    else if (fVerbose) {
-      auto itProc = proc_map.find(i);
-      std::cout << test_material->GetName() << " " <<
-                   test_material->GetDensity() << " " <<
-                   test_material->GetA() << " " << test_material->GetZ() <<
-                   " " << x << " " << y << " " << z;
-      if (itProc != proc_map.end())
-        std::cout << " " << itProc->second;
-      std::cout << std::endl;
-    }
-
-    if (i == part.NumberTrajectoryPoints() - 1)
-      found_last = true;
-  }
-
-  double mass = 0.;
-
-  switch (abs(part.PdgCode())) {
-    case 211: {
-      mass = 139.57;
-      break;
-    }
-    case 2212: {
-      mass = 938.28;
-      break;
-    }
-    default: {
-      return false;
-      break;
-    }
-  }
-
-  for (size_t i = 1; i < traj_X.size(); ++i) {
-    std::string proc = "default";
-    if (found_last && i == traj_X.size() - 1) {
-      proc = part.EndProcess();
-    }
-    else if (std::find(elastic_indices.begin(), elastic_indices.end(), i) !=
-             elastic_indices.end()){
-      proc = "hadElastic";
-    }
-
-    double dX = traj_X[i] - traj_X[i-1];
-    double dY = traj_Y[i] - traj_Y[i-1];
-    double dZ = traj_Z[i] - traj_Z[i-1];
-
-    double len = sqrt(dX*dX + dY*dY + dZ*dZ);
-
-    double preStepP[3] = {traj_PX[i-1]*1.e3,
-                          traj_PY[i-1]*1.e3,
-                          traj_PZ[i-1]*1.e3};
-
-    double postStepP[3] = {traj_PX[i]*1.e3,
-                           traj_PY[i]*1.e3,
-                           traj_PZ[i]*1.e3};
-    if (i == 1) {
-      double p_squared = preStepP[0]*preStepP[0] + preStepP[1]*preStepP[1] +
-                         preStepP[2]*preStepP[2];
-      theTraj->SetEnergy(sqrt(p_squared + mass*mass));
-    }
-
-    G4ReweightStep * step = new G4ReweightStep(part.TrackId(), part.PdgCode(),
-                                               0, event, preStepP, postStepP,
-                                               len, proc);
-    theTraj->AddStep(step);
-  }
-
-  return true;
-}
-
-
-std::vector<G4ReweightTraj *> pionana::PionAnalyzer::CreateNRWTrajs(
-    const simb::MCParticle & part, const sim::ParticleList & plist,
-    art::ServiceHandle < geo::Geometry > geo_serv, int event) {
-  std::vector<G4ReweightTraj *> results;
-
-
-  //Create process map
-  auto procs = part.Trajectory().TrajectoryProcesses();
-  std::map<size_t, std::string> proc_map;
-  for (auto it = procs.begin(); it != procs.end(); ++it) {
-    proc_map[it->first] = part.Trajectory().KeyToProcess(it->second);
-  }
-
-  std::vector<double> traj_X, traj_Y, traj_Z;
-  //std::vector<double> traj_PX, traj_PY, traj_PZ;
-  //std::vector<size_t> elastic_indices;
-
-  std::vector<std::pair<size_t, size_t>> ranges;
-
-  //bool found_last = false;
-  bool found_LAr = false;
-  size_t start = 0, end = 0;
-  //G4ReweightTraj theTraj(part.TrackId(), part.PdgCode(), 0, event, {0,0});
-  for (size_t i = 0; i < part.NumberTrajectoryPoints(); ++i) {
-    double x = part.Position(i).X();
-    double y = part.Position(i).Y();
-    double z = part.Position(i).Z();
-
-    geo::Point_t test_point{x, y, z};
-    const TGeoMaterial * test_material = geo_serv->Material(test_point);
-
-    if (!strcmp(test_material->GetName(), "LAr")) {
-      if (fVerbose) {
-        std::cout << i << " " << "LAr: " << test_material->GetDensity() << " " <<
-                     test_material->GetA() << " " << test_material->GetZ() <<
-                     " " << x << " " << y << " " << z << 
-                     std::endl;
-      }
-
-      if (!found_LAr) {
-        found_LAr = true;
-        start = i;
-      }
-
-      //traj_PX.push_back(part.Px(i));
-      //traj_PY.push_back(part.Py(i));
-      //traj_PZ.push_back(part.Pz(i));
-
-      //auto itProc = proc_map.find(i);
-      //if (itProc != proc_map.end() && itProc->second == "hadElastic") {
-      //  elastic_indices.push_back(i);
-      //}
-    }
-    else {
-      if (fVerbose) {
-        std::cout << i << " " << test_material->GetName() << " " <<
-                     test_material->GetDensity() << " " <<
-                     test_material->GetA() << " " << test_material->GetZ() <<
-                     " " << x << " " << y << " " << z << 
-                     std::endl;
-      }
-      if (found_LAr) {
-        found_LAr = false;
-        end = i;
-        ranges.push_back({start, end});
-      }
-    }
-
-    //if (i == part.NumberTrajectoryPoints() - 1)
-    //  found_last = true;
-  }
-  if (found_LAr) {
-    //size_t np = part.NumberTrajectoryPoints();
-    ranges.push_back({start, part.NumberTrajectoryPoints() - 1});
-    //double x = part.Position(np - 1).X();
-    //double y = part.Position(np - 1).Y();
-    //double z = part.Position(np - 1).Z();
-  }
-
-  double mass = 0.;
-
-  switch (abs(part.PdgCode())) {
-    case 211: {
-      mass = 139.57;
-      break;
-    }
-    case 2212: {
-      mass = 938.28;
-      break;
-    }
-    default: {
-      return results;
-      break;
-    }
-  }
-
-  for (size_t i = 0; i < ranges.size(); ++i) {
-    //std::cout << ranges[i].first << " " << ranges[i].second << std::endl;
-    G4ReweightTraj * theTraj = new G4ReweightTraj(i, part.PdgCode(), 0, event, {0,0});
-    
-    for (size_t j = ranges[i].first; j < ranges[i].second; ++j) {
-      double dx = part.Position(j+1).X() - part.Position(j).X();
-      double dy = part.Position(j+1).Y() - part.Position(j).Y();
-      double dz = part.Position(j+1).Z() - part.Position(j).Z();
-
-      double len = sqrt(dx*dx + dy*dy + dz*dz);
-  
-      double preStepP[3] = {part.Px(j)*1.e3,
-                            part.Py(j)*1.e3,
-                            part.Pz(j)*1.e3};
-  
-      double postStepP[3] = {part.Px(j + 1)*1.e3,
-                             part.Py(j + 1)*1.e3,
-                             part.Pz(j + 1)*1.e3};
-      if (j == ranges[i].first) {
-        double p_squared = preStepP[0]*preStepP[0] + preStepP[1]*preStepP[1] +
-                           preStepP[2]*preStepP[2];
-        theTraj->SetEnergy(sqrt(p_squared + mass*mass));
-      }
-
-      //prochere
-      auto itProc = proc_map.find(j);
-      std::string proc = "default";
-      if (itProc != proc_map.end() &&
-          j != (part.NumberTrajectoryPoints() - 2)) {
-        proc = itProc->second;
-      }
-      //- 2 because the last element is the end of the last step
-      else if (j == (part.NumberTrajectoryPoints() - 2)) {
-        proc = part.EndProcess();
-      }
-      //std::cout << j << " Proc: " << proc << std::endl;
-      G4ReweightStep * step = new G4ReweightStep(i, part.PdgCode(),
-                                                 0, event, preStepP, postStepP,
-                                                 len, proc);
-      theTraj->AddStep(step);
-    }
-
-    results.push_back(theTraj);
-  }
-
-  if (results.size()) {
-    //Loop over daughters
-    for (int i = 0; i < part.NumberDaughters(); ++i) {
-      int d_index = part.Daughter(i);
-      auto d_part = plist[d_index];
-
-      int d_PDG = d_part->PdgCode();
-      int d_ID = d_part->TrackId();
-
-      results.back()->AddChild(new G4ReweightTraj(d_ID, d_PDG,
-                               results.size() - 1, event, {0,0}));
-    }
-  }
-  return results;
 }
 
 // define the parameteric line equation

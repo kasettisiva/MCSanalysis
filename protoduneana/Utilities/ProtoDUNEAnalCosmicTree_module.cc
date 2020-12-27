@@ -277,7 +277,7 @@ void protoana::ProtoDUNEAnalCosmicTree::FillCosmicsTree(art::Event const & evt){
   }
 
   // Do not process more than NMAXCOSMICPARTICLES
-  if(fNCOSMICS > NMAXCOSMICPARTICLES) return;
+  if(fNCOSMICS >= NMAXCOSMICPARTICLES) return;
 
   // Get all PFParticles
   auto recoParticles = evt.getValidHandle<std::vector<recob::PFParticle>>(fPFParticleTag);

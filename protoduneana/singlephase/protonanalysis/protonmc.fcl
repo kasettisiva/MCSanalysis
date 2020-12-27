@@ -130,7 +130,12 @@ services.Geometry: @local::protodunev7_geo
 #physics.analyzers.protonmc.XSecFile: "/dune/data2/users/hyliao/GeantReweight/xs_cascade/cross_section_out.root"
 
 physics.analyzers.protonmc.FracsFile: "./cascade_fix.root"
-physics.analyzers.protonmc.XSecFile: "./cross_section_out.root"
+physics.analyzers.protonmc.Material: {
+  Name: "liquidArgon"
+  Z:    18
+  Mass: 39.948
+  Density: 1.400
+}
 
 physics.analyzers.protonmc.RW_PDG: 2212
 
