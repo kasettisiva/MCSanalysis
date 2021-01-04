@@ -93,104 +93,20 @@ namespace pionana {
       std::vector<const sim::IDE*> ides, double the_z0, double the_pitch,
       double true_endZ){
 
-    std::map< int, std::vector< const sim::IDE* > > results;
+    std::map<int, std::vector<const sim::IDE*>> results;
 
     for (size_t i = 0; i < ides.size(); ++i) {
       int slice_num = std::floor(
           (ides[i]->z - (the_z0 - the_pitch/2.)) / the_pitch);
-
-      
       /*
       std::cout << "IDE: " << i << " ID: " << ides[i]->trackID << " Edep: "
                 << ides[i]->energy << " (X,Y,Z): " << "(" << ides[i]->x << ","
                 << ides[i]->y<<","<<ides[i]->z << ") Z0: " << the_z0
-                << " Slice: " << slice_num << std::endl;
-     */ 
-
+                << " Slice: " << slice_num << std::endl;*/
       results[slice_num].push_back(ides[i]);
     }
 
     return results;
-  }
-
-  std::vector< std::pair< int, double > > getTrueSliceListFromRecoHit_electrons(detinfo::DetectorClocksData const& clockData,
-                                                                                const recob::Hit & hit, art::ServiceHandle<cheat::BackTrackerService> bt, const std::map< int, std::vector< const sim::IDE* > > & true_slices, int beam_id ){
-
-    std::vector< std::pair< int, double > > results;
-
-    auto ides = bt->HitToSimIDEs_Ps(clockData, hit);
-    std::map< int, double > ID_to_IDE_electrons;
-    //First, check if the hit is matched to the beam id
-    for( size_t i = 0; i < ides.size(); ++i ){
-      //std::cout << "Adding " << ides[i]->trackID << " " << ides[i]->z << std::endl;
-      //ID_to_IDE_electrons[ ides[i]->trackID ] += ides[i]->numElectrons;
-      ID_to_IDE_electrons[ abs( ides[i]->trackID ) ] += ides[i]->numElectrons;
-    }
-
-    int max_id = -999;
-    double prev_max_electrons = -999.;
-    for( auto it = ID_to_IDE_electrons.begin(); it != ID_to_IDE_electrons.end(); ++it ){
-      if( it->second > prev_max_electrons ){
-        max_id = it->first;
-        prev_max_electrons = it->second;
-      }
-    }
-    //If it's not matched to beam, return default
-    if( max_id != beam_id ){
-      results.push_back( {-999,-999.} );
-      return results;
-    }
-
-    std::unordered_map< int, double > slice_to_nElectrons;
-    //Now, count the number of electrons from ides in this hit ordered by slice number
-    for( size_t i = 0; i < ides.size(); ++i ){
-      const sim::IDE * theIDE = ides[i];
-      for( auto it = true_slices.begin(); it != true_slices.end(); ++it ){
-        if( std::find( it->second.begin(), it->second.end(), theIDE ) != it->second.end() ){
-          slice_to_nElectrons[it->first] += theIDE->numElectrons;
-          break;
-        }
-      }
-    }
-
-    std::vector< std::pair< int, double > > pair_vec(slice_to_nElectrons.begin(), slice_to_nElectrons.end());
-
-    std::sort( pair_vec.begin(), pair_vec.end(), [](std::pair<int,double> a, std::pair<int,double> b){return (a.second > b.second);});
-
-    return pair_vec;
-  }
-
-  double total_electrons( std::vector< const sim::IDE* > ides ){
-    double result = 0.;
-    for( size_t i = 0; i < ides.size(); ++i ){
-      result += ides[i]->numElectrons;
-    }
-    return result;
-  }
-
-  int getTrueIDFromHit( detinfo::DetectorClocksData const& clockData,
-                        const recob::Hit & hit, art::ServiceHandle<cheat::BackTrackerService> bt ){
-    int max_id = -999;
-    double prev_max_electrons = -999.;
-
-    std::map< int, double > ID_to_IDE_electrons;
-
-    auto ides = bt->HitToSimIDEs_Ps(clockData, hit);
-    //First, check if the hit is matched to the beam id
-    //std::cout << "N IDES " << ides.size() << std::endl;
-    for( size_t i = 0; i < ides.size(); ++i ){
-      ID_to_IDE_electrons[ abs( ides[i]->trackID ) ] += ides[i]->numElectrons;
-    }
-
-
-    for( auto it = ID_to_IDE_electrons.begin(); it != ID_to_IDE_electrons.end(); ++it ){
-      if( it->second > prev_max_electrons ){
-        max_id = it->first;
-        prev_max_electrons = it->second;
-      }
-    }
-
-    return max_id;
   }
 
   struct cnnOutput2D{
@@ -207,8 +123,8 @@ namespace pionana {
   struct calo_point{
 
     calo_point();
-    calo_point(size_t w, double p, double dqdx, double dedx, double cali_dedx,
-               double r, size_t index, double input_z, int t)
+    calo_point(size_t w, double p, double dqdx, double dedx, double dq,
+               double cali_dedx, double r, size_t index, double input_z, int t)
         : wire(w), pitch(p), dQdX(dqdx), dEdX(dedx), calibrated_dEdX(cali_dedx),
           res_range(r), hit_index(index), z(input_z), tpc(t) {};
 
@@ -216,6 +132,7 @@ namespace pionana {
     double pitch;
     double dQdX;
     double dEdX;
+    double dQ;
     double calibrated_dEdX;
     double res_range;
     size_t hit_index;
@@ -223,7 +140,11 @@ namespace pionana {
     int tpc;
   };
 
-  cnnOutput2D GetCNNOutputFromPFParticle( const recob::PFParticle & part, const art::Event & evt, const anab::MVAReader<recob::Hit,4> & CNN_results,  protoana::ProtoDUNEPFParticleUtils & pfpUtil, std::string fPFParticleTag ){
+  cnnOutput2D GetCNNOutputFromPFParticle(
+      const recob::PFParticle & part, const art::Event & evt,
+      const anab::MVAReader<recob::Hit,4> & CNN_results,
+      protoana::ProtoDUNEPFParticleUtils & pfpUtil,
+      std::string fPFParticleTag) {
 
     cnnOutput2D output;
     const std::vector< art::Ptr< recob::Hit > > daughterPFP_hits = pfpUtil.GetPFParticleHits_Ptrs( part, evt, fPFParticleTag );
@@ -331,6 +252,7 @@ private:
   //Truth level info of the primary beam particle
   //that generated the event
   int true_beam_PDG;
+  double true_beam_mass;
   int true_beam_ID;
   std::string true_beam_endProcess;
   double true_beam_endX;
@@ -443,7 +365,7 @@ private:
   double reco_beam_trackEndDirX, reco_beam_trackEndDirY, reco_beam_trackEndDirZ;
 
   std::vector<double> reco_beam_dEdX_SCE, reco_beam_dQdX_SCE, reco_beam_resRange_SCE, reco_beam_TrkPitch_SCE;
-  std::vector<double> reco_beam_calibrated_dEdX_SCE;
+  std::vector<double> reco_beam_calibrated_dEdX_SCE, reco_beam_dQ;
 
   std::vector<double> reco_beam_dEdX_NoSCE, reco_beam_dQdX_NoSCE, reco_beam_resRange_NoSCE, reco_beam_TrkPitch_NoSCE;
   std::vector<double> reco_beam_calibrated_dEdX_NoSCE;
@@ -1088,6 +1010,7 @@ void pionana::PionAnalyzer::beginJob()
   fTree->Branch("reco_beam_trackID", &reco_beam_trackID);
 
   fTree->Branch("reco_beam_dQdX_SCE", &reco_beam_dQdX_SCE);
+  fTree->Branch("reco_beam_dQ", &reco_beam_dQ);
   fTree->Branch("reco_beam_dEdX_SCE", &reco_beam_dEdX_SCE);
   fTree->Branch("reco_beam_calibrated_dEdX_SCE", &reco_beam_calibrated_dEdX_SCE);
   fTree->Branch("reco_beam_resRange_SCE", &reco_beam_resRange_SCE);
@@ -1260,6 +1183,7 @@ void pionana::PionAnalyzer::beginJob()
 
 
   fTree->Branch("true_beam_PDG", &true_beam_PDG);
+  fTree->Branch("true_beam_mass", &true_beam_mass);
   fTree->Branch("true_beam_ID", &true_beam_ID);
   fTree->Branch("true_beam_endProcess", &true_beam_endProcess);
   fTree->Branch("true_beam_endX", &true_beam_endX);
@@ -1510,12 +1434,12 @@ double pionana::PionAnalyzer::lateralDist(TVector3 &n, TVector3 &x0, TVector3 &p
 
 void pionana::PionAnalyzer::reset()
 {
-  reco_beam_startX = -1;
-  reco_beam_startY = -1;
-  reco_beam_startZ = -1;
-  reco_beam_endX = -1;
-  reco_beam_endY = -1;
-  reco_beam_endZ = -1;
+  reco_beam_startX = -999;
+  reco_beam_startY = -999;
+  reco_beam_startZ = -999;
+  reco_beam_endX = -999;
+  reco_beam_endY = -999;
+  reco_beam_endZ = -999;
   reco_beam_flipped = false;
   reco_beam_trackEndDirX = -999;
   reco_beam_trackEndDirY = -999;
@@ -1524,14 +1448,14 @@ void pionana::PionAnalyzer::reset()
   reco_beam_trackDirY = -999;
   reco_beam_trackDirZ = -999;
 
-  reco_beam_len = -1;
-  reco_beam_alt_len = -1;
-  reco_beam_calo_startX = -1;
-  reco_beam_calo_startY = -1;
-  reco_beam_calo_startZ = -1;
-  reco_beam_calo_endX = -1;
-  reco_beam_calo_endY = -1;
-  reco_beam_calo_endZ = -1;
+  reco_beam_len = -999;
+  reco_beam_alt_len = -999;
+  reco_beam_calo_startX = -999;
+  reco_beam_calo_startY = -999;
+  reco_beam_calo_startZ = -999;
+  reco_beam_calo_endX = -999;
+  reco_beam_calo_endY = -999;
+  reco_beam_calo_endZ = -999;
   reco_beam_calo_startDirX.clear();
   reco_beam_calo_startDirY.clear();
   reco_beam_calo_startDirZ.clear();
@@ -1549,7 +1473,7 @@ void pionana::PionAnalyzer::reset()
   reco_track_ID.clear();
   reco_track_nHits.clear();
 
-  reco_beam_type = -1;
+  reco_beam_type = -999;
   reco_beam_passes_beam_cuts = false;
 
   reco_beam_vertex_slice = std::numeric_limits<int>::max();
@@ -1561,37 +1485,38 @@ void pionana::PionAnalyzer::reset()
   true_daughter_nNeutron = 0;
   true_daughter_nNucleus = 0;
 
-  reco_beam_true_byE_PDG = 0;
-  reco_beam_true_byE_ID = 0;
-  reco_beam_true_byHits_PDG = 0;
-  reco_beam_true_byHits_ID = 0;
+  reco_beam_true_byE_PDG = -999;
+  reco_beam_true_byE_ID = -999;
+  reco_beam_true_byHits_PDG = -999;
+  reco_beam_true_byHits_ID = -999;
 
-  true_beam_PDG = 0;
-  true_beam_ID = 0;
+  true_beam_PDG = -999;
+  true_beam_mass = -999.;
+  true_beam_ID = -999;
   true_beam_endProcess ="";
-  true_beam_endX = 0.;
-  true_beam_endY = 0.;
-  true_beam_endZ = 0.;
-  true_beam_startX = 0.;
-  true_beam_startY = 0.;
-  true_beam_startZ = 0.;
+  true_beam_endX = -999.;
+  true_beam_endY = -999.;
+  true_beam_endZ = -999.;
+  true_beam_startX = -999.;
+  true_beam_startY = -999.;
+  true_beam_startZ = -999.;
 
-  true_beam_startPx   = 0.;
-  true_beam_startPy   = 0.;
-  true_beam_startPz   = 0.;
-  true_beam_startP    = 0.;
+  true_beam_startPx   = -999.;
+  true_beam_startPy   = -999.;
+  true_beam_startPz   = -999.;
+  true_beam_startP    = -999.;
 
-  true_beam_endPx   = 0.;
-  true_beam_endPy   = 0.;
-  true_beam_endPz   = 0.;
-  true_beam_endP    = 0.;
-  true_beam_endP2    = 0.;
-  true_beam_last_len    = 0.;
+  true_beam_endPx   = -999.;
+  true_beam_endPy   = -999.;
+  true_beam_endPz   = -999.;
+  true_beam_endP    = -999.;
+  true_beam_endP2    = -999.;
+  true_beam_last_len    = -999.;
 
-  true_beam_startDirX = 0.;
-  true_beam_startDirY = 0.;
-  true_beam_startDirZ = 0.;
-  true_beam_nHits = -1;
+  true_beam_startDirX = -999.;
+  true_beam_startDirY = -999.;
+  true_beam_startDirZ = -999.;
+  true_beam_nHits = -999;
 
 
   true_beam_processes.clear();
@@ -1602,7 +1527,7 @@ void pionana::PionAnalyzer::reset()
   true_beam_elastic_Z.clear();
   true_beam_elastic_deltaE.clear();
   true_beam_elastic_IDE_edep.clear();
-  true_beam_IDE_totalDep = 0.;
+  true_beam_IDE_totalDep = -999.;
 
   true_beam_reco_byHits_PFP_ID.clear();
   true_beam_reco_byHits_PFP_nHits.clear();
@@ -1610,39 +1535,39 @@ void pionana::PionAnalyzer::reset()
 
   reco_beam_true_byE_endProcess ="";
   reco_beam_true_byE_process ="";
-  reco_beam_true_byE_origin = -1;
+  reco_beam_true_byE_origin = -999;
 
-  reco_beam_true_byE_endPx = 0.;
-  reco_beam_true_byE_endPy = 0.;
-  reco_beam_true_byE_endPz = 0.;
-  reco_beam_true_byE_endE = 0.;
-  reco_beam_true_byE_endP = 0.;
+  reco_beam_true_byE_endPx = -999.;
+  reco_beam_true_byE_endPy = -999.;
+  reco_beam_true_byE_endPz = -999.;
+  reco_beam_true_byE_endE = -999.;
+  reco_beam_true_byE_endP = -999.;
 
-  reco_beam_true_byE_startPx = 0.;
-  reco_beam_true_byE_startPy = 0.;
-  reco_beam_true_byE_startPz = 0.;
-  reco_beam_true_byE_startE = 0.;
-  reco_beam_true_byE_startP = 0.;
+  reco_beam_true_byE_startPx = -999.;
+  reco_beam_true_byE_startPy = -999.;
+  reco_beam_true_byE_startPz = -999.;
+  reco_beam_true_byE_startE = -999.;
+  reco_beam_true_byE_startP = -999.;
 
   reco_beam_true_byHits_endProcess ="";
   reco_beam_true_byHits_process ="";
-  reco_beam_true_byHits_origin = -1;
+  reco_beam_true_byHits_origin = -999;
 
-  reco_beam_true_byHits_endPx = 0.;
-  reco_beam_true_byHits_endPy = 0.;
-  reco_beam_true_byHits_endPz = 0.;
-  reco_beam_true_byHits_endE = 0.;
-  reco_beam_true_byHits_endP = 0.;
+  reco_beam_true_byHits_endPx = -999.;
+  reco_beam_true_byHits_endPy = -999.;
+  reco_beam_true_byHits_endPz = -999.;
+  reco_beam_true_byHits_endE = -999.;
+  reco_beam_true_byHits_endP = -999.;
 
-  reco_beam_true_byHits_startPx = 0.;
-  reco_beam_true_byHits_startPy = 0.;
-  reco_beam_true_byHits_startPz = 0.;
-  reco_beam_true_byHits_startE = 0.;
-  reco_beam_true_byHits_startP = 0.;
+  reco_beam_true_byHits_startPx = -999.;
+  reco_beam_true_byHits_startPy = -999.;
+  reco_beam_true_byHits_startPz = -999.;
+  reco_beam_true_byHits_startE = -999.;
+  reco_beam_true_byHits_startP = -999.;
 
   reco_beam_true_byE_matched = false;
   reco_beam_true_byHits_matched = false;
-  reco_beam_true_byHits_purity = 0.;
+  reco_beam_true_byHits_purity = -999.;
 
 
   //reco_daughter_true_byE_isPrimary = false;
@@ -1650,24 +1575,24 @@ void pionana::PionAnalyzer::reset()
 
 
 
-  beam_inst_P = 0.;
-  beam_inst_X = 0.;
-  beam_inst_Y = 0.;
-  beam_inst_Z = 0.;
-  beam_inst_dirX = 0.;
-  beam_inst_dirY = 0.;
-  beam_inst_dirZ = 0.;
-  beam_inst_nFibersP1 = 0;
-  beam_inst_nFibersP2 = 0;
-  beam_inst_nFibersP3 = 0;
+  beam_inst_P = -999.;
+  beam_inst_X = -999.;
+  beam_inst_Y = -999.;
+  beam_inst_Z = -999.;
+  beam_inst_dirX = -999.;
+  beam_inst_dirY = -999.;
+  beam_inst_dirZ = -999.;
+  beam_inst_nFibersP1 = -999;
+  beam_inst_nFibersP2 = -999;
+  beam_inst_nFibersP3 = -999;
   beam_inst_PDG_candidates.clear();
   beam_inst_TOF.clear();
   beam_inst_TOF_Chan.clear();
-  beam_inst_nTracks = -1;
-  beam_inst_nMomenta = -1;
+  beam_inst_nTracks = -999;
+  beam_inst_nMomenta = -999;
   beam_inst_valid = true;
 
-  reco_beam_Chi2_ndof = -1;
+  reco_beam_Chi2_ndof = -999;
 
   reco_daughter_allTrack_momByRange_proton.clear();
   reco_daughter_allTrack_momByRange_muon.clear();
@@ -1800,10 +1725,11 @@ void pionana::PionAnalyzer::reset()
   reco_beam_TrkPitch_NoSCE.clear();
 
   reco_beam_dQdX_SCE.clear();
+  reco_beam_dQ.clear();
   reco_beam_dEdX_SCE.clear();
   reco_beam_calibrated_dEdX_SCE.clear();
-  reco_beam_vertex_nHits = -1;
-  reco_beam_vertex_michel_score = -1.;
+  reco_beam_vertex_nHits = -999;
+  reco_beam_vertex_michel_score = -999.;
 
   reco_beam_resRange_SCE.clear();
   reco_beam_TrkPitch_SCE.clear();
@@ -1816,7 +1742,7 @@ void pionana::PionAnalyzer::reset()
   reco_beam_hit_true_origin.clear();
   reco_beam_hit_true_slice.clear();
 
-  reco_beam_trackID = -1;
+  reco_beam_trackID = -999;
 
   reco_beam_incidentEnergies.clear();
   reco_beam_interactingEnergy = -999.;
@@ -2141,6 +2067,7 @@ void pionana::PionAnalyzer::BeamTrackInfo(
       reco_beam_TrkPitch_SCE.push_back( calo[index].TrkPitchVec()[i] );
 
       const recob::Hit & theHit = (*allHits)[ TpIndices[i] ];
+      reco_beam_dQ.push_back(theHit.Integral());
       reco_beam_calo_TPC.push_back(theHit.WireID().TPC);
       if (theHit.WireID().TPC == 1) {
         reco_beam_calo_wire.push_back( theHit.WireID().Wire );
@@ -2189,12 +2116,12 @@ void pionana::PionAnalyzer::BeamTrackInfo(
       reco_beam_calo_endDirZ.push_back(dir.Unit().Z());
     }
     else {
-      reco_beam_calo_startDirX.push_back(-1.);
-      reco_beam_calo_endDirX.push_back(-1.);
-      reco_beam_calo_startDirY.push_back(-1.);
-      reco_beam_calo_endDirY.push_back(-1.);
-      reco_beam_calo_startDirZ.push_back(-1.);
-      reco_beam_calo_endDirZ.push_back(-1.);
+      reco_beam_calo_startDirX.push_back(-999.);
+      reco_beam_calo_endDirX.push_back(-999.);
+      reco_beam_calo_startDirY.push_back(-999.);
+      reco_beam_calo_endDirY.push_back(-999.);
+      reco_beam_calo_startDirZ.push_back(-999.);
+      reco_beam_calo_endDirZ.push_back(-999.);
     }
 
     if (theXYZPoints.size() > 1) {
@@ -2220,12 +2147,12 @@ void pionana::PionAnalyzer::BeamTrackInfo(
       reco_beam_calo_endDirZ.push_back(end_diff.Unit().Z());
     }
     else {
-      reco_beam_calo_startDirX.push_back(-1.);
-      reco_beam_calo_endDirX.push_back(-1.);
-      reco_beam_calo_startDirY.push_back(-1.);
-      reco_beam_calo_endDirY.push_back(-1.);
-      reco_beam_calo_startDirZ.push_back(-1.);
-      reco_beam_calo_endDirZ.push_back(-1.);
+      reco_beam_calo_startDirX.push_back(-999.);
+      reco_beam_calo_endDirX.push_back(-999.);
+      reco_beam_calo_startDirY.push_back(-999.);
+      reco_beam_calo_endDirY.push_back(-999.);
+      reco_beam_calo_startDirZ.push_back(-999.);
+      reco_beam_calo_endDirZ.push_back(-999.);
     }
 
     if (theXYZPoints.size() > 2) {
@@ -2255,12 +2182,12 @@ void pionana::PionAnalyzer::BeamTrackInfo(
       reco_beam_calo_endDirZ.push_back(endDiff.Unit().Z());
     }
     else {
-      reco_beam_calo_startDirX.push_back(-1.);
-      reco_beam_calo_endDirX.push_back(-1.);
-      reco_beam_calo_startDirY.push_back(-1.);
-      reco_beam_calo_endDirY.push_back(-1.);
-      reco_beam_calo_startDirZ.push_back(-1.);
-      reco_beam_calo_endDirZ.push_back(-1.);
+      reco_beam_calo_startDirX.push_back(-999.);
+      reco_beam_calo_endDirX.push_back(-999.);
+      reco_beam_calo_startDirY.push_back(-999.);
+      reco_beam_calo_endDirY.push_back(-999.);
+      reco_beam_calo_startDirZ.push_back(-999.);
+      reco_beam_calo_endDirZ.push_back(-999.);
     }
 
     if (theXYZPoints.size() > 3) {
@@ -2291,18 +2218,18 @@ void pionana::PionAnalyzer::BeamTrackInfo(
 
     }
     else {
-      reco_beam_calo_startDirX.push_back(-1.);
-      reco_beam_calo_endDirX.push_back(-1.);
-      reco_beam_calo_startDirY.push_back(-1.);
-      reco_beam_calo_endDirY.push_back(-1.);
-      reco_beam_calo_startDirZ.push_back(-1.);
-      reco_beam_calo_endDirZ.push_back(-1.);
+      reco_beam_calo_startDirX.push_back(-999.);
+      reco_beam_calo_endDirX.push_back(-999.);
+      reco_beam_calo_startDirY.push_back(-999.);
+      reco_beam_calo_endDirY.push_back(-999.);
+      reco_beam_calo_startDirZ.push_back(-999.);
+      reco_beam_calo_endDirZ.push_back(-999.);
     }
     ////////////////////////////////////////////
 
     //New Calibration
     std::cout << "Getting reco beam calo" << std::endl;
-    std::vector< float > new_dEdX = calibration_SCE.GetCalibratedCalorimetry(  *thisTrack, evt, fTrackerTag, fCalorimetryTagSCE, 2, -1.);
+    std::vector< float > new_dEdX = calibration_SCE.GetCalibratedCalorimetry(*thisTrack, evt, fTrackerTag, fCalorimetryTagSCE, 2, -1.);
     std::cout << new_dEdX.size() << " " << reco_beam_resRange_SCE.size() << std::endl;
     for( size_t i = 0; i < new_dEdX.size(); ++i ){ reco_beam_calibrated_dEdX_SCE.push_back( new_dEdX[i] ); }
     std::cout << "got calibrated dedx" << std::endl;
@@ -2326,6 +2253,7 @@ void pionana::PionAnalyzer::BeamTrackInfo(
         reco_beam_calo_points.push_back(
           calo_point(reco_beam_calo_wire[i], reco_beam_TrkPitch_SCE[i],
                      reco_beam_dQdX_SCE[i], reco_beam_dEdX_SCE[i],
+                     reco_beam_dQ[i],
                      reco_beam_calibrated_dEdX_SCE[i],
                      calo_hit_indices[i], reco_beam_resRange_SCE[i],
                      reco_beam_calo_wire_z[i], reco_beam_calo_TPC[i]));
@@ -2346,28 +2274,23 @@ void pionana::PionAnalyzer::BeamTrackInfo(
         reco_beam_calo_TPC[i] = thePoint.tpc;
         reco_beam_resRange_SCE[i] = thePoint.res_range;
         reco_beam_dQdX_SCE[i] = thePoint.dQdX;
+        reco_beam_dQ[i] = thePoint.dQ;
         reco_beam_dEdX_SCE[i] = thePoint.dEdX;
       }
 
       //Get the initial Energy KE
-      double mass = 0.;
+      //double mass = 0.;
       double init_KE = 0.;
       //std::cout << "Has BI? " << fMCHasBI << " " << evt.isRealData() << std::endl;
       if (evt.isRealData() || fMCHasBI) {
-        mass = 139.57;
+        double mass = 139.57;
 
         init_KE =  sqrt( 1.e6*beam_inst_P*beam_inst_P + mass*mass ) - mass;
        // std::cout << "MC has BI: " << init_KE << std::endl;
       }
       else{
-        if( true_beam_PDG == 2212 ) mass = 938.27;
-        else if( abs(true_beam_PDG) == 211 ) mass = 139.57;
-        else if( abs(true_beam_PDG) == 11 ) mass = .511;
-        else if( abs(true_beam_PDG) == 321 ) mass = 321;
-        else if( abs(true_beam_PDG) == 13 )  mass = 105.66;
-
-        init_KE = sqrt( 1.e6 * true_beam_startP*true_beam_startP + mass*mass ) - mass;
-        //std::cout << "MC does not has BI: " << init_KE << std::endl;
+        init_KE = sqrt(1.e6*true_beam_startP*true_beam_startP +
+                       true_beam_mass*true_beam_mass) - true_beam_mass;
       }
 
       reco_beam_incidentEnergies.push_back( init_KE );
@@ -2433,6 +2356,7 @@ void pionana::PionAnalyzer::BeamTrackInfo(
         reco_beam_calo_points.push_back(
           calo_point(reco_beam_calo_wire[i], reco_beam_TrkPitch_NoSCE[i],
                      reco_beam_dQdX_NoSCE[i], reco_beam_dEdX_NoSCE[i],
+                     reco_beam_dQ[i],
                      reco_beam_calibrated_dEdX_NoSCE[i],
                      calo_hit_indices[i], reco_beam_resRange_NoSCE[i],
                      reco_beam_calo_wire_z[i], reco_beam_calo_TPC[i]));
@@ -2482,6 +2406,7 @@ void pionana::PionAnalyzer::TrueBeamInfo(
   true_beam_endProcess = true_beam_particle->EndProcess();
 
   true_beam_PDG         = true_beam_particle->PdgCode();
+  true_beam_mass        = true_beam_particle->Mass()*1.e3;
   true_beam_ID          = true_beam_particle->TrackId();
   true_beam_endX = true_beam_particle->EndX();
   true_beam_endY = true_beam_particle->EndY();
@@ -2582,15 +2507,10 @@ void pionana::PionAnalyzer::TrueBeamInfo(
         ( ( PX * next_PX ) + ( PY * next_PY ) + ( PZ * next_PZ ) ) / ( total_P * total_next_P )
       );
 
-      double mass = 139.57;
-      if( true_beam_PDG == 2212 ) mass = 938.27;
-      else if( abs(true_beam_PDG) == 211 ) mass = 139.57;
-      else if( abs(true_beam_PDG) == 11 ) mass = .511;
-      else if( abs(true_beam_PDG) == 321 ) mass = 321;
-      else if( abs(true_beam_PDG) == 13 )  mass = 105.66;
-
-      double total_E = sqrt(total_P*total_P*1.e6 + mass*mass);
-      double total_next_E = sqrt(total_next_P*total_next_P*1.e6 + mass*mass);
+      double total_E = sqrt(total_P*total_P*1.e6 +
+                            true_beam_mass*true_beam_mass);
+      double total_next_E = sqrt(total_next_P*total_next_P*1.e6 +
+                                 true_beam_mass*true_beam_mass);
 
       true_beam_elastic_X.push_back( process_X );
       true_beam_elastic_Y.push_back( process_Y );
@@ -2659,15 +2579,8 @@ void pionana::PionAnalyzer::TrueBeamInfo(
     view2_IDEs.erase( view2_IDEs.begin() + remove_index, view2_IDEs.end() );
   }
 
-  //Get the mass for the beam particle
-  double mass = 139.57;
-  if( true_beam_PDG == 2212 ) mass = 938.27;
-  else if( abs(true_beam_PDG) == 211 ) mass = 139.57;
-  else if( abs(true_beam_PDG) == 11 ) mass = .511;
-  else if( abs(true_beam_PDG) == 321 ) mass = 321;
-  else if( abs(true_beam_PDG) == 13 )  mass = 105.66;
-
-  double init_KE = sqrt( 1.e6 * true_beam_startP*true_beam_startP + mass*mass ) - mass;
+  double init_KE = sqrt(1.e6 * true_beam_startP*true_beam_startP +
+                        true_beam_mass*true_beam_mass) - true_beam_mass;
 
   //slice up the view2_IDEs up by the wire pitch
   auto sliced_ides = slice_IDEs( view2_IDEs, fZ0, fPitch, true_beam_endZ);
@@ -2707,12 +2620,12 @@ void pionana::PionAnalyzer::TrueBeamInfo(
           std::cout << "Point " << i << " (" << x1 << ", " << y1 <<
                        ", " << z1 << ") Material " << mat1->GetName() <<
                        std::endl;
-          init_KE = 1.e3 * true_beam_trajectory.E(i-1) - mass;
+          init_KE = 1.e3 * true_beam_trajectory.E(i-1) - true_beam_mass;
           if (fVerbose) {
             std::cout << "Found matching position" << z0 << " " << ide_z <<
                          " " << z1 << std::endl;
             std::cout << "init KE: " << init_KE << " " <<
-                         (1.e3*true_beam_trajectory.E(i) - mass) << std::endl;
+                         (1.e3*true_beam_trajectory.E(i) - true_beam_mass) << std::endl;
           }
           break;
         }
@@ -2745,7 +2658,7 @@ void pionana::PionAnalyzer::TrueBeamInfo(
     true_beam_traj_Y.push_back(true_beam_trajectory.Y(i));
     true_beam_traj_Z.push_back(true_beam_trajectory.Z(i));
     
-    true_beam_traj_KE.push_back(true_beam_trajectory.E(i)*1.e3 - mass);
+    true_beam_traj_KE.push_back(true_beam_trajectory.E(i)*1.e3 - true_beam_mass);
   }
 
   //Look through the daughters
@@ -2876,7 +2789,7 @@ void pionana::PionAnalyzer::TrueBeamInfo(
      
             }
             else{
-              true_beam_Pi0_decay_reco_byHits_allTrack_ID.back().push_back( -1 );
+              true_beam_Pi0_decay_reco_byHits_allTrack_ID.back().push_back( -999 );
               true_beam_Pi0_decay_reco_byHits_allTrack_startX.back().push_back( -999. );
               true_beam_Pi0_decay_reco_byHits_allTrack_startY.back().push_back( -999. );
               true_beam_Pi0_decay_reco_byHits_allTrack_startZ.back().push_back( -999. );
@@ -2902,7 +2815,7 @@ void pionana::PionAnalyzer::TrueBeamInfo(
               true_beam_Pi0_decay_reco_byHits_allShower_len.back().push_back( pandora2Shower->Length() );
             }
             else{
-              true_beam_Pi0_decay_reco_byHits_allShower_ID.back().push_back( -1 );
+              true_beam_Pi0_decay_reco_byHits_allShower_ID.back().push_back( -999 );
               true_beam_Pi0_decay_reco_byHits_allShower_startX.back().push_back( -999. );
               true_beam_Pi0_decay_reco_byHits_allShower_startY.back().push_back( -999. );
               true_beam_Pi0_decay_reco_byHits_allShower_startZ.back().push_back( -999. );
@@ -2987,7 +2900,7 @@ void pionana::PionAnalyzer::TrueBeamInfo(
  
         }
         else{
-          true_beam_daughter_reco_byHits_allTrack_ID.back().push_back( -1 );
+          true_beam_daughter_reco_byHits_allTrack_ID.back().push_back( -999 );
           true_beam_daughter_reco_byHits_allTrack_startX.back().push_back( -999. );
           true_beam_daughter_reco_byHits_allTrack_startY.back().push_back( -999. );
           true_beam_daughter_reco_byHits_allTrack_startZ.back().push_back( -999. );
@@ -3014,7 +2927,7 @@ void pionana::PionAnalyzer::TrueBeamInfo(
  
         }
         else{
-          true_beam_daughter_reco_byHits_allShower_ID.back().push_back( -1 );
+          true_beam_daughter_reco_byHits_allShower_ID.back().push_back( -999 );
           true_beam_daughter_reco_byHits_allShower_startX.back().push_back( -999. );
           true_beam_daughter_reco_byHits_allShower_startY.back().push_back( -999. );
           true_beam_daughter_reco_byHits_allShower_startZ.back().push_back( -999. );
@@ -3457,13 +3370,13 @@ void pionana::PionAnalyzer::DaughterPFPInfo(
 
       }
       else{
-        reco_daughter_allTrack_ID.push_back( -1 );
+        reco_daughter_allTrack_ID.push_back( -999 );
         reco_daughter_allTrack_resRange_SCE.push_back( std::vector<double>() );
         reco_daughter_allTrack_dEdX_SCE.push_back( std::vector<double>() );
         reco_daughter_allTrack_dQdX_SCE.push_back( std::vector<double>() );
         reco_daughter_allTrack_calibrated_dEdX_SCE.push_back(std::vector<double>());
         reco_daughter_allTrack_Chi2_proton.push_back( -999. );
-        reco_daughter_allTrack_Chi2_ndof.push_back( 0 );
+        reco_daughter_allTrack_Chi2_ndof.push_back( -999 );
 
         //Calorimetry + chi2 for planes 0 and 1
         reco_daughter_allTrack_calibrated_dEdX_SCE_plane0.push_back(
@@ -3476,9 +3389,9 @@ void pionana::PionAnalyzer::DaughterPFPInfo(
             std::vector<double>());
 
         reco_daughter_allTrack_Chi2_proton_plane0.push_back( -999. );
-        reco_daughter_allTrack_Chi2_ndof_plane0.push_back( 0 );
+        reco_daughter_allTrack_Chi2_ndof_plane0.push_back( -999 );
         reco_daughter_allTrack_Chi2_proton_plane1.push_back( -999. );
-        reco_daughter_allTrack_Chi2_ndof_plane1.push_back( 0 );
+        reco_daughter_allTrack_Chi2_ndof_plane1.push_back( -999 );
         //////////////////////////////////
 
         reco_daughter_allTrack_Theta.push_back(-999. );
@@ -3492,7 +3405,7 @@ void pionana::PionAnalyzer::DaughterPFPInfo(
         reco_daughter_allTrack_endY.push_back(   -999. );
         reco_daughter_allTrack_endZ.push_back(   -999. );
         reco_daughter_allTrack_to_vertex.push_back( -999. );
-        reco_daughter_allTrack_dR.push_back( -1. );
+        reco_daughter_allTrack_dR.push_back( -999. );
         reco_daughter_allTrack_momByRange_proton.push_back(-999.);
         reco_daughter_allTrack_momByRange_muon.push_back(-999.);
 
@@ -3586,15 +3499,15 @@ void pionana::PionAnalyzer::DaughterPFPInfo(
         }
       }
       else{
-        reco_daughter_allShower_ID.push_back(       -1  );
-        reco_daughter_allShower_len.push_back(    -999. );
-        reco_daughter_allShower_startX.push_back( -999. );
-        reco_daughter_allShower_startY.push_back( -999. );
-        reco_daughter_allShower_startZ.push_back( -999. );
-        reco_daughter_allShower_dirX.push_back( -999. );
-        reco_daughter_allShower_dirY.push_back( -999. );
-        reco_daughter_allShower_dirZ.push_back( -999. );
-        reco_daughter_allShower_energy.push_back( -999. );
+        reco_daughter_allShower_ID.push_back(-999);
+        reco_daughter_allShower_len.push_back(-999.);
+        reco_daughter_allShower_startX.push_back(-999.);
+        reco_daughter_allShower_startY.push_back(-999.);
+        reco_daughter_allShower_startZ.push_back(-999.);
+        reco_daughter_allShower_dirX.push_back(-999.);
+        reco_daughter_allShower_dirY.push_back(-999.);
+        reco_daughter_allShower_dirZ.push_back(-999.);
+        reco_daughter_allShower_energy.push_back(-999.);
       }
 
     }
@@ -3753,14 +3666,14 @@ void pionana::PionAnalyzer::DaughterMatchInfo(
     reco_daughter_PFP_true_byHits_completeness.push_back( sharedHits/totalTruth );
   }
   else{
-    reco_daughter_PFP_true_byHits_PDG.push_back( -1 );
-    reco_daughter_PFP_true_byHits_ID.push_back( -1 );
-    reco_daughter_PFP_true_byHits_origin.push_back( -1 );
-    reco_daughter_PFP_true_byHits_parID.push_back( -1 );
-    reco_daughter_PFP_true_byHits_parPDG.push_back( -1 );
+    reco_daughter_PFP_true_byHits_PDG.push_back( -999 );
+    reco_daughter_PFP_true_byHits_ID.push_back( -999 );
+    reco_daughter_PFP_true_byHits_origin.push_back( -999 );
+    reco_daughter_PFP_true_byHits_parID.push_back( -999 );
+    reco_daughter_PFP_true_byHits_parPDG.push_back( -999 );
     reco_daughter_PFP_true_byHits_process.push_back( "empty" );
-    reco_daughter_PFP_true_byHits_sharedHits.push_back( 0 );
-    reco_daughter_PFP_true_byHits_emHits.push_back( 0 );
+    reco_daughter_PFP_true_byHits_sharedHits.push_back( -999 );
+    reco_daughter_PFP_true_byHits_emHits.push_back( -999 );
 
     reco_daughter_PFP_true_byHits_len.push_back( -999. );
     reco_daughter_PFP_true_byHits_startX.push_back( -999. );
@@ -3790,7 +3703,7 @@ void pionana::PionAnalyzer::DaughterMatchInfo(
     reco_daughter_PFP_true_byE_completeness.push_back( completeness );
   }
   else {
-    reco_daughter_PFP_true_byE_PDG.push_back( -1 );
+    reco_daughter_PFP_true_byE_PDG.push_back( -999 );
     reco_daughter_PFP_true_byE_len.push_back( -999. );
     reco_daughter_PFP_true_byE_purity.push_back( -999. );
     reco_daughter_PFP_true_byE_completeness.push_back( -999. );
