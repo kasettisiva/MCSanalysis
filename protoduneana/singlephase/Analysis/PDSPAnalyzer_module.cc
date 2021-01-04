@@ -2,6 +2,8 @@
 // Class:       PDSPAnalyzer
 // Plugin Type: analyzer (art v3_00_00)
 // File:        PDSPAnalyzer_module.cc
+// Written by Jake Calcutt (calcuttj@msu.edu -- Slack: @jakecalcutt)
+// Reach out for questions/issues/bugs
 ////////////////////////////////////////////////////////////////////////
 
 #include "art/Framework/Core/EDAnalyzer.h"
