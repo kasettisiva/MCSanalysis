@@ -124,7 +124,7 @@ protoana::G4RWExampleAnalyzer::G4RWExampleAnalyzer(
       FracsFile( (p.get< std::string >( "FracsFile" )).c_str(), "OPEN" ),
       //ProtFracsFile( (p.get< std::string >( "ProtFracsFile" )).c_str(), "OPEN" ),
       ParSet(p.get<std::vector<fhicl::ParameterSet>>("ParameterSet")),
-      ParMaker(ParSet, RW_PDG),
+      ParMaker(ParSet, false, RW_PDG),
       RWManager({p.get<fhicl::ParameterSet>("Material")}),
       MultiRW(RW_PDG, FracsFile, ParSet,
               p.get<fhicl::ParameterSet>("Material"),
@@ -331,7 +331,7 @@ void protoana::G4RWExampleAnalyzer::analyze(art::Event const& e) {
     std::vector<G4ReweightTraj *> trajs = CreateNRWTrajs(
         *true_beam_particle, plist,
         fGeometryService, event, true);
-    
+    std::cout << "Made " << trajs.size() << " trajs" << std::endl; 
     bool added = false;
     for (size_t i = 0; i < trajs.size(); ++i) {
       if (trajs[i]->GetNSteps() > 0) {
