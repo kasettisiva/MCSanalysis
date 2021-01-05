@@ -3,5 +3,7 @@ truthanalyzer: {
   module_type: "TruthAnalyzer"
   GeneratorTag: "generator"
   View: 2
+
+  SimEDepTag: "largeant:LArG4DetectorServicevolTPCActive:G4Stage1"
 }
 END_PROLOG

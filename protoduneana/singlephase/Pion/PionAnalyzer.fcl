@@ -32,6 +32,7 @@ pionanalysis:
 
   CalibrationPars: @local::CalorimetryParameters_SPProd2_MC_SCE
   SaveHits: false
+  SkipMVA: false
   TrueToReco: false
   DoReweight: false
   DoProtReweight: false 
