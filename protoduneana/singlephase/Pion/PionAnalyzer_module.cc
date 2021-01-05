@@ -1477,7 +1477,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
                 pfpUtil.GetPFParticleHits_Ptrs( *thePFP, evt, fPFParticleTag ).size()
               );
 
-              if (fSkipMVA) {
+              if (!fSkipMVA) {
                 cnnOutput2D theCNNResults = GetCNNOutputFromPFParticle( *thePFP, evt, *hitResults, pfpUtil, fPFParticleTag );
                 double track_score = ((theCNNResults.nHits > 0) ? 
                                       (theCNNResults.track / theCNNResults.nHits) :
@@ -1587,7 +1587,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
             pfpUtil.GetPFParticleHits_Ptrs( *thePFP, evt, fPFParticleTag ).size()
           );
 
-          if (fSkipMVA) {
+          if (!fSkipMVA) {
             cnnOutput2D theCNNResults = GetCNNOutputFromPFParticle( *thePFP, evt, *hitResults, pfpUtil, fPFParticleTag );
             double track_score = ((theCNNResults.nHits > 0) ? 
                                   (theCNNResults.track / theCNNResults.nHits) :
@@ -1667,7 +1667,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
   reco_beam_PFP_ID = particle->Self();
   const std::vector< art::Ptr< recob::Hit > > beamPFP_hits = pfpUtil.GetPFParticleHits_Ptrs( *particle, evt, fPFParticleTag );
   reco_beam_PFP_nHits = beamPFP_hits.size();
-  if (fSkipMVA) {
+  if (!fSkipMVA) {
     cnnOutput2D cnn = GetCNNOutputFromPFParticle( *particle, evt, *hitResults, pfpUtil, fPFParticleTag );
     reco_beam_PFP_trackScore = (cnn.nHits > 0 ?
                                 (cnn.track / cnn.nHits) : -999.);
@@ -2385,7 +2385,7 @@ void pionana::PionAnalyzer::analyze(art::Event const & evt) {
         reco_daughter_PFP_michelScore_collection.push_back( -999. );
       }
 */
-      if (fSkipMVA) {
+      if (!fSkipMVA) {
         cnnOutput2D theCNNResults = GetCNNOutputFromPFParticle(
             *daughterPFP, evt, *hitResults, pfpUtil, fPFParticleTag);
         double track_score = (theCNNResults.nHits > 0 ?
