@@ -61,7 +61,8 @@
 #include "geant4reweight/src/ReweightBase/G4MultiReweighter.hh"
 #include "geant4reweight/src/ReweightBase/G4ReweightManager.hh"
 
-
+#include "cetlib/search_path.h"
+#include "cetlib/filesystem.h"
 
 #include "art_root_io/TFileService.h"
 #include "TProfile.h"
@@ -106,6 +107,38 @@ namespace pduneana {
     }
 
     return results;
+  }
+
+  TFile * OpenFile(const std::string filename) {
+    TFile * theFile = 0x0;
+    mf::LogInfo("pduneana::OpenFile") << "Searching for " << filename;
+    if (cet::file_exists(filename)) {
+      mf::LogInfo("pduneana::OpenFile") << "File exists. Opening " << filename;
+      theFile = new TFile(filename.c_str());
+      if (!theFile ||theFile->IsZombie() || !theFile->IsOpen()) {
+        delete theFile;
+        theFile = 0x0;
+        throw cet::exception("PDSPAnalyzer_module.cc") << "Could not open " << filename;
+      }
+    }
+    else {
+      mf::LogInfo("pduneana::OpenFile") << "File does not exist here. Searching FW_SEARCH_PATH";
+      cet::search_path sp{"FW_SEARCH_PATH"};
+      std::string found_filename;
+      auto found = sp.find_file(filename, found_filename);
+      if (!found) {
+        throw cet::exception("PDSPAnalyzer_module.cc") << "Could not find " << filename;
+      }
+
+      mf::LogInfo("pduneana::OpenFile") << "Found file " << found_filename;
+      theFile = new TFile(found_filename.c_str());
+      if (!theFile ||theFile->IsZombie() || !theFile->IsOpen()) {
+        delete theFile;
+        theFile = 0x0;
+        throw cet::exception("PDSPAnalyzer_module.cc") << "Could not open " << found_filename;
+      }
+    }
+    return theFile;
   }
 
   struct cnnOutput2D{
@@ -605,7 +638,7 @@ private:
   std::string fBeamModuleLabel;
   protoana::ProtoDUNEBeamlineUtils fBeamlineUtils;
   std::string dEdX_template_name;
-  TFile dEdX_template_file;
+  TFile * dEdX_template_file;
   bool fVerbose;    
   fhicl::ParameterSet BeamPars;
   fhicl::ParameterSet BeamCuts;
@@ -653,7 +686,7 @@ pduneana::PDSPAnalyzer::PDSPAnalyzer(fhicl::ParameterSet const& p)
   fBeamModuleLabel(p.get<std::string>("BeamModuleLabel")),
   fBeamlineUtils(p.get< fhicl::ParameterSet >("BeamlineUtils")),
   dEdX_template_name(p.get<std::string>("dEdX_template_name")),
-  dEdX_template_file( dEdX_template_name.c_str(), "OPEN" ),
+  //dEdX_template_file( dEdX_template_name.c_str(), "OPEN" ),
   fVerbose(p.get<bool>("Verbose")),
   BeamPars(p.get<fhicl::ParameterSet>("BeamPars")),
   BeamCuts(p.get<fhicl::ParameterSet>("BeamCuts")),
@@ -666,10 +699,11 @@ pduneana::PDSPAnalyzer::PDSPAnalyzer(fhicl::ParameterSet const& p)
   fDoProtReweight(p.get<bool>("DoProtReweight")),
   fGetTrackMichel(p.get<bool>("GetTrackMichel")) {
 
-  templates[ 211 ]  = (TProfile*)dEdX_template_file.Get( "dedx_range_pi"  );
-  templates[ 321 ]  = (TProfile*)dEdX_template_file.Get( "dedx_range_ka"  );
-  templates[ 13 ]   = (TProfile*)dEdX_template_file.Get( "dedx_range_mu"  );
-  templates[ 2212 ] = (TProfile*)dEdX_template_file.Get( "dedx_range_pro" );
+  dEdX_template_file = OpenFile(dEdX_template_name);
+  templates[ 211 ]  = (TProfile*)dEdX_template_file->Get( "dedx_range_pi"  );
+  templates[ 321 ]  = (TProfile*)dEdX_template_file->Get( "dedx_range_ka"  );
+  templates[ 13 ]   = (TProfile*)dEdX_template_file->Get( "dedx_range_mu"  );
+  templates[ 2212 ] = (TProfile*)dEdX_template_file->Get( "dedx_range_pro" );
 
   beam_cuts = protoana::ProtoDUNEBeamCuts( BeamCuts );
 
@@ -1417,7 +1451,7 @@ void pduneana::PDSPAnalyzer::beginJob()
 
 void pduneana::PDSPAnalyzer::endJob()
 {
-  dEdX_template_file.Close();
+  dEdX_template_file->Close();
 }
 
 double pduneana::PDSPAnalyzer::lateralDist(TVector3 &n, TVector3 &x0, TVector3 &p){

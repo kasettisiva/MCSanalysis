@@ -66,17 +66,12 @@ physics.filters.fTruth.PDG: [211, -13, 2212]
 physics.analyzers.pduneana.SelectEvents: ["fpath"]
 physics.analyzers.pduneana.CalorimetryTagSCE: "pandoracalinoxyzt"
 physics.analyzers.pduneana.CalorimetryTagNoSCE: "pandoracalonosce" ##For no-SCE sample
-
-#physics.analyzers.pduneana.Pandora2CaloSCE: "pandora2calonosce"
 physics.analyzers.pduneana.Pandora2CaloSCE: "pandora2calinoxyzt"
-physics.analyzers.pduneana.HitTag: "hitpdune"
+#physics.analyzers.pduneana.HitTag: "hitpdune"
 physics.analyzers.pduneana.Verbose: true
 physics.analyzers.pduneana.DoReweight: false 
 physics.analyzers.pduneana.DoProtReweight: false 
 physics.analyzers.pduneana.GetTrackMichel: false 
 physics.analyzers.pduneana.CalibrationParsSCE: @local::CalorimetryParameters_SPProd4_MC_SCE #_eLT
 physics.analyzers.pduneana.CalibrationParsNoSCE: @local::CalorimetryParameters_SPProd4_MC_SCE #_eLT
-#physics.analyzers.pduneana.CalibrationParsSCE.X_correction: "/pnfs/dune/resilient/users/calcuttj/Prod4Calibration/Xcalo_prod4_sceon.root"
-#physics.analyzers.pduneana.CalibrationParsSCE.YZ_correction: "/pnfs/dune/resilient/users/calcuttj/Prod4Calibration/YZcalo_prod4_sceon.root"
-#physics.analyzers.pduneana.CalibrationParsSCE.E_field_correction: "SpaceChargeProtoDUNE/SCE_DataDriven_180kV_v4.root"
 services.ParticleInventoryService.ParticleInventory.EveIdCalculator: "EmEveIdCalculator"

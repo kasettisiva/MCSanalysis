@@ -17,11 +17,11 @@ pdspanalysis:
   CalorimetryTagNoSCE:    "pandoracalonosce"
   Pandora2CaloSCE:        "pandora2caloSCE"
   TrackerTag:             "pandoraTrack"
-  HitTag:                 "gaushit"
+  HitTag:                 "hitpdune"
   ShowerTag:              "pandoraShower"
   PFParticleTag:          "pandora"
   GeneratorTag:           "generator"
-  dEdX_template_name:     "/dune/data/users/calcuttj/dEdxrestemplates.root"
+  dEdX_template_name:     "dEdxrestemplates.root"
   BeamModuleLabel:        "beamevent"
   BeamlineUtils: @local::standard_protodunebeamlineutils
   Verbose:                false 
