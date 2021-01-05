@@ -370,10 +370,8 @@ private:
   std::vector<double> reco_beam_calibrated_dEdX_NoSCE;
 
   std::vector<double> reco_beam_calo_wire, reco_beam_calo_tick, reco_beam_calo_wire_z;
-  std::vector<std::vector<double>> reco_beam_calo_IDE_Zs;
   std::vector<int> reco_beam_calo_TPC;
 
-  std::vector< int >    reco_beam_hit_true_ID, reco_beam_hit_true_origin, reco_beam_hit_true_slice;
   int reco_beam_trackID;
   bool reco_beam_flipped;
 
@@ -1023,13 +1021,9 @@ void pduneana::PDSPAnalyzer::beginJob()
 
   fTree->Branch("reco_beam_calo_wire", &reco_beam_calo_wire);
   fTree->Branch("reco_beam_calo_wire_z", &reco_beam_calo_wire_z);
-  fTree->Branch("reco_beam_calo_IDE_Zs", &reco_beam_calo_IDE_Zs);
   fTree->Branch("reco_beam_calo_tick", &reco_beam_calo_tick);
   fTree->Branch("reco_beam_calo_TPC", &reco_beam_calo_TPC);
 
-  fTree->Branch("reco_beam_hit_true_ID", &reco_beam_hit_true_ID);
-  fTree->Branch("reco_beam_hit_true_slice", &reco_beam_hit_true_slice);
-  fTree->Branch("reco_beam_hit_true_origin", &reco_beam_hit_true_origin);
   fTree->Branch("reco_beam_flipped", &reco_beam_flipped);
   fTree->Branch("reco_beam_passes_beam_cuts", &reco_beam_passes_beam_cuts);
 
@@ -1734,12 +1728,8 @@ void pduneana::PDSPAnalyzer::reset()
   reco_beam_TrkPitch_SCE.clear();
   reco_beam_calo_wire.clear();
   reco_beam_calo_wire_z.clear();
-  reco_beam_calo_IDE_Zs.clear();
   reco_beam_calo_tick.clear();
   reco_beam_calo_TPC.clear();
-  reco_beam_hit_true_ID.clear();
-  reco_beam_hit_true_origin.clear();
-  reco_beam_hit_true_slice.clear();
 
   reco_beam_trackID = -999;
 
@@ -3759,7 +3749,7 @@ void pduneana::PDSPAnalyzer::BeamForcedTrackInfo(
 
       reco_beam_allTrack_len  = pandora2Track->Length();
 
-      auto calo = trackUtil.GetRecoTrackCalorimetry(*pandora2Track, evt, fTrackerTag, fCalorimetryTagSCE);
+      auto calo = trackUtil.GetRecoTrackCalorimetry(*pandora2Track, evt, fTrackerTag, fPandora2CaloSCE);
       size_t index = 0;
       bool found_plane = false;
       for (index = 0; index < calo.size(); ++index) {
@@ -3776,7 +3766,7 @@ void pduneana::PDSPAnalyzer::BeamForcedTrackInfo(
         }
 
         //New Calibration
-        std::vector< float > new_dEdX = calibration_SCE.GetCalibratedCalorimetry(*pandora2Track, evt, fTrackerTag, fCalorimetryTagSCE, 2);
+        std::vector< float > new_dEdX = calibration_SCE.GetCalibratedCalorimetry(*pandora2Track, evt, fTrackerTag, fPandora2CaloSCE, 2);
         for( size_t i = 0; i < new_dEdX.size(); ++i ){ reco_beam_allTrack_calibrated_dEdX.push_back( new_dEdX[i] ); }
         ////////////////////////////////////////////
 
