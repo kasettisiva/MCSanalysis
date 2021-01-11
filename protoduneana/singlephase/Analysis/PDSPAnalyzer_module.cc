@@ -2278,7 +2278,7 @@ void pduneana::PDSPAnalyzer::BeamTrackInfo(
                      reco_beam_dQdX_SCE[i], reco_beam_dEdX_SCE[i],
                      reco_beam_dQ[i],
                      reco_beam_calibrated_dEdX_SCE[i],
-                     calo_hit_indices[i], reco_beam_resRange_SCE[i],
+                     reco_beam_resRange_SCE[i], calo_hit_indices[i],
                      reco_beam_calo_wire_z[i], reco_beam_calo_TPC[i]));
       }
 
