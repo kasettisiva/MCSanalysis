@@ -2,7 +2,7 @@
 #include "services_dune.fcl"
 #include "ProtoDUNEFembFilter.fcl"
 #include "ProtoDUNEUnstableHVFilter.fcl"
-
+#include "protoDUNE_reco_data_prolog.fcl"
 
 process_name: PDSPAna
 
@@ -40,7 +40,7 @@ physics:
 {
 
  producers: { 
- 
+   @table::protoDUNE_reco_data_stage1_producers
  }
 
  filters: { 
@@ -75,3 +75,5 @@ physics.analyzers.pduneana.GetTrackMichel: false
 physics.analyzers.pduneana.CalibrationParsSCE: @local::CalorimetryParameters_SPProd4_MC_SCE #_eLT
 physics.analyzers.pduneana.CalibrationParsNoSCE: @local::CalorimetryParameters_SPProd4_MC_SCE #_eLT
 services.ParticleInventoryService.ParticleInventory.EveIdCalculator: "EmEveIdCalculator"
+physics.producers.emtrkmichelid.PointIdAlg.AdcMin: -10 # This was previously -50
+physics.producers.emtrkmichelid.PointIdAlg.AdcMax: 30  # This was previously 150
