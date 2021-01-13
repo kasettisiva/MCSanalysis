@@ -88,6 +88,7 @@ include(BuildPlugins)
 
 # ADD SOURCE CODE SUBDIRECTORIES HERE
 add_subdirectory(protoduneana)
+add_subdirectory(fcl)
 
 # Unit tests.
 #add_subdirectory(test)

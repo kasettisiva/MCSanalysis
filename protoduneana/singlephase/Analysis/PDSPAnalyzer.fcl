@@ -6,21 +6,22 @@
 
 BEGIN_PROLOG
 
-pionanalysis:
+pdspanalysis:
 {
-  module_type: "PionAnalyzer"
+  module_type: "PDSPAnalyzer"
   SpacePointModuleLabel:  "reco3d"
   TrackModuleLabel:       "pandoraTrack"
   TimeDecoderModuleLabel: "timingrawdecoder:daq"
 
-  CalorimetryTag:         "pandoracalo"
+  CalorimetryTagSCE:      "pandoracalo"
+  CalorimetryTagNoSCE:    "pandoracalonosce"
   Pandora2CaloSCE:        "pandora2caloSCE"
   TrackerTag:             "pandoraTrack"
-  HitTag:                 "gaushit"
+  HitTag:                 "hitpdune"
   ShowerTag:              "pandoraShower"
   PFParticleTag:          "pandora"
   GeneratorTag:           "generator"
-  dEdX_template_name:     "/dune/data/users/calcuttj/dEdxrestemplates.root"
+  dEdX_template_name:     "dEdxrestemplates.root"
   BeamModuleLabel:        "beamevent"
   BeamlineUtils: @local::standard_protodunebeamlineutils
   Verbose:                false 
@@ -30,7 +31,8 @@ pionanalysis:
   BeamPars: @local::BeamCuts_MCC11
   BeamCuts: @local::Prod2BeamCuts 
 
-  CalibrationPars: @local::CalorimetryParameters_SPProd2_MC_SCE
+  CalibrationParsSCE: @local::CalorimetryParameters_SPProd2_MC_SCE
+  CalibrationParsSCE: @local::CalorimetryParameters_SPProd2_MC_35ms
   SaveHits: false
   SkipMVA: false
   TrueToReco: false
