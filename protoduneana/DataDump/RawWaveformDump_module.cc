@@ -29,8 +29,8 @@
 // DUNETPC specific includes
 //#include "dune/DAQTriggerSim/TriggerDataProducts/TriggerTypes.h"
 //#include "dune/DAQTriggerSim/TriggerDataProducts/BasicTrigger.h"
-#include "dune/DuneInterface/AdcTypes.h"
-#include "dune/DuneInterface/SimChannelExtractService.h"
+#include "dune/DuneInterface/Data/AdcTypes.h"
+#include "dune/DuneInterface/Service/SimChannelExtractService.h"
 
 #include "c2numpy.h"
 
