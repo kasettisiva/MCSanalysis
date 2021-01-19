@@ -13,6 +13,7 @@ add_subdirectory(EMTaskForce)
 add_subdirectory(T0Ana)
 add_subdirectory(MDMAna)
 add_subdirectory(PhotonDetectors)
+add_subdirectory(diffusion)
 
 #install(PROGRAMS evd3apa.py DESTINATION ${product}/${version}/python)
 install_scripts()
