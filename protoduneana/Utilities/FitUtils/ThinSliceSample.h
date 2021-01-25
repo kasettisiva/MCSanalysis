@@ -15,12 +15,15 @@ namespace protoana {
 std::string PreciseToString(const double val, const int n = 2);
 
 
+//Need to split up samples by its true incident energy (from the beam line)
+
 class ThinSliceSample {
  public:
   ThinSliceSample(std::string name, int flux_type,
                   const std::vector<fhicl::ParameterSet> & selections,
                   const std::vector<double> & incident_bins,
                   const std::vector<double> & true_incident_bins,
+                  size_t beam_energy_bin,
                   bool is_signal = false, std::pair<double, double> range = {0., 0.});
 
   ~ThinSliceSample(){};

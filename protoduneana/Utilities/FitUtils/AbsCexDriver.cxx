@@ -13,18 +13,18 @@ protoana::AbsCexDriver::AbsCexDriver(
 
 void protoana::AbsCexDriver::BuildMCSamples(
     TTree * tree,
-    std::map<int, std::vector<ThinSliceSample>> & samples,
+    std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     const std::map<int, bool> & signal_sample_checks,
     std::map<int, double> & nominal_fluxes,
-    std::map<int, std::vector<double>> & fluxes_by_sample/*,
-    std::map<int, std::pair<TH1D, TH1D>> & signal_eff_parts*/) {
+    std::map<int, std::vector<std::vector<double>>> & fluxes_by_sample,
+    std::vector<double> & beam_energy_bins) {
 
   int sample_ID, selection_ID; 
   double true_beam_interactingEnergy, reco_beam_interactingEnergy;
-  double reco_beam_endZ;
+  double reco_beam_endZ, true_beam_startP;
   std::vector<double> * reco_beam_incidentEnergies = 0x0,
                       * true_beam_incidentEnergies = 0x0;
-  std::vector< int > * true_beam_slices = 0x0;
+  std::vector<int> * true_beam_slices = 0x0;
   tree->SetBranchAddress("new_interaction_topology", &sample_ID);
   tree->SetBranchAddress("selection_ID", &selection_ID);
   tree->SetBranchAddress("true_beam_interactingEnergy",
@@ -38,6 +38,7 @@ void protoana::AbsCexDriver::BuildMCSamples(
                          &true_beam_incidentEnergies);
   tree->SetBranchAddress("true_beam_slices",
                          &true_beam_slices);
+  tree->SetBranchAddress("true_beam_startP", &true_beam_startP);
 
   //Determine the slice cut
   //based on the endZ cut and wire pitch 
@@ -62,14 +63,30 @@ void protoana::AbsCexDriver::BuildMCSamples(
       good_true_incEnergies.push_back((*true_beam_incidentEnergies)[j]);
     }
 
-    std::vector<ThinSliceSample> & samples_vec = samples.at(sample_ID);
+    //Look for the coinciding energy bin
+    int bin = -1;
+    for (size_t j = 1; j < beam_energy_bins.size(); ++j) {
+      if ((beam_energy_bins[j-1] <= true_beam_startP) &&
+          (true_beam_startP < beam_energy_bins[j])) {
+        bin = j;
+        break;
+      }
+    }
+    if (bin == -1) {
+      std::string message = "Could not find beam energy bin for " +
+                            std::to_string(true_beam_startP);
+      throw std::runtime_error(message);
+    }
+
+
+    std::vector<ThinSliceSample> & samples_vec = samples.at(sample_ID)[bin];
     bool is_signal = signal_sample_checks.at(sample_ID);
 
     if (!is_signal) {
       ThinSliceSample & sample = samples_vec.at(0);
       int flux_type = sample.GetFluxType();
       nominal_fluxes[flux_type] += 1.;
-      fluxes_by_sample[sample_ID][0] += 1.;
+      fluxes_by_sample[sample_ID][bin][0] += 1.;
       sample.AddFlux();
       if (reco_beam_incidentEnergies->size()) {
         sample.FillIncidentHist(*reco_beam_incidentEnergies);
@@ -94,7 +111,7 @@ void protoana::AbsCexDriver::BuildMCSamples(
         if (sample.CheckInSignalRange(true_beam_interactingEnergy)) {
           int flux_type = sample.GetFluxType();
           nominal_fluxes[flux_type] += 1.;
-          fluxes_by_sample[sample_ID][j] += 1.;
+          fluxes_by_sample[sample_ID][bin][j] += 1.;
           sample.AddFlux();
           if (reco_beam_incidentEnergies->size()) {
             sample.FillIncidentHist(*reco_beam_incidentEnergies);
@@ -115,32 +132,13 @@ void protoana::AbsCexDriver::BuildMCSamples(
           break;
         }
       }
-      
-      //Fill the total hist with truth info
-      //signal_eff_parts[sample_ID].first.Fill(true_beam_interactingEnergy);
     }
-
   }
-
-  /*
-  //Determine the efficiencies for the signals
-  for (auto it = signal_eff_parts.begin(); it != signal_eff_parts.end(); ++it) {
-    int sample_ID = it->first;
-    //TH1D & total = it->second.first;
-    TH1D & passed = it->second.second;
-
-    //Fill the passed with the hist contents from above
-    std::vector<ThinSliceSample> & samples_vec = samples.at(sample_ID);
-    for (size_t i = 0; i < samples_vec.size(); ++i) {
-      //Need to worry bout over/underflow?
-      passed.SetBinContent(i+1, samples_vec[i].GetNominalFlux());
-    }
-  }*/
 }
 
 void protoana::AbsCexDriver::BuildSystSamples(
     TTree * tree,
-    std::map<int, std::vector<ThinSliceSample>> & samples,
+    std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     const std::map<int, bool> & signal_sample_checks/*,
     std::map<int, double> & nominal_fluxes,
     std::map<int, std::vector<double>> & fluxes_by_sample*/) {
@@ -162,7 +160,7 @@ void protoana::AbsCexDriver::BuildSystSamples(
 
 void protoana::AbsCexDriver::SystRoutineG4RW(
     TTree * tree,
-    std::map<int, std::vector<ThinSliceSample>> & samples,
+    std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     const std::map<int, bool> & signal_sample_checks,
     const fhicl::ParameterSet & routine) {
   return;
@@ -204,7 +202,8 @@ void protoana::AbsCexDriver::BuildDataHists(
 }
 
 void protoana::AbsCexDriver::BuildFakeData(
-    TTree * tree, std::map<int, std::vector<ThinSliceSample>> & samples,
+    TTree * tree,
+    std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     ThinSliceDataSet & data_set, double & flux) {
   std::string routine = fExtraOptions.get<std::string>("FakeDataRoutine");
   if (routine == "SampleScales") {
@@ -213,7 +212,8 @@ void protoana::AbsCexDriver::BuildFakeData(
 }
 
 void protoana::AbsCexDriver::FakeDataSampleScales(
-    TTree * tree, std::map<int, std::vector<ThinSliceSample>> & samples,
+    TTree * tree,
+    std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     ThinSliceDataSet & data_set, double & flux) {
 
   //Build the map for fake data scales
@@ -267,7 +267,7 @@ void protoana::AbsCexDriver::FakeDataSampleScales(
 }
 
 std::pair<double, size_t> protoana::AbsCexDriver::CalculateChi2(
-    std::map<int, std::vector<ThinSliceSample>> & samples,
+    std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     ThinSliceDataSet & data_set) {
 
   double chi2 = 0.;
@@ -285,10 +285,13 @@ std::pair<double, size_t> protoana::AbsCexDriver::CalculateChi2(
       double mc_val = 0.;
       //Go through all the samples and get the values from mc
       for (auto it2 = samples.begin(); it2 != samples.end(); ++it2) {
-        std::vector<ThinSliceSample> & samples_vec = it2->second;
-        for (size_t j = 0; j < samples_vec.size(); ++j) {
-          ThinSliceSample & sample = samples_vec[j];
-          mc_val += sample.GetSelectionHist(selection_ID)->GetBinContent(i);
+        std::vector<std::vector<ThinSliceSample>> & samples_vec_2D = it2->second;
+        for (size_t j = 0; j < samples_vec_2D.size(); ++j) {
+          std::vector<ThinSliceSample> & samples_vec = samples_vec_2D[j];
+          for (size_t k = 0; k < samples_vec.size(); ++k) {
+            ThinSliceSample & sample = samples_vec[k];
+            mc_val += sample.GetSelectionHist(selection_ID)->GetBinContent(i);
+          }
         }
       }
       chi2 += (std::pow((data_val - mc_val), 2) / std::pow(data_err, 2));
@@ -309,10 +312,13 @@ std::pair<double, size_t> protoana::AbsCexDriver::CalculateChi2(
       double mc_val = 0.;
       //Go through all the samples and get the values from mc
       for (auto it = samples.begin(); it != samples.end(); ++it) {
-        std::vector<ThinSliceSample> & samples_vec = it->second;
-        for (size_t j = 0; j < samples_vec.size(); ++j) {
-          ThinSliceSample & sample = samples_vec[j];
-          mc_val += sample.GetIncidentHist().GetBinContent(i);
+        std::vector<std::vector<ThinSliceSample>> & samples_vec_2D = it->second;
+        for (size_t j = 0; j < samples_vec_2D.size(); ++j) {
+          std::vector<ThinSliceSample> & samples_vec = samples_vec_2D[j]; 
+          for (size_t k = 0; k < samples_vec.size(); ++k) { 
+            ThinSliceSample & sample = samples_vec[k];
+            mc_val += sample.GetIncidentHist().GetBinContent(i);
+          }
         }
       }
 
@@ -335,7 +341,7 @@ std::pair<double, size_t> protoana::AbsCexDriver::CalculateChi2(
 }
 
 void protoana::AbsCexDriver::CompareSelections(
-    std::map<int, std::vector<ThinSliceSample>> & samples,
+    std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     ThinSliceDataSet & data_set, TFile & output_file,
     std::vector<std::pair<int, int>> plot_style,
     bool plot_rebinned,
@@ -359,19 +365,40 @@ void protoana::AbsCexDriver::CompareSelections(
     TCanvas cSelection(canvas_name.c_str(), "");
     cSelection.SetTicks();
 
+    std::map<int, std::vector<TH1D *>> temp_hists;
+    for (auto it2 = samples.begin(); it2 != samples.end(); ++it2) {
+      temp_hists[it2->first] = std::vector<TH1D *>();
+      std::vector<ThinSliceSample> & vec = it2->second[0];
+      for (size_t i = 0; i < vec.size(); ++i) {
+        temp_hists[it2->first].push_back((TH1D*)(
+            plot_rebinned ?
+            vec[i].GetRebinnedSelectionHist(selection_ID) :
+            vec[i].GetSelectionHist(selection_ID))->Clone());
+      }
+      for (size_t i = 1; i < it2->second.size(); ++i) {
+        for (size_t j = 0; j < it2->second[i].size(); ++j) {
+          temp_hists[it2->first][j]->Add((TH1D*)(
+              plot_rebinned ?
+              it2->second[i][j].GetRebinnedSelectionHist(selection_ID) :
+              it2->second[i][j].GetSelectionHist(selection_ID)));
+          }
+      }
+    }
     //Build the mc stack
     std::string stack_name = (post_fit ? "PostFit" : "Nominal") +
                              data_set.GetSelectionName(selection_ID) +
                              "Stack";
     THStack mc_stack(stack_name.c_str(), "");
     size_t iColor = 0;
-    for (auto it2 = samples.begin(); it2 != samples.end(); ++it2) {
+    //need to add second loop with temp hists
+    //for (auto it2 = samples.begin(); it2 != samples.end(); ++it2) {
+    for (auto it2 = temp_hists.begin(); it2 != temp_hists.end(); ++it2) {
       for (size_t i = 0; i < it2->second.size(); ++i) {
-        TH1D * sel_hist
-            = (TH1D*)(plot_rebinned ?
-                      it2->second.at(i).GetRebinnedSelectionHist(selection_ID) :
-                      it2->second.at(i).GetSelectionHist(selection_ID));
-
+        //TH1D * sel_hist
+        //    = (TH1D*)(plot_rebinned ?
+        //              it2->second.at(i).GetRebinnedSelectionHist(selection_ID) :
+        //              it2->second.at(i).GetSelectionHist(selection_ID));
+        TH1D * sel_hist = it2->second.at(i);
         std::pair<int, int> color_fill = GetColorAndStyle(iColor, plot_style);
         sel_hist->SetFillColor(color_fill.first);
         sel_hist->SetFillStyle(color_fill.second);

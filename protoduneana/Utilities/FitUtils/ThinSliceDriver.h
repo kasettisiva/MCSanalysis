@@ -23,27 +23,29 @@ class ThinSliceDriver {
     TTree * tree, ThinSliceDataSet & data_set, double & flux) = 0;
 
   virtual void BuildFakeData(
-    TTree * tree, std::map<int, std::vector<ThinSliceSample>> & samples,
+    TTree * tree,
+    std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     ThinSliceDataSet & data_set, double & flux) = 0;
 
   virtual void BuildMCSamples(
       TTree * tree,
-      std::map<int, std::vector<ThinSliceSample>> & samples,
+      std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
       const std::map<int, bool> & signal_sample_checks,
       std::map<int, double> & nominal_fluxes,
-      std::map<int, std::vector<double>> & fluxes_by_sample) = 0;
+      std::map<int, std::vector<std::vector<double>>> & fluxes_by_sample,
+      std::vector<double> & beam_energy_bins) = 0;
 
   virtual void BuildSystSamples(
       TTree * tree,
-      std::map<int, std::vector<ThinSliceSample>> & samples,
+      std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
       const std::map<int, bool> & signal_sample_checks) = 0;
 
   virtual std::pair<double, size_t> CalculateChi2(
-      std::map<int, std::vector<ThinSliceSample>> & samples,
+      std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
       ThinSliceDataSet & data_set) = 0;
 
   virtual void CompareSelections(
-      std::map<int, std::vector<ThinSliceSample>> & samples,
+      std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
       ThinSliceDataSet & data_set,
       TFile & output_file,
       std::vector<std::pair<int, int>> plot_style,
@@ -51,7 +53,7 @@ class ThinSliceDriver {
       bool post_fit) = 0;
 
   void CompareDataMC(
-      std::map<int, std::vector<ThinSliceSample>> & samples,
+      std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
       ThinSliceDataSet & data_set,
       TFile & output_file,
       std::vector<std::pair<int, int>> plot_style,

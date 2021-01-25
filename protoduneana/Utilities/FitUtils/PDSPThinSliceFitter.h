@@ -41,7 +41,7 @@ class PDSPThinSliceFitter {
   void ParameterScans();
 
   ThinSliceDriver * fThinSliceDriver;
-  std::map<int, std::vector<ThinSliceSample>> fSamples;
+  std::map<int, std::vector<std::vector<ThinSliceSample>>> fSamples;
   ThinSliceDataSet fDataSet;
   std::map<int, bool> fIsSignalSample;
   TFile fMCFile;
@@ -69,7 +69,7 @@ class PDSPThinSliceFitter {
   //std::map<int, THStack *> fPostFitSelectedMCStacks;
 
   std::map<int, double> fNominalFluxes;
-  std::map<int, std::vector<double>> fFluxesBySample;
+  std::map<int, std::vector<std::vector<double>>> fFluxesBySample;
   std::map<int, std::vector<int>> fFluxParsToSamples;
   double fDataFlux;
   double fMCDataScale = 1.;
@@ -104,7 +104,7 @@ class PDSPThinSliceFitter {
   bool fDoFakeData;
   bool fFitFlux;
   
-  std::vector<double> fIncidentRecoBins, fTrueIncidentBins;
+  std::vector<double> fIncidentRecoBins, fTrueIncidentBins, fBeamEnergyBins;
   std::vector<int> fIncidentSamples, fMeasurementSamples;
   //////////////////////////
 };

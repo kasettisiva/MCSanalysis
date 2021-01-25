@@ -12,6 +12,7 @@ protoana::ThinSliceSample::ThinSliceSample(
     const std::vector<fhicl::ParameterSet> & selections,
     const std::vector<double> & incident_bins,
     const std::vector<double> & true_incident_bins,
+    size_t beam_energy_bin,
     bool is_signal, std::pair<double, double> range)
     : fSampleName(name),
       fFluxType(flux_type),
@@ -28,11 +29,14 @@ protoana::ThinSliceSample::ThinSliceSample(
   if (is_signal) {
     inc_name = "sample_" + name + "_" +
                protoana::PreciseToString(range.first) + "_" +
-               protoana::PreciseToString(range.second) + "_incident_hist";
+               protoana::PreciseToString(range.second) + "_" +
+               "_incident_hist_" +
+               std::to_string(beam_energy_bin);
   }
   else {
-    inc_name = "sample_" + name + "_incident_hist";
+    inc_name = "sample_" + name + "_incident_hist_" + std::to_string(beam_energy_bin);
   }
+  inc_name += ("_" + std::to_string(beam_energy_bin));
   fIncidentHist = TH1D(inc_name.c_str(), title.c_str(), incident_bins.size() - 1,
                        &incident_bins[0]);
 
@@ -53,6 +57,7 @@ protoana::ThinSliceSample::ThinSliceSample(
       sel_name = "sample_" + name + "_selected_" +
                  it->get<std::string>("Name") + "_hist";
     }
+    sel_name += "_" + std::to_string(beam_energy_bin);
 
     std::vector<std::vector<double>> selected_bins
         = it->get<std::vector<std::vector<double>>>("RecoBins");
