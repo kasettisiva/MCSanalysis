@@ -535,7 +535,10 @@ void protoana::PDSPThinSliceFitter::DefineFitFunction() {
         //double flux_factor = nominal_flux / varied_flux;
         std::vector<double> flux_factor = nominal_flux;
         for (size_t i = 0; i < flux_factor.size(); ++i) {
-          flux_factor[i] /= (varied_flux[i] > 1.e-7 ? varied_flux[i] : 1.);
+          flux_factor[i] = (nominal_flux[i] > 1.e-7 ?
+                            flux_factor[i] / varied_flux[i] :
+                            0.);
+          //flux_factor[i] /= (varied_flux[i] > 1.e-7 ? varied_flux[i] : 1.);
         }
 
         for (auto it = fSamples.begin(); it != fSamples.end(); ++it) {

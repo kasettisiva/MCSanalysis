@@ -66,7 +66,8 @@ DefaultSignalBins: [0., 400., 600., 800, 1200.]
 
 TrueIncidentBins: @local::DefaultSignalBins
 
-BeamEnergyBins: [0., 800., 900., 1000., 1100., 1200., 2000.]
+#BeamEnergyBins: [0., 800., 900., 1000., 1100., 1200., 2000.]
+BeamEnergyBins: [0., 2000.]
 
 #For use identifying the true incident samples
 #used to make the final total pion incident histogram
@@ -142,5 +143,5 @@ PlotRebinned: true
 
 ## Validation
 RandomStart: false 
-DoFakeData: false 
+DoFakeData: true 
 #####################

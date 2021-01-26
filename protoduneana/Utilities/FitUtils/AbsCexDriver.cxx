@@ -66,9 +66,9 @@ void protoana::AbsCexDriver::BuildMCSamples(
     //Look for the coinciding energy bin
     int bin = -1;
     for (size_t j = 1; j < beam_energy_bins.size(); ++j) {
-      if ((beam_energy_bins[j-1] <= true_beam_startP) &&
-          (true_beam_startP < beam_energy_bins[j])) {
-        bin = j;
+      if ((beam_energy_bins[j-1] <= 1.e3*true_beam_startP) &&
+          (1.e3*true_beam_startP < beam_energy_bins[j])) {
+        bin = j - 1;
         break;
       }
     }
