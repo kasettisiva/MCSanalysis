@@ -258,7 +258,6 @@ void protoana::PDSPThinSliceFitter::SaveMCSamples() {
   fOutputFile.cd();
   fOutputFile.mkdir("MC_Samples");
   fOutputFile.cd("MC_Samples");
-  //Need to add these together after changing fSamples
   for (auto it = fSamples.begin(); it != fSamples.end(); ++it) {
     for (size_t i = 0; i < it->second.size(); ++i) {
       auto vec = it->second.at(i);

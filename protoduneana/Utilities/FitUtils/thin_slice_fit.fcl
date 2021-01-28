@@ -1,20 +1,30 @@
 #include "FitterPlotStyle.fcl"
 
-MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_beamType.root"
-DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_beamType.root"
+MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_G4RW/eventSelection_mc_beamType.root"
+DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_G4RW/eventSelection_mc_beamType.root"
+TreeName: "pduneana/beamana"
+
+#MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_beamType.root"
+#DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_beamType.root"
 #MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4/eventSelection_mc_beamType.root"
 #DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4/eventSelection_mc_beamType.root"
-TreeName: "pionana/beamana"
+#TreeName: "pionana/beamana"
 
 DriverName: "protoana::AbsCexDriver"
 AnalysisOptions: {
   ReducedChi2: true 
   SkipIncidentChi2: true
   FakeDataRoutine: "SampleScales"
+  #FakeDataRoutine: "G4RW"
 
   FakeDataScales: [
     [2, 2.]
   ]
+
+  #FakeDataG4RW: {
+  #  Position: 2 
+  #  Shift: 1
+  #}
 
   EndZCut: 226. 
   WirePitch: .47974
@@ -62,12 +72,12 @@ FluxTypes: [
              [2, "Muons"]
            ]
 
-DefaultSignalBins: [0., 400., 600., 800, 1200.]
+DefaultSignalBins: [0., 400., 600., 800, 2000.]
 
 TrueIncidentBins: @local::DefaultSignalBins
 
 #BeamEnergyBins: [0., 800., 900., 1000., 1100., 1200., 2000.]
-BeamEnergyBins: [0., 2000.]
+BeamEnergyBins: [0., 4000.]
 
 #For use identifying the true incident samples
 #used to make the final total pion incident histogram
@@ -143,5 +153,5 @@ PlotRebinned: true
 
 ## Validation
 RandomStart: false 
-DoFakeData: true 
+DoFakeData: false 
 #####################

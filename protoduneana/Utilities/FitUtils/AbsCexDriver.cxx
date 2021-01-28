@@ -106,6 +106,7 @@ void protoana::AbsCexDriver::BuildMCSamples(
     }
     else {
       //Iterate through the true bins and find the correct one
+      bool found = false;
       for (size_t j = 0; j < samples_vec.size(); ++j) {
         ThinSliceSample & sample = samples_vec.at(j);
         if (sample.CheckInSignalRange(true_beam_interactingEnergy)) {
@@ -129,8 +130,13 @@ void protoana::AbsCexDriver::BuildMCSamples(
          //sample.FillTrueIncidentHist(*true_beam_incidentEnergies);
           sample.FillTrueIncidentHist(good_true_incEnergies);
 
+          found = true;
           break;
         }
+      }
+      if (!found) {
+        std::cout << "Warning: could not find true bin " <<
+                     true_beam_interactingEnergy << std::endl;
       }
     }
   }
@@ -209,6 +215,9 @@ void protoana::AbsCexDriver::BuildFakeData(
   if (routine == "SampleScales") {
     FakeDataSampleScales(tree, samples, data_set, flux);
   }
+  else if (routine == "G4RW") {
+    FakeDataG4RW(tree, samples, data_set, flux);
+  }
 }
 
 void protoana::AbsCexDriver::FakeDataSampleScales(
@@ -239,7 +248,9 @@ void protoana::AbsCexDriver::FakeDataSampleScales(
   TH1D & incident_hist = data_set.GetIncidentHist();
   std::map<int, TH1 *> & selected_hists = data_set.GetSelectionHists();
 
-  flux = 0.;
+  double new_flux = 0.;
+  //flux = 0.;
+  flux = tree->GetEntries(); 
 
   for (int i = 0; i < tree->GetEntries(); ++i) {
     tree->GetEntry(i);
@@ -249,7 +260,7 @@ void protoana::AbsCexDriver::FakeDataSampleScales(
 
     double scale = (fake_data_scales.find(sample_ID) != fake_data_scales.end() ?
                     fake_data_scales.at(sample_ID) : 1.);
-    flux += scale; //1 or scaled
+    new_flux += scale; //1 or scaled
     if (reco_beam_incidentEnergies->size()) {
       for (size_t j = 0; j < reco_beam_incidentEnergies->size(); ++j) {
         incident_hist.Fill((*reco_beam_incidentEnergies)[j], scale);
@@ -264,6 +275,86 @@ void protoana::AbsCexDriver::FakeDataSampleScales(
       }
     }
   }
+
+  incident_hist.Scale(flux/new_flux);
+  for (auto it = selected_hists.begin(); it != selected_hists.end(); ++it) {
+    it->second->Scale(flux/new_flux);
+  }
+}
+
+void protoana::AbsCexDriver::FakeDataG4RW(
+    TTree * tree,
+    std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+    ThinSliceDataSet & data_set, double & flux) {
+
+  //Build the map for fake data scales
+  fhicl::ParameterSet g4rw_options 
+      = fExtraOptions.get<fhicl::ParameterSet>("FakeDataG4RW");
+
+  int sample_ID, selection_ID; 
+  double true_beam_interactingEnergy, reco_beam_interactingEnergy;
+  std::vector<double> * reco_beam_incidentEnergies = 0x0;
+  double reco_beam_endZ;
+  std::vector<double> * g4rw_weight = 0x0;
+  tree->SetBranchAddress("reco_beam_endZ", &reco_beam_endZ);
+  tree->SetBranchAddress("new_interaction_topology", &sample_ID);
+  tree->SetBranchAddress("selection_ID", &selection_ID);
+  tree->SetBranchAddress("true_beam_interactingEnergy",
+                         &true_beam_interactingEnergy);
+  tree->SetBranchAddress("reco_beam_interactingEnergy",
+                         &reco_beam_interactingEnergy);
+  tree->SetBranchAddress("reco_beam_incidentEnergies",
+                         &reco_beam_incidentEnergies);
+
+  if (g4rw_options.get<int>("Shift") > 0) {
+    tree->SetBranchAddress("g4rw_alt_primary_plus_sigma_weight", &g4rw_weight);
+  }
+  else {
+    tree->SetBranchAddress("g4rw_alt_primary_minus_sigma_weight", &g4rw_weight);
+  }
+
+  size_t g4rw_pos = g4rw_options.get<size_t>("Position");
+
+  TH1D & incident_hist = data_set.GetIncidentHist();
+  std::map<int, TH1 *> & selected_hists = data_set.GetSelectionHists();
+
+  double new_flux = 0.;
+  flux = tree->GetEntries();
+  
+
+  for (int i = 0; i < tree->GetEntries(); ++i) {
+    tree->GetEntry(i);
+
+    if (samples.find(sample_ID) == samples.end())
+      continue;
+
+    double scale = 1.;
+    if (g4rw_weight->size() > 0) {
+      scale = g4rw_weight->at(g4rw_pos);
+    }
+
+    new_flux += scale; //1 or scaled
+    if (reco_beam_incidentEnergies->size()) {
+      for (size_t j = 0; j < reco_beam_incidentEnergies->size(); ++j) {
+        incident_hist.Fill((*reco_beam_incidentEnergies)[j], scale);
+      }
+      if (selected_hists.find(selection_ID) != selected_hists.end()) {
+        if (selection_ID != 4) {
+          selected_hists[selection_ID]->Fill(reco_beam_interactingEnergy, scale);
+        }
+        else {
+          selected_hists[selection_ID]->Fill(reco_beam_endZ, scale);
+        }
+      }
+    }
+  }
+
+  incident_hist.Scale(flux/new_flux);
+  for (auto it = selected_hists.begin(); it != selected_hists.end(); ++it) {
+    it->second->Scale(flux/new_flux);
+  }
+
+  std::cout << "Fluxes: " << flux << " " << new_flux << std::endl;
 }
 
 std::pair<double, size_t> protoana::AbsCexDriver::CalculateChi2(

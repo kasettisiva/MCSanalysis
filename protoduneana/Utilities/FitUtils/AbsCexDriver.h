@@ -18,6 +18,11 @@ class AbsCexDriver : public ThinSliceDriver {
     TTree * tree,
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     ThinSliceDataSet & data_set, double & flux);
+  void FakeDataG4RW(
+    TTree * tree,
+    std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+    ThinSliceDataSet & data_set, double & flux);
+
   void BuildMCSamples(
       TTree * tree,
       std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
