@@ -107,7 +107,7 @@ void protoana::AbsCexDriver::BuildMCSamples(
     else {
       //Iterate through the true bins and find the correct one
       bool found = false;
-      for (size_t j = 0; j < samples_vec.size(); ++j) {
+      for (size_t j = 0; j < samples_vec.size(); ++j) { //Over/underflow: change limits
         ThinSliceSample & sample = samples_vec.at(j);
         if (sample.CheckInSignalRange(true_beam_interactingEnergy)) {
           int flux_type = sample.GetFluxType();
@@ -135,6 +135,7 @@ void protoana::AbsCexDriver::BuildMCSamples(
         }
       }
       if (!found) {
+        //over/underflow here
         std::cout << "Warning: could not find true bin " <<
                      true_beam_interactingEnergy << std::endl;
       }
@@ -255,6 +256,7 @@ void protoana::AbsCexDriver::FakeDataSampleScales(
   for (int i = 0; i < tree->GetEntries(); ++i) {
     tree->GetEntry(i);
 
+    //Add under/overflow check here
     if (samples.find(sample_ID) == samples.end())
       continue;
 

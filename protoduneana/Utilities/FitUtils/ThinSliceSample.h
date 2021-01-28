@@ -139,6 +139,9 @@ class ThinSliceSample {
   bool CheckIsSignal() {return fIsSignal;};
   bool CheckInSignalRange(double val) {return ((fRange.first < val) &&
                                                (val <= fRange.second));};
+  double RangeLowEnd() {return fRange.first;};
+  double RangeHighEnd() {return fRange.second;};
+
   const std::pair<double, double> & GetRange() const {return fRange;};
 
   void RefillRebinnedHists();
