@@ -72,12 +72,14 @@ FluxTypes: [
              [2, "Muons"]
            ]
 
-DefaultSignalBins: [0., 400., 600., 800, 2000.]
+DefaultSignalBins: [450., 600., 800, 2000.]
+#DefaultSignalBins: [400., 450., 500., 550., 600., 650., 700.,
+#                    750., 800, 900., 1000., 1200.]
 
 TrueIncidentBins: @local::DefaultSignalBins
 
-#BeamEnergyBins: [0., 800., 900., 1000., 1100., 1200., 2000.]
-BeamEnergyBins: [0., 4000.]
+BeamEnergyBins: [0., 800., 900., 1000., 1100., 1200., 4000.]
+#BeamEnergyBins: [0., 4000.]
 
 #For use identifying the true incident samples
 #used to make the final total pion incident histogram

@@ -25,6 +25,7 @@ class ThinSliceDriver {
   virtual void BuildFakeData(
     TTree * tree,
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+    const std::map<int, bool> & signal_sample_checks,
     ThinSliceDataSet & data_set, double & flux) = 0;
 
   virtual void BuildMCSamples(

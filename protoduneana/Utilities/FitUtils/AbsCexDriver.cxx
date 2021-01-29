@@ -103,11 +103,13 @@ void protoana::AbsCexDriver::BuildMCSamples(
       //Fill the total incident hist with truth info
       //sample.FillTrueIncidentHist(*true_beam_incidentEnergies);
       sample.FillTrueIncidentHist(good_true_incEnergies);
+      sample.AddIncidentEnergies(good_true_incEnergies);
     }
     else {
       //Iterate through the true bins and find the correct one
       bool found = false;
-      for (size_t j = 0; j < samples_vec.size(); ++j) { //Over/underflow: change limits
+      //for (size_t j = 0; j < samples_vec.size(); ++j) { //Over/underflow: change limits
+      for (size_t j = 1; j < samples_vec.size()-1; ++j) {
         ThinSliceSample & sample = samples_vec.at(j);
         if (sample.CheckInSignalRange(true_beam_interactingEnergy)) {
           int flux_type = sample.GetFluxType();
@@ -129,6 +131,7 @@ void protoana::AbsCexDriver::BuildMCSamples(
           //Fill the total incident hist with truth info
          //sample.FillTrueIncidentHist(*true_beam_incidentEnergies);
           sample.FillTrueIncidentHist(good_true_incEnergies);
+          sample.AddIncidentEnergies(good_true_incEnergies);
 
           found = true;
           break;
@@ -136,8 +139,55 @@ void protoana::AbsCexDriver::BuildMCSamples(
       }
       if (!found) {
         //over/underflow here
-        std::cout << "Warning: could not find true bin " <<
-                     true_beam_interactingEnergy << std::endl;
+        if (true_beam_interactingEnergy <= samples_vec[1].RangeLowEnd()) {
+          ThinSliceSample & sample = samples_vec[0];
+          int flux_type = sample.GetFluxType();
+          nominal_fluxes[flux_type] += 1.;
+          fluxes_by_sample[sample_ID][bin][0] += 1.;
+          sample.AddFlux();
+          if (reco_beam_incidentEnergies->size()) {
+            sample.FillIncidentHist(*reco_beam_incidentEnergies);
+            if (selection_ID != 4) {
+              double energy[1] = {reco_beam_interactingEnergy};
+              sample.FillSelectionHist(selection_ID, energy);
+            }
+            else {
+              double endZ[1] = {reco_beam_endZ};
+              sample.FillSelectionHist(selection_ID, endZ);
+            }
+          }
+
+          //Fill the total incident hist with truth info
+          sample.FillTrueIncidentHist(good_true_incEnergies);
+          sample.AddIncidentEnergies(good_true_incEnergies);
+        }
+        else if (true_beam_interactingEnergy >
+                 samples_vec[samples_vec.size()-2].RangeHighEnd()) {
+          ThinSliceSample & sample = samples_vec.back();
+          int flux_type = sample.GetFluxType();
+          nominal_fluxes[flux_type] += 1.;
+          fluxes_by_sample[sample_ID][bin].back() += 1.;
+          sample.AddFlux();
+          if (reco_beam_incidentEnergies->size()) {
+            sample.FillIncidentHist(*reco_beam_incidentEnergies);
+            if (selection_ID != 4) {
+              double energy[1] = {reco_beam_interactingEnergy};
+              sample.FillSelectionHist(selection_ID, energy);
+            }
+            else {
+              double endZ[1] = {reco_beam_endZ};
+              sample.FillSelectionHist(selection_ID, endZ);
+            }
+          }
+
+          //Fill the total incident hist with truth info
+          sample.FillTrueIncidentHist(good_true_incEnergies);
+          sample.AddIncidentEnergies(good_true_incEnergies);
+        }
+        else {
+          std::cout << "Warning: could not find true bin " <<
+                       true_beam_interactingEnergy << std::endl;
+        }
       }
     }
   }
@@ -211,10 +261,11 @@ void protoana::AbsCexDriver::BuildDataHists(
 void protoana::AbsCexDriver::BuildFakeData(
     TTree * tree,
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+    const std::map<int, bool> & signal_sample_checks,
     ThinSliceDataSet & data_set, double & flux) {
   std::string routine = fExtraOptions.get<std::string>("FakeDataRoutine");
   if (routine == "SampleScales") {
-    FakeDataSampleScales(tree, samples, data_set, flux);
+    FakeDataSampleScales(tree, samples, signal_sample_checks, data_set, flux);
   }
   else if (routine == "G4RW") {
     FakeDataG4RW(tree, samples, data_set, flux);
@@ -224,6 +275,7 @@ void protoana::AbsCexDriver::BuildFakeData(
 void protoana::AbsCexDriver::FakeDataSampleScales(
     TTree * tree,
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+    const std::map<int, bool> & signal_sample_checks,
     ThinSliceDataSet & data_set, double & flux) {
 
   //Build the map for fake data scales
@@ -262,6 +314,25 @@ void protoana::AbsCexDriver::FakeDataSampleScales(
 
     double scale = (fake_data_scales.find(sample_ID) != fake_data_scales.end() ?
                     fake_data_scales.at(sample_ID) : 1.);
+
+    //If it's signal
+    //Determine if the over/underflow bin 
+    bool is_signal = signal_sample_checks.at(sample_ID);
+    if (is_signal) {
+      std::vector<ThinSliceSample> & samples_vec = samples[sample_ID][0];
+      //Get the samples vec from the first beam energy bin
+      bool found = false;
+      for (size_t j = 1; j < samples_vec.size()-1; ++j) {
+        ThinSliceSample & sample = samples_vec.at(j);
+        if (sample.CheckInSignalRange(true_beam_interactingEnergy)) {     
+          found = true;
+          break;
+        }
+      }
+      if (!found) //If in the under/overflow, just set to 1. 
+        scale = 1.;
+    }
+
     new_flux += scale; //1 or scaled
     if (reco_beam_incidentEnergies->size()) {
       for (size_t j = 0; j < reco_beam_incidentEnergies->size(); ++j) {

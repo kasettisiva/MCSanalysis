@@ -76,6 +76,11 @@ class ThinSliceSample {
     }
   };
 
+  void AddIncidentEnergies(const std::vector<double> & vals) {
+    for (auto v : vals)
+      fIncidentEnergies.push_back({v, 1.});
+  };
+
   void FillTrueIncidentHist(const std::vector<double> & vals) {
     for (size_t i = 0; i < vals.size(); ++i) {
       fTrueIncidentHist.Fill(vals.at(i));
@@ -108,6 +113,12 @@ class ThinSliceSample {
     }
   }
 
+  void FillHistFromIncidentEnergies(TH1D & hist) {
+    for (auto vals : fIncidentEnergies) {
+      hist.Fill(vals.first, fFactor/*vals.second*/);
+    }
+  };
+
   void ScaleHists(double val) {
     fIncidentHist.Scale(val);
     for (auto it = fSelectionHists.begin(); it != fSelectionHists.end(); ++it) {
@@ -117,9 +128,17 @@ class ThinSliceSample {
     fTrueIncidentHist.Scale(val);
   };
 
+  void ScaleIncidentEnergies(double val) {
+    for (auto it = fIncidentEnergies.begin();
+         it != fIncidentEnergies.end(); ++it) {
+      it->second *= val;
+    }
+  };
+
   void SetDataMCScale(double val) {
     fDataMCScale = val;
     ScaleHists(fDataMCScale);
+    //ScaleIncidentEnergies(fDataMCScale);
     fNominalFlux *= val;
   };
 
@@ -128,10 +147,12 @@ class ThinSliceSample {
     fFactor = val;
     fNominalFlux *= val;
     ScaleHists(val);
+    //ScaleIncidentEnergies(val);
   };
 
   void ResetFactor() {
     ScaleHists(1./fFactor);
+    //ScaleIncidentEnergies(1./fFactor);
     fNominalFlux *= (1./fFactor);
     fFactor = 1.;
   };
@@ -165,6 +186,8 @@ class ThinSliceSample {
   std::map<int, TH1 *> fSelectionHistsRebinned;
   TH1D fIncidentHistRebinned;
   bool fMadeRebinned = false;
+
+  std::vector<std::pair<double, double>> fIncidentEnergies;
 
 };
 
