@@ -106,6 +106,7 @@ class PDSPThinSliceFitter {
   
   std::vector<double> fIncidentRecoBins, fTrueIncidentBins, fBeamEnergyBins;
   std::vector<int> fIncidentSamples, fMeasurementSamples;
+  bool fDrawXSecUnderflow;
   std::map<int, std::vector<double>> fSignalBins;
   //////////////////////////
 };

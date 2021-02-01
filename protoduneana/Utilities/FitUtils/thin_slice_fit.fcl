@@ -73,12 +73,11 @@ FluxTypes: [
            ]
 
 DefaultSignalBins: [450., 600., 800, 2000.]
-#DefaultSignalBins: [400., 450., 500., 550., 600., 650., 700.,
-#                    750., 800, 900., 1000., 1200.]
-
+#DefaultSignalBins: [0., 200., 400., 600., 800, 1200.]
 TrueIncidentBins: @local::DefaultSignalBins
 
-BeamEnergyBins: [0., 800., 900., 1000., 1100., 1200., 4000.]
+#BeamEnergyBins: [0., 800., 900., 1000., 1100., 1200., 4000.]
+BeamEnergyBins: [0., 800., 1200., 4000.]
 #BeamEnergyBins: [0., 4000.]
 
 #For use identifying the true incident samples
@@ -151,9 +150,10 @@ FitFlux: true
 ## Plotting
 PlotStyle: @local::ReducedColorsStyle
 PlotRebinned: true 
+DrawXSecUnderflow: true
 #####################
 
 ## Validation
 RandomStart: false 
-DoFakeData: false 
+DoFakeData: true 
 #####################

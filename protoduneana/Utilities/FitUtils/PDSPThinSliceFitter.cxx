@@ -283,91 +283,42 @@ void protoana::PDSPThinSliceFitter::SaveMCSamples() {
 void protoana::PDSPThinSliceFitter::CompareDataMC(bool post_fit) {
   fThinSliceDriver->CompareDataMC(fSamples, fDataSet, fOutputFile,
                                   fPlotStyle, fPlotRebinned, post_fit);
-  //std::string inc_name = "TotalIncident";
   if (!post_fit) {
     fOutputFile.mkdir("PreFitXSec");
     fOutputFile.cd("PreFitXSec");
-    //inc_name = "PreFit" + inc_name;
   }
   else {
     fOutputFile.mkdir("PostFitXSec");
     fOutputFile.cd("PostFitXSec");
-    //inc_name = "PostFit" + inc_name;
   }
 
   //Get the incident histogram from all of the relevant samples
-  /*
-  TH1D total_incident_hist(inc_name.c_str(), "",
-                           fTrueIncidentBins.size() - 1,
-                           &fTrueIncidentBins[0]);
-  for (size_t i = 0; i < fIncidentSamples.size(); ++i) {
-    auto & samples_vec_2D = fSamples[fIncidentSamples[i]];
-    for (size_t j = 0; j < samples_vec_2D.size(); ++j) {
-      auto & samples_vec = samples_vec_2D[j];
-      for (size_t k = 0; k < samples_vec.size(); ++k) {
-        total_incident_hist.Add(&samples_vec[k].GetTrueIncidentHist());
-      }
-    }
-  }
-  total_incident_hist.Write();
-
-  //Go through the signal samples and determine the number of interactions
-  for (size_t i = 0; i < fMeasurementSamples.size(); ++i) {
-    //std::vector<ThinSliceSample> & samples_vec
-    auto & samples_vec_2D
-        = fSamples[fMeasurementSamples[i]]; 
-
-    //std::string signal_name = (post_fit ? "PostFit" : "PreFit") +
-    //                          samples_vec[0].GetName() + "Hist";
-    std::string signal_name = (post_fit ? "PostFit" : "PreFit") +
-                               samples_vec_2D[0][0].GetName() + "Hist";
-    TH1D signal_hist(signal_name.c_str(), "", fTrueIncidentBins.size() - 1,
-                     &fTrueIncidentBins[0]);
-
-    //for (size_t j = 0; j < samples_vec.size(); ++j) {
-    //  ThinSliceSample & sample = samples_vec[j];
-    //  signal_hist.SetBinContent(j+1, sample.GetNominalFlux());
-    //}
-    for (size_t j = 0; j < samples_vec_2D.size(); ++j) {
-      auto & samples_vec = samples_vec_2D[j];
-      //Option to draw over/underflow here?
-      for (size_t k = 0; k < samples_vec.size(); ++k) {
-        ThinSliceSample & sample = samples_vec[k];
-        signal_hist.AddBinContent(k+1, sample.GetNominalFlux());
-      }
-    }
-    signal_hist.Write();
-
-    std::string xsec_name = (post_fit ? "PostFit" : "PreFit") +
-                             samples_vec_2D[0][0].GetName() + "XSec";
-    TH1D * xsec_hist = (TH1D*)signal_hist.Clone(xsec_name.c_str());
-    xsec_hist->Divide(&total_incident_hist);
-    xsec_hist->Scale(1.E27/ (fAnalysisOptions.get<double>("WirePitch") * 1.4 *
-                    6.022E23 / 39.948 ));
-    xsec_hist->Write();
-  }
-  */
-
-
-  //Alt xsec drawing
   for (size_t i = 0; i < fMeasurementSamples.size(); ++i) {
     int sample_ID = fMeasurementSamples[i];
     auto & samples_vec_2D
         = fSamples[sample_ID]; 
 
+    std::vector<double> signal_bins = fSignalBins[sample_ID];
+    if (fDrawXSecUnderflow) signal_bins.insert(signal_bins.begin(), 0.);
+
     std::string signal_name = (post_fit ? "PostFit" : "PreFit");
     signal_name += samples_vec_2D[0][1].GetName() + "Hist";
-    TH1D signal_hist(signal_name.c_str(), "", fSignalBins[sample_ID].size() - 1,
-                     &fSignalBins[sample_ID][0]);
+    //TH1D signal_hist(signal_name.c_str(), "", fSignalBins[sample_ID].size() - 1,
+    //                 &fSignalBins[sample_ID][0]);
+    TH1D signal_hist(signal_name.c_str(), "", signal_bins.size() - 1,
+                     &signal_bins[0]);
 
     for (size_t j = 0; j < samples_vec_2D.size(); ++j) {
       auto & samples_vec = samples_vec_2D[j];
-      //Option to draw over/underflow here?
-      //for (size_t k = 0; k < samples_vec.size(); ++k) {
-      for (size_t k = 1; k < samples_vec.size()-1; ++k) {
+      for (size_t k = (fDrawXSecUnderflow? 0 : 1);
+           k < samples_vec.size()-1; ++k) {
         ThinSliceSample & sample = samples_vec[k];
-        //signal_hist.AddBinContent(k+1, sample.GetNominalFlux());
-        signal_hist.AddBinContent(k, sample.GetNominalFlux());
+        if (fDrawXSecUnderflow) {
+          signal_hist.AddBinContent(k+1, sample.GetNominalFlux());
+        }
+        else {
+          signal_hist.AddBinContent(k, sample.GetNominalFlux());
+        }
       }
     }
     signal_hist.Write();
@@ -376,15 +327,17 @@ void protoana::PDSPThinSliceFitter::CompareDataMC(bool post_fit) {
     std::string inc_name = (post_fit ? "PostFit" : "PreFit");
     inc_name += "TotalIncident" + samples_vec_2D[0][0].GetName();
 
+    //TH1D total_incident_hist(inc_name.c_str(), "",
+    //                         fSignalBins[sample_ID].size() - 1,
+    //                         &fSignalBins[sample_ID][0]);
     TH1D total_incident_hist(inc_name.c_str(), "",
-                             fSignalBins[sample_ID].size() - 1,
-                             &fSignalBins[sample_ID][0]);
+                             signal_bins.size() - 1,
+                             &signal_bins[0]);
     for (size_t i = 0; i < fIncidentSamples.size(); ++i) {
       auto & samples_vec_2D = fSamples[fIncidentSamples[i]];
       for (size_t j = 0; j < samples_vec_2D.size(); ++j) {
         auto & samples_vec = samples_vec_2D[j];
         for (size_t k = 0; k < samples_vec.size(); ++k) {
-          //total_incident_hist.Add(&samples_vec[k].GetTrueIncidentHist());
           samples_vec[k].FillHistFromIncidentEnergies(total_incident_hist);
         }
       }
@@ -705,6 +658,8 @@ void protoana::PDSPThinSliceFitter::Configure(std::string fcl_file) {
   fBeamEnergyBins = pset.get<std::vector<double>>("BeamEnergyBins");
   fIncidentSamples = pset.get<std::vector<int>>("IncidentSamples");
   fMeasurementSamples = pset.get<std::vector<int>>("MeasurementSamples");
+
+  fDrawXSecUnderflow = pset.get<bool>("DrawXSecUnderflow");
   
   fSampleSets = pset.get<std::vector<fhicl::ParameterSet>>("Samples");
   std::vector<std::pair<int, std::string>> temp_vec
