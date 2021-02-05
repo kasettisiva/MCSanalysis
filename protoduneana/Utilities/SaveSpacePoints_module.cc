@@ -15,14 +15,18 @@
 #include "art/Framework/Principal/SubRun.h"
 #include "art_root_io/TFileService.h"
 #include "canvas/Utilities/InputTag.h"
+#include "canvas/Persistency/Common/FindManyP.h"
 #include "fhiclcpp/ParameterSet.h"
 #include "messagefacility/MessageLogger/MessageLogger.h"
 
 #include "lardataobj/RecoBase/SpacePoint.h"
 #include "lardataobj/RecoBase/PointCharge.h"
 #include "lardataobj/RecoBase/Track.h"
-
+#include "lardataobj/RecoBase/Hit.h"
 #include "lardataobj/RawData/RDTimeStamp.h"
+#include "larsim/MCCheater/BackTrackerService.h"
+#include "larsim/MCCheater/ParticleInventoryService.h"
+#include "lardata/DetectorInfoServices/DetectorClocksService.h"
 
 #include "dune/DuneObj/ProtoDUNEBeamEvent.h"
 #include "protoduneana/Utilities/ProtoDUNEBeamlineUtils.h"
@@ -77,6 +81,9 @@ private:
   std::vector<double> vz;
   std::vector<double> vcharge;
   std::vector<int> vtrackid;
+  std::vector<int> vpdg;
+  std::vector<int> vg4id;
+  std::vector<int> vorigin;
 
   // beam information
   std::vector<double> beamPosx;
@@ -127,6 +134,9 @@ void proto::SaveSpacePoints::analyze(art::Event const & evt)
   vz.clear();
   vcharge.clear();
   vtrackid.clear();
+  vpdg.clear();
+  vg4id.clear();
+  vorigin.clear();
   beamPosx.clear();
   beamPosy.clear();
   beamPosz.clear();
@@ -189,12 +199,57 @@ void proto::SaveSpacePoints::analyze(art::Event const & evt)
   if (evt.getByLabel(fSpacePointModuleLabel, pcsHandle))
     art::fill_ptr_vector(pcs, pcsHandle);
 
+  art::FindManyP<recob::Hit> fmhsp(spsHandle, evt, fSpacePointModuleLabel);
+
+  //Services
+  art::ServiceHandle<cheat::BackTrackerService> bt_serv;
+  art::ServiceHandle<cheat::ParticleInventoryService> pi_serv;
+
+  auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(evt);
+
   for (size_t i = 0; i<sps.size(); ++i){
     vx.push_back(sps[i]->XYZ()[0]);
     vy.push_back(sps[i]->XYZ()[1]);
     vz.push_back(sps[i]->XYZ()[2]);
     vcharge.push_back(pcs[i]->charge());
     vtrackid.push_back(-1);
+    if (!evt.isRealData()){
+      auto const& hits = fmhsp.at(i);
+      int TrackID = 0;
+      std::map<int,double> trkide;
+      for (auto const & hit : hits){
+        std::vector<sim::TrackIDE> TrackIDs = bt_serv->HitToEveTrackIDEs(clockData, hit);
+        for(size_t e = 0; e < TrackIDs.size(); ++e){
+          trkide[TrackIDs[e].trackID] += TrackIDs[e].energy;
+        }
+      }
+      // Work out which IDE despoited the most charge in the hit if there was more than one.
+      double maxe = -1;
+      double tote = 0;
+      for (std::map<int,double>::iterator ii = trkide.begin(); ii!=trkide.end(); ++ii){
+        tote += ii->second;
+        if ((ii->second)>maxe){
+          maxe = ii->second;
+          TrackID = ii->first;
+        }
+      }
+      // Now have trackID, so get PdG code and T0 etc.
+      vg4id.push_back(TrackID);
+      const simb::MCParticle *particle = pi_serv->TrackIdToParticle_P(TrackID);
+      if (particle){
+        vpdg.push_back(particle->PdgCode());
+        vorigin.push_back(pi_serv->ParticleToMCTruth_P(particle)->Origin());
+      }
+      else{
+        vpdg.push_back(0);
+        vorigin.push_back(0);
+      }
+    }
+    else{
+      vg4id.push_back(0);
+      vpdg.push_back(0);
+      vorigin.push_back(0);
+    }
   }
 
   art::Handle< std::vector<recob::Track> > trkHandle;
@@ -211,6 +266,9 @@ void proto::SaveSpacePoints::analyze(art::Event const & evt)
         vz.push_back(trk->TrajectoryPoint(j).position.Z());
         vcharge.push_back(0);
         vtrackid.push_back(trk->ID());
+        vpdg.push_back(-1);
+        vg4id.push_back(-1);
+        vorigin.push_back(-1);
       }
     }
   }
@@ -232,6 +290,9 @@ void proto::SaveSpacePoints::beginJob()
   fTree->Branch("vz",&vz);
   fTree->Branch("vcharge",&vcharge);
   fTree->Branch("vtrackid",&vtrackid);
+  fTree->Branch("vpdg",&vpdg);
+  fTree->Branch("vg4id",&vg4id);
+  fTree->Branch("vorigin",&vorigin);
   fTree->Branch("beamPosx",&beamPosx);
   fTree->Branch("beamPosy",&beamPosy);
   fTree->Branch("beamPosz",&beamPosz);
