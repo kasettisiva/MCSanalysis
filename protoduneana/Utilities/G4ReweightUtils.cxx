@@ -193,9 +193,9 @@ std::vector<G4ReweightTraj *> protoana::G4ReweightUtils::CreateNRWTrajs(
     //double z = part.Position(np - 1).Z();
   }
 
-  double mass = 0.;
+  double mass = part.Mass()*1.e3;
 
-  switch (abs(part.PdgCode())) {
+  /*switch (abs(part.PdgCode())) {
     case 211: {
       mass = 139.57;
       break;
@@ -208,11 +208,14 @@ std::vector<G4ReweightTraj *> protoana::G4ReweightUtils::CreateNRWTrajs(
       mass = 939.57;
       break;
     }
+    case  321: {
+
+    }
     default: {
       return results;
       break;
     }
-  }
+  }*/
 
   for (size_t i = 0; i < ranges.size(); ++i) {
     //std::cout << ranges[i].first << " " << ranges[i].second << std::endl;

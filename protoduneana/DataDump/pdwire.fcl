@@ -16,11 +16,13 @@ services:
                         @table::protodune_data_reco_services
   IFDH:               {}
 }
-#services.RawDigitPrepService.AdcChannelToolNames: @local::protodune_dataprep_tools_evd
-services.RawDigitPrepService.AdcChannelToolNames: [
+#services.RawDigitPrepService.ToolNames: @local::protodune_dataprep_tools_evd
+services.RawDigitPrepService.ToolNames: [
   @sequence::protodune_dataprep_tools_calib_noiserem,
   "adcKeepAllSignalFinder"
 ]
+# This is temporary for dunetpc v09_15_00 and earlier.
+services.RawDigitPrepService.AdcChannelToolNames: @local::services.RawDigitPrepService.ToolNames
 
 #source is now a root file
 source:

@@ -1,0 +1,5 @@
+#include "pduneana_Prod4_5387_1GeV.fcl"
+
+process_name: PDSPAna
+
+physics.reco: [ emtrkmichelid ]
