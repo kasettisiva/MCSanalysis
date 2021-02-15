@@ -211,6 +211,8 @@ private:
   double first_IDE_Z;
   double first_point_Z;
 
+  std::vector<double> true_traj_X, true_traj_Y, true_traj_Z, true_traj_E;
+
 };
 
 
@@ -223,6 +225,7 @@ pionana::TruthAnalyzer::TruthAnalyzer(fhicl::ParameterSet const& p)
 
 void pionana::TruthAnalyzer::analyze(art::Event const& e)
 {
+  reset();
   protoana::ProtoDUNETruthUtils truthUtil;
   art::ServiceHandle<cheat::BackTrackerService> bt_serv;
   art::ServiceHandle< cheat::ParticleInventoryService > pi_serv;
@@ -306,6 +309,10 @@ void pionana::TruthAnalyzer::analyze(art::Event const& e)
   first_IDE_Z = ide_z;
   std::cout << "First IDE: " << ide_z << std::endl;
 
+  for (size_t i = 0; i < view2_IDEs.size(); ++i) {
+    std::cout << i << " " << view2_IDEs[i]->z << std::endl;
+  }
+
   std::sort(daughter_IDEs.begin(), daughter_IDEs.end(),
             [](const sim::IDE * i1, const sim::IDE * i2) {return (i1->z < i2->z);});
   if (daughter_IDEs.size())
@@ -373,6 +380,10 @@ void pionana::TruthAnalyzer::analyze(art::Event const& e)
   for (size_t i = 0; i < true_beam_trajectory.size(); ++i) {
     std::cout << "Z, E: " << true_beam_trajectory.Z(i) << " " <<
                  true_beam_trajectory.E(i) << std::endl;
+    true_traj_X.push_back(true_beam_trajectory.X(i));
+    true_traj_Y.push_back(true_beam_trajectory.Y(i));
+    true_traj_Z.push_back(true_beam_trajectory.Z(i));
+    true_traj_E.push_back(true_beam_trajectory.E(i));
   }
   if (view2_IDEs.size()) {
     std::cout << std::endl;
@@ -535,6 +546,11 @@ void pionana::TruthAnalyzer::reset() {
   first_IDE_Z = -999.;
   run = -999;
   subrun = -999;
+
+  true_traj_X.clear();
+  true_traj_Y.clear();
+  true_traj_Z.clear();
+  true_traj_E.clear();
 }
 
 void pionana::TruthAnalyzer::beginJob() {
@@ -552,6 +568,10 @@ void pionana::TruthAnalyzer::beginJob() {
   fTree->Branch("run", &run);
   fTree->Branch("subrun", &subrun);
   fTree->Branch("first_IDE_Z", &first_IDE_Z);
+  fTree->Branch("true_traj_X", &true_traj_X);
+  fTree->Branch("true_traj_Y", &true_traj_Y);
+  fTree->Branch("true_traj_Z", &true_traj_Z);
+  fTree->Branch("true_traj_E", &true_traj_E);
 }
 
 DEFINE_ART_MODULE(pionana::TruthAnalyzer)
