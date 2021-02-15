@@ -156,16 +156,16 @@ void protoana::PDSPThinSliceFitter::InitializeMCSamples() {
           fFluxesBySample[sample_ID].back().push_back(0.);
         }
 
-        ThinSliceSample sample(sample_name + "Overflow",
+        ThinSliceSample overflow_sample(sample_name + "Overflow",
                                flux_type, fSelectionSets,
                                fIncidentRecoBins, fTrueIncidentBins, j);
-        fSamples[sample_ID].back().push_back(sample);
+        fSamples[sample_ID].back().push_back(overflow_sample);
         fFluxesBySample[sample_ID].back().push_back(0.);
       }
       else {
-        ThinSliceSample overflow_sample(sample_name, flux_type, fSelectionSets,
+        ThinSliceSample sample(sample_name, flux_type, fSelectionSets,
                                        fIncidentRecoBins, fTrueIncidentBins, j);
-        fSamples[sample_ID].back().push_back(overflow_sample);
+        fSamples[sample_ID].back().push_back(sample);
         fFluxesBySample[sample_ID].back().push_back(0.);
         if (fFluxParameters.find(flux_type) != fFluxParameters.end() &&
             j == 1) {
@@ -303,8 +303,6 @@ void protoana::PDSPThinSliceFitter::CompareDataMC(bool post_fit) {
 
     std::string signal_name = (post_fit ? "PostFit" : "PreFit");
     signal_name += samples_vec_2D[0][1].GetName() + "Hist";
-    //TH1D signal_hist(signal_name.c_str(), "", fSignalBins[sample_ID].size() - 1,
-    //                 &fSignalBins[sample_ID][0]);
     TH1D signal_hist(signal_name.c_str(), "", signal_bins.size() - 1,
                      &signal_bins[0]);
 
@@ -327,18 +325,32 @@ void protoana::PDSPThinSliceFitter::CompareDataMC(bool post_fit) {
     std::string inc_name = (post_fit ? "PostFit" : "PreFit");
     inc_name += "TotalIncident" + samples_vec_2D[0][0].GetName();
 
-    //TH1D total_incident_hist(inc_name.c_str(), "",
-    //                         fSignalBins[sample_ID].size() - 1,
-    //                         &fSignalBins[sample_ID][0]);
     TH1D total_incident_hist(inc_name.c_str(), "",
                              signal_bins.size() - 1,
                              &signal_bins[0]);
+    std::map<int, std::vector<TH1D*>> temp_hists;
+    //std::map<int, std::vector<std::string>> titles;
     for (size_t i = 0; i < fIncidentSamples.size(); ++i) {
-      auto & samples_vec_2D = fSamples[fIncidentSamples[i]];
-      for (size_t j = 0; j < samples_vec_2D.size(); ++j) {
-        auto & samples_vec = samples_vec_2D[j];
+      auto & vec_2D = fSamples[fIncidentSamples[i]];
+      temp_hists[fIncidentSamples[i]] = std::vector<TH1D*>();
+      //titles[fIncidentSamples[i]] = std::vector<TH1D*>();
+      for (size_t j = 0; j < vec_2D.size(); ++j) {
+        auto & samples_vec = vec_2D[j];
         for (size_t k = 0; k < samples_vec.size(); ++k) {
+          if (j == 0) {
+            std::string name = (post_fit ? "PostFit" : "PreFit");
+            name += "Incident" + samples_vec_2D[0][1].GetName() +
+                     samples_vec[k].GetName() + std::to_string(k);
+            std::string title = samples_vec[k].GetSelectionHists().begin()->second->GetTitle();
+            temp_hists[fIncidentSamples[i]].push_back(
+                new TH1D(name.c_str(),
+                         title.c_str(),
+                         signal_bins.size() - 1,
+                         &signal_bins[0]));
+          }
           samples_vec[k].FillHistFromIncidentEnergies(total_incident_hist);
+          samples_vec[k].FillHistFromIncidentEnergies(
+              *(temp_hists[fIncidentSamples[i]][k]));
         }
       }
     }
@@ -351,6 +363,24 @@ void protoana::PDSPThinSliceFitter::CompareDataMC(bool post_fit) {
     xsec_hist->Scale(1.E27/ (fAnalysisOptions.get<double>("WirePitch") * 1.4 *
                     6.022E23 / 39.948 ));
     xsec_hist->Write();
+
+    std::string stack_name = (post_fit ? "PostFit" : "PreFit");
+    stack_name += "IncidentStack" + samples_vec_2D[0][1].GetName();
+    THStack inc_stack(stack_name.c_str(), ";Reconstructed KE (MeV)");
+    int iColor = 0;
+    for (auto it = temp_hists.begin(); it != temp_hists.end(); ++it) {
+      for (size_t i = 0; i < it->second.size(); ++i) {
+        std::pair<int, int> color_fill =
+            fThinSliceDriver->GetColorAndStyle(iColor, fPlotStyle);
+        //it->second[i]->SetTitle();
+        it->second[i]->SetFillColor(color_fill.first);
+        it->second[i]->SetFillStyle(color_fill.second);
+        it->second[i]->SetLineColor(1);
+        inc_stack.Add(it->second[i]);
+        ++iColor;
+      }
+    }
+    inc_stack.Write();
   }
 }
 
@@ -441,6 +471,8 @@ void protoana::PDSPThinSliceFitter::RunFitAndSave() {
     //Drawing pre + post fit pars
     TCanvas cPars("cParameters", "");
     cPars.SetTicks();
+    parsHist.GetYaxis()->SetTitle("Parameter Values");
+    parsHist.SetTitleSize(.05, "Y");
     parsHist.Draw("e2");
     TH1D * preFitParsHist = (TH1D*)fOutputFile.Get("preFitPars");
     preFitParsHist->Draw("p same");
@@ -449,7 +481,7 @@ void protoana::PDSPThinSliceFitter::RunFitAndSave() {
     l.Draw("same");
     TLegend leg(.15, .65, .45, .85);
     leg.AddEntry(preFitParsHist, "Pre-Fit", "p");
-    leg.AddEntry(&parsHist, "Post-Fit", "lp");
+    leg.AddEntry(&parsHist, "Post-Fit #pm 1 #sigma", "lpf");
     leg.Draw();
     cPars.Write();
 
@@ -517,7 +549,6 @@ void protoana::PDSPThinSliceFitter::DefineFitFunction() {
         for (auto it = fFluxesBySample.begin();
              it != fFluxesBySample.end(); ++it) {
           int sample_ID = it->first;
-          //std::vector<ThinSliceSample> & samples
           std::vector<std::vector<ThinSliceSample>> & samples_2D
               = fSamples[sample_ID];
           for (size_t i = 0; i < samples_2D.size(); ++i) {
@@ -529,9 +560,6 @@ void protoana::PDSPThinSliceFitter::DefineFitFunction() {
               
               if (fSignalParameters.find(sample_ID) != fSignalParameters.end()) {
                 //Scale the flux for this signal channel
-                //varied_flux[i]
-                //    += (fFluxesBySample[sample_ID][i][j] *
-                //        fSignalParameters[sample_ID][j]);//increment j by 1 when using over/underflow
                 //check for under/overflow bin here. Don't scale by signal pars
                 if (j == 0 || j == samples.size() - 1) {
                   varied_flux[i]
@@ -562,7 +590,6 @@ void protoana::PDSPThinSliceFitter::DefineFitFunction() {
           flux_factor[i] = (nominal_flux[i] > 1.e-7 ?
                             flux_factor[i] / varied_flux[i] :
                             0.);
-          //flux_factor[i] /= (varied_flux[i] > 1.e-7 ? varied_flux[i] : 1.);
         }
 
         for (auto it = fSamples.begin(); it != fSamples.end(); ++it) {
@@ -593,7 +620,6 @@ void protoana::PDSPThinSliceFitter::DefineFitFunction() {
               if (std::find(flux_samples.begin(), flux_samples.end(),
                             sample_ID) != flux_samples.end()) {
 
-                //for (size_t i = 0; i < it->second.size(); ++i) {
                 for (size_t i = 0; i < samples_2D.size(); ++i) {
                   std::vector<ThinSliceSample> & samples = samples_2D[i];
                   for (size_t j = 0; j < samples.size(); ++j) {
@@ -681,7 +707,6 @@ void protoana::PDSPThinSliceFitter::Configure(std::string fcl_file) {
   fTolerance = pset.get<double>("Tolerance");
   fLowerLimit = pset.get<double>("LowerLimit");
   fUpperLimit = pset.get<double>("UpperLimit");
-  fReducedIncidentChi2 = pset.get<bool>("ReducedIncidentChi2");
   fPlotStyle = pset.get<std::vector<std::pair<int,int>>>("PlotStyle");
   fPlotRebinned = pset.get<bool>("PlotRebinned");
   fRandomStart = pset.get<bool>("RandomStart");

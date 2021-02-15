@@ -21,6 +21,7 @@ void protoana::AbsCexDriver::BuildMCSamples(
 
   int sample_ID, selection_ID; 
   double true_beam_interactingEnergy, reco_beam_interactingEnergy;
+  double true_beam_endP, true_beam_mass;
   double reco_beam_endZ, true_beam_startP;
   std::vector<double> * reco_beam_incidentEnergies = 0x0,
                       * true_beam_incidentEnergies = 0x0;
@@ -29,6 +30,8 @@ void protoana::AbsCexDriver::BuildMCSamples(
   tree->SetBranchAddress("selection_ID", &selection_ID);
   tree->SetBranchAddress("true_beam_interactingEnergy",
                          &true_beam_interactingEnergy);
+  tree->SetBranchAddress("true_beam_endP", &true_beam_endP);
+  tree->SetBranchAddress("true_beam_mass", &true_beam_mass);
   tree->SetBranchAddress("reco_beam_interactingEnergy",
                          &reco_beam_interactingEnergy);
   tree->SetBranchAddress("reco_beam_endZ", &reco_beam_endZ);
@@ -49,6 +52,9 @@ void protoana::AbsCexDriver::BuildMCSamples(
 
   for (int i = 0; i < tree->GetEntries(); ++i) {
     tree->GetEntry(i);
+
+    //double end_energy = sqrt(true_beam_endP*true_beam_endP*1.e6 +
+    //                         true_beam_mass*true_beam_mass) - true_beam_mass;
 
     if (samples.find(sample_ID) == samples.end()) {
       std::cout << "Warning: skipping sample " << sample_ID << std::endl;
@@ -108,10 +114,10 @@ void protoana::AbsCexDriver::BuildMCSamples(
     else {
       //Iterate through the true bins and find the correct one
       bool found = false;
-      //for (size_t j = 0; j < samples_vec.size(); ++j) { //Over/underflow: change limits
       for (size_t j = 1; j < samples_vec.size()-1; ++j) {
         ThinSliceSample & sample = samples_vec.at(j);
         if (sample.CheckInSignalRange(true_beam_interactingEnergy)) {
+        //if (sample.CheckInSignalRange(end_energy)) {
           int flux_type = sample.GetFluxType();
           nominal_fluxes[flux_type] += 1.;
           fluxes_by_sample[sample_ID][bin][j] += 1.;
@@ -140,6 +146,7 @@ void protoana::AbsCexDriver::BuildMCSamples(
       if (!found) {
         //over/underflow here
         if (true_beam_interactingEnergy <= samples_vec[1].RangeLowEnd()) {
+        //if (end_energy <= samples_vec[1].RangeLowEnd()) {
           ThinSliceSample & sample = samples_vec[0];
           int flux_type = sample.GetFluxType();
           nominal_fluxes[flux_type] += 1.;
@@ -163,6 +170,8 @@ void protoana::AbsCexDriver::BuildMCSamples(
         }
         else if (true_beam_interactingEnergy >
                  samples_vec[samples_vec.size()-2].RangeHighEnd()) {
+        //else if (end_energy >
+        //         samples_vec[samples_vec.size()-2].RangeHighEnd()) {
           ThinSliceSample & sample = samples_vec.back();
           int flux_type = sample.GetFluxType();
           nominal_fluxes[flux_type] += 1.;
@@ -186,7 +195,7 @@ void protoana::AbsCexDriver::BuildMCSamples(
         }
         else {
           std::cout << "Warning: could not find true bin " <<
-                       true_beam_interactingEnergy << std::endl;
+                       /*end_energy*/true_beam_interactingEnergy << std::endl;
         }
       }
     }
@@ -465,6 +474,7 @@ std::pair<double, size_t> protoana::AbsCexDriver::CalculateChi2(
 
   //Go through the incident hist. Calculate it as its own point.
   //Then add reduced incident chi2 to full chi2 
+  /*
   if (!fExtraOptions.get<bool>("SkipIncidentChi2")) {
     double incident_chi2 = 0.;
     size_t incident_points = 0;
@@ -500,6 +510,7 @@ std::pair<double, size_t> protoana::AbsCexDriver::CalculateChi2(
       nPoints += incident_points;
     }
   }
+  */
 
   return {chi2, nPoints};
 }
@@ -555,7 +566,6 @@ void protoana::AbsCexDriver::CompareSelections(
     THStack mc_stack(stack_name.c_str(), "");
     size_t iColor = 0;
     //need to add second loop with temp hists
-    //for (auto it2 = samples.begin(); it2 != samples.end(); ++it2) {
     for (auto it2 = temp_hists.begin(); it2 != temp_hists.end(); ++it2) {
       for (size_t i = 0; i < it2->second.size(); ++i) {
         //TH1D * sel_hist
@@ -603,5 +613,39 @@ void protoana::AbsCexDriver::CompareSelections(
         = (TH1D*)data_hist->Clone(ratio_name.c_str());
     hRatio->Divide(hMC);
     hRatio->Write(); 
+
+    canvas_name += "Ratio";
+    TCanvas cRatio(canvas_name.c_str(), "");
+    cRatio.SetTicks();
+    TPad p1((canvas_name + "pad1").c_str(), "", 0, 0.3, 1., 1.);
+    p1.SetBottomMargin(0.1);
+    p1.Draw();
+    p1.cd();
+    mc_stack.Draw("hist");
+    mc_stack.GetHistogram()->SetTitle("Abs;;");
+    for (int i = 1; i < mc_stack.GetHistogram()->GetNbinsX(); ++i) {
+      hRatio->GetXaxis()->SetBinLabel(i, mc_stack.GetHistogram()->GetXaxis()->GetBinLabel(i));
+      mc_stack.GetHistogram()->GetXaxis()->SetBinLabel(i, "");
+    }
+    mc_stack.Draw("hist");
+    data_hist->Draw("e1 same");
+
+    cRatio.cd();
+    TPad p2((canvas_name + "pad2").c_str(), "", 0, 0, 1., 0.3);
+    p2.SetTopMargin(0.1);
+    p2.SetBottomMargin(.2);
+    p2.Draw();
+    p2.cd();
+    hRatio->Sumw2();
+    std::string r_title = (selection_ID != 4 ?
+                           ";Reconstructed KE (MeV)" :
+                           ";Reconstructed End Z (cm)");
+    r_title += ";Data/MC";
+    hRatio->SetTitle(r_title.c_str());
+    hRatio->SetTitleSize(.04, "XY");
+    hRatio->Draw("ep");
+
+    cRatio.Write();
+
   }
 }

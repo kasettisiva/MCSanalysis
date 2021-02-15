@@ -94,7 +94,6 @@ class PDSPThinSliceFitter {
   int fMaxCalls;
   unsigned int fNScanSteps;
   double fTolerance, fLowerLimit, fUpperLimit;
-  bool fReducedIncidentChi2;
   std::vector<std::pair<int, int>> fPlotStyle;
   bool fPlotRebinned;
   bool fRandomStart;
