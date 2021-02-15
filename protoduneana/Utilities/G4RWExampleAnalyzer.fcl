@@ -14,6 +14,8 @@ g4rwexample: {
     Density: 1.400
   }
 
+  DoFull: false
+
 
   RW_PDG: 211
 
