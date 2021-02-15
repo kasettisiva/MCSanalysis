@@ -30,6 +30,7 @@
 #include "lardata/DetectorInfoServices/DetectorPropertiesService.h"
 #include "larcore/Geometry/Geometry.h"
 #include "larreco/RecoAlg/TrackMomentumCalculator.h"
+#include "larevt/SpaceChargeServices/SpaceChargeService.h"
 
 #include "protoduneana/Utilities/ProtoDUNETrackUtils.h"
 #include "protoduneana/Utilities/ProtoDUNEShowerUtils.h"
@@ -290,6 +291,9 @@ private:
   double true_beam_endX;
   double true_beam_endY;
   double true_beam_endZ;
+  double true_beam_endX_SCE;
+  double true_beam_endY_SCE;
+  double true_beam_endZ_SCE;
   double true_beam_startX;
   double true_beam_startY;
   double true_beam_startZ;
@@ -472,6 +476,9 @@ private:
   std::vector<double> true_beam_traj_Y;
   std::vector<double> true_beam_traj_Z;
   std::vector<double> true_beam_traj_KE;
+  std::vector<double> true_beam_traj_X_SCE;
+  std::vector<double> true_beam_traj_Y_SCE;
+  std::vector<double> true_beam_traj_Z_SCE;
 
   int    reco_beam_PFP_ID;
   int    reco_beam_PFP_nHits;
@@ -865,38 +872,41 @@ void pduneana::PDSPAnalyzer::analyze(art::Event const & evt) {
 
   if(beamParticles.size() == 0){
     std::cout << "We found no beam particles for this event... moving on" << std::endl;
-    return;
+    //return;
   }
   else {
     std::cout << "Found " << beamParticles.size() << " particles" << std::endl;
+    // Get the reconstructed PFParticle tagged as beam by Pandora
+    const recob::PFParticle* particle = beamParticles.at(0);
+    //////////////////////////////////////////////////////////////////
+    
+    
+    //If MC, attempt to match to some MCParticle
+    if( !evt.isRealData() ){
+      BeamMatchInfo(evt, particle, true_beam_particle, clockData);
+    }
+    BeamPFPInfo(evt, particle, hitResults);
+
+    // Determine if the beam particle is track-like or shower-like
+    const recob::Track* thisTrack = pfpUtil.GetPFParticleTrack(*particle,evt,fPFParticleTag,fTrackerTag);
+    const recob::Shower* thisShower = pfpUtil.GetPFParticleShower(*particle,evt,fPFParticleTag,fShowerTag);
+    if( thisTrack ){
+      BeamTrackInfo(evt, thisTrack, clockData);
+    }
+    else if( thisShower ){
+      BeamShowerInfo(thisShower);
+    }
+
+    DaughterPFPInfo(evt, particle, clockData, hitResults);
+    BeamForcedTrackInfo(evt, particle);
   }
 
-  // Get the reconstructed PFParticle tagged as beam by Pandora
-  const recob::PFParticle* particle = beamParticles.at(0);
-  //////////////////////////////////////////////////////////////////
-  
-  
+
   //If MC, attempt to match to some MCParticle
   if( !evt.isRealData() ){
-    BeamMatchInfo(evt, particle, true_beam_particle, clockData);
     TrueBeamInfo(evt, true_beam_particle, clockData, plist, trueToPFPs, hitResults);
   }
 
-  BeamPFPInfo(evt, particle, hitResults);
-
-  // Determine if the beam particle is track-like or shower-like
-  const recob::Track* thisTrack = pfpUtil.GetPFParticleTrack(*particle,evt,fPFParticleTag,fTrackerTag);
-  const recob::Shower* thisShower = pfpUtil.GetPFParticleShower(*particle,evt,fPFParticleTag,fShowerTag);
-  if( thisTrack ){
-    BeamTrackInfo(evt, thisTrack, clockData);
-  }
-  else if( thisShower ){
-    BeamShowerInfo(thisShower);
-  }
-
-  DaughterPFPInfo(evt, particle, clockData, hitResults);
-
-  BeamForcedTrackInfo(evt, particle);
 
   //New geant4reweight stuff
   if (!evt.isRealData() && fDoReweight) {
@@ -1216,6 +1226,9 @@ void pduneana::PDSPAnalyzer::beginJob()
   fTree->Branch("true_beam_endX", &true_beam_endX);
   fTree->Branch("true_beam_endY", &true_beam_endY);
   fTree->Branch("true_beam_endZ", &true_beam_endZ);
+  fTree->Branch("true_beam_endX_SCE", &true_beam_endX_SCE);
+  fTree->Branch("true_beam_endY_SCE", &true_beam_endY_SCE);
+  fTree->Branch("true_beam_endZ_SCE", &true_beam_endZ_SCE);
   fTree->Branch("true_beam_startX", &true_beam_startX);
   fTree->Branch("true_beam_startY", &true_beam_startY);
   fTree->Branch("true_beam_startZ", &true_beam_startZ);
@@ -1422,6 +1435,9 @@ void pduneana::PDSPAnalyzer::beginJob()
   fTree->Branch("true_beam_traj_Y", &true_beam_traj_Y);
   fTree->Branch("true_beam_traj_Z", &true_beam_traj_Z);
   fTree->Branch("true_beam_traj_KE", &true_beam_traj_KE);
+  fTree->Branch("true_beam_traj_X_SCE", &true_beam_traj_X_SCE);
+  fTree->Branch("true_beam_traj_Y_SCE", &true_beam_traj_Y_SCE);
+  fTree->Branch("true_beam_traj_Z_SCE", &true_beam_traj_Z_SCE);
 
   fTree->Branch("g4rw_primary_weights", &g4rw_primary_weights);
   fTree->Branch("g4rw_primary_plus_sigma_weight", &g4rw_primary_plus_sigma_weight);
@@ -1524,6 +1540,9 @@ void pduneana::PDSPAnalyzer::reset()
   true_beam_endX = -999.;
   true_beam_endY = -999.;
   true_beam_endZ = -999.;
+  true_beam_endX_SCE = -999.;
+  true_beam_endY_SCE = -999.;
+  true_beam_endZ_SCE = -999.;
   true_beam_startX = -999.;
   true_beam_startY = -999.;
   true_beam_startZ = -999.;
@@ -1779,6 +1798,9 @@ void pduneana::PDSPAnalyzer::reset()
   true_beam_traj_Y.clear();
   true_beam_traj_Z.clear();
   true_beam_traj_KE.clear();
+  true_beam_traj_X_SCE.clear();
+  true_beam_traj_Y_SCE.clear();
+  true_beam_traj_Z_SCE.clear();
 
   //Alternative Reco
   reco_daughter_PFP_true_byHits_PDG.clear();
@@ -2438,6 +2460,14 @@ void pduneana::PDSPAnalyzer::TrueBeamInfo(
   true_beam_startY     = true_beam_particle->Position(0).Y();
   true_beam_startZ     = true_beam_particle->Position(0).Z();
 
+  auto sce = lar::providerFrom<spacecharge::SpaceChargeService>();
+  auto offset = sce->GetPosOffsets(
+      {true_beam_endX, true_beam_endY, true_beam_endZ});
+  true_beam_endX_SCE = true_beam_endX - offset.X();
+  true_beam_endY_SCE = true_beam_endY + offset.Y();
+  true_beam_endZ_SCE = true_beam_endZ + offset.Z();
+
+
   true_beam_startPx    = true_beam_particle->Px();
   true_beam_startPy    = true_beam_particle->Py();
   true_beam_startPz    = true_beam_particle->Pz();
@@ -2682,6 +2712,13 @@ void pduneana::PDSPAnalyzer::TrueBeamInfo(
     true_beam_traj_Z.push_back(true_beam_trajectory.Z(i));
     
     true_beam_traj_KE.push_back(true_beam_trajectory.E(i)*1.e3 - true_beam_mass);
+
+    auto offset = sce->GetPosOffsets(
+        {true_beam_trajectory.X(i), true_beam_trajectory.Y(i),
+         true_beam_trajectory.Z(i)});
+    true_beam_traj_X_SCE.push_back(true_beam_trajectory.X(i) - offset.X());
+    true_beam_traj_Y_SCE.push_back(true_beam_trajectory.Y(i) + offset.Y());
+    true_beam_traj_Z_SCE.push_back(true_beam_trajectory.Z(i) + offset.Z());
   }
 
   //Look through the daughters
