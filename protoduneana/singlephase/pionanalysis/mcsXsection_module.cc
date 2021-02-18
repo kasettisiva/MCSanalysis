@@ -179,7 +179,7 @@ private:
   std::string fShowerTag;
   std::string fPFParticleTag;
   std::string fGeneratorTag;
-  bool fVerbose;
+  //bool fVerbose;
 
   geo::GeometryCore const * fGeometry;
 
@@ -432,8 +432,8 @@ private:
   G4ReweightParameterMaker ParMaker;
   G4ReweightManager RWManager;
   G4MultiReweighter MultiRW;
-  G4ReweighterFactory RWFactory;
-  G4Reweighter * theRW;
+  //G4ReweighterFactory RWFactory;
+  //G4Reweighter * theRW;
 
   //bool fVerbose;
 
