@@ -7,6 +7,7 @@
 #include <TF1.h>
 #include <TFile.h>
 #include <TGaxis.h>
+#include <TKey.h>
 
 #include <RooDataSet.h>
 #include <RooSimultaneous.h>

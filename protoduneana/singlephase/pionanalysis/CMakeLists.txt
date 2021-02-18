@@ -27,6 +27,9 @@ art_make(BASENAME_ONLY
   ProtoDUNEDataUtils
   ProtoDUNEUtilities
   )
+
+cet_remove_compiler_flags(CXX -pedantic)
+
 install_headers()
 install_fhicl()
 install_source()

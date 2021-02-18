@@ -1,12 +1,14 @@
 #include "SaveSpacePoints.fcl"
+#include "services_dune.fcl"
 
 process_name: SPS
 services:
 {
     TFileService: { fileName: "eventtree.root" }
     TimeTracker:       {}
+    @table::protodune_services
 }
-
+services.BackTrackerService.BackTracker.SimChannelModuleLabel: "tpcrawdecoder:simpleSC"
 #Look at the input files
 source:
 {

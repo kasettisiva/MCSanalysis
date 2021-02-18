@@ -846,13 +846,13 @@ void pduneana::PDSPAnalyzer::analyze(art::Event const & evt) {
     hitResults = new anab::MVAReader<recob::Hit, 4>(evt, "emtrkmichelid:emtrkmichel" );
   }
 
-  auto allHits = evt.getValidHandle<std::vector<recob::Hit> >(fHitTag);
-
+  /*
   auto recoTracks = evt.getValidHandle<std::vector<recob::Track> >(fTrackerTag);
   art::FindManyP<recob::Hit> findHits(recoTracks,evt,fTrackerTag);
 
   auto recoShowers = evt.getValidHandle< std::vector< recob::Shower > >(fShowerTag);
   art::FindManyP<recob::Hit> findHitsFromShowers(recoShowers,evt,fShowerTag);
+  */
 
   std::map< int, std::vector< int > > trueToPFPs;
   if( fTrueToReco ){

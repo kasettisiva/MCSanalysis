@@ -1,11 +1,16 @@
 //////////////////////////////////////////////////////////////////////////////
-// Class:       hitrmsraw                                                   ///
-// File:        hitrmsraw_module.cc                                         ///   
-//Description:                                                             /// 
-//drift hitrmsraw calculation module                                        ///
-//dumps all the infomrmation in TTrees which needs to analysed             ///
-//contact person:apaudel@phys.ksu.edu                                      ///
+/// Class:       hitrmsrawdigits                                           ///
+/// File:        hitrmsrawdigits_module.cc                                 /// 
+/// Description: Module for calculations with hit information based on     ///
+///              RawDigits and/or from after deconvolution. Information is ///
+///              taken from MC samples or data files and put into TTrees   ///
+///              to be analyzed.                                           ///
+/// Contact Person: ehinkle@uchicago.edu                                   ///
+/// Written by: Ajib Paudel                                                ///
+/// Modified by: Elise Hinkle                                              ///
+/// Last Date Modified: January 15, 2021                                   ///
 //////////////////////////////////////////////////////////////////////////////
+
 #include "art/Framework/Core/EDAnalyzer.h"
 #include "art/Framework/Principal/Event.h"
 #include "art/Framework/Principal/Handle.h"
@@ -92,10 +97,10 @@
 
 
 namespace protoana{
-  class hitrmsraw : public art::EDAnalyzer {
+  class hitrmsrawdigits : public art::EDAnalyzer {
   public:
-    explicit hitrmsraw(fhicl::ParameterSet const& pset);
-    virtual ~hitrmsraw();
+    explicit hitrmsrawdigits(fhicl::ParameterSet const& pset);
+    virtual ~hitrmsrawdigits();
 
     void beginJob();
     void endJob();
@@ -170,7 +175,8 @@ namespace protoana{
     std::vector< std::vector<float> > hit_rms2;
     std::vector< std::vector<float> > hit_rmsraw2;
     std::vector< std::vector<float> > hit_peakTraw2;
-    float hit_signal[10][5000][50];//[TrackIndex, hitindex,peakTindex]signal for each hit peaktime-20 to peaktime+30 ticks
+    float hit_signal[10][5000][60];//[TrackIndex, hitindex,peakTindex]signal for each hit peaktime-30 to peaktime+30 ticks
+    //float hit_signal[10][5000][50];//[TrackIndex, hitindex,peakTindex]signal for each hit peaktime-20 to peaktime+30 ticks
     std::vector< std::vector<float> > hit_rms_true;
     std::vector< std::vector<float> > trkhitx2;
     std::vector< std::vector<float> > trkhity2;
@@ -190,7 +196,7 @@ namespace protoana{
   };
 
   //========================================================================
-  hitrmsraw::hitrmsraw(fhicl::ParameterSet const& pset) :
+  hitrmsrawdigits::hitrmsrawdigits(fhicl::ParameterSet const& pset) :
     EDAnalyzer(pset),
     fWaveformSize             (pset.get<unsigned int>("WaveformSize", 6000)),
     fDataUtils                (pset.get<fhicl::ParameterSet>("DataUtils")),
@@ -207,12 +213,12 @@ namespace protoana{
   }
   
   //========================================================================
-  hitrmsraw::~hitrmsraw(){
+  hitrmsrawdigits::~hitrmsrawdigits(){
   }
   //========================================================================
 
   //========================================================================
-  void hitrmsraw::beginJob(){
+  void hitrmsrawdigits::beginJob(){
     std::cout<<"job begin..."<<std::endl;
     art::ServiceHandle<art::TFileService> tfs;
     fEventTree = tfs->make<TTree>("Event", "Event Tree from Reco");
@@ -268,7 +274,7 @@ namespace protoana{
     fEventTree->Branch("hit_rms2",&hit_rms2);
     fEventTree->Branch("hit_rmsraw2",&hit_rmsraw2);
     fEventTree->Branch("hit_peakTraw2",&hit_peakTraw2);
-    fEventTree->Branch("hit_signal",hit_signal,"hit_signal[10][5000][50]/F");
+    fEventTree->Branch("hit_signal",hit_signal,"hit_signal[10][5000][60]/F");
     fEventTree->Branch("hit_rms_true",&hit_rms_true);
     fEventTree->Branch("trkhitx2",&trkhitx2);
     fEventTree->Branch("trkhity2",&trkhity2);
@@ -285,13 +291,13 @@ namespace protoana{
   }
 
   //========================================================================
-  void hitrmsraw::endJob(){     
+  void hitrmsrawdigits::endJob(){     
 
   }
 
   //========================================================================
-  void hitrmsraw::beginRun(const art::Run&){
-    mf::LogInfo("hitrmsraw")<<"begin run..."<<std::endl;
+  void hitrmsrawdigits::beginRun(const art::Run&){
+    mf::LogInfo("hitrmsrawdigits")<<"begin run..."<<std::endl;
   }
   //========================================================================
 
@@ -299,7 +305,7 @@ namespace protoana{
 
   //========================================================================
 
-  void hitrmsraw::analyze( const art::Event& evt){//analyze
+  void hitrmsrawdigits::analyze( const art::Event& evt){//analyze
     reset();  
     std::cout<<"raw producer module label "<<fRawProducerLabel<<std::endl;
     // art::ServiceHandle<cheat::ParticleInventoryService> pi_serv;
@@ -563,6 +569,17 @@ namespace protoana{
 	    hitz_1.push_back(zpos);	
 	  }//planenum 1
 	  if(planenum==2){
+	    // Remove all hits within 30tt of other hits by looping over all other hits: 
+	    bool removehit=false;
+	    for (size_t i2=0; i2<hitlist.size(); ++i2) {
+	      if (vhit[ii].key() == hitlist[i2].key()) continue;
+	      if (vhit[ii]->Channel()!=hitlist[i2]->Channel()) continue;
+	      if ((vhit[ii]->PeakTime()+30<hitlist[i2]->PeakTime()-30) || (vhit[ii]->PeakTime()-30>hitlist[i2]->PeakTime()+30)) continue; 
+	      removehit=true;
+	      break;
+	    }
+	    if (removehit) continue;
+	    // Normal procedure resumes (i.e. keep this if keeping all hits):
 	    nhits++;
 	    peakT_2.push_back(vhit[ii]->PeakTime()-this_t0crt2/500.0);
 	    tpc_2.push_back(vhit[ii]->WireID().TPC);
@@ -613,11 +630,11 @@ namespace protoana{
 		}//finding peak signal
 		std::cout<<"hitpeak time, hitraw peak time "<<vhit[ii]->PeakTime()<<"  "<<hit_t<<std::endl;
 		int hitindx=0;
-		for(size_t it1=hit_t-20;it1<hit_t+30;it1++){
+		for(size_t it1=hit_t-30;it1<hit_t+30;it1++){
 		  if(it1<1||it1>5999||it1>inputsignal.size()) continue;
 		  hit_signal[ntrks][nhits-1][hitindx]=signal[it1];
 		  hitindx++;
-		}//storing signal for peakT-20 to peakT+30 ticks
+		}//storing signal for peakT-30 to peakT+30 ticks
 		double hit_ch = 0;
 		double hit_fwhh = 0;
 		double mean_t = 0;
@@ -665,7 +682,7 @@ namespace protoana{
 		}//itick loop
 		std::cout<<"hitpeak time, hitraw peak time "<<vhit[ii]->PeakTime()<<"  "<<hit_t<<std::endl;
 		int hitindex=0;
-		for(size_t it1=hit_t-20;it1<hit_t+30;it1++){
+		for(size_t it1=hit_t-30;it1<hit_t+30;it1++){
 		  if(it1<1|| it1>5999 || it1>rawadc.size()) continue;
 		  // hit_signal[ntrks][nhits-1][hitindex]=rawadc[it1]-digitVec->GetPedestal();
 		  hit_signal[ntrks][nhits-1][hitindex]=rawadc[it1]-med_signal;
@@ -820,7 +837,7 @@ namespace protoana{
   } // end of analyze function
 	   
   /////////////////// Defintion of reset function ///////////
-  void hitrmsraw::reset(){
+  void hitrmsrawdigits::reset(){
     run = -9999;
     subrun = -9999;
     event = -9999;
@@ -891,7 +908,7 @@ namespace protoana{
     t0crt2.clear();
     for(int i=0; i<10; i++){
       for(int j=0; j<5000; j++){
-	for(int k=0;k<50;k++){
+	for(int k=0;k<60;k++){
 	  hit_signal[i][j][k]=-99999;;
 	}
       }
@@ -899,5 +916,5 @@ namespace protoana{
   }
   //////////////////////// End of definition ///////////////	
 	  
-  DEFINE_ART_MODULE(hitrmsraw)
+  DEFINE_ART_MODULE(hitrmsrawdigits)
 }

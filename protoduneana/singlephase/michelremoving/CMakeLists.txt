@@ -83,10 +83,12 @@ art_make(
   ${ROOT_BASIC_LIB_LIST}
   )
 
+cet_remove_compiler_flags(CXX -pedantic)
+
 install_headers()
 install_fhicl()
 install_source()
 #install_fw( LIST toyWaveform.txt)
 add_subdirectory(Xcalo)
 add_subdirectory(YZcalo)
-add_subdirectory(Xcalo_cathodeanode)
+#add_subdirectory(Xcalo_cathodeanode)
