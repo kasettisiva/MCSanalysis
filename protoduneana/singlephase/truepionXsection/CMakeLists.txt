@@ -29,6 +29,9 @@ art_make(BASENAME_ONLY
   ${MF_MESSAGELOGGER}
   cetlib cetlib_except
   )
+
+cet_remove_compiler_flags(CXX -pedantic)
+
 install_headers()
 install_fhicl()
 install_source()
