@@ -158,7 +158,8 @@ namespace pduneana {
     calo_point();
     calo_point(size_t w, double p, double dqdx, double dedx, double dq,
                double cali_dedx, double r, size_t index, double input_z, int t)
-        : wire(w), pitch(p), dQdX(dqdx), dEdX(dedx), calibrated_dEdX(cali_dedx),
+        : wire(w), pitch(p), dQdX(dqdx), dEdX(dedx), dQ(dq),
+          calibrated_dEdX(cali_dedx),
           res_range(r), hit_index(index), z(input_z), tpc(t) {};
 
     size_t wire;
