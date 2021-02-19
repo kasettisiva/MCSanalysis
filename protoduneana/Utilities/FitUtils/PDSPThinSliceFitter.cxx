@@ -348,9 +348,16 @@ void protoana::PDSPThinSliceFitter::CompareDataMC(bool post_fit) {
                          signal_bins.size() - 1,
                          &signal_bins[0]));
           }
-          samples_vec[k].FillHistFromIncidentEnergies(total_incident_hist);
-          samples_vec[k].FillHistFromIncidentEnergies(
-              *(temp_hists[fIncidentSamples[i]][k]));
+          if (fAnalysisOptions.get<bool>("ESlice")) {
+            samples_vec[k].FillESliceHist(total_incident_hist);
+            samples_vec[k].FillESliceHist(
+                *(temp_hists[fIncidentSamples[i]][k]));
+          }
+          else {
+            samples_vec[k].FillHistFromIncidentEnergies(total_incident_hist);
+            samples_vec[k].FillHistFromIncidentEnergies(
+                *(temp_hists[fIncidentSamples[i]][k]));
+          }
         }
       }
     }
@@ -360,8 +367,24 @@ void protoana::PDSPThinSliceFitter::CompareDataMC(bool post_fit) {
     TH1D * xsec_hist = (TH1D*)signal_hist.Clone(xsec_name.c_str());
     xsec_hist->Sumw2();
     xsec_hist->Divide(&total_incident_hist);
-    xsec_hist->Scale(1.E27/ (fAnalysisOptions.get<double>("WirePitch") * 1.4 *
-                    6.022E23 / 39.948 ));
+    if (fAnalysisOptions.get<bool>("ESlice")) {
+      for (int i = 1; i <= xsec_hist->GetNbinsX(); ++i) {
+        xsec_hist->SetBinContent(i, -1.*log(1. - xsec_hist->GetBinContent(i)));
+      }
+      xsec_hist->Scale(1.E27*39.948/(1.4 * 6.022E23));
+      for (int i = 1; i <= xsec_hist->GetNbinsX(); ++i) {
+
+        double bethe_val = BetheBloch(xsec_hist->GetBinCenter(i), 139.57); 
+
+        xsec_hist->SetBinContent(i, (bethe_val*
+                                     xsec_hist->GetBinContent(i)/
+                                     xsec_hist->GetBinWidth(i)));
+      }
+    }
+    else {
+      xsec_hist->Scale(1.E27/ (fAnalysisOptions.get<double>("WirePitch") * 1.4 *
+                      6.022E23 / 39.948 ));
+    }
     xsec_hist->Write();
 
     std::string stack_name = (post_fit ? "PostFit" : "PreFit");

@@ -81,6 +81,10 @@ class ThinSliceSample {
       fIncidentEnergies.push_back({v, 1.});
   };
 
+  void AddESliceEnergies(const std::pair<double, double> & vals) {
+    fESliceEnergies.push_back(vals);
+  };
+
   void FillTrueIncidentHist(const std::vector<double> & vals) {
     for (size_t i = 0; i < vals.size(); ++i) {
       fTrueIncidentHist.Fill(vals.at(i));
@@ -116,6 +120,15 @@ class ThinSliceSample {
   void FillHistFromIncidentEnergies(TH1D & hist) {
     for (auto vals : fIncidentEnergies) {
       hist.Fill(vals.first, fFactor/*vals.second*/);
+    }
+  };
+
+  void FillESliceHist(TH1D & hist) {
+    for (auto vals : fESliceEnergies) {
+      int last_bin = hist.FindBin(vals.first);
+      int first_bin = hist.FindBin(vals.second);
+      for (int i = first_bin; i <= last_bin; ++i)
+        hist.AddBinContent(i, fFactor);
     }
   };
 
@@ -188,6 +201,7 @@ class ThinSliceSample {
   bool fMadeRebinned = false;
 
   std::vector<std::pair<double, double>> fIncidentEnergies;
+  std::vector<std::pair<double, double>> fESliceEnergies;
 
 };
 

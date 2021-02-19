@@ -57,8 +57,11 @@ void protoana::AbsCexDriver::BuildMCSamples(
   for (int i = 0; i < tree->GetEntries(); ++i) {
     tree->GetEntry(i);
 
-    //double end_energy = sqrt(true_beam_endP*true_beam_endP*1.e6 +
-    //                         true_beam_mass*true_beam_mass) - true_beam_mass;
+    double end_energy = (fExtraOptions.get<bool>("TrajSlices") ?
+                         (*true_beam_traj_KE)[true_beam_traj_KE->size()-2] :
+                         true_beam_interactingEnergy);
+    if (fExtraOptions.get<bool>("ESlice"))
+      end_energy = sqrt(true_beam_endP*true_beam_endP*1.e6 + 139.57*139.57) - 139.57;
 
     if (samples.find(sample_ID) == samples.end()) {
       std::cout << "Warning: skipping sample " << sample_ID << std::endl;
@@ -67,50 +70,19 @@ void protoana::AbsCexDriver::BuildMCSamples(
 
     //Build the true incident energy vector based on the slice cut
     std::vector<double> good_true_incEnergies;
-    bool found_start = false;
     if (fExtraOptions.get<bool>("TrajSlices")) {
-      //double next_slice_z = -999.;
       double next_slice_z = fExtraOptions.get<double>("TrajZStart");
-      int slice_cut = fExtraOptions.get<int>("SliceCut");
+      slice_cut = fExtraOptions.get<int>("SliceCut");
       int next_slice_num = 0;
       for (size_t j = 1; j < true_beam_traj_Z->size(); ++j) {
         double z = (*true_beam_traj_Z)[j];
         double ke = (*true_beam_traj_KE)[j];
 
-        //int slice = std::floor((z - (z0 - pitch/2.))/pitch);
-        //if (slice > slice_cut) continue;
         if (z < fExtraOptions.get<double>("TrajZStart")) continue;
 
-        /*
-        if (!found_start) {
-          double prev_z = (*true_beam_traj_Z)[j-1];
-          double prev_ke = (*true_beam_traj_KE)[j-1];
-
-          double delta_e = prev_ke - ke;
-          double delta_z = z - prev_z;
-
-          double sub_z = fExtraOptions.get<double>("TrajZStart")
-                         - prev_z;
-          double start_ke = prev_ke - delta_e*(sub_z/delta_z);
-          std::cout << "Found start: " << prev_z << " " << z <<
-                       " " << start_ke << std::endl;
-          good_true_incEnergies.push_back(start_ke);
-          next_slice_z = z + pitch;
-          found_start = true;
-          continue;
-        }
-        */
-
         if (z >= next_slice_z) {
-
           double temp_z = (*true_beam_traj_Z)[j-1];
           double temp_e = (*true_beam_traj_KE)[j-1];
-
-          if (!found_start) {
-            //std::cout << "Found start: " << temp_z << " " << z <<
-            //             " " << temp_e << std::endl;
-            found_start = true;
-          }
 
           while (next_slice_z < z && next_slice_num < slice_cut) {
             double sub_z = next_slice_z - temp_z;
@@ -121,13 +93,14 @@ void protoana::AbsCexDriver::BuildMCSamples(
             temp_z = next_slice_z;
             next_slice_z += pitch;
             ++next_slice_num;
-            //if (next_slice_z >= endZ_cut) {
-            //  std::cout << "passed cut " << next_slice_z << " " << endZ_cut << std::endl;
-            //}
           }
         }
       }
     }
+    /*
+    else if (fExtraOptions.get<bool>("ESlice")) {
+      good_true_incEnergies.push_back();
+    }*/
     else {
       for (size_t j = 0; j < true_beam_incidentEnergies->size(); ++j) {
         int slice = (*true_beam_slices)[j]; 
@@ -186,6 +159,11 @@ void protoana::AbsCexDriver::BuildMCSamples(
       //sample.FillTrueIncidentHist(*true_beam_incidentEnergies);
       sample.FillTrueIncidentHist(good_true_incEnergies);
       sample.AddIncidentEnergies(good_true_incEnergies);
+      if (true_beam_incidentEnergies->size() > 0) {
+        sample.AddESliceEnergies(
+            {(*true_beam_incidentEnergies)[0],
+             end_energy});
+      }
     }
     else {
       //Iterate through the true bins and find the correct one
@@ -193,8 +171,9 @@ void protoana::AbsCexDriver::BuildMCSamples(
       for (size_t j = 1; j < samples_vec.size()-1; ++j) {
         ThinSliceSample & sample = samples_vec.at(j);
         //if (sample.CheckInSignalRange(true_beam_interactingEnergy)) {
-        if (sample.CheckInSignalRange(
-            (*true_beam_traj_KE)[true_beam_traj_KE->size()-2])) {
+        //if (sample.CheckInSignalRange(
+        //    (*true_beam_traj_KE)[true_beam_traj_KE->size()-2])) {
+        if (sample.CheckInSignalRange(end_energy)) {
           int flux_type = sample.GetFluxType();
           nominal_fluxes[flux_type] += 1.;
           fluxes_by_sample[sample_ID][bin][j] += 1.;
@@ -224,6 +203,11 @@ void protoana::AbsCexDriver::BuildMCSamples(
          //sample.FillTrueIncidentHist(*true_beam_incidentEnergies);
           sample.FillTrueIncidentHist(good_true_incEnergies);
           sample.AddIncidentEnergies(good_true_incEnergies);
+          if (true_beam_incidentEnergies->size() > 0) {
+          sample.AddESliceEnergies(
+              {(*true_beam_incidentEnergies)[0],
+               end_energy});
+          }
 
           found = true;
           break;
@@ -232,9 +216,9 @@ void protoana::AbsCexDriver::BuildMCSamples(
       if (!found) {
         //over/underflow here
         //if (true_beam_interactingEnergy <= samples_vec[1].RangeLowEnd()) {
-        if ((*true_beam_traj_KE)[true_beam_traj_KE->size()-2] <=
-            samples_vec[1].RangeLowEnd()) {
-        //if (end_energy <= samples_vec[1].RangeLowEnd()) {
+        //if ((*true_beam_traj_KE)[true_beam_traj_KE->size()-2] <=
+        //    samples_vec[1].RangeLowEnd()) {
+        if (end_energy <= samples_vec[1].RangeLowEnd()) {
           ThinSliceSample & sample = samples_vec[0];
           int flux_type = sample.GetFluxType();
           nominal_fluxes[flux_type] += 1.;
@@ -264,13 +248,18 @@ void protoana::AbsCexDriver::BuildMCSamples(
           //Fill the total incident hist with truth info
           sample.FillTrueIncidentHist(good_true_incEnergies);
           sample.AddIncidentEnergies(good_true_incEnergies);
+          if (true_beam_incidentEnergies->size() > 0) {
+          sample.AddESliceEnergies(
+              {(*true_beam_incidentEnergies)[0],
+               end_energy});
+          }
         }
         //else if (true_beam_interactingEnergy >
         //         samples_vec[samples_vec.size()-2].RangeHighEnd()) {
-        else if ((*true_beam_traj_KE)[true_beam_traj_KE->size()-2] >
-                 samples_vec[samples_vec.size()-2].RangeHighEnd()) {
-        //else if (end_energy >
+        //else if ((*true_beam_traj_KE)[true_beam_traj_KE->size()-2] >
         //         samples_vec[samples_vec.size()-2].RangeHighEnd()) {
+        else if (end_energy >
+                 samples_vec[samples_vec.size()-2].RangeHighEnd()) {
           ThinSliceSample & sample = samples_vec.back();
           int flux_type = sample.GetFluxType();
           nominal_fluxes[flux_type] += 1.;
@@ -300,11 +289,16 @@ void protoana::AbsCexDriver::BuildMCSamples(
           //Fill the total incident hist with truth info
           sample.FillTrueIncidentHist(good_true_incEnergies);
           sample.AddIncidentEnergies(good_true_incEnergies);
+          if (true_beam_incidentEnergies->size() > 0) {
+          sample.AddESliceEnergies(
+              {(*true_beam_incidentEnergies)[0],
+               end_energy});
+          }
         }
         else {
           std::cout << "Warning: could not find true bin " <<
-                       /*end_energy*//*true_beam_interactingEnergy*/
-                       (*true_beam_traj_KE)[true_beam_traj_KE->size()-2] <<
+                       end_energy/*true_beam_interactingEnergy
+                       (*true_beam_traj_KE)[true_beam_traj_KE->size()-2]*/ <<
                        std::endl;
         }
       }
