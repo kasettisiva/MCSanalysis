@@ -563,8 +563,8 @@ void protoana::PDSPThinSliceFitter::DefineFitFunction() {
           ++par_position;
         }
 
-        //double varied_flux = 0.;
-        //double nominal_flux = 0.;
+        double total_varied_flux = 0.;
+        double total_nominal_flux = 0.;
         std::vector<double> varied_flux(fBeamEnergyBins.size() - 1, 0.);
         std::vector<double> nominal_flux(fBeamEnergyBins.size() - 1, 0.);
 
@@ -579,40 +579,64 @@ void protoana::PDSPThinSliceFitter::DefineFitFunction() {
             for (size_t j = 0; j < samples.size(); ++j) {
               ThinSliceSample & sample = samples.at(j);
               int flux_type = sample.GetFluxType();
-              nominal_flux[i] += fFluxesBySample[sample_ID][i][j];
+              if (flux_type == 1) {
+                nominal_flux[i] += fFluxesBySample[sample_ID][i][j];
+              }
+              total_nominal_flux += fFluxesBySample[sample_ID][i][j];
               
               if (fSignalParameters.find(sample_ID) != fSignalParameters.end()) {
                 //Scale the flux for this signal channel
                 //check for under/overflow bin here. Don't scale by signal pars
                 if (j == 0 || j == samples.size() - 1) {
-                  varied_flux[i]
-                      += (fFluxesBySample[sample_ID][i][j]);
+                  if (flux_type == 1) {
+                    varied_flux[i]
+                        += (fFluxesBySample[sample_ID][i][j]);
+                  }
+                  total_varied_flux += fFluxesBySample[sample_ID][i][j];
                 }
                 else {
-                  varied_flux[i]
-                      += (fFluxesBySample[sample_ID][i][j] *
-                          fSignalParameters[sample_ID][j-1]);
+                  if (flux_type == 1) {
+                    varied_flux[i]
+                        += (fFluxesBySample[sample_ID][i][j] *
+                            fSignalParameters[sample_ID][j-1]);
+                  }
+                  total_varied_flux += (fFluxesBySample[sample_ID][i][j]*
+                                        fSignalParameters[sample_ID][j-1]);
                 }
               }
               else if (fFluxParameters.find(flux_type) != fFluxParameters.end()) {
-                varied_flux[i]
-                    += (fFluxesBySample[sample_ID][i][j] *
-                        fFluxParameters[flux_type]);
+                if (flux_type == 1) {
+                  varied_flux[i]
+                      += (fFluxesBySample[sample_ID][i][j] *
+                          fFluxParameters[flux_type]);
+                }
+                total_varied_flux += (fFluxesBySample[sample_ID][i][j]*
+                                      fFluxParameters[flux_type]);
               }
               else {
-                varied_flux[i]
-                    += fFluxesBySample[sample_ID][i][j];
+                if (flux_type == 1) {
+                  varied_flux[i]
+                      += fFluxesBySample[sample_ID][i][j];
+                }
+                total_varied_flux += fFluxesBySample[sample_ID][i][j];
               }
             }
           }
         }
 
-        //double flux_factor = nominal_flux / varied_flux;
+        double total_flux_factor = total_nominal_flux / total_varied_flux;
+
+        double nominal_primary = 0., varied_primary = 0.;
+        for (size_t i = 0; i < nominal_flux.size(); ++i) {
+          nominal_primary += nominal_flux[i];
+          varied_primary += varied_flux[i];
+        }
+
         std::vector<double> flux_factor = nominal_flux;
         for (size_t i = 0; i < flux_factor.size(); ++i) {
           flux_factor[i] = (nominal_flux[i] > 1.e-7 ?
                             flux_factor[i] / varied_flux[i] :
-                            0.);
+                            0.)*(varied_primary/nominal_primary);
         }
 
         for (auto it = fSamples.begin(); it != fSamples.end(); ++it) {
@@ -628,7 +652,14 @@ void protoana::PDSPThinSliceFitter::DefineFitFunction() {
                 double val = ((j == 0 || j == samples.size() - 1) ?
                               1. : fSignalParameters[sample_ID][j-1]);
                 ThinSliceSample & sample = samples.at(j);
-                sample.SetFactorAndScale(flux_factor[i]*val);
+                int flux_type = sample.GetFluxType();
+                if (flux_type == 1) {
+                  sample.SetFactorAndScale(flux_factor[i]*val*
+                                           total_flux_factor);
+                }
+                else {
+                  sample.SetFactorAndScale(val*total_flux_factor);
+                }
               }
             }
           }
@@ -647,7 +678,13 @@ void protoana::PDSPThinSliceFitter::DefineFitFunction() {
                   std::vector<ThinSliceSample> & samples = samples_2D[i];
                   for (size_t j = 0; j < samples.size(); ++j) {
                     ThinSliceSample & sample = samples.at(j);
-                    sample.SetFactorAndScale(flux_factor[i]*val);
+                    if (flux_type == 1) {
+                      sample.SetFactorAndScale(flux_factor[i]*val*
+                                               total_flux_factor);
+                    }
+                    else {
+                      sample.SetFactorAndScale(val*total_flux_factor);
+                    }
                   }
                 }
 
@@ -662,7 +699,14 @@ void protoana::PDSPThinSliceFitter::DefineFitFunction() {
                 std::vector<ThinSliceSample> & samples = samples_2D[i];
                 for (size_t j = 0; j < samples.size(); ++j) {
                   ThinSliceSample & sample = samples.at(j);
-                  sample.SetFactorAndScale(flux_factor[i]);
+                  int flux_type = sample.GetFluxType();
+                  if (flux_type == 1) {
+                    sample.SetFactorAndScale(flux_factor[i]*
+                                             total_flux_factor);
+                  }
+                  else {
+                    sample.SetFactorAndScale(total_flux_factor);
+                  }
                 }
               }
             }
