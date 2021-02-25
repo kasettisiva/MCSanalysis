@@ -110,6 +110,8 @@ void pdsp::EMCNNCheck::analyze(art::Event const& e)
   charge.clear();
   peakt.clear();
   score_em.clear();
+  score_trk.clear();
+  score_mic.clear();
   pdg.clear();
   origin.clear();
 
