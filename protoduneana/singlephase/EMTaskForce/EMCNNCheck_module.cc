@@ -91,7 +91,7 @@ pdsp::EMCNNCheck::EMCNNCheck(fhicl::ParameterSet const& p)
   : EDAnalyzer{p},
 //fselectpdg(p.get<int>("selectpdg")),
   fGeneratorTag(p.get<std::string>("GeneratorTag")),
-  fCNNTag(p.get<std::string>("CNNTag")),
+  fCNNTag(p.get<std::string>("CNNTag","emtrkmichelid:emtrkmichel")),
   beam_cuts(p.get<fhicl::ParameterSet>("BeamCuts")),
   fBeamlineUtils(p.get<fhicl::ParameterSet>("BeamlineUtils"))
   //BeamCuts(p.get<fhicl::ParameterSet>("BeamCuts"))
