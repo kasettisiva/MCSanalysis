@@ -69,6 +69,9 @@ private:
   int subrun;
   int event;
   int beampdg;
+  double average_score_em;
+  double average_score_trk;
+  double average_score_mic;
   std::vector<short> channel;
   std::vector<short> tpc;
   std::vector<short> plane;
@@ -103,6 +106,9 @@ void pdsp::EMCNNCheck::analyze(art::Event const& e)
   subrun = e.subRun();
   event = e.id().event();
   beampdg = 0;
+  average_score_em  = 0.;
+  average_score_trk = 0.;
+  average_score_mic = 0.;
   channel.clear();
   tpc.clear();
   plane.clear();
@@ -294,6 +300,23 @@ void pdsp::EMCNNCheck::analyze(art::Event const& e)
       }
     }
   }
+
+  // Get the average of the collection plane scores
+  unsigned int nCollectionHits = 0;
+  for(unsigned int h = 0; h < plane.size(); ++h){
+    if(plane.at(h) == 2){
+      ++nCollectionHits;
+      average_score_em += score_em.at(h);
+      average_score_trk += score_trk.at(h);
+      average_score_mic += score_mic.at(h);
+    }
+  }
+  if(nCollectionHits > 0){
+    average_score_em /= static_cast<double>(nCollectionHits);
+    average_score_trk /= static_cast<double>(nCollectionHits);
+    average_score_mic /= static_cast<double>(nCollectionHits);
+  }
+
   if (!channel.empty()) ftree->Fill();
 }
 
@@ -304,6 +327,9 @@ void pdsp::EMCNNCheck::beginJob(){
   ftree->Branch("run", &run, "run/I");
   ftree->Branch("event", &event, "event/I");
   ftree->Branch("beampdg", &beampdg, "beampdg/I");
+  ftree->Branch("average_score_em" , &average_score_em , "average_score_em/D");
+  ftree->Branch("average_score_trk", &average_score_trk, "average_score_trk/D");
+  ftree->Branch("average_score_mic", &average_score_mic, "average_score_mic/D");
   ftree->Branch("channel", &channel);
   ftree->Branch("tpc", &tpc);
   ftree->Branch("plane", &plane);
