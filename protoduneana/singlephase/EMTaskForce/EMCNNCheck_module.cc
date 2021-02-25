@@ -59,6 +59,7 @@ private:
 
   //int fselectpdg;
   std::string fGeneratorTag;
+  std::string fCNNTag;
   //fhicl::ParameterSet BeamCuts;
   protoana::ProtoDUNEBeamCuts beam_cuts;
   protoana::ProtoDUNEBeamlineUtils fBeamlineUtils;
@@ -75,6 +76,8 @@ private:
   std::vector<double> charge;
   std::vector<double> peakt;
   std::vector<double> score_em;
+  std::vector<double> score_trk;
+  std::vector<double> score_mic;
   std::vector<int> pdg;
   std::vector<int> origin;
 
@@ -85,6 +88,7 @@ pdsp::EMCNNCheck::EMCNNCheck(fhicl::ParameterSet const& p)
   : EDAnalyzer{p},
 //fselectpdg(p.get<int>("selectpdg")),
   fGeneratorTag(p.get<std::string>("GeneratorTag")),
+  fCNNTag(p.get<std::string>("CNNTag")),
   beam_cuts(p.get<fhicl::ParameterSet>("BeamCuts")),
   fBeamlineUtils(p.get<fhicl::ParameterSet>("BeamlineUtils"))
   //BeamCuts(p.get<fhicl::ParameterSet>("BeamCuts"))
@@ -142,7 +146,7 @@ void pdsp::EMCNNCheck::analyze(art::Event const& e)
 
   art::FindManyP <recob::Hit> hitsFromSlice(sliceListHandle, e, "pandora");
 
-  anab::MVAReader<recob::Hit,4> hitResults(e, "emtrkmichelid:emtrkmichel");
+  anab::MVAReader<recob::Hit,4> hitResults(e, fCNNTag);
 
   auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(e);
   if (!e.isRealData()){
@@ -252,6 +256,8 @@ void pdsp::EMCNNCheck::analyze(art::Event const& e)
             charge.push_back(hit->Integral());
             peakt.push_back(hit->PeakTime());     
             score_em.push_back(cnn_out[hitResults.getIndex("em")]);
+            score_trk.push_back(cnn_out[hitResults.getIndex("track")]);
+            score_mic.push_back(cnn_out[hitResults.getIndex("michel")]);
             int this_pdg = 0;
             int this_origin = -1;
             if (!e.isRealData()){
@@ -303,6 +309,8 @@ void pdsp::EMCNNCheck::beginJob(){
   ftree->Branch("charge", &charge);
   ftree->Branch("peakt", &peakt);
   ftree->Branch("score_em", &score_em);
+  ftree->Branch("score_trk", &score_trk);
+  ftree->Branch("score_mic", &score_mic);
   ftree->Branch("pdg", &pdg);
   ftree->Branch("origin", &origin);
 
