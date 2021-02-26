@@ -29,6 +29,9 @@
 #include "protoduneana/Utilities/ProtoDUNEBeamlineUtils.h"
 #include "protoduneana/Utilities/ProtoDUNEBeamCuts.h"
 
+#include "lardataobj/RecoBase/Vertex.h"
+#include "lardataobj/RecoBase/TrackHitMeta.h"
+
 #include "TTree.h"
 
 #include <iostream>
@@ -72,6 +75,9 @@ private:
   double average_score_em;
   double average_score_trk;
   double average_score_mic;
+  double track_endz;
+  int ndaughterhits;
+  double average_daughter_score_mic;
   std::vector<short> channel;
   std::vector<short> tpc;
   std::vector<short> plane;
@@ -109,6 +115,9 @@ void pdsp::EMCNNCheck::analyze(art::Event const& e)
   average_score_em  = 0.;
   average_score_trk = 0.;
   average_score_mic = 0.;
+  track_endz = -1;
+  ndaughterhits = 0;
+  average_daughter_score_mic = -1.;
   channel.clear();
   tpc.clear();
   plane.clear();
@@ -146,13 +155,36 @@ void pdsp::EMCNNCheck::analyze(art::Event const& e)
     art::fill_ptr_vector(cluList, cluListHandle);
   }
 
+  // Get all tracks
+  art::Handle < std::vector < recob::Track > > trkListHandle;
+  std::vector < art::Ptr < recob::Track > > trkList;
+  if (e.getByLabel("pandoraTrack", trkListHandle)) {
+    art::fill_ptr_vector(trkList, trkListHandle);
+  }
+
+  // Get all hits
+  art::Handle < std::vector < recob::Hit > > hitListHandle;
+  std::vector < art::Ptr < recob::Hit > > hitList;
+  if (e.getByLabel("hitpdune", hitListHandle)) {
+    art::fill_ptr_vector(hitList, hitListHandle);
+  }
+
   // Get cluster-PFParticle association
   art::FindManyP<recob::Cluster> fmcpfp(pfpListHandle, e, "pandora");
+
+  // Get vertex-PFParticle association
+  art::FindManyP<recob::Vertex> fmvpfp(pfpListHandle, e, "pandora");
 
   // Get hit-cluster association
   art::FindManyP<recob::Hit> fmhc(cluListHandle, e, "pandora");
 
   art::FindManyP <recob::Hit> hitsFromSlice(sliceListHandle, e, "pandora");
+
+  // Get track-hit association
+  art::FindManyP<recob::Hit, recob::TrackHitMeta> fmthm(trkListHandle, e,"pandoraTrack"); // to associate tracks and hits
+
+  // Get hit-track association
+  art::FindManyP<recob::Track> thass(hitListHandle, e, "pandoraTrack"); //to associate hit just trying
 
   anab::MVAReader<recob::Hit,4> hitResults(e, fCNNTag);
 
@@ -230,12 +262,54 @@ void pdsp::EMCNNCheck::analyze(art::Event const& e)
   }
 
   // We can now look at these particles
+  int trackid = -1;
+  int endwire = -1;
+  int endtpc = -1;
+  double endpeakt = -1;
+  std::vector<int> wirekeys;
   for(const recob::PFParticle* particle : beamParticles){
 
     const recob::Track* thisTrack = pfpUtil.GetPFParticleTrack(*particle,e,"pandora","pandoraTrack");
     const recob::Shower* thisShower = pfpUtil.GetPFParticleShower(*particle,e,"pandora","pandoraShower");
     if (thisTrack){
       if (!beam_cuts.IsBeamlike(*thisTrack, e, "1")) return;
+      // Track ID
+      trackid = thisTrack->ID();
+      // Track end point z
+      track_endz = thisTrack->End().Z();
+      // Find the last wire number and peak time on the track
+      if (fmthm.isValid()){
+        float zlast0=-99999;
+        auto vhit=fmthm.at(trackid);
+        auto vmeta=fmthm.data(trackid);
+        for (size_t ii = 0; ii<vhit.size(); ++ii){ //loop over all meta data hit
+          bool fBadhit = false;
+          if (vmeta[ii]->Index() == std::numeric_limits<int>::max()){
+            fBadhit = true;
+            continue;
+          }
+          if (vmeta[ii]->Index()>=thisTrack->NumberTrajectoryPoints()){
+            throw cet::exception("Calorimetry_module.cc") << "Requested track trajectory index "<<vmeta[ii]->Index()<<" exceeds the total number of trajectory points "<<thisTrack->NumberTrajectoryPoints()<<" for track index "<<trackid<<". Something is wrong with the track reconstruction. Please contact tjyang@fnal.gov!!";
+          }
+          if (!thisTrack->HasValidPoint(vmeta[ii]->Index())){
+            fBadhit = true;
+            continue;
+          }
+          auto loc = thisTrack->LocationAtPoint(vmeta[ii]->Index());
+          if (fBadhit) continue; //HY::If BAD hit, skip this hit and go next
+          if (loc.Z()<-100) continue; //hit not on track
+          if(vhit[ii]->WireID().Plane==2){
+            wirekeys.push_back(vhit[ii].key());
+            float zlast=loc.Z();
+            if(zlast>zlast0){
+              zlast0=zlast;
+              endwire=vhit[ii]->WireID().Wire;
+              endpeakt=vhit[ii]->PeakTime();
+              endtpc=vhit[ii]->WireID().TPC;
+            }
+          }
+        }
+      }
     }
     if (thisShower){
       if (!beam_cuts.IsBeamlike(*thisShower, e, "1")) return;
@@ -317,6 +391,31 @@ void pdsp::EMCNNCheck::analyze(art::Event const& e)
     average_score_mic /= static_cast<double>(nCollectionHits);
   }
 
+  // Get the hits near the track end (Michel candidate)
+  std::cout<<trackid<<std::endl;
+  if (trackid!=-1){
+    for(size_t hitl=0;hitl<hitList.size();hitl++){
+      std::array<float,4> cnn_out=hitResults.getOutput(hitList[hitl]);
+      auto & tracks = thass.at(hitList[hitl].key());
+      // hit non on the track
+      if (std::find(wirekeys.begin(), wirekeys.end(), hitl) != wirekeys.end()) continue;
+      // hit not on a long track
+      if (!tracks.empty() && int(tracks[0].key()) != trackid && trkList[tracks[0].key()]->Length()>25) continue;
+      int planeid=hitList[hitl]->WireID().Plane;
+      if (planeid!=2) continue;
+      int tpcid=hitList[hitl]->WireID().TPC;
+      if (tpcid!=endtpc) continue;
+      float peakth1=hitList[hitl]->PeakTime();
+      int wireh1=hitList[hitl]->WireID().Wire;
+      if(std::abs(wireh1-endwire)<15 && std::abs(peakth1-endpeakt)<100 && tpcid==endtpc){
+        ++ndaughterhits;
+        average_daughter_score_mic += cnn_out[hitResults.getIndex("michel")];
+        //std::cout<<cnn_out[hitResults.getIndex("michel")]<<std::endl;
+      }
+    }
+  }
+  if (ndaughterhits) average_daughter_score_mic /= ndaughterhits;
+  
   if (!channel.empty()) ftree->Fill();
 }
 
@@ -330,6 +429,9 @@ void pdsp::EMCNNCheck::beginJob(){
   ftree->Branch("average_score_em" , &average_score_em , "average_score_em/D");
   ftree->Branch("average_score_trk", &average_score_trk, "average_score_trk/D");
   ftree->Branch("average_score_mic", &average_score_mic, "average_score_mic/D");
+  ftree->Branch("track_endz", &track_endz, "track_endz/D");
+  ftree->Branch("ndaughterhits", &ndaughterhits, "ndaughterhits/I");
+  ftree->Branch("average_daughter_score_mic", &average_daughter_score_mic, "average_daughter_score_mic/D");
   ftree->Branch("channel", &channel);
   ftree->Branch("tpc", &tpc);
   ftree->Branch("plane", &plane);
