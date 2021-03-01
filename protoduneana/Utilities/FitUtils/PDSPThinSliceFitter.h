@@ -13,6 +13,9 @@
 #include "Math/Minimizer.h"
 #include "TRandom3.h"
 #include "TGraphAsymmErrors.h"
+#include "TMatrixD.h"
+#include "TVectorD.h"
+
 
 #include "ThinSliceSample.h"
 #include "ThinSliceDataSet.h"
@@ -39,6 +42,7 @@ class PDSPThinSliceFitter {
   void DefineFitFunction();
   void MakeMinimizer();
   void ParameterScans();
+  void DoThrows(const TH1D & pars, const TMatrixD * cov);
 
   ThinSliceDriver * fThinSliceDriver;
   std::map<int, std::vector<std::vector<ThinSliceSample>>> fSamples;
@@ -102,6 +106,7 @@ class PDSPThinSliceFitter {
   fhicl::ParameterSet fAnalysisOptions;
   bool fDoFakeData;
   bool fFitFlux;
+  double fNThrows;
   
   std::vector<double> fIncidentRecoBins, fTrueIncidentBins, fBeamEnergyBins;
   std::vector<int> fIncidentSamples, fMeasurementSamples;

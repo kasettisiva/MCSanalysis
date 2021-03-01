@@ -20,6 +20,11 @@ class AbsCexDriver : public ThinSliceDriver {
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     const std::map<int, bool> & signal_sample_checks,
     ThinSliceDataSet & data_set, double & flux);
+  void FakeDataBinnedScales(
+    TTree * tree,
+    std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+    const std::map<int, bool> & signal_sample_checks,
+    ThinSliceDataSet & data_set, double & flux);
   void FakeDataG4RW(
     TTree * tree,
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
@@ -57,6 +62,19 @@ class AbsCexDriver : public ThinSliceDriver {
       std::vector<std::pair<int, int>> plot_style,
       bool plot_rebinned,
       bool post_fit) override;
+
+  void GetCurrentHists(
+      std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+      std::map<int, std::vector<TH1*>> & throw_hists,
+      bool plot_rebinned) override;
+  /*void PostFitThrows(
+      std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+      ThinSliceDataSet & data_set,
+      TH1D & pars,
+      TH2D & cov,
+      TFile & output_file,
+      std::vector<std::pair<int, int>> plot_style,
+      bool plot_rebinned) override;*/
 };
 }
 #endif

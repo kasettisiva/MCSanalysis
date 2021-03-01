@@ -25,6 +25,8 @@
 #include "TH2D.h"
 #include "TH1D.h"
 #include "TGraph.h"
+#include "TDecompChol.h"
+#include "TF1.h"
 
 #include "PDSPThinSliceFitter.h"
 #include "AbsCexDriver.h"
@@ -348,7 +350,7 @@ void protoana::PDSPThinSliceFitter::CompareDataMC(bool post_fit) {
                          signal_bins.size() - 1,
                          &signal_bins[0]));
           }
-          if (fAnalysisOptions.get<bool>("ESlice")) {
+          if (fAnalysisOptions.get<std::string>("SliceMethod") == "E") {
             samples_vec[k].FillESliceHist(total_incident_hist);
             samples_vec[k].FillESliceHist(
                 *(temp_hists[fIncidentSamples[i]][k]));
@@ -367,7 +369,7 @@ void protoana::PDSPThinSliceFitter::CompareDataMC(bool post_fit) {
     TH1D * xsec_hist = (TH1D*)signal_hist.Clone(xsec_name.c_str());
     xsec_hist->Sumw2();
     xsec_hist->Divide(&total_incident_hist);
-    if (fAnalysisOptions.get<bool>("ESlice")) {
+    if (fAnalysisOptions.get<std::string>("SliceMethod") == "E") {
       for (int i = 1; i <= xsec_hist->GetNbinsX(); ++i) {
         xsec_hist->SetBinContent(i, -1.*log(1. - xsec_hist->GetBinContent(i)));
       }
@@ -380,6 +382,13 @@ void protoana::PDSPThinSliceFitter::CompareDataMC(bool post_fit) {
                                      xsec_hist->GetBinContent(i)/
                                      xsec_hist->GetBinWidth(i)));
       }
+    }
+    else if (fAnalysisOptions.get<std::string>("SliceMethod") == "Alt") {
+      for (int i = 1; i <= xsec_hist->GetNbinsX(); ++i) {
+        xsec_hist->SetBinContent(i, -1.*log(1. - xsec_hist->GetBinContent(i)));
+      }
+      xsec_hist->Scale(1.E27*39.948/(fAnalysisOptions.get<double>("WirePitch")
+                       * 1.4 * 6.022E23));
     }
     else {
       xsec_hist->Scale(1.E27/ (fAnalysisOptions.get<double>("WirePitch") * 1.4 *
@@ -475,12 +484,16 @@ void protoana::PDSPThinSliceFitter::RunFitAndSave() {
       ++n_par;
     }
 
+    TMatrixD * cov = new TMatrixD(fTotalSignalParameters + fTotalFluxParameters, 
+                                  fTotalSignalParameters + fTotalFluxParameters);
+
     for (size_t i = 0; i < (fTotalSignalParameters + fTotalFluxParameters);
          ++i) {
       for (size_t j = 0; j < (fTotalSignalParameters + fTotalFluxParameters);
            ++j) {
         covHist.SetBinContent(i+1, j+1, fMinimizer->CovMatrix(i, j));
         corrHist.SetBinContent(i+1, j+1, fMinimizer->Correlation(i, j));
+        (*cov)(i, j) = fMinimizer->CovMatrix(i, j);
       }
     }
 
@@ -514,6 +527,7 @@ void protoana::PDSPThinSliceFitter::RunFitAndSave() {
     //save post fit stacks
     CompareDataMC(true);
     ParameterScans();
+    DoThrows(parsHist, cov);
   }
 }
 
@@ -537,6 +551,139 @@ void protoana::PDSPThinSliceFitter::ParameterScans() {
 
   delete[] x;
   delete[] y;
+}
+
+void protoana::PDSPThinSliceFitter::DoThrows(const TH1D & pars, const TMatrixD * cov) {
+  std::vector<std::vector<double>> vals;//(pars.GetNbinsX(), 1.);
+  TVectorD rand(pars.GetNbinsX());
+
+  TDecompChol chol(*cov);
+  bool success = chol.Decompose();
+  if (!success) {
+    std::cout << "Error" << std::endl;
+    return;
+  }
+
+  /*
+  std::cout << "Nominal: " << std::endl;
+  for (int i = 1; i < pars.GetNbinsX(); ++i) {
+    std::cout << pars.GetBinContent(i) << " ";
+  }
+  std::cout << std::endl << std::endl;
+  */
+
+  fOutputFile.mkdir("Throws");
+  fOutputFile.cd("Throws");
+
+  TCanvas cPars("cParametersThrown", "");
+  cPars.SetTicks();
+
+  //Build up the map of selection hists
+  std::map<int, std::vector<TH1*>> throw_hists;
+  for (auto it = fDataSet.GetSelectionHists().begin();
+       it != fDataSet.GetSelectionHists().end(); ++it) {
+    throw_hists[it->first] = std::vector<TH1*>();
+  }
+
+  TH2D pars_vals("pars_vals", "", pars.GetNbinsX(), 0, pars.GetNbinsX(), 200, 0., 20.);
+
+  for (size_t i = 0; i < fNThrows; ++i) {
+    vals.push_back(std::vector<double>(pars.GetNbinsX(), 1.));
+    
+    bool rethrow = true;
+    while (rethrow) {
+
+      bool all_pos = true;
+      for (int j = 1; j <= pars.GetNbinsX(); ++j) {
+        rand[j-1] = fRNG.Gaus();
+      }
+
+      TVectorD rand_times_chol = chol.GetU()*rand;
+
+      for (int j = 1; j <= pars.GetNbinsX(); ++j) {
+        vals.back()[j-1] = pars.GetBinContent(j) + rand_times_chol[j-1];
+
+        //Configure this to truncate at 0 or rethrow
+        if (vals.back()[j-1] < 0.) {
+          all_pos = false;
+          //vals.back()[j-1] = 0.;
+        }
+        rethrow = !all_pos;
+
+       // std::cout << vals.back()[j-1] << " ";
+      }
+      //std::cout << std::endl;
+    }
+    for (size_t j = 0; j < vals.back().size(); ++j) {
+      pars_vals.Fill(.5 + j, vals.back()[j]);
+      //pars_vals[j]->Fill(vals.back()[j]);
+    }
+
+    //Applies the variations according to the thrown parameters
+    //fFitFunction(&vals[0]);
+    //fThinSliceDriver->GetCurrentHists(fSamples, throw_hists, fPlotRebinned);
+  }
+
+  std::vector<double> means(pars.GetNbinsX(), 0.), sigmas(pars.GetNbinsX(), 0.);
+  for (size_t i = 0; i < fNThrows; ++i) {
+    for (size_t j = 0; j < means.size(); ++j) {
+      means[j] += vals[i][j]/fNThrows;
+    }
+  }
+
+  for (size_t i = 0; i < fNThrows; ++i) {
+    for (size_t j = 0; j < means.size(); ++j) {
+      sigmas[j] += std::pow((means[j] - vals[i][j]), 2)/(fNThrows-1);
+    }
+  }
+
+  std::vector<double> sigmas_low = sigmas;
+  for (size_t i = 0; i < sigmas.size(); ++i) {
+    sigmas[i] = sqrt(sigmas[i]);
+    sigmas_low[i] = sigmas[i];
+    if ((means[i] - sigmas[i]) < 0.) {
+      sigmas_low[i] = means[i];
+    }
+  }
+
+  std::vector<double> xs, exs;
+  for (int i = 1; i <= pars.GetNbinsX(); ++i) {
+    xs.push_back(pars.GetBinCenter(i));
+    exs.push_back(pars.GetBinWidth(i)/2.);
+  }
+  auto pars_gr = new TGraphAsymmErrors(means.size(), &xs[0], &means[0], &exs[0],
+                                       &exs[0], &sigmas_low[0], &sigmas[0]);
+
+  pars_gr->SetFillColor(kRed);
+  pars_gr->SetFillStyle(3144);
+  pars_gr->SetMarkerColor(kBlack);
+  pars_gr->SetMarkerStyle(20);
+
+  fOutputFile.cd();
+  pars_gr->Write("AllThrownPars");
+  pars_vals.Write();
+  std::vector<TH1D*> pars_vals_1D;
+  for (int i = 1; i <= pars_vals.GetNbinsX(); ++i) {
+    std::string name = "pars_vals" + std::to_string(i);
+    pars_vals_1D.push_back(pars_vals.ProjectionY(name.c_str(), i, i));
+    pars_vals_1D.back()->Write();
+  }
+
+
+  for (size_t i = 0; i < pars_vals_1D.size(); ++i) {
+    pars_vals_1D[i]->Fit("gaus", "Q", "", 0., 20.);
+    means[i] = pars_vals_1D[i]->GetFunction("gaus")->GetParameter(1);
+    sigmas[i] = pars_vals_1D[i]->GetFunction("gaus")->GetParameter(2);
+    if ((means[i] - sigmas[i])  < 0.) {
+      sigmas_low[i] = means[i];
+    }
+    else {
+      sigmas_low[i] = sigmas[i];
+    }
+  }
+  auto pars_gr2 = new TGraphAsymmErrors(means.size(), &xs[0], &means[0], &exs[0],
+                                        &exs[0], &sigmas_low[0], &sigmas[0]);
+  pars_gr2->Write("AllThrownPars2");
 }
 
 void protoana::PDSPThinSliceFitter::DefineFitFunction() {
@@ -781,5 +928,7 @@ void protoana::PDSPThinSliceFitter::Configure(std::string fcl_file) {
   fDriverName = pset.get<std::string>("DriverName");
   fAnalysisOptions = pset.get<fhicl::ParameterSet>("AnalysisOptions");
   fDoFakeData = pset.get<bool>("DoFakeData");
+
+  fNThrows = pset.get<double>("NThrows");
 }
 

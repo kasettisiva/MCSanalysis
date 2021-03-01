@@ -111,6 +111,7 @@ void protoana::ThinSliceDriver::CompareDataMC(
       post_fit);
 }
 
+
 std::pair<int, int> protoana::ThinSliceDriver::GetColorAndStyle(
     size_t i,
     const std::vector<std::pair<int, int>> & plot_style) {

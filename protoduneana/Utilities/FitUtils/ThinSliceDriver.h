@@ -53,6 +53,20 @@ class ThinSliceDriver {
       bool plot_rebinned,
       bool post_fit) = 0;
 
+  virtual void GetCurrentHists(
+      std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+      std::map<int, std::vector<TH1*>> & hists,
+      bool plot_rebinned) = 0;
+
+  /*virtual void PostFitThrows(
+      std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+      ThinSliceDataSet & data_set,
+      TH1D & pars,
+      TH2D & cov,
+      TFile & output_file,
+      std::vector<std::pair<int, int>> plot_style,
+      bool plot_rebinned) = 0;*/
+
   void CompareDataMC(
       std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
       ThinSliceDataSet & data_set,
