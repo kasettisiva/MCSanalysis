@@ -438,6 +438,8 @@ private:
 
   std::vector<double> g4rw_alt_primary_plus_sigma_weight;
   std::vector<double> g4rw_alt_primary_minus_sigma_weight;
+  std::vector<double> g4rw_full_primary_plus_sigma_weight;
+  std::vector<double> g4rw_full_primary_minus_sigma_weight;
 
   //EDIT: STANDARDIZE
   //EndProcess --> endProcess ?
@@ -476,6 +478,9 @@ private:
   std::vector<double> true_beam_traj_X;
   std::vector<double> true_beam_traj_Y;
   std::vector<double> true_beam_traj_Z;
+  std::vector<double> true_beam_traj_Px;
+  std::vector<double> true_beam_traj_Py;
+  std::vector<double> true_beam_traj_Pz;
   std::vector<double> true_beam_traj_KE;
   std::vector<double> true_beam_traj_X_SCE;
   std::vector<double> true_beam_traj_Y_SCE;
@@ -967,7 +972,72 @@ void pduneana::PDSPAnalyzer::analyze(art::Event const & evt) {
           added = true;
         }
       }
-      
+
+      //Weighting according to the full heirarchy
+      std::deque<int> to_create = {true_beam_ID};
+      std::vector<std::vector<G4ReweightTraj *>> full_created;
+      while (to_create.size()) {
+        auto part = plist[to_create[0]];
+        std::vector<G4ReweightTraj *> temp_trajs =
+            CreateNRWTrajs(*part, plist, fGeometryService,
+                           event, true);
+        std::cout << "size: " << temp_trajs.size() << std::endl;
+        for (int i = 0; i < part->NumberDaughters(); ++i) {
+          int daughter_ID = part->Daughter(i);
+          auto d_part = plist[daughter_ID];
+          if ((d_part->PdgCode() == 2212) || (d_part->PdgCode() == 2112) ||
+              (abs(d_part->PdgCode()) == 211)) {
+            to_create.push_back(daughter_ID);
+            std::cout << "Adding daughter " << to_create.back() << std::endl;
+          }
+        }
+
+
+        if (temp_trajs.size()) {
+          auto last_traj = temp_trajs.back();
+          std::cout << "created " << last_traj->GetTrackID() << " " <<
+                       last_traj->GetPDG() << std::endl;
+          //for (size_t i = 0; i < last_traj->GetNChilds(); ++i) {
+          //  if ((last_traj->GetChild(i)->GetPDG() == 2212) ||
+          //      (last_traj->GetChild(i)->GetPDG() == 2112) ||
+          //      (abs(last_traj->GetChild(i)->GetPDG()) == 211) ) {
+          //    to_create.push_back(last_traj->GetChild(i)->GetTrackID());
+          //    std::cout << "Adding daughter " << to_create.back() << std::endl;
+          //  }
+          //}
+
+          if (temp_trajs[0]->GetPDG() == 211) {
+            full_created.push_back(temp_trajs);
+          }
+        }
+        to_create.pop_front();
+      }
+      std::cout << "Created " << full_created.size() << " reweightable pi+" << std::endl;
+
+      bool new_added = false;
+      for (size_t i = 0; i < full_created.size(); ++i) {
+        std::vector<G4ReweightTraj *> temp_trajs = full_created[i];
+        std::cout << i << " n trajs: " << temp_trajs.size() << std::endl;
+        for (size_t j = 0; j < temp_trajs.size(); ++j) {
+          G4ReweightTraj * this_traj = temp_trajs[j];
+          if (this_traj->GetNSteps() > 0) {
+            for (size_t k = 0; k < ParSet.size(); ++k) {
+              std::pair<double, double> pm_weights =
+                  MultiRW->GetPlusMinusSigmaParWeight((*this_traj), k);
+
+              if (!new_added) {
+                g4rw_full_primary_plus_sigma_weight.push_back(pm_weights.first);
+                g4rw_full_primary_minus_sigma_weight.push_back(pm_weights.second);
+              }
+              else {
+                g4rw_full_primary_plus_sigma_weight[k] *= pm_weights.first;
+                g4rw_full_primary_minus_sigma_weight[k] *= pm_weights.second;
+              }
+            }
+            new_added = true;
+          }
+        }
+      }
     }
   }
   if (!evt.isRealData() && fDoProtReweight && true_beam_PDG == 2212) {
@@ -1435,6 +1505,9 @@ void pduneana::PDSPAnalyzer::beginJob()
   fTree->Branch("true_beam_traj_X", &true_beam_traj_X);
   fTree->Branch("true_beam_traj_Y", &true_beam_traj_Y);
   fTree->Branch("true_beam_traj_Z", &true_beam_traj_Z);
+  fTree->Branch("true_beam_traj_Px", &true_beam_traj_Px);
+  fTree->Branch("true_beam_traj_Py", &true_beam_traj_Py);
+  fTree->Branch("true_beam_traj_Pz", &true_beam_traj_Pz);
   fTree->Branch("true_beam_traj_KE", &true_beam_traj_KE);
   fTree->Branch("true_beam_traj_X_SCE", &true_beam_traj_X_SCE);
   fTree->Branch("true_beam_traj_Y_SCE", &true_beam_traj_Y_SCE);
@@ -1449,6 +1522,11 @@ void pduneana::PDSPAnalyzer::beginJob()
                 &g4rw_alt_primary_plus_sigma_weight);
   fTree->Branch("g4rw_alt_primary_minus_sigma_weight",
                 &g4rw_alt_primary_minus_sigma_weight);
+
+  fTree->Branch("g4rw_full_primary_plus_sigma_weight",
+                &g4rw_full_primary_plus_sigma_weight);
+  fTree->Branch("g4rw_full_primary_minus_sigma_weight",
+                &g4rw_full_primary_minus_sigma_weight);
 
   if( fSaveHits ){
     fTree->Branch( "reco_beam_spacePts_X", &reco_beam_spacePts_X );
@@ -1798,6 +1876,9 @@ void pduneana::PDSPAnalyzer::reset()
   true_beam_traj_X.clear();
   true_beam_traj_Y.clear();
   true_beam_traj_Z.clear();
+  true_beam_traj_Px.clear();
+  true_beam_traj_Py.clear();
+  true_beam_traj_Pz.clear();
   true_beam_traj_KE.clear();
   true_beam_traj_X_SCE.clear();
   true_beam_traj_Y_SCE.clear();
@@ -1912,6 +1993,8 @@ void pduneana::PDSPAnalyzer::reset()
   g4rw_primary_var.clear();
   g4rw_alt_primary_plus_sigma_weight.clear();
   g4rw_alt_primary_minus_sigma_weight.clear();
+  g4rw_full_primary_plus_sigma_weight.clear();
+  g4rw_full_primary_minus_sigma_weight.clear();
 }
 
 
@@ -2711,6 +2794,9 @@ void pduneana::PDSPAnalyzer::TrueBeamInfo(
     true_beam_traj_X.push_back(true_beam_trajectory.X(i));
     true_beam_traj_Y.push_back(true_beam_trajectory.Y(i));
     true_beam_traj_Z.push_back(true_beam_trajectory.Z(i));
+    true_beam_traj_Px.push_back(true_beam_trajectory.Px(i));
+    true_beam_traj_Py.push_back(true_beam_trajectory.Py(i));
+    true_beam_traj_Pz.push_back(true_beam_trajectory.Pz(i));
     
     true_beam_traj_KE.push_back(true_beam_trajectory.E(i)*1.e3 - true_beam_mass);
 
