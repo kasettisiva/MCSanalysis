@@ -1,6 +1,8 @@
 #include "AbsCexDriver.h"
 #include "TCanvas.h"
 #include "THStack.h"
+#include "TGraphAsymmErrors.h"
+#include "TLegend.h"
 
 #include "ThinSliceDriverFactory.h"
 DECLARE_THINSLICEDRIVER_FACTORY_NS(protoana::AbsCexDriver, protoana, AbsCexDriver)
@@ -431,16 +433,20 @@ void protoana::AbsCexDriver::BuildFakeData(
     TTree * tree,
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     const std::map<int, bool> & signal_sample_checks,
-    ThinSliceDataSet & data_set, double & flux) {
+    ThinSliceDataSet & data_set, double & flux,
+    std::map<int, std::vector<double>> & sample_scales) {
   std::string routine = fExtraOptions.get<std::string>("FakeDataRoutine");
   if (routine == "SampleScales") {
-    FakeDataSampleScales(tree, samples, signal_sample_checks, data_set, flux);
+    FakeDataSampleScales(tree, samples, signal_sample_checks, data_set, flux,
+                         sample_scales);
   }
   else if (routine == "G4RW") {
-    FakeDataG4RW(tree, samples, data_set, flux);
+    FakeDataG4RW(tree, samples, signal_sample_checks, data_set, flux,
+                 sample_scales);
   }
   else if (routine == "BinnedScales") {
-    FakeDataBinnedScales(tree, samples, signal_sample_checks, data_set, flux);
+    FakeDataBinnedScales(tree, samples, signal_sample_checks, data_set, flux,
+                         sample_scales);
   }
 }
 
@@ -448,7 +454,9 @@ void protoana::AbsCexDriver::FakeDataSampleScales(
     TTree * tree,
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     const std::map<int, bool> & signal_sample_checks,
-    ThinSliceDataSet & data_set, double & flux) {
+    ThinSliceDataSet & data_set, double & flux,
+    std::map<int, std::vector<double>> & sample_scales) {
+
 
   //Build the map for fake data scales
   std::vector<std::pair<int, double>> temp_vec
@@ -486,6 +494,11 @@ void protoana::AbsCexDriver::FakeDataSampleScales(
   std::map<int, double> means;
   for (int i = 1; i <= 735; ++i) {
     means[i] = h2D->ProjectionY("", i, i)->GetMean();
+  }
+
+  std::map<int, std::vector<double>> nominal_samples;
+  for (auto it = sample_scales.begin(); it != sample_scales.end(); ++it) {
+    nominal_samples[it->first] = std::vector<double>(it->second.size(), 0.);
   }
 
   for (int i = 0; i < tree->GetEntries(); ++i) {
@@ -526,11 +539,26 @@ void protoana::AbsCexDriver::FakeDataSampleScales(
         ThinSliceSample & sample = samples_vec.at(j);
         if (sample.CheckInSignalRange(end_energy)) {     
           found = true;
+          sample_scales[sample_ID][j] += scale;
+          nominal_samples[sample_ID][j] += 1.;
           break;
         }
       }
-      if (!found) //If in the under/overflow, just set to 1. 
+      if (!found) {//If in the under/overflow, just set to 1. 
         scale = 1.;
+        if (end_energy < samples_vec[1].RangeLowEnd()) {
+          sample_scales[sample_ID][0] += scale;
+          nominal_samples[sample_ID][0] += 1.;
+        }
+        else {
+          sample_scales[sample_ID].back() += scale;
+          nominal_samples[sample_ID].back() += 1.;
+        }
+      }
+    }
+    else {
+      sample_scales[sample_ID][0] += scale;
+      nominal_samples[sample_ID][0] += 1.;
     }
 
     new_flux += scale; //1 or scaled
@@ -560,6 +588,18 @@ void protoana::AbsCexDriver::FakeDataSampleScales(
     }
   }
 
+  for (auto it = sample_scales.begin(); it != sample_scales.end(); ++it) {
+    for (size_t i = 0; i < it->second.size(); ++i) {
+      if (it->second[i] > 0.) {
+        it->second[i] /= nominal_samples[it->first][i];
+      }
+      else {
+        it->second[i] = 1.;
+      }
+      it->second[i] *= (flux/new_flux);
+    }
+  }
+
   incident_hist.Scale(flux/new_flux);
   for (auto it = selected_hists.begin(); it != selected_hists.end(); ++it) {
     it->second->Scale(flux/new_flux);
@@ -570,7 +610,8 @@ void protoana::AbsCexDriver::FakeDataBinnedScales(
     TTree * tree,
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     const std::map<int, bool> & signal_sample_checks,
-    ThinSliceDataSet & data_set, double & flux) {
+    ThinSliceDataSet & data_set, double & flux,
+    std::map<int, std::vector<double>> & sample_scales) {
 
   //Build the map for fake data scales
   std::vector<std::pair<int, std::vector<double>>> temp_vec
@@ -599,6 +640,8 @@ void protoana::AbsCexDriver::FakeDataBinnedScales(
   TH1D & incident_hist = data_set.GetIncidentHist();
   std::map<int, TH1 *> & selected_hists = data_set.GetSelectionHists();
 
+
+  //Add check here 
   tree->Draw("true_beam_traj_KE:true_beam_traj_Z>>h2D(734, -.49375, 351.63541, 200, 0, 2000)", "true_beam_PDG == 211 && new_interaction_topology != 4 && new_interaction_topology != 5 && true_beam_traj_Z > -.43975 && true_beam_traj_KE > 10.");
   TH2D * h2D = (TH2D*)gDirectory->Get("h2D");
   std::map<int, double> means;
@@ -610,12 +653,14 @@ void protoana::AbsCexDriver::FakeDataBinnedScales(
   //flux = 0.;
   flux = tree->GetEntries(); 
 
+  std::map<int, std::vector<double>> nominal_samples;
+  for (auto it = sample_scales.begin(); it != sample_scales.end(); ++it) {
+    nominal_samples[it->first] = std::vector<double>(it->second.size(), 0.);
+  }
+
   for (int i = 0; i < tree->GetEntries(); ++i) {
     tree->GetEntry(i);
 
-    //double end_energy = (fExtraOptions.get<bool>("TrajSlices") ?
-    //                     sqrt(true_beam_endP*true_beam_endP*1.e6 + 139.57*139.57) - 139.57 :
-    //                     true_beam_interactingEnergy);
     std::string slice_method = fExtraOptions.get<std::string>("SliceMethod");
     double end_energy = true_beam_interactingEnergy;
     if (slice_method == "Traj") {
@@ -651,22 +696,31 @@ void protoana::AbsCexDriver::FakeDataBinnedScales(
         if (sample.CheckInSignalRange(end_energy)) {     
           found = true;
           scale = fake_data_scales.at(sample_ID)[j];
+          sample_scales[sample_ID][j] += scale;
+          nominal_samples[sample_ID][j] += 1.;
           break;
         }
       }
       if (!found) {
         if (end_energy < samples_vec[1].RangeLowEnd()) {
           scale = fake_data_scales.at(sample_ID)[0];
+          sample_scales[sample_ID][0] += scale;
+          nominal_samples[sample_ID][0] += 1.;
         }
         else {
           scale = fake_data_scales.at(sample_ID).back();
+          sample_scales[sample_ID].back() += scale;
+          nominal_samples[sample_ID].back() += 1.;
         }
       }
     }
 
     if (!is_signal && is_scaled) {
       scale = fake_data_scales.at(sample_ID)[0];
+      sample_scales[sample_ID][0] += scale;
+      nominal_samples[sample_ID][0] += 1.;
     }
+
 
     new_flux += scale; //1 or scaled
     if (reco_beam_incidentEnergies->size()) {
@@ -695,6 +749,20 @@ void protoana::AbsCexDriver::FakeDataBinnedScales(
     }
   }
 
+  for (auto it = sample_scales.begin(); it != sample_scales.end(); ++it) {
+    for (size_t i = 0; i < it->second.size(); ++i) {
+      if (it->second[i] > 0.) {
+        it->second[i] /= nominal_samples[it->first][i];
+      }
+      else {
+        it->second[i] = 1.;
+      }
+      it->second[i] *= (flux/new_flux);
+    }
+  }
+
+  std::cout << "Flux: " << flux << " new_flux: " << new_flux << std::endl;
+
   incident_hist.Scale(flux/new_flux);
   for (auto it = selected_hists.begin(); it != selected_hists.end(); ++it) {
     it->second->Scale(flux/new_flux);
@@ -704,7 +772,9 @@ void protoana::AbsCexDriver::FakeDataBinnedScales(
 void protoana::AbsCexDriver::FakeDataG4RW(
     TTree * tree,
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
-    ThinSliceDataSet & data_set, double & flux) {
+    const std::map<int, bool> & signal_sample_checks,
+    ThinSliceDataSet & data_set, double & flux,
+    std::map<int, std::vector<double>> & sample_scales) {
 
   //Build the map for fake data scales
   fhicl::ParameterSet g4rw_options 
@@ -712,7 +782,7 @@ void protoana::AbsCexDriver::FakeDataG4RW(
 
   int sample_ID, selection_ID; 
   double true_beam_interactingEnergy, reco_beam_interactingEnergy;
-  //double true_beam_endP;
+  double true_beam_endP;
   std::vector<double> * reco_beam_incidentEnergies = 0x0;
   double reco_beam_endZ;
   std::vector<double> * g4rw_weight = 0x0;
@@ -721,11 +791,13 @@ void protoana::AbsCexDriver::FakeDataG4RW(
   tree->SetBranchAddress("selection_ID", &selection_ID);
   tree->SetBranchAddress("true_beam_interactingEnergy",
                          &true_beam_interactingEnergy);
-  //tree->SetBranchAddress("true_beam_endP", &true_beam_endP);
+  tree->SetBranchAddress("true_beam_endP", &true_beam_endP);
   tree->SetBranchAddress("reco_beam_interactingEnergy",
                          &reco_beam_interactingEnergy);
   tree->SetBranchAddress("reco_beam_incidentEnergies",
                          &reco_beam_incidentEnergies);
+  std::vector<double> * true_beam_traj_Z = 0x0;
+  tree->SetBranchAddress("true_beam_traj_Z", &true_beam_traj_Z);
 
   if (g4rw_options.get<int>("Shift") > 0) {
     if (g4rw_options.get<bool>("Full")) {
@@ -755,15 +827,72 @@ void protoana::AbsCexDriver::FakeDataG4RW(
   flux = tree->GetEntries();
   
 
+  tree->Draw("true_beam_traj_KE:true_beam_traj_Z>>h2D(734, -.49375, 351.63541, 200, 0, 2000)", "true_beam_PDG == 211 && new_interaction_topology != 4 && new_interaction_topology != 5 && true_beam_traj_Z > -.43975 && true_beam_traj_KE > 10.");
+  TH2D * h2D = (TH2D*)gDirectory->Get("h2D");
+  std::map<int, double> means;
+  for (int i = 1; i <= 735; ++i) {
+    means[i] = h2D->ProjectionY("", i, i)->GetMean();
+  }
+
+  std::map<int, std::vector<double>> nominal_samples;
+  for (auto it = sample_scales.begin(); it != sample_scales.end(); ++it) {
+    nominal_samples[it->first] = std::vector<double>(it->second.size(), 0.);
+  }
+
   for (int i = 0; i < tree->GetEntries(); ++i) {
     tree->GetEntry(i);
 
     if (samples.find(sample_ID) == samples.end())
       continue;
 
+    std::string slice_method = fExtraOptions.get<std::string>("SliceMethod");
+    double end_energy = true_beam_interactingEnergy;
+    if (slice_method == "Traj") {
+      end_energy = sqrt(true_beam_endP*true_beam_endP*1.e6 + 139.57*139.57) - 139.57;
+    }
+    else if (slice_method == "E") {
+      end_energy = sqrt(true_beam_endP*true_beam_endP*1.e6 + 139.57*139.57) - 139.57;
+    }
+    else if (slice_method == "Alt") {
+      int bin = h2D->GetXaxis()->FindBin(true_beam_traj_Z->back());
+      if (bin > 0) {
+        end_energy = means.at(bin);
+      }
+    }
+
     double scale = 1.;
     if (g4rw_weight->size() > 0) {
       scale = g4rw_weight->at(g4rw_pos);
+    }
+
+    bool is_signal = signal_sample_checks.at(sample_ID);
+    if (is_signal) {
+      std::vector<ThinSliceSample> & samples_vec = samples[sample_ID][0];
+      //Get the samples vec from the first beam energy bin
+      bool found = false;
+      for (size_t j = 1; j < samples_vec.size()-1; ++j) {
+        ThinSliceSample & sample = samples_vec.at(j);
+        if (sample.CheckInSignalRange(end_energy)) {     
+          found = true;
+          sample_scales[sample_ID][j] += scale;
+          nominal_samples[sample_ID][j] += 1.;
+          break;
+        }
+      }
+      if (!found) {
+        if (end_energy < samples_vec[1].RangeLowEnd()) {
+          sample_scales[sample_ID][0] += scale;
+          nominal_samples[sample_ID][0] += 1.;
+        }
+        else {
+          sample_scales[sample_ID].back() += scale;
+          nominal_samples[sample_ID].back() += 1.;
+        }
+      }
+    }
+    else {
+      sample_scales[sample_ID][0] += scale;
+      nominal_samples[sample_ID][0] += 1.;
     }
 
     new_flux += scale; //1 or scaled
@@ -790,6 +919,18 @@ void protoana::AbsCexDriver::FakeDataG4RW(
           selected_hists[selection_ID]->Fill(reco_beam_endZ, scale);
         }
       }
+    }
+  }
+
+  for (auto it = sample_scales.begin(); it != sample_scales.end(); ++it) {
+    for (size_t i = 0; i < it->second.size(); ++i) {
+      if (it->second[i] > 0.) {
+        it->second[i] /= nominal_samples[it->first][i];
+      }
+      else {
+        it->second[i] = 1.;
+      }
+      it->second[i] *= (flux/new_flux);
     }
   }
 
@@ -1014,26 +1155,38 @@ void protoana::AbsCexDriver::CompareSelections(
 
 void protoana::AbsCexDriver::GetCurrentHists(
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+    ThinSliceDataSet & data_set,
     std::map<int, std::vector<TH1*>> & throw_hists,
     bool plot_rebinned) {
   
+  //Use data set as a template
+  std::map<int, TH1*> data_hists
+      = (plot_rebinned ?
+         data_set.GetRebinnedSelectionHists() :
+         data_set.GetSelectionHists());
+
+  for (auto it = data_hists.begin(); it != data_hists.end(); ++it) {
+    std::vector<double> bins;
+    std::string name = data_set.GetSelectionName(it->first) + "Throw" +
+                       std::to_string(throw_hists[it->first].size());
+
+    TH1D * temp_hist = (TH1D*)it->second->Clone(name.c_str());
+    temp_hist->Reset();
+    throw_hists[it->first].push_back(temp_hist);
+  }
+
   //Iterate over samples
-  for (auto it = samples.begin(); it != samples.end(); ++it) {
-    //Loop over beam energy and true bins
-    for (size_t i = 0; i < it->second.size(); ++i) {
-      for (size_t j = 0; j < it->second[i].size(); ++j) {
-        for (auto it2 = throw_hists.begin(); it2 != throw_hists.end(); ++it2) {
-          if (i == 0 && j == 0) {
-            it2->second.push_back((TH1D*)(
-                plot_rebinned ?
-                it->second[i][j].GetRebinnedSelectionHist(it2->first) :
-                it->second[i][j].GetSelectionHist(it2->first))->Clone());
-          }
-          else {
-            it2->second.back()->Add((TH1D*)(
-                plot_rebinned ?
-                it->second[i][j].GetRebinnedSelectionHist(it2->first) :
-                it->second[i][j].GetSelectionHist(it2->first)));
+  for (auto it = throw_hists.begin(); it != throw_hists.end(); ++it) {
+    int selection_ID = it->first;
+    for (auto it2 = samples.begin(); it2 != samples.end(); ++it2) {
+      std::vector<std::vector<ThinSliceSample>> & samples_vec_2D = it2->second;
+      for (size_t j = 0; j < samples_vec_2D.size(); ++j) {
+        std::vector<ThinSliceSample> & samples_vec = samples_vec_2D[j];
+        for (size_t k = 0; k < samples_vec.size(); ++k) {
+          ThinSliceSample & sample = samples_vec[k];
+          for (int i = 1; i <= it->second.back()->GetNbinsX(); ++i) {
+            it->second.back()->AddBinContent(i,
+                sample.GetSelectionHist(selection_ID)->GetBinContent(i));
           }
         }
       }
@@ -1041,15 +1194,187 @@ void protoana::AbsCexDriver::GetCurrentHists(
   }
 }
 
-//void protoana::AbsCexDriver::PlotThrows(
-//    ThinSliceDataSet & data_set, std::map<int, std::vector<TH1*>> & throw_hists,
-//    TFile & output_file, bool plot_rebinned) {
-//  std::map<int, TH1*> data_hists
-//      = (plot_rebinned ?
-//         data_set.GetRebinnedSelectionHists() :
-//         data_set.GetSelectionHists());
-//  for (auto it = data_hists.begin(); it != data_hists.end() ++it) {
-//    int selection_ID = it->first;
-//    it->second
-//  }
-//}
+void protoana::AbsCexDriver::GetCurrentTruthHists(
+    std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+    std::map<int, std::vector<TH1*>> & throw_hists) {
+  //Loop over the samples
+  for (auto it = samples.begin(); it != samples.end(); ++it) {
+    //Get the number of bins from the first entry of the beam energy bins
+    std::vector<std::vector<ThinSliceSample>> & samples_vec_2D = it->second;
+    size_t nBins = samples_vec_2D[0].size();
+    std::string name = it->second[0][0].GetName() + "Throw" +
+                       std::to_string(throw_hists[it->first].size());
+    TH1D * temp_hist = new TH1D(name.c_str(), "", nBins, 0, nBins); 
+    for (size_t i = 0; i < samples_vec_2D.size(); ++i) {
+      std::vector<ThinSliceSample> & samples_vec = samples_vec_2D[i];
+      for (size_t j = 0; j < it->second[i].size(); ++j) {
+        temp_hist->AddBinContent(j+1, samples_vec[j].GetVariedFlux());
+      }
+    }
+    throw_hists[it->first].push_back(temp_hist);
+  }
+}
+
+void protoana::AbsCexDriver::PlotThrows(
+    ThinSliceDataSet & data_set, std::map<int, std::vector<TH1*>> & throw_hists,
+    std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+    std::map<int, std::vector<TH1*>> & truth_throw_hists,
+    TFile & output_file, bool plot_rebinned,
+    std::map<int, std::vector<double>> * sample_scales) {
+  std::map<int, TH1*> data_hists
+      = (plot_rebinned ?
+         data_set.GetRebinnedSelectionHists() :
+         data_set.GetSelectionHists());
+  for (auto it = data_hists.begin(); it != data_hists.end(); ++it) {
+    int selection_ID = it->first;
+    std::vector<TH1*> hists = throw_hists.at(selection_ID);
+    std::cout << "Got " << hists.size() << " hists from " << selection_ID << std::endl;
+    std::vector<double> means = std::vector<double>(it->second->GetNbinsX(), 0.);
+    std::vector<double> sigmas = std::vector<double>(it->second->GetNbinsX(), 0.);
+
+    for (size_t i = 0; i < hists.size(); ++i) {
+      for (size_t j = 0; j < means.size(); ++j) {
+        means[j] += hists[i]->GetBinContent(j+1)/hists.size();
+        //std::cout << i << " " << j << " " << hists[i]->GetBinContent(j+1) <<
+                     //std::endl;
+      }
+    }
+    for (size_t i = 0; i < hists.size(); ++i) {
+      for (size_t j = 0; j < sigmas.size(); ++j) {
+        sigmas[j] += std::pow(hists[i]->GetBinContent(j+1) - means[j], 2) /
+                     (hists.size() - 1);
+      }
+    }
+    for (size_t i = 0; i < sigmas.size(); ++i) {
+      sigmas[i] = sqrt(sigmas[i]);
+    }
+
+    std::string canvas_name = "cThrow" +
+                              data_set.GetSelectionName(selection_ID);
+    TCanvas cThrow(canvas_name.c_str(), "");
+    cThrow.SetTicks();
+
+    std::string name = "Throw" + data_set.GetSelectionName(selection_ID);
+    auto data_hist = it->second;
+    std::vector<double> sigmas_low;
+    std::vector<double> xs, xs_width;
+    for (size_t i = 0; i < means.size(); ++i) {
+      xs.push_back(data_hist->GetBinCenter(i+1));
+      xs_width.push_back(data_hist->GetBinWidth(i+1)/2.);
+
+      sigmas_low.push_back(
+          (((means[i] - sigmas[i]) >= 0.) ?
+           sigmas[i] : means[i]));
+      //std::cout << "Sigmas: " << sigmas_low[i] << " " << sigmas[i] << std::endl;
+    }
+    TGraphAsymmErrors throw_gr(data_hist->GetNbinsX(),
+                               &xs[0], &means[0], 
+                               &xs_width[0], &xs_width[0], &sigmas_low[0], &sigmas[0]);
+
+    throw_gr.SetFillStyle(3144);
+    throw_gr.SetFillColor(kRed);
+    throw_gr.Draw("a2");
+    data_hist->Draw("same e1");
+    output_file.cd();
+    cThrow.Write();
+  }
+
+  for (auto it = truth_throw_hists.begin(); it != truth_throw_hists.end(); ++it) {
+    int sample_ID = it->first;
+    std::cout << sample_ID << std::endl;
+
+    if (it->second.size() == 0) return;
+    std::vector<double> means = std::vector<double>(it->second[0]->GetNbinsX(), 0.);
+    std::vector<double> sigmas = std::vector<double>(it->second[0]->GetNbinsX(), 0.);
+   
+    for (size_t i = 0; i < it->second.size(); ++i) {
+      for (int j = 1; j <= it->second[i]->GetNbinsX(); ++j) {
+        means[j-1] += it->second[i]->GetBinContent(j)/it->second.size();
+      }
+    }
+    for (size_t i = 0; i < it->second.size(); ++i) {
+      for (size_t j = 0; j < sigmas.size(); ++j) {
+        sigmas[j] += std::pow(it->second[i]->GetBinContent(j+1) - means[j], 2) /
+                     (it->second.size() - 1);
+      }
+    }
+    for (size_t i = 0; i < sigmas.size(); ++i) {
+      sigmas[i] = sqrt(sigmas[i]);
+    }
+
+
+    std::vector<double> sigmas_low;
+    std::vector<double> xs, xs_width;
+    for (size_t i = 0; i < means.size(); ++i) {
+      xs.push_back(i + 0.5);
+      xs_width.push_back(.5);
+
+      sigmas_low.push_back(
+          (((means[i] - sigmas[i]) >= 0.) ?
+           sigmas[i] : means[i]));
+      //std::cout << "Sigmas: " << sigmas_low[i] << " " << sigmas[i] << std::endl;
+    }
+    TGraphAsymmErrors throw_gr(xs.size(),
+                               &xs[0], &means[0], 
+                               &xs_width[0], &xs_width[0], &sigmas_low[0], &sigmas[0]);
+
+    throw_gr.SetFillStyle(3144);
+    throw_gr.SetFillColor(kRed);
+
+    std::string name = "hNominal" + samples[sample_ID][0][0].GetName();
+    TH1D temp_nominal(name.c_str(), "", xs.size(), 0, xs.size());
+    std::vector<std::vector<ThinSliceSample>> & samples_vec_2D
+        = samples[sample_ID];
+    for (size_t i = 0; i < samples_vec_2D.size(); ++i) {
+      for (size_t j = 0; j < samples_vec_2D[i].size(); ++j) {
+        temp_nominal.AddBinContent(j+1, samples_vec_2D[i][j].GetNominalFlux());
+      }
+    }
+    std::cout << name << std::endl; 
+    for (int i = 1; i <= temp_nominal.GetNbinsX(); ++i) {
+      std::cout << temp_nominal.GetBinContent(i) << " ";
+    }
+    std::cout << std::endl;
+
+    double max = -999.;
+    for (size_t i = 0; i < means.size(); ++i) {
+      if ((means[i] + sigmas[i]) > max)
+        max = means[i] + sigmas[i];
+
+      if (temp_nominal.GetBinContent(i+1) > max)
+        max = temp_nominal.GetBinContent(i+1);
+    }
+
+    output_file.cd();
+    std::string canvas_name = "cTruthThrow" + samples[sample_ID][0][0].GetName();
+    TCanvas cThrow(canvas_name.c_str(), "");
+    cThrow.SetTicks();
+    throw_gr.SetMinimum(0.);
+    throw_gr.SetMaximum(1.5*max);
+    throw_gr.Draw("a2");
+    throw_gr.Draw("p");
+    temp_nominal.SetMarkerColor(kBlue);
+    temp_nominal.SetMarkerStyle(20);
+    temp_nominal.Draw("same p");
+
+    TLegend leg;
+    leg.AddEntry(&throw_gr, "Throws", "lpf");
+    leg.AddEntry(&temp_nominal, "Nominal", "p");
+
+    if (sample_scales) {
+      name = "hVaried" + samples[sample_ID][0][0].GetName();
+      TH1D * temp_varied = (TH1D*)temp_nominal.Clone(name.c_str());
+      for (size_t i = 0; i < xs.size(); ++i) {
+        temp_varied->SetBinContent(
+            i+1, temp_varied->GetBinContent(i+1)*(*sample_scales)[sample_ID][i]);
+      }
+      temp_varied->SetMarkerColor(kBlack);
+      temp_varied->SetMarkerStyle(20);
+      temp_varied->Draw("same p");
+      leg.AddEntry(temp_varied, "Fake Data", "p");
+    }
+
+    leg.Draw();
+    cThrow.Write();
+  }
+}

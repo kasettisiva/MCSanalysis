@@ -19,8 +19,8 @@ TreeName: "pduneana/beamana"
 DriverName: "protoana::AbsCexDriver"
 AnalysisOptions: {
   #FakeDataRoutine: "SampleScales"
-  FakeDataRoutine: "BinnedScales"
-  #FakeDataRoutine: "G4RW"
+  #FakeDataRoutine: "BinnedScales"
+  FakeDataRoutine: "G4RW"
 
   FakeDataScales: [
     [2, 2.]
@@ -112,7 +112,7 @@ FluxTypes: [
 
 
 #DefaultSignalBins: [450., 600., 800, 1200.]
-DefaultSignalBins: [0., 400., 500., 600., 700., 800, 1200.]
+DefaultSignalBins: [0., 400., 800., 1000, 1200.]
 TrueIncidentBins: @local::DefaultSignalBins
 
 BeamEnergyBins: [0., 800., 900., 1000., 1100., 1200., 4000.]
@@ -130,7 +130,7 @@ Samples: [
     ID: 1
     IsSignal: true
     #SignalBins: [0., 200., 400., 500., 600., 800., 1000.] 
-    SignalBins: [0., 400., 600., 800., 1000.] 
+    SignalBins: [200., 500., 600., 800., 1200.] 
     #SignalBins: [000., 50.,
     #             100., 150.,
     #             200., 250.,
@@ -149,7 +149,7 @@ Samples: [
     ID: 2
     IsSignal: true
     #SignalBins: [0., 200., 400., 600., 800., 1200.]
-    SignalBins: [0., 450., 600., 800., 1200.]
+    SignalBins: [200., 600., 800., 1200.]
     #SignalBins: [000., 50.,
     #             100., 150.,
     #             200., 250.,
@@ -220,5 +220,6 @@ DrawXSecUnderflow: false
 ## Validation
 RandomStart: false 
 DoFakeData: true
-NThrows: 10000
+NThrows: 1000
+MaxRethrows: 1000
 #####################

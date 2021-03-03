@@ -237,8 +237,21 @@ void protoana::PDSPThinSliceFitter::BuildDataHists() {
     fThinSliceDriver->BuildDataHists(tree, fDataSet, fDataFlux);
   }
   else {
+    for (auto it = fSamples.begin(); it != fSamples.end(); ++it) {
+      std::vector<ThinSliceSample> & samples_vec = it->second[0];
+      fFakeDataScales[it->first] = std::vector<double>(samples_vec.size(), 0.);
+    }
     fThinSliceDriver->BuildFakeData(tree, fSamples, fIsSignalSample, fDataSet,
-                                    fDataFlux);
+                                    fDataFlux, fFakeDataScales);
+    std::cout << "Sample scales: "; 
+    for (auto it = fFakeDataScales.begin(); it != fFakeDataScales.end(); ++it) {
+      std::cout << fSamples[it->first][0][0].GetName() << " ";
+      for (size_t i = 0; i < it->second.size(); ++i) {
+        std::cout << it->second[i] << " ";
+      }
+      std::cout << std::endl;
+    }
+    std::cout << std::endl;
   }
 
 
@@ -314,10 +327,10 @@ void protoana::PDSPThinSliceFitter::CompareDataMC(bool post_fit) {
            k < samples_vec.size()-1; ++k) {
         ThinSliceSample & sample = samples_vec[k];
         if (fDrawXSecUnderflow) {
-          signal_hist.AddBinContent(k+1, sample.GetNominalFlux());
+          signal_hist.AddBinContent(k+1, sample.GetVariedFlux());
         }
         else {
-          signal_hist.AddBinContent(k, sample.GetNominalFlux());
+          signal_hist.AddBinContent(k, sample.GetVariedFlux());
         }
       }
     }
@@ -537,6 +550,7 @@ void protoana::PDSPThinSliceFitter::ParameterScans() {
   out->cd();
 
   size_t total_parameters = fTotalSignalParameters + fTotalFluxParameters;
+  std::cout << "Total parameters " << total_parameters << std::endl;
 
   double * x = new double[fNScanSteps] {};
   double * y = new double[fNScanSteps] {};
@@ -585,14 +599,19 @@ void protoana::PDSPThinSliceFitter::DoThrows(const TH1D & pars, const TMatrixD *
     throw_hists[it->first] = std::vector<TH1*>();
   }
 
+  std::map<int, std::vector<TH1*>> truth_throw_hists;
+  for (auto it = fSamples.begin(); it != fSamples.end(); ++it) {
+    truth_throw_hists[it->first] = std::vector<TH1*>();
+  }
+
   TH2D pars_vals("pars_vals", "", pars.GetNbinsX(), 0, pars.GetNbinsX(), 200, 0., 20.);
 
   for (size_t i = 0; i < fNThrows; ++i) {
     vals.push_back(std::vector<double>(pars.GetNbinsX(), 1.));
     
     bool rethrow = true;
-    while (rethrow) {
-
+    size_t nRethrows = 0;
+    while (rethrow && nRethrows < fMaxRethrows) {
       bool all_pos = true;
       for (int j = 1; j <= pars.GetNbinsX(); ++j) {
         rand[j-1] = fRNG.Gaus();
@@ -613,6 +632,7 @@ void protoana::PDSPThinSliceFitter::DoThrows(const TH1D & pars, const TMatrixD *
        // std::cout << vals.back()[j-1] << " ";
       }
       //std::cout << std::endl;
+      ++nRethrows;
     }
     for (size_t j = 0; j < vals.back().size(); ++j) {
       pars_vals.Fill(.5 + j, vals.back()[j]);
@@ -620,9 +640,13 @@ void protoana::PDSPThinSliceFitter::DoThrows(const TH1D & pars, const TMatrixD *
     }
 
     //Applies the variations according to the thrown parameters
-    //fFitFunction(&vals[0]);
-    //fThinSliceDriver->GetCurrentHists(fSamples, throw_hists, fPlotRebinned);
+    fFitFunction(&(vals.back()[0]));
+    fThinSliceDriver->GetCurrentHists(fSamples, fDataSet, throw_hists, fPlotRebinned);
+    fThinSliceDriver->GetCurrentTruthHists(fSamples, truth_throw_hists);
   }
+  fThinSliceDriver->PlotThrows(fDataSet, throw_hists, fSamples,
+                               truth_throw_hists, fOutputFile, fPlotRebinned,
+                               (fDoFakeData ? &fFakeDataScales : 0x0));
 
   std::vector<double> means(pars.GetNbinsX(), 0.), sigmas(pars.GetNbinsX(), 0.);
   for (size_t i = 0; i < fNThrows; ++i) {
@@ -683,6 +707,10 @@ void protoana::PDSPThinSliceFitter::DoThrows(const TH1D & pars, const TMatrixD *
   }
   auto pars_gr2 = new TGraphAsymmErrors(means.size(), &xs[0], &means[0], &exs[0],
                                         &exs[0], &sigmas_low[0], &sigmas[0]);
+  pars_gr2->SetFillColor(kRed);
+  pars_gr2->SetFillStyle(3144);
+  pars_gr2->SetMarkerColor(kBlack);
+  pars_gr2->SetMarkerStyle(20);
   pars_gr2->Write("AllThrownPars2");
 }
 
@@ -929,6 +957,7 @@ void protoana::PDSPThinSliceFitter::Configure(std::string fcl_file) {
   fAnalysisOptions = pset.get<fhicl::ParameterSet>("AnalysisOptions");
   fDoFakeData = pset.get<bool>("DoFakeData");
 
-  fNThrows = pset.get<double>("NThrows");
+  fNThrows = pset.get<size_t>("NThrows");
+  fMaxRethrows = pset.get<size_t>("MaxRethrows");
 }
 

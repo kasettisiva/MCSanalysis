@@ -26,7 +26,8 @@ class ThinSliceDriver {
     TTree * tree,
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     const std::map<int, bool> & signal_sample_checks,
-    ThinSliceDataSet & data_set, double & flux) = 0;
+    ThinSliceDataSet & data_set, double & flux,
+    std::map<int, std::vector<double>> & sample_scales) = 0;
 
   virtual void BuildMCSamples(
       TTree * tree,
@@ -55,8 +56,20 @@ class ThinSliceDriver {
 
   virtual void GetCurrentHists(
       std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+      ThinSliceDataSet & data_set,
       std::map<int, std::vector<TH1*>> & hists,
       bool plot_rebinned) = 0;
+
+  virtual void GetCurrentTruthHists(
+      std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+      std::map<int, std::vector<TH1*>> & hists) = 0;
+
+  virtual void PlotThrows(
+    ThinSliceDataSet & data_set, std::map<int, std::vector<TH1*>> & throw_hists,
+    std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+    std::map<int, std::vector<TH1*>> & truth_throw_hists,
+    TFile & output_file, bool plot_rebinned,
+    std::map<int, std::vector<double>> * sample_scales = 0x0) = 0;
 
   /*virtual void PostFitThrows(
       std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,

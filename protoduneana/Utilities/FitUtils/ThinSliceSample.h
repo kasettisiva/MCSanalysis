@@ -66,8 +66,13 @@ class ThinSliceSample {
     return fNominalFlux;
   };
 
+  const double & GetVariedFlux() const {
+    return fVariedFlux;
+  };
+
   void AddFlux(double val = 1.) {
     fNominalFlux += val;
+    fVariedFlux += val;
   };
 
   void FillIncidentHist(const std::vector<double> & vals) {
@@ -153,12 +158,14 @@ class ThinSliceSample {
     ScaleHists(fDataMCScale);
     //ScaleIncidentEnergies(fDataMCScale);
     fNominalFlux *= val;
+    fVariedFlux *= val;
   };
 
   void SetFactorAndScale(double val) {
     ResetFactor();
     fFactor = val;
-    fNominalFlux *= val;
+    //fNominalFlux *= val;
+    fVariedFlux *= val;
     ScaleHists(val);
     //ScaleIncidentEnergies(val);
   };
@@ -166,7 +173,8 @@ class ThinSliceSample {
   void ResetFactor() {
     ScaleHists(1./fFactor);
     //ScaleIncidentEnergies(1./fFactor);
-    fNominalFlux *= (1./fFactor);
+    //fNominalFlux *= (1./fFactor);
+    fVariedFlux *= (1./fFactor);
     fFactor = 1.;
   };
 
@@ -186,6 +194,7 @@ class ThinSliceSample {
   std::string fSampleName;
   int fFluxType;
   double fNominalFlux = 0.;
+  double fVariedFlux = 0.;
   double fDataMCScale = 1.;
   bool fIsSignal;
   std::pair<double, double> fRange;

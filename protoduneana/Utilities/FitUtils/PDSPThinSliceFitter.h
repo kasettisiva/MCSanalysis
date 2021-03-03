@@ -87,6 +87,7 @@ class PDSPThinSliceFitter {
   size_t fTotalFluxParameters = 0;
 
   TRandom3 fRNG;
+  std::map<int, std::vector<double>> fFakeDataScales;
 
   //Configurable members
   std::string fMCFileName;
@@ -106,7 +107,7 @@ class PDSPThinSliceFitter {
   fhicl::ParameterSet fAnalysisOptions;
   bool fDoFakeData;
   bool fFitFlux;
-  double fNThrows;
+  size_t fNThrows, fMaxRethrows;
   
   std::vector<double> fIncidentRecoBins, fTrueIncidentBins, fBeamEnergyBins;
   std::vector<int> fIncidentSamples, fMeasurementSamples;
