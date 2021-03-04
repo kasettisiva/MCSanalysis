@@ -517,6 +517,9 @@ void protoana::PDSPThinSliceFitter::RunFitAndSave() {
     parsHist.SetMarkerStyle(20);
     parsHist.Write();
 
+    fBestFitSignalPars = fSignalParameters; 
+    fBestFitFluxPars = fFluxParameters; 
+
     //Drawing pre + post fit pars
     TCanvas cPars("cParameters", "");
     cPars.SetTicks();
@@ -604,7 +607,7 @@ void protoana::PDSPThinSliceFitter::DoThrows(const TH1D & pars, const TMatrixD *
     truth_throw_hists[it->first] = std::vector<TH1*>();
   }
 
-  TH2D pars_vals("pars_vals", "", pars.GetNbinsX(), 0, pars.GetNbinsX(), 200, 0., 20.);
+  TH2D pars_vals("pars_vals", "", pars.GetNbinsX(), 0, pars.GetNbinsX(), 100, 0., 4.);
 
   for (size_t i = 0; i < fNThrows; ++i) {
     vals.push_back(std::vector<double>(pars.GetNbinsX(), 1.));
@@ -683,7 +686,7 @@ void protoana::PDSPThinSliceFitter::DoThrows(const TH1D & pars, const TMatrixD *
   pars_gr->SetMarkerColor(kBlack);
   pars_gr->SetMarkerStyle(20);
 
-  fOutputFile.cd();
+  fOutputFile.cd("Throws");
   pars_gr->Write("AllThrownPars");
   pars_vals.Write();
   std::vector<TH1D*> pars_vals_1D;
@@ -890,7 +893,7 @@ void protoana::PDSPThinSliceFitter::DefineFitFunction() {
 
         std::pair<double, size_t> chi2_points
             = fThinSliceDriver->CalculateChi2(fSamples, fDataSet);
-        return (chi2_points.first/chi2_points.second);
+        return (chi2_points.first/*/chi2_points.second*/);
       },
       fTotalSignalParameters + fTotalFluxParameters);
 
@@ -961,3 +964,12 @@ void protoana::PDSPThinSliceFitter::Configure(std::string fcl_file) {
   fMaxRethrows = pset.get<size_t>("MaxRethrows");
 }
 
+void protoana::PDSPThinSliceFitter::SetBestFit() {
+  for (auto it = fSamples.begin(); it != fSamples.end(); ++it) {
+    for (size_t i = 0; i < it->second.size(); ++i) {
+      for (size_t j = 0; j < it->second[i].size(); ++j) {
+        it->second[i][j].SetBestFit();
+      }
+    }
+  }
+}

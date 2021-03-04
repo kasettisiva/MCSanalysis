@@ -34,6 +34,23 @@ class ThinSliceSample {
     return fSelectionHists;
   };
 
+  const std::map<int, TH1 *> & GetRebinnedSelectionHists() const {
+    return fSelectionHistsRebinned;
+  };
+
+/*
+  const std::map<int, TH1 *> & GetBestFitSelectionHists() const {
+    SetFactorAndScale(fBestFitFactor);
+    return fSelectionHists;
+    //return fBestFitSelectionHists;
+  };
+
+  const std::map<int, TH1 *> & GetBestFitRebinnedSelectionHists() const {
+    SetFactorAndScale(fBestFitFactor);
+    return fSelectionHistsRebinned;
+    //return fBestFitSelectionHistsRebinned;
+  };*/
+
   TH1 * GetSelectionHist(int id) {
     return fSelectionHists.at(id);
   };
@@ -178,6 +195,29 @@ class ThinSliceSample {
     fFactor = 1.;
   };
 
+  void SetFactorToBestFit() {
+    SetFactorAndScale(fBestFitFactor);
+  };
+
+  void SetBestFit() {
+    if (fBestFitIsSet) {
+      return;
+    }
+
+    fBestFitFactor = fFactor;
+  /*
+    for (auto it = fSelectionHists.begin(); it != fSelectionHists.end(); ++it) {
+      std::string name = it->second->GetName();
+      name += "BestFit";
+      fBestFitSelectionHists[it->first] = (TH1*)it->second->Clone(name.c_str());
+
+      name = fSelectionHistsRebinned[it->first]->GetName();
+      name += "BestFit";
+      fBestFitSelectionHistsRebinned[it->first]
+          = (TH1*)fSelectionHistsRebinned[it->first]->Clone(name.c_str());
+    }*/
+  };
+
   bool CheckIsSignal() {return fIsSignal;};
   bool CheckInSignalRange(double val) {return ((fRange.first < val) &&
                                                (val <= fRange.second));};
@@ -190,7 +230,8 @@ class ThinSliceSample {
   void MakeRebinnedHists();
 
  private:
-  double fFactor = 1.;
+  double fFactor = 1., fBestFitFactor = 1.;
+  bool fBestFitIsSet = false;
   std::string fSampleName;
   int fFluxType;
   double fNominalFlux = 0.;
@@ -203,9 +244,11 @@ class ThinSliceSample {
   void Rebin2D(TH1 * sel_hist, TH1 * rebinned);
   void Rebin3D(TH1 * sel_hist, TH1 * rebinned);
   std::map<int, TH1 *> fSelectionHists;
+  //std::map<int, TH1 *> fBestFitSelectionHists;
   TH1D fIncidentHist;
   TH1D fTrueIncidentHist;
   std::map<int, TH1 *> fSelectionHistsRebinned;
+  //std::map<int, TH1 *> fBestFitSelectionHistsRebinned;
   TH1D fIncidentHistRebinned;
   bool fMadeRebinned = false;
 

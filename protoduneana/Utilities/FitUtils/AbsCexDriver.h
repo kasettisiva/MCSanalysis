@@ -85,14 +85,6 @@ class AbsCexDriver : public ThinSliceDriver {
     TFile & output_file, bool plot_rebinned,
     std::map<int, std::vector<double>> * sample_scales = 0x0) override;
 
-  /*void PostFitThrows(
-      std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
-      ThinSliceDataSet & data_set,
-      TH1D & pars,
-      TH2D & cov,
-      TFile & output_file,
-      std::vector<std::pair<int, int>> plot_style,
-      bool plot_rebinned) override;*/
 };
 }
 #endif

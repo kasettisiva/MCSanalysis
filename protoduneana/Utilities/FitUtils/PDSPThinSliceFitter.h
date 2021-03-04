@@ -43,6 +43,7 @@ class PDSPThinSliceFitter {
   void MakeMinimizer();
   void ParameterScans();
   void DoThrows(const TH1D & pars, const TMatrixD * cov);
+  void SetBestFit();
 
   ThinSliceDriver * fThinSliceDriver;
   std::map<int, std::vector<std::vector<ThinSliceSample>>> fSamples;
@@ -88,6 +89,8 @@ class PDSPThinSliceFitter {
 
   TRandom3 fRNG;
   std::map<int, std::vector<double>> fFakeDataScales;
+  std::map<int, std::vector<double>> fBestFitSignalPars;
+  std::map<int, double> fBestFitFluxPars;
 
   //Configurable members
   std::string fMCFileName;

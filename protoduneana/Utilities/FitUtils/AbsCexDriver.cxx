@@ -1067,25 +1067,34 @@ void protoana::AbsCexDriver::CompareSelections(
                              data_set.GetSelectionName(selection_ID) +
                              "Stack";
     THStack mc_stack(stack_name.c_str(), "");
+    TLegend leg;
+    std::vector<TH1D*> temp_vec;
     size_t iColor = 0;
     //need to add second loop with temp hists
     for (auto it2 = temp_hists.begin(); it2 != temp_hists.end(); ++it2) {
       for (size_t i = 0; i < it2->second.size(); ++i) {
-        //TH1D * sel_hist
-        //    = (TH1D*)(plot_rebinned ?
-        //              it2->second.at(i).GetRebinnedSelectionHist(selection_ID) :
-        //              it2->second.at(i).GetSelectionHist(selection_ID));
         TH1D * sel_hist = it2->second.at(i);
         std::pair<int, int> color_fill = GetColorAndStyle(iColor, plot_style);
         sel_hist->SetFillColor(color_fill.first);
         sel_hist->SetFillStyle(color_fill.second);
         sel_hist->SetLineColor(kBlack);
         mc_stack.Add(sel_hist);
+        temp_vec.push_back(sel_hist);
         ++iColor;
       }
     }
     mc_stack.Write();
 
+    for (auto it = temp_vec.rbegin(); it != temp_vec.rend(); ++it) {
+      leg.AddEntry(*it);
+    }
+    leg.AddEntry(data_hist, "Data");
+    
+    std::pair<double, size_t> chi2 = CalculateChi2(samples, data_set);
+    std::string chi2_str = "#chi^{2}/ndof = " +
+                           std::to_string(chi2.first) + "/" +
+                           std::to_string(chi2.second);
+    leg.AddEntry((TObject*)0x0, chi2_str.c_str(), "");
 
     mc_stack.Draw("hist");
     double max_mc = mc_stack.GetHistogram()->GetMaximum();
@@ -1100,6 +1109,7 @@ void protoana::AbsCexDriver::CompareSelections(
     mc_stack.SetMaximum((max_data > max_mc ? max_data : max_mc));
     mc_stack.Draw("hist");
     data_hist->Draw("e1 same");
+    leg.Draw("same");
 
     cSelection.Write();
 
@@ -1225,10 +1235,23 @@ void protoana::AbsCexDriver::PlotThrows(
       = (plot_rebinned ?
          data_set.GetRebinnedSelectionHists() :
          data_set.GetSelectionHists());
+
+  //For this, set the samples to the best fit point
+  for (auto it = samples.begin(); it != samples.end(); ++it) {
+    for (size_t i = 0; i < it->second.size(); ++i) {
+      for (size_t j = 0; j < it->second[i].size(); ++j) {
+        it->second[i][j].SetFactorToBestFit();
+      }
+    }
+  }
+
   for (auto it = data_hists.begin(); it != data_hists.end(); ++it) {
     int selection_ID = it->first;
     std::vector<TH1*> hists = throw_hists.at(selection_ID);
     std::cout << "Got " << hists.size() << " hists from " << selection_ID << std::endl;
+
+
+
     std::vector<double> means = std::vector<double>(it->second->GetNbinsX(), 0.);
     std::vector<double> sigmas = std::vector<double>(it->second->GetNbinsX(), 0.);
 
@@ -1275,7 +1298,7 @@ void protoana::AbsCexDriver::PlotThrows(
     throw_gr.SetFillColor(kRed);
     throw_gr.Draw("a2");
     data_hist->Draw("same e1");
-    output_file.cd();
+    output_file.cd("Throws");
     cThrow.Write();
   }
 
@@ -1345,7 +1368,7 @@ void protoana::AbsCexDriver::PlotThrows(
         max = temp_nominal.GetBinContent(i+1);
     }
 
-    output_file.cd();
+    output_file.cd("Throws");
     std::string canvas_name = "cTruthThrow" + samples[sample_ID][0][0].GetName();
     TCanvas cThrow(canvas_name.c_str(), "");
     cThrow.SetTicks();
