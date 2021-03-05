@@ -18,9 +18,9 @@ TreeName: "pduneana/beamana"
 
 DriverName: "protoana::AbsCexDriver"
 AnalysisOptions: {
-  FakeDataRoutine: "SampleScales"
+  #FakeDataRoutine: "SampleScales"
   #FakeDataRoutine: "BinnedScales"
-  #FakeDataRoutine: "G4RW"
+  FakeDataRoutine: "G4RW"
 
   FakeDataScales: [
     #[1, 2.]

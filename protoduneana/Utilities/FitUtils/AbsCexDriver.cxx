@@ -1206,7 +1206,11 @@ void protoana::AbsCexDriver::GetCurrentHists(
 
 void protoana::AbsCexDriver::GetCurrentTruthHists(
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
-    std::map<int, std::vector<TH1*>> & throw_hists) {
+    std::map<int, std::vector<TH1*>> & throw_hists,
+    std::map<int, std::vector<TH1*>> & throw_inc_hists,
+    std::map<int, std::vector<TH1*>> & throw_xsec_hists,
+    const std::vector<int> & incident_samples,
+    const std::map<int, std::vector<double>> & signal_bins) {
   //Loop over the samples
   for (auto it = samples.begin(); it != samples.end(); ++it) {
     //Get the number of bins from the first entry of the beam energy bins
@@ -1223,12 +1227,57 @@ void protoana::AbsCexDriver::GetCurrentTruthHists(
     }
     throw_hists[it->first].push_back(temp_hist);
   }
+
+  for (auto it = throw_inc_hists.begin(); it != throw_inc_hists.end(); ++it) {
+    int s = it->first;
+    auto & samples_vec_2D = samples[s];
+    const std::vector<double> & bins = signal_bins.at(s);
+    std::string name = samples_vec_2D[0][0].GetName();
+    name += "IncidentThrow" +
+             std::to_string(throw_inc_hists[it->first].size());
+    TH1D * temp_inc_hist = new TH1D(name.c_str(), "", bins.size() - 1, &bins[0]); 
+    
+
+    name = samples_vec_2D[0][0].GetName();
+    name += "XSecThrow" +
+             std::to_string(throw_inc_hists[it->first].size());
+    TH1D * temp_xsec_hist = new TH1D(name.c_str(), "", bins.size() - 1,
+                                     &bins[0]);
+    for (auto i_s : incident_samples) {
+      auto & incident_vec_2D = samples[i_s];
+      for (size_t i = 0; i < incident_vec_2D.size(); ++i) {
+        for (size_t j = 0; j < incident_vec_2D[i].size(); ++j) {
+          if (fExtraOptions.get<std::string>("SliceMethod") == "E") {
+            incident_vec_2D[i][j].FillESliceHist(*temp_inc_hist);
+          }
+          else {
+            incident_vec_2D[i][j].FillHistFromIncidentEnergies(*temp_inc_hist);
+          }
+        }
+      }
+    }
+    throw_inc_hists[s].push_back(temp_inc_hist);
+
+    for (int i = 1; i <= temp_xsec_hist->GetNbinsX(); ++i) {
+      temp_xsec_hist->SetBinContent(
+          i, throw_hists[s].back()->GetBinContent(i+1));
+    }
+    temp_xsec_hist->Divide(temp_inc_hist);
+    throw_xsec_hists[s].push_back(temp_xsec_hist);
+  }
 }
 
 void protoana::AbsCexDriver::PlotThrows(
     ThinSliceDataSet & data_set, std::map<int, std::vector<TH1*>> & throw_hists,
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+    size_t nThrows,
     std::map<int, std::vector<TH1*>> & truth_throw_hists,
+    std::map<int, std::vector<TH1*>> & truth_inc_hists,
+    std::map<int, std::vector<TH1*>> & truth_xsec_hists,
+    std::map<int, TH1*> & best_fit_incs,
+    std::map<int, TH1*> & best_fit_xsecs,
+    std::map<int, TH1*> & nominal_incs,
+    std::map<int, TH1*> & nominal_xsecs,
     TFile & output_file, bool plot_rebinned,
     std::map<int, std::vector<double>> * sample_scales) {
   std::map<int, TH1*> data_hists
@@ -1236,41 +1285,187 @@ void protoana::AbsCexDriver::PlotThrows(
          data_set.GetRebinnedSelectionHists() :
          data_set.GetSelectionHists());
 
-  //For this, set the samples to the best fit point
+  //Build best fit hists and get bins for covariance 
+  std::map<int, TH1D*> best_fit_selection_hists;
+  int nBins = 0;
+  for (auto it = data_hists.begin(); it != data_hists.end(); ++it ) {
+    TH1D * best_fit_hist = (TH1D*)it->second->Clone();
+    best_fit_hist->Reset();
+    for (auto it2 = samples.begin(); it2 != samples.end(); ++it2) {
+      for (size_t i = 0; i < it2->second.size(); ++i) {
+        for (size_t j = 0; j < it2->second[i].size(); ++j) {
+          it2->second[i][j].SetFactorToBestFit();
+          best_fit_hist->Add(
+              (TH1D*)(plot_rebinned ?
+                      it2->second[i][j].GetRebinnedSelectionHist(it->first) :
+                      it2->second[i][j].GetSelectionHist(it->first)));
+        }
+      }
+    }
+    best_fit_selection_hists[it->first] = best_fit_hist;
+    nBins += best_fit_hist->GetNbinsX();
+  }
+
+  TH2D selection_cov("SelectionCov", "", nBins, 0, nBins, nBins, 0, nBins);
+
+  nBins = 0;
+  std::map<int, size_t> sample_bins;
   for (auto it = samples.begin(); it != samples.end(); ++it) {
-    for (size_t i = 0; i < it->second.size(); ++i) {
-      for (size_t j = 0; j < it->second[i].size(); ++j) {
-        it->second[i][j].SetFactorToBestFit();
+    nBins += it->second[0].size();
+    sample_bins[it->first] = it->second[0].size();
+  }
+
+  std::map<int, std::vector<double>> best_fit_truth;
+  std::map<int, std::vector<double>> best_fit_errs;
+
+  for (auto it = samples.begin(); it != samples.end(); ++it) {
+    best_fit_truth[it->first]
+        = std::vector<double>(sample_bins[it->first], 0.);
+    best_fit_errs[it->first]
+        = std::vector<double>(sample_bins[it->first], 0.);
+   
+    for (size_t i = 0; i < sample_bins[it->first]; ++i) {
+      double best_fit_val_i = 0.;
+      for (size_t j = 0; j < it->second.size(); ++j) {
+        best_fit_val_i += it->second[j][i].GetVariedFlux();
+      }
+
+      best_fit_truth[it->first][i] = best_fit_val_i;
+    }
+  }
+
+  TH2D interaction_cov("interaction_cov", "", nBins, 0, nBins, nBins, 0, nBins);
+  std::map<int, std::vector<double>> best_fit_inc_truth;
+  std::map<int, std::vector<double>> best_fit_xsec_truth;
+  std::map<int, std::vector<double>> best_fit_inc_errs;
+  std::map<int, std::vector<double>> best_fit_xsec_errs;
+
+  nBins = 0;
+  std::map<int, size_t> xsec_bins;
+  for (auto it = best_fit_incs.begin(); it != best_fit_incs.end(); ++it) {
+    int s = it->first;
+    nBins += it->second->GetNbinsX();
+    xsec_bins[s] = it->second->GetNbinsX();
+
+    best_fit_inc_truth[s] = std::vector<double>(xsec_bins[s], 0.);
+    best_fit_xsec_truth[s] = std::vector<double>(xsec_bins[s], 0.);
+    best_fit_inc_errs[s] = std::vector<double>(xsec_bins[s], 0.);
+    best_fit_xsec_errs[s] = std::vector<double>(xsec_bins[s], 0.);
+    
+    for (size_t i = 0; i < xsec_bins[s]; ++i) {
+      best_fit_inc_truth[s][i] = it->second->GetBinContent(i+1);
+      best_fit_xsec_truth[s][i] = best_fit_xsecs[s]->GetBinContent(i+1);
+    }
+  }
+
+  //TH2D incident_cov("incident_cov", "", nBins, 0, nBins, nBins, 0, nBins);
+  TH2D xsec_cov("xsec_cov", "", nBins, 0, nBins, nBins, 0, nBins);
+
+  for (size_t z = 0; z < nThrows; ++z) {
+    int bin_i = 1;
+    for (auto it = best_fit_selection_hists.begin();
+         it != best_fit_selection_hists.end(); ++it) {
+      TH1D * best_fit = it->second;
+      int selection_ID = it->first;
+      std::vector<TH1*> & temp_throws = throw_hists[selection_ID];
+      for (int i = 1; i <= best_fit->GetNbinsX(); ++i) {
+        double best_fit_val_i = best_fit->GetBinContent(i);
+        int bin_j = 1;
+        for (auto it2 = best_fit_selection_hists.begin();
+             it2 != best_fit_selection_hists.end(); ++it2) {
+
+          TH1D * best_fit_2 = it2->second;
+          int selection_ID_2 = it2->first;
+          std::vector<TH1*> & temp_throws_2 = throw_hists[selection_ID_2];
+          for (int j = 1; j <= best_fit_2->GetNbinsX(); ++j) {
+            double best_fit_val_j = best_fit_2->GetBinContent(j);
+            double val = (best_fit_val_i - temp_throws[z]->GetBinContent(i))*
+                         (best_fit_val_j - temp_throws_2[z]->GetBinContent(j));
+            selection_cov.SetBinContent(
+                bin_i, bin_j, (val/temp_throws.size() +
+                               selection_cov.GetBinContent(bin_i, bin_j)));
+            ++bin_j;
+          }
+        }
+        ++bin_i;
+      }
+    }
+
+    bin_i = 1;
+    for (auto it = samples.begin(); it != samples.end(); ++it) {
+      std::vector<TH1 *> throw_hists_i = truth_throw_hists[it->first];
+     
+      for (size_t i = 0; i < sample_bins[it->first]; ++i) {
+        double best_fit_val_i = best_fit_truth[it->first][i];
+
+        int bin_j = 1;
+        for (auto it2 = samples.begin(); it2 != samples.end(); ++it2) {
+          std::vector<TH1 *> throw_hists_j = truth_throw_hists[it2->first];
+          for (size_t j = 0; j < sample_bins[it2->first]; ++j) {
+            double best_fit_val_j = best_fit_truth[it2->first][j];
+
+            double val
+                = (throw_hists_i[z]->GetBinContent(i+1) - best_fit_val_i)*
+                  (throw_hists_j[z]->GetBinContent(j+1) - best_fit_val_j);
+            interaction_cov.SetBinContent(
+                bin_i, bin_j,
+                (interaction_cov.GetBinContent(bin_i, bin_j) +
+                 val/throw_hists_i.size()));
+            if (bin_i == bin_j && (z == nThrows - 1)) {
+              best_fit_errs[it->first][i]
+                  = sqrt(interaction_cov.GetBinContent(bin_i, bin_j));
+            }
+            ++bin_j;
+          }
+        }
+
+        ++bin_i;
+      }
+    }
+
+    bin_i = 1;
+    for (auto it = truth_inc_hists.begin(); it != truth_inc_hists.end(); ++it) {
+      //std::vector<TH1 *> inc_hists_i = it->second;
+      std::vector<TH1 *> xsec_hists_i = truth_xsec_hists[it->first];
+
+      for (size_t i = 0; i < xsec_bins[it->first]; ++i) {
+        //double best_fit_inc_i = best_fit_inc_truth[it->first][i];
+        double best_fit_xsec_i = best_fit_xsec_truth[it->first][i];
+
+        int bin_j = 1;
+        for (auto it2 = truth_inc_hists.begin(); it2 != truth_inc_hists.end();
+             ++it2) {
+          std::vector<TH1 *> xsec_hists_j = truth_xsec_hists[it2->first];
+          for (size_t j = 0; j < xsec_bins[it2->first]; ++j) {
+            double best_fit_xsec_j = best_fit_xsec_truth[it2->first][j];
+
+            double val
+                = (xsec_hists_i[z]->GetBinContent(i+1) - best_fit_xsec_i)*
+                  (xsec_hists_j[z]->GetBinContent(j+1) - best_fit_xsec_j);
+            xsec_cov.SetBinContent(
+                bin_i, bin_j,
+                (xsec_cov.GetBinContent(bin_i, bin_j) +
+                 val/nThrows));
+            if (bin_i == bin_j && (z == nThrows - 1)) {
+              best_fit_xsec_errs[it->first][i]
+                  = sqrt(xsec_cov.GetBinContent(bin_i, bin_j));
+            }
+          }
+        }
       }
     }
   }
 
+
+  output_file.cd("Throws");
+  selection_cov.Write();
+  interaction_cov.Write();
+  xsec_cov.Write();
+
+  int bin_count = 0;
   for (auto it = data_hists.begin(); it != data_hists.end(); ++it) {
     int selection_ID = it->first;
     std::vector<TH1*> hists = throw_hists.at(selection_ID);
-    std::cout << "Got " << hists.size() << " hists from " << selection_ID << std::endl;
-
-
-
-    std::vector<double> means = std::vector<double>(it->second->GetNbinsX(), 0.);
-    std::vector<double> sigmas = std::vector<double>(it->second->GetNbinsX(), 0.);
-
-    for (size_t i = 0; i < hists.size(); ++i) {
-      for (size_t j = 0; j < means.size(); ++j) {
-        means[j] += hists[i]->GetBinContent(j+1)/hists.size();
-        //std::cout << i << " " << j << " " << hists[i]->GetBinContent(j+1) <<
-                     //std::endl;
-      }
-    }
-    for (size_t i = 0; i < hists.size(); ++i) {
-      for (size_t j = 0; j < sigmas.size(); ++j) {
-        sigmas[j] += std::pow(hists[i]->GetBinContent(j+1) - means[j], 2) /
-                     (hists.size() - 1);
-      }
-    }
-    for (size_t i = 0; i < sigmas.size(); ++i) {
-      sigmas[i] = sqrt(sigmas[i]);
-    }
 
     std::string canvas_name = "cThrow" +
                               data_set.GetSelectionName(selection_ID);
@@ -1279,20 +1474,21 @@ void protoana::AbsCexDriver::PlotThrows(
 
     std::string name = "Throw" + data_set.GetSelectionName(selection_ID);
     auto data_hist = it->second;
-    std::vector<double> sigmas_low;
     std::vector<double> xs, xs_width;
-    for (size_t i = 0; i < means.size(); ++i) {
-      xs.push_back(data_hist->GetBinCenter(i+1));
-      xs_width.push_back(data_hist->GetBinWidth(i+1)/2.);
+    std::vector<double> ys, errs;
+    for (int i = 1;
+         i <= best_fit_selection_hists[it->first]->GetNbinsX(); ++i) {
+      ys.push_back(
+          best_fit_selection_hists[it->first]->GetBinContent(i));
+      errs.push_back(
+          sqrt(selection_cov.GetBinContent(bin_count+i, bin_count+i)));
+      xs.push_back(data_hist->GetBinCenter(i));
+      xs_width.push_back(data_hist->GetBinWidth(i)/2.);
+    } 
 
-      sigmas_low.push_back(
-          (((means[i] - sigmas[i]) >= 0.) ?
-           sigmas[i] : means[i]));
-      //std::cout << "Sigmas: " << sigmas_low[i] << " " << sigmas[i] << std::endl;
-    }
     TGraphAsymmErrors throw_gr(data_hist->GetNbinsX(),
-                               &xs[0], &means[0], 
-                               &xs_width[0], &xs_width[0], &sigmas_low[0], &sigmas[0]);
+                               &xs[0], &ys[0], 
+                               &xs_width[0], &xs_width[0], &errs[0], &errs[0]);
 
     throw_gr.SetFillStyle(3144);
     throw_gr.SetFillColor(kRed);
@@ -1300,49 +1496,19 @@ void protoana::AbsCexDriver::PlotThrows(
     data_hist->Draw("same e1");
     output_file.cd("Throws");
     cThrow.Write();
+
+    bin_count += data_hist->GetNbinsX();
   }
 
+  bin_count = 0;
   for (auto it = truth_throw_hists.begin(); it != truth_throw_hists.end(); ++it) {
     int sample_ID = it->first;
-    std::cout << sample_ID << std::endl;
 
-    if (it->second.size() == 0) return;
-    std::vector<double> means = std::vector<double>(it->second[0]->GetNbinsX(), 0.);
-    std::vector<double> sigmas = std::vector<double>(it->second[0]->GetNbinsX(), 0.);
-   
-    for (size_t i = 0; i < it->second.size(); ++i) {
-      for (int j = 1; j <= it->second[i]->GetNbinsX(); ++j) {
-        means[j-1] += it->second[i]->GetBinContent(j)/it->second.size();
-      }
-    }
-    for (size_t i = 0; i < it->second.size(); ++i) {
-      for (size_t j = 0; j < sigmas.size(); ++j) {
-        sigmas[j] += std::pow(it->second[i]->GetBinContent(j+1) - means[j], 2) /
-                     (it->second.size() - 1);
-      }
-    }
-    for (size_t i = 0; i < sigmas.size(); ++i) {
-      sigmas[i] = sqrt(sigmas[i]);
-    }
-
-
-    std::vector<double> sigmas_low;
     std::vector<double> xs, xs_width;
-    for (size_t i = 0; i < means.size(); ++i) {
+    for (size_t i = 0; i < sample_bins[it->first]; ++i) {
       xs.push_back(i + 0.5);
       xs_width.push_back(.5);
-
-      sigmas_low.push_back(
-          (((means[i] - sigmas[i]) >= 0.) ?
-           sigmas[i] : means[i]));
-      //std::cout << "Sigmas: " << sigmas_low[i] << " " << sigmas[i] << std::endl;
     }
-    TGraphAsymmErrors throw_gr(xs.size(),
-                               &xs[0], &means[0], 
-                               &xs_width[0], &xs_width[0], &sigmas_low[0], &sigmas[0]);
-
-    throw_gr.SetFillStyle(3144);
-    throw_gr.SetFillColor(kRed);
 
     std::string name = "hNominal" + samples[sample_ID][0][0].GetName();
     TH1D temp_nominal(name.c_str(), "", xs.size(), 0, xs.size());
@@ -1353,16 +1519,11 @@ void protoana::AbsCexDriver::PlotThrows(
         temp_nominal.AddBinContent(j+1, samples_vec_2D[i][j].GetNominalFlux());
       }
     }
-    std::cout << name << std::endl; 
-    for (int i = 1; i <= temp_nominal.GetNbinsX(); ++i) {
-      std::cout << temp_nominal.GetBinContent(i) << " ";
-    }
-    std::cout << std::endl;
 
     double max = -999.;
-    for (size_t i = 0; i < means.size(); ++i) {
-      if ((means[i] + sigmas[i]) > max)
-        max = means[i] + sigmas[i];
+    for (size_t i = 0; i < sample_bins[it->first]; ++i) {
+      if ((best_fit_truth[sample_ID][i] + best_fit_errs[sample_ID][i]) > max)
+        max = (best_fit_truth[sample_ID][i] + best_fit_errs[sample_ID][i]);
 
       if (temp_nominal.GetBinContent(i+1) > max)
         max = temp_nominal.GetBinContent(i+1);
@@ -1372,10 +1533,18 @@ void protoana::AbsCexDriver::PlotThrows(
     std::string canvas_name = "cTruthThrow" + samples[sample_ID][0][0].GetName();
     TCanvas cThrow(canvas_name.c_str(), "");
     cThrow.SetTicks();
+    TGraphAsymmErrors throw_gr(xs.size(),
+                                &xs[0], &best_fit_truth[it->first][0], 
+                                &xs_width[0], &xs_width[0],
+                                &best_fit_errs[it->first][0],
+                                &best_fit_errs[it->first][0]);
+    throw_gr.SetFillStyle(3144);
+    throw_gr.SetFillColor(kRed);
     throw_gr.SetMinimum(0.);
     throw_gr.SetMaximum(1.5*max);
     throw_gr.Draw("a2");
     throw_gr.Draw("p");
+
     temp_nominal.SetMarkerColor(kBlue);
     temp_nominal.SetMarkerStyle(20);
     temp_nominal.Draw("same p");
@@ -1398,6 +1567,36 @@ void protoana::AbsCexDriver::PlotThrows(
     }
 
     leg.Draw();
+    cThrow.Write();
+
+    bin_count += xs.size();
+  }
+
+  for (auto it = best_fit_xsec_truth.begin(); it != best_fit_xsec_truth.end();
+       ++it) {
+    int sample_ID = it->first;
+
+    std::vector<double> xs, xs_width;
+    for (size_t i = 0; i < xsec_bins[sample_ID]; ++i) {
+      xs.push_back(i + 0.5);
+      xs_width.push_back(.5);
+    }
+
+    output_file.cd("Throws");
+    std::string canvas_name = "cXSecThrow" + samples[sample_ID][0][0].GetName();
+    TCanvas cThrow(canvas_name.c_str(), "");
+    cThrow.SetTicks();
+    TGraphAsymmErrors throw_gr(xs.size(),
+                               &xs[0], &best_fit_xsec_truth[it->first][0], 
+                               &xs_width[0], &xs_width[0],
+                               &best_fit_xsec_errs[it->first][0],
+                               &best_fit_xsec_errs[it->first][0]);
+    throw_gr.SetFillStyle(3144);
+    throw_gr.SetFillColor(kRed);
+    throw_gr.SetMinimum(0.);
+    throw_gr.Draw("a2");
+    throw_gr.Draw("p");
+
     cThrow.Write();
   }
 }

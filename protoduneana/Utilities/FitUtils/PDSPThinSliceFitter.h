@@ -44,6 +44,16 @@ class PDSPThinSliceFitter {
   void ParameterScans();
   void DoThrows(const TH1D & pars, const TMatrixD * cov);
   void SetBestFit();
+  void GetCurrentTruthHists(
+    std::map<int, std::vector<TH1*>> & throw_hists,
+    std::map<int, std::vector<TH1*>> & throw_inc_hists,
+    std::map<int, std::vector<TH1*>> & throw_xsec_hists);
+  void PlotThrows(
+    std::map<int, std::vector<TH1*>> & throw_hists,
+    std::map<int, std::vector<TH1*>> & truth_throw_hists,
+    std::map<int, std::vector<TH1*>> & truth_inc_hists,
+    std::map<int, std::vector<TH1*>> & truth_xsec_hists);
+  void BuildFakeDataXSecs();
 
   ThinSliceDriver * fThinSliceDriver;
   std::map<int, std::vector<std::vector<ThinSliceSample>>> fSamples;
@@ -91,6 +101,9 @@ class PDSPThinSliceFitter {
   std::map<int, std::vector<double>> fFakeDataScales;
   std::map<int, std::vector<double>> fBestFitSignalPars;
   std::map<int, double> fBestFitFluxPars;
+  std::map<int, TH1*> fNominalXSecs, fNominalIncs;
+  std::map<int, TH1*> fBestFitXSecs, fBestFitIncs;
+  std::map<int, TH1*> fFakeDataXSecs, fFakeDataIncs;
 
   //Configurable members
   std::string fMCFileName;

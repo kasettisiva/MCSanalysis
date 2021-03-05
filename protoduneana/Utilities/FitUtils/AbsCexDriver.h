@@ -76,12 +76,23 @@ class AbsCexDriver : public ThinSliceDriver {
 
   virtual void GetCurrentTruthHists(
       std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
-      std::map<int, std::vector<TH1*>> & hists) override;
+      std::map<int, std::vector<TH1*>> & hists,
+      std::map<int, std::vector<TH1*>> & inc_hists,
+      std::map<int, std::vector<TH1*>> & xsec_hists,
+      const std::vector<int> & incident_samples,
+      const std::map<int, std::vector<double>> & signal_bins) override;
 
   void PlotThrows(
     ThinSliceDataSet & data_set, std::map<int, std::vector<TH1*>> & throw_hists,
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+    size_t nThrows,
     std::map<int, std::vector<TH1*>> & truth_throw_hists,
+    std::map<int, std::vector<TH1*>> & truth_inc_hists,
+    std::map<int, std::vector<TH1*>> & truth_xsec_hists,
+    std::map<int, TH1*> & best_fit_incs,
+    std::map<int, TH1*> & best_fit_xsecs,
+    std::map<int, TH1*> & nominal_incs,
+    std::map<int, TH1*> & nominal_xsecs,
     TFile & output_file, bool plot_rebinned,
     std::map<int, std::vector<double>> * sample_scales = 0x0) override;
 

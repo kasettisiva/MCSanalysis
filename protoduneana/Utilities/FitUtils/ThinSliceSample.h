@@ -199,12 +199,17 @@ class ThinSliceSample {
     SetFactorAndScale(fBestFitFactor);
   };
 
+  double GetBestFitFactor() {
+    return fBestFitFactor;
+  };
+
   void SetBestFit() {
     if (fBestFitIsSet) {
       return;
     }
 
     fBestFitFactor = fFactor;
+    fBestFitIsSet = true;
   /*
     for (auto it = fSelectionHists.begin(); it != fSelectionHists.end(); ++it) {
       std::string name = it->second->GetName();
