@@ -408,7 +408,8 @@ private:
   std::vector<double> reco_beam_calibrated_dEdX_NoSCE;
 
   std::vector<double> reco_beam_calo_wire, reco_beam_calo_tick, reco_beam_calo_wire_z;
-  std::vector<int> reco_beam_calo_TPC;
+  std::vector<double> reco_beam_calo_wire_NoSCE, reco_beam_dQ_NoSCE, reco_beam_calo_wire_z_NoSCE;
+  std::vector<int> reco_beam_calo_TPC, reco_beam_calo_TPC_NoSCE;
 
   int reco_beam_trackID;
   bool reco_beam_flipped;
@@ -1129,6 +1130,7 @@ void pduneana::PDSPAnalyzer::beginJob()
   fTree->Branch("reco_beam_TrkPitch_SCE", &reco_beam_TrkPitch_SCE);
 
   fTree->Branch("reco_beam_dQdX_NoSCE", &reco_beam_dQdX_NoSCE);
+  fTree->Branch("reco_beam_dQ_NoSCE", &reco_beam_dQ_NoSCE);
   fTree->Branch("reco_beam_dEdX_NoSCE", &reco_beam_dEdX_NoSCE);
   fTree->Branch("reco_beam_calibrated_dEdX_NoSCE", &reco_beam_calibrated_dEdX_NoSCE);
   fTree->Branch("reco_beam_resRange_NoSCE", &reco_beam_resRange_NoSCE);
@@ -1136,8 +1138,11 @@ void pduneana::PDSPAnalyzer::beginJob()
 
   fTree->Branch("reco_beam_calo_wire", &reco_beam_calo_wire);
   fTree->Branch("reco_beam_calo_wire_z", &reco_beam_calo_wire_z);
+  fTree->Branch("reco_beam_calo_wire_NoSCE", &reco_beam_calo_wire_NoSCE);
+  fTree->Branch("reco_beam_calo_wire_z_NoSCE", &reco_beam_calo_wire_z_NoSCE);
   fTree->Branch("reco_beam_calo_tick", &reco_beam_calo_tick);
   fTree->Branch("reco_beam_calo_TPC", &reco_beam_calo_TPC);
+  fTree->Branch("reco_beam_calo_TPC_NoSCE", &reco_beam_calo_TPC_NoSCE);
 
   fTree->Branch("reco_beam_flipped", &reco_beam_flipped);
   fTree->Branch("reco_beam_passes_beam_cuts", &reco_beam_passes_beam_cuts);
@@ -1851,6 +1856,7 @@ void pduneana::PDSPAnalyzer::reset()
 
   reco_beam_dQdX_SCE.clear();
   reco_beam_dQ.clear();
+  reco_beam_dQ_NoSCE.clear();
   reco_beam_dEdX_SCE.clear();
   reco_beam_calibrated_dEdX_SCE.clear();
   reco_beam_vertex_nHits = -999;
@@ -1860,8 +1866,11 @@ void pduneana::PDSPAnalyzer::reset()
   reco_beam_TrkPitch_SCE.clear();
   reco_beam_calo_wire.clear();
   reco_beam_calo_wire_z.clear();
+  reco_beam_calo_wire_NoSCE.clear();
+  reco_beam_calo_wire_z_NoSCE.clear();
   reco_beam_calo_tick.clear();
   reco_beam_calo_TPC.clear();
+  reco_beam_calo_TPC_NoSCE.clear();
 
   reco_beam_trackID = -999;
 
@@ -2460,6 +2469,22 @@ void pduneana::PDSPAnalyzer::BeamTrackInfo(
       reco_beam_resRange_NoSCE.push_back( calo_range[i] );
       reco_beam_TrkPitch_NoSCE.push_back( calo_NoSCE[index].TrkPitchVec()[i] );
       calo_hit_indices.push_back( TpIndices[i] );
+      const recob::Hit & theHit = (*allHits)[ TpIndices[i] ];
+      reco_beam_dQ_NoSCE.push_back(theHit.Integral());
+      reco_beam_calo_TPC_NoSCE.push_back(theHit.WireID().TPC);
+      if (theHit.WireID().TPC == 1) {
+        reco_beam_calo_wire_NoSCE.push_back( theHit.WireID().Wire );
+      }
+      else if (theHit.WireID().TPC == 5) {
+        reco_beam_calo_wire_NoSCE.push_back( theHit.WireID().Wire + 479);
+      }
+      //Need other TPCs?
+      else {
+        reco_beam_calo_wire_NoSCE.push_back(theHit.WireID().Wire );
+      }
+      reco_beam_calo_wire_z_NoSCE.push_back(
+          geom->Wire(theHit.WireID()).GetCenter().Z());
+
     }
 
     std::vector< float > new_dEdX = calibration_NoSCE.GetCalibratedCalorimetry(  *thisTrack, evt, fTrackerTag, fCalorimetryTagNoSCE, 2, -1.);
