@@ -12,12 +12,12 @@
 #include "ProtoDUNEFembFilter.fcl"
 
 
-process_name: hitrmsraw
+process_name: hitrmsrawdigits
 
 services:
 {
   #Load the service that manages root files for histograms.
-  TFileService: { fileName: "hitrmsraw.root" }
+  TFileService: { fileName: "hitrmsrawdigits.root" }
   RandomNumberGenerator: {}                     #ART native random number generator
   @table::protodune_services
   message:      @local::standard_info
@@ -42,29 +42,30 @@ f1: @local::HVfilter
    } 
    fpath: [f1]
  analyzers:{
-   hitrmsraw:
+   hitrmsrawdigits:
    {
-   module_type: "hitrmsraw"
+   module_type: "hitrmsrawdigits"
    DataUtils: @local::standard_protodunedatautils
   }	   
  }
  
 
-ana:  [ hitrmsraw ]
+ana:  [ hitrmsrawdigits ]
  end_paths:     [  ana ] 
 }
 
 # define the list of LArSoft modules to run through the simulate path
 
 
-physics.analyzers.hitrmsraw.TrackModuleLabel:        "pandoraTrack"
-physics.analyzers.hitrmsraw.CalorimetryModuleLabel:  "pandoracalo"
-physics.analyzers.hitrmsfinding.HitsModuleLabel:  "hitpdune"
-#physics.analyzers.hitrmsraw.WireProducerLabel:  "wclsdatanfsp:gauss"
-#physics.analyzers.hitrmsraw.RawProducerLabel:  "tpcrawdecoder:daq"
-physics.analyzers.hitrmsraw.WireProducerLabel:  "wclsdatanfsp:gauss"
-physics.analyzers.hitrmsraw.RawProducerLabel:  "tpcrawdecoder:daq"
-physics.analyzers.hitrmsraw.SaveTrackInfo: true
-#physics.analyzers.hitrmsraw.SelectEvents: [fpath]
+physics.analyzers.hitrmsrawdigits.TrackModuleLabel:        "pandoraTrack"
+physics.analyzers.hitrmsrawdigits.CalorimetryModuleLabel:  "pandoracalo"
+physics.analyzers.hitrmsrawdigits.HitsModuleLabel:  "hitpdune"
+physics.analyzers.hitrmsrawdigits.WireProducerLabel:  "caldata:dataprep"
+physics.analyzers.hitrmsrawdigits.RawProducerLabel:  "tpcrawdecoder:daq"
+#physics.analyzers.hitrmsrawdigits.WireProducerLabel:  "caldata:dataprep"
+#physics.analyzers.hitrmsrawdigits.RawProducerLabel:  "caldata:dataprep"
+#physics.analyzers.hitrmsrawdigits.DataUtils.RawDigitTag: "caldata:dataprep"
+physics.analyzers.hitrmsrawdigits.SaveTrackInfo: true
+#physics.analyzers.hitrmsrawdigits.SelectEvents: [fpath]
 services.PdspChannelMapService:        @local::pdspchannelmap
 services.BackTrackerService.BackTracker.SimChannelModuleLabel: "tpcrawdecoder:simpleSC"
