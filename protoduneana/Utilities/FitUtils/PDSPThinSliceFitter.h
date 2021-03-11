@@ -121,7 +121,7 @@ class PDSPThinSliceFitter {
   std::string fDriverName;
   std::string fAnalysis;
   fhicl::ParameterSet fAnalysisOptions;
-  bool fDoFakeData;
+  bool fDoFakeData, fDoThrows;
   bool fFitFlux;
   size_t fNThrows, fMaxRethrows;
   

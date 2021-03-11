@@ -1,5 +1,6 @@
 // C++ language includes
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -558,7 +559,8 @@ void protoana::PDSPThinSliceFitter::RunFitAndSave() {
     SetBestFit();
     CompareDataMC(true);
     ParameterScans();
-    DoThrows(parsHist, cov);
+    if (fDoThrows) 
+      DoThrows(parsHist, cov);
   }
 }
 
@@ -875,7 +877,6 @@ void protoana::PDSPThinSliceFitter::DefineFitFunction() {
             }
 
             if (!flux_sample) {
-              //for (size_t i = 0; i < it->second.size(); ++i) {
               for (size_t i = 0; i < samples_2D.size(); ++i) {
                 std::vector<ThinSliceSample> & samples = samples_2D[i];
                 for (size_t j = 0; j < samples.size(); ++j) {
@@ -890,6 +891,16 @@ void protoana::PDSPThinSliceFitter::DefineFitFunction() {
                   }
                 }
               }
+            }
+          }
+        }
+
+        double final_nominal_total = 0., final_varied_total = 0.;
+        for (auto it = fSamples.begin(); it != fSamples.end(); ++it) {
+          for (size_t i = 0; i < it->second.size(); ++i) {
+            for (size_t j = 0; j < it->second[i].size(); ++j) {
+              final_nominal_total += it->second[i][j].GetNominalFlux();
+              final_varied_total += it->second[i][j].GetVariedFlux();
             }
           }
         }
@@ -962,6 +973,7 @@ void protoana::PDSPThinSliceFitter::Configure(std::string fcl_file) {
   fDriverName = pset.get<std::string>("DriverName");
   fAnalysisOptions = pset.get<fhicl::ParameterSet>("AnalysisOptions");
   fDoFakeData = pset.get<bool>("DoFakeData");
+  fDoThrows = pset.get<bool>("DoThrows");
 
   fNThrows = pset.get<size_t>("NThrows");
   fMaxRethrows = pset.get<size_t>("MaxRethrows");

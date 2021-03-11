@@ -181,15 +181,18 @@ void protoana::AbsCexDriver::BuildMCSamples(
     std::vector<ThinSliceSample> & samples_vec = samples.at(sample_ID)[bin];
     bool is_signal = signal_sample_checks.at(sample_ID);
 
+    ThinSliceSample * this_sample = 0x0;
     if (!is_signal) {
-      ThinSliceSample & sample = samples_vec.at(0);
-      int flux_type = sample.GetFluxType();
-      nominal_fluxes[flux_type] += 1.;
+      //ThinSliceSample & sample = samples_vec.at(0);
+      this_sample = &samples_vec.at(0);
+
+      //int flux_type = sample.GetFluxType();
+      //nominal_fluxes[flux_type] += 1.;
       fluxes_by_sample[sample_ID][bin][0] += 1.;
-      sample.AddFlux();
+      /*sample.AddFlux();
       if (reco_beam_incidentEnergies->size()) {
         sample.FillIncidentHist(*reco_beam_incidentEnergies);
-        if (selection_ID != 4) {
+        if (selection_ID != 4 && selection_ID != 5 && selection_ID != 6) {
           double energy[1] = {reco_beam_interactingEnergy};
           if (fExtraOptions.get<bool>("DoEnergyFix")) {
             for (size_t j = 1; j < reco_beam_incidentEnergies->size(); ++j) {
@@ -202,10 +205,16 @@ void protoana::AbsCexDriver::BuildMCSamples(
           }
           sample.FillSelectionHist(selection_ID, energy);
         }
-        else {
+        else if (selection_ID == 4) {
           double endZ[1] = {reco_beam_endZ};
           sample.FillSelectionHist(selection_ID, endZ);
         }
+        else {
+          sample.FillSelectionHist(selection_ID, .5);
+        }
+      }
+      else {
+        sample.FillSelectionHist(selection_ID, .5);
       }
 
       //Fill the total incident hist with truth info
@@ -217,6 +226,7 @@ void protoana::AbsCexDriver::BuildMCSamples(
             {(*true_beam_incidentEnergies)[0],
              end_energy});
       }
+      */
     }
     else {
       //Iterate through the true bins and find the correct one
@@ -224,13 +234,15 @@ void protoana::AbsCexDriver::BuildMCSamples(
       for (size_t j = 1; j < samples_vec.size()-1; ++j) {
         ThinSliceSample & sample = samples_vec.at(j);
         if (sample.CheckInSignalRange(end_energy)) {
-          int flux_type = sample.GetFluxType();
-          nominal_fluxes[flux_type] += 1.;
+          this_sample = &sample;
+
+          //int flux_type = sample.GetFluxType();
+          //nominal_fluxes[flux_type] += 1.;
           fluxes_by_sample[sample_ID][bin][j] += 1.;
-          sample.AddFlux();
-          if (reco_beam_incidentEnergies->size()) {
+          //sample.AddFlux();
+          /*if (reco_beam_incidentEnergies->size()) {
             sample.FillIncidentHist(*reco_beam_incidentEnergies);
-            if (selection_ID != 4) {
+            if (selection_ID != 4 && selection_ID != 5 && selection_ID != 6) {
               double energy[1] = {reco_beam_interactingEnergy};
               if (fExtraOptions.get<bool>("DoEnergyFix")) {
                 for (size_t k = 1; k < reco_beam_incidentEnergies->size(); ++k) {
@@ -243,10 +255,16 @@ void protoana::AbsCexDriver::BuildMCSamples(
               }
               sample.FillSelectionHist(selection_ID, energy);
             }
-            else {
+            else if (selection_ID == 4) {
               double endZ[1] = {reco_beam_endZ};
               sample.FillSelectionHist(selection_ID, endZ);
             }
+            else {
+              sample.FillSelectionHist(selection_ID, .5);
+            }
+          }
+          else {
+            sample.FillSelectionHist(selection_ID, .5);
           }
 
           //Fill the total incident hist with truth info
@@ -258,7 +276,7 @@ void protoana::AbsCexDriver::BuildMCSamples(
               {(*true_beam_incidentEnergies)[0],
                end_energy});
           }
-
+        */
           found = true;
           break;
         }
@@ -266,14 +284,17 @@ void protoana::AbsCexDriver::BuildMCSamples(
       if (!found) {
         //over/underflow here
         if (end_energy <= samples_vec[1].RangeLowEnd()) {
-          ThinSliceSample & sample = samples_vec[0];
-          int flux_type = sample.GetFluxType();
-          nominal_fluxes[flux_type] += 1.;
+          //ThinSliceSample & sample = samples_vec[0];
+
+          this_sample = &samples_vec[0];
+
+          //int flux_type = sample.GetFluxType();
+          //nominal_fluxes[flux_type] += 1.;
           fluxes_by_sample[sample_ID][bin][0] += 1.;
-          sample.AddFlux();
-          if (reco_beam_incidentEnergies->size()) {
+          //sample.AddFlux();
+          /*if (reco_beam_incidentEnergies->size()) {
             sample.FillIncidentHist(*reco_beam_incidentEnergies);
-            if (selection_ID != 4) {
+            if (selection_ID != 4 && selection_ID != 5 && selection_ID != 6) {
               double energy[1] = {reco_beam_interactingEnergy};
               if (fExtraOptions.get<bool>("DoEnergyFix")) {
                 for (size_t k = 1; k < reco_beam_incidentEnergies->size(); ++k) {
@@ -286,12 +307,19 @@ void protoana::AbsCexDriver::BuildMCSamples(
               }
               sample.FillSelectionHist(selection_ID, energy);
             }
-            else {
+            else if (selection_ID == 4) {
               double endZ[1] = {reco_beam_endZ};
               sample.FillSelectionHist(selection_ID, endZ);
             }
+            else {
+              //Fill middle of these bins
+              sample.FillSelectionHist(selection_ID, .5);
+            }
           }
-
+          else {
+            sample.FillSelectionHist(selection_ID, .5);
+          }
+        
           //Fill the total incident hist with truth info
           sample.FillTrueIncidentHist(good_true_incEnergies);
           sample.AddIncidentEnergies(good_true_incEnergies);
@@ -300,17 +328,19 @@ void protoana::AbsCexDriver::BuildMCSamples(
               {(*true_beam_incidentEnergies)[0],
                end_energy});
           }
+          */
         }
         else if (end_energy >
                  samples_vec[samples_vec.size()-2].RangeHighEnd()) {
-          ThinSliceSample & sample = samples_vec.back();
-          int flux_type = sample.GetFluxType();
-          nominal_fluxes[flux_type] += 1.;
+         // ThinSliceSample & sample = samples_vec.back();
+          this_sample = &samples_vec.back();
+          //int flux_type = sample.GetFluxType();
+          //nominal_fluxes[flux_type] += 1.;
           fluxes_by_sample[sample_ID][bin].back() += 1.;
-          sample.AddFlux();
+          /*sample.AddFlux();
           if (reco_beam_incidentEnergies->size()) {
             sample.FillIncidentHist(*reco_beam_incidentEnergies);
-            if (selection_ID != 4) {
+            if (selection_ID != 4 && selection_ID != 5 && selection_ID != 6) {
               double energy[1] = {reco_beam_interactingEnergy};
               if (fExtraOptions.get<bool>("DoEnergyFix")) {
                 for (size_t k = 1; k < reco_beam_incidentEnergies->size(); ++k) {
@@ -323,10 +353,16 @@ void protoana::AbsCexDriver::BuildMCSamples(
               }
               sample.FillSelectionHist(selection_ID, energy);
             }
-            else {
+            else if (selection_ID == 4) {
               double endZ[1] = {reco_beam_endZ};
               sample.FillSelectionHist(selection_ID, endZ);
             }
+            else {
+              sample.FillSelectionHist(selection_ID, .5);
+            }
+          }
+          else {
+            sample.FillSelectionHist(selection_ID, .5);
           }
 
           //Fill the total incident hist with truth info
@@ -336,7 +372,7 @@ void protoana::AbsCexDriver::BuildMCSamples(
           sample.AddESliceEnergies(
               {(*true_beam_incidentEnergies)[0],
                end_energy});
-          }
+          }*/
         }
         else {
           std::cout << "Warning: could not find true bin " <<
@@ -346,6 +382,88 @@ void protoana::AbsCexDriver::BuildMCSamples(
         }
       }
     }
+
+    int flux_type = this_sample->GetFluxType();
+    nominal_fluxes[flux_type] += 1.;
+    this_sample->AddFlux();
+    double val[1] = {0};
+    if (selection_ID == 4) {
+      TH1D * selected_hist
+          = (TH1D*)this_sample->GetSelectionHists().at(selection_ID);
+      if (selected_hist->FindBin(reco_beam_endZ) == 0) {
+        //selected_hist->Fill(
+        //    selected_hist->GetBinCenter(1));
+        val[0] = selected_hist->GetBinCenter(1);
+      }
+      else if (selected_hist->FindBin(reco_beam_endZ) >
+               selected_hist->GetNbinsX()) {
+        //selected_hist->Fill(
+        //    selected_hist->GetBinCenter(
+        //        selected_hist->GetNbinsX()));
+        val[0] = selected_hist->GetBinCenter(selected_hist->GetNbinsX());
+      }
+      else {
+        //selected_hist->Fill(reco_beam_endZ);
+        val[0] = reco_beam_endZ;
+      }
+    }
+    else if (selection_ID > 4) {
+      //TH1D & selected_hist
+      //    = this_sample->GetSelectionHists().at(selection_ID);
+      //selected_hist.Fill(.5);
+      val[0] = .5;
+    }
+    else if (reco_beam_incidentEnergies->size()) {
+      this_sample->FillIncidentHist(*reco_beam_incidentEnergies);
+      double energy[1] = {reco_beam_interactingEnergy};
+      if (fExtraOptions.get<bool>("DoEnergyFix")) {
+        for (size_t k = 1; k < reco_beam_incidentEnergies->size(); ++k) {
+          double deltaE = ((*reco_beam_incidentEnergies)[k-1] -
+                           (*reco_beam_incidentEnergies)[k]);
+          if (deltaE > fExtraOptions.get<double>("EnergyFix")) {
+            energy[0] += deltaE; 
+          }
+        }
+      }
+      //this_sample->FillSelectionHist(selection_ID, energy);
+
+      TH1D * selected_hist
+          = (TH1D*)this_sample->GetSelectionHists().at(selection_ID);
+      if (selected_hist->FindBin(energy[0]) == 0) {
+        //selected_hist->Fill(
+        //    selected_hist->GetBinCenter(1));
+        val[0] = selected_hist->GetBinCenter(1);
+      }
+      else if (selected_hist->FindBin(energy[0]) >
+               selected_hist->GetNbinsX()) {
+        //selected_hist->Fill(
+        //    selected_hist->GetBinCenter(
+        //        selected_hist->GetNbinsX()));
+        val[0] = selected_hist->GetBinCenter(selected_hist->GetNbinsX());
+      }
+      else {
+        //selected_hist->Fill(energy[0]);
+        val[0] = energy[0];
+      }
+    }
+    else {
+      TH1D * selected_hist
+          = (TH1D*)this_sample->GetSelectionHists().at(selection_ID);
+      //selected_hist->Fill(
+      //    selected_hist->GetBinCenter(1));
+      val[0] = selected_hist->GetBinCenter(1);
+    }
+    this_sample->FillSelectionHist(selection_ID, val);
+
+    //Fill the total incident hist with truth info
+    this_sample->FillTrueIncidentHist(good_true_incEnergies);
+    this_sample->AddIncidentEnergies(good_true_incEnergies);
+    if (true_beam_incidentEnergies->size() > 0) {
+    this_sample->AddESliceEnergies(
+        {(*true_beam_incidentEnergies)[0],
+         end_energy});
+    }
+
   }
 
   fOut.cd();
@@ -402,12 +520,29 @@ void protoana::AbsCexDriver::BuildDataHists(
 
   for (int i = 0; i < tree->GetEntries(); ++i) {
     tree->GetEntry(i);
-    if (reco_beam_incidentEnergies->size()) {
+    double val = 0.;
+    if (selection_ID == 4) {
+      if (selected_hists[selection_ID]->FindBin(reco_beam_endZ) == 0) {
+        val = selected_hists[selection_ID]->GetBinCenter(1);
+      }
+      else if (selected_hists[selection_ID]->FindBin(reco_beam_endZ) >
+               selected_hists[selection_ID]->GetNbinsX()) {
+        val = selected_hists[selection_ID]->GetBinCenter(
+            selected_hists[selection_ID]->GetNbinsX());
+      }
+      else {
+        val = reco_beam_endZ;
+      }
+    }
+    else if (selection_ID > 4) {
+      val = .5;
+    }
+    else if (reco_beam_incidentEnergies->size()) {
       for (size_t j = 0; j < reco_beam_incidentEnergies->size(); ++j) {
         incident_hist.Fill((*reco_beam_incidentEnergies)[j]);
       }
       if (selected_hists.find(selection_ID) != selected_hists.end()) {
-        if (selection_ID != 4) {
+        if (selection_ID != 4 && selection_ID != 5 && selection_ID != 6) {
           double energy = reco_beam_interactingEnergy;
           if (fExtraOptions.get<bool>("DoEnergyFix")) {
             for (size_t k = 1; k < reco_beam_incidentEnergies->size(); ++k) {
@@ -418,15 +553,27 @@ void protoana::AbsCexDriver::BuildDataHists(
               }
             }
           }
-          //selected_hists[selection_ID]->Fill(reco_beam_interactingEnergy);
-          selected_hists[selection_ID]->Fill(energy);
-        }
-        else {
-          selected_hists[selection_ID]->Fill(reco_beam_endZ);
+          if (selected_hists[selection_ID]->FindBin(energy) == 0) {
+            val = selected_hists[selection_ID]->GetBinCenter(1);
+          }
+          else if (selected_hists[selection_ID]->FindBin(energy) >
+                   selected_hists[selection_ID]->GetNbinsX()) {
+            val = selected_hists[selection_ID]->GetBinCenter(
+                selected_hists[selection_ID]->GetNbinsX());
+          }
+          else {
+            val = energy;
+          }
         }
       }
     }
+    else {
+      val = selected_hists[selection_ID]->GetBinCenter(1);
+    }
+
+    selected_hists[selection_ID]->Fill(val);
   }
+
 }
 
 void protoana::AbsCexDriver::BuildFakeData(
@@ -950,13 +1097,25 @@ std::pair<double, size_t> protoana::AbsCexDriver::CalculateChi2(
   size_t nPoints = 0;
 
   std::map<int, TH1 *> & selected_data_hists = data_set.GetSelectionHists();
+  double total_data = 0., total_mc = 0.;
   for (auto it = selected_data_hists.begin();
        it != selected_data_hists.end(); ++it) {
     TH1D * data_hist = (TH1D*)it->second;
     int selection_ID = it->first;
+    if (data_hist->GetBinContent(0) > 0.) {
+      std::cout << "Warning: underflow bin of " << selection_ID <<
+                   " has " << data_hist->GetBinContent(0) << " events" <<
+                   std::endl;
+    }
+    else if (data_hist->GetBinContent(data_hist->GetNbinsX()+1) > 0.) {
+      std::cout << "Warning: overflow bin of " << selection_ID <<
+                   " has " << data_hist->GetBinContent(data_hist->GetNbinsX()+1) <<
+                   " events" <<
+                   std::endl;
+    }
     for (int i = 1; i <= data_hist->GetNbinsX(); ++i) {
       double data_val = data_hist->GetBinContent(i);
-      double data_err = data_hist->GetBinError(i);
+      //double data_err = data_hist->GetBinError(i);
 
       double mc_val = 0.;
       //Go through all the samples and get the values from mc
@@ -970,50 +1129,18 @@ std::pair<double, size_t> protoana::AbsCexDriver::CalculateChi2(
           }
         }
       }
-      chi2 += (std::pow((data_val - mc_val), 2) / std::pow(data_err, 2));
+      //chi2 += (std::pow((data_val - mc_val), 2) / std::pow(data_err, 2));
+      chi2 += 2*data_val*std::log(data_val/mc_val);
       ++nPoints;
+      total_mc += mc_val;
+      total_data += data_val;
     }
   }
 
-  //Go through the incident hist. Calculate it as its own point.
-  //Then add reduced incident chi2 to full chi2 
-  /*
-  if (!fExtraOptions.get<bool>("SkipIncidentChi2")) {
-    double incident_chi2 = 0.;
-    size_t incident_points = 0;
-    TH1D & incident_data_hist = data_set.GetIncidentHist();
-    for (int i = 1; i <= incident_data_hist.GetNbinsX(); ++i) {
-      double data_val = incident_data_hist.GetBinContent(i);
-      double data_err = incident_data_hist.GetBinError(i);
-
-      double mc_val = 0.;
-      //Go through all the samples and get the values from mc
-      for (auto it = samples.begin(); it != samples.end(); ++it) {
-        std::vector<std::vector<ThinSliceSample>> & samples_vec_2D = it->second;
-        for (size_t j = 0; j < samples_vec_2D.size(); ++j) {
-          std::vector<ThinSliceSample> & samples_vec = samples_vec_2D[j]; 
-          for (size_t k = 0; k < samples_vec.size(); ++k) { 
-            ThinSliceSample & sample = samples_vec[k];
-            mc_val += sample.GetIncidentHist().GetBinContent(i);
-          }
-        }
-      }
-
-      incident_chi2 += (std::pow((data_val - mc_val), 2) / std::pow(data_err, 2));
-      ++incident_points;
-    }
-
-    if (fExtraOptions.get<bool>("ReducedChi2")) {
-      //Add reduced incident chi2 to full chi2, increment total nPoints
-      chi2 += incident_chi2 / incident_points;
-      ++nPoints;
-    }
-    else {
-      chi2 += incident_chi2;
-      nPoints += incident_points;
-    }
-  }
-  */
+  //if (total_data != total_mc) {
+  //  std::cout << "Warning: data != mc " << total_data << " " << total_mc <<
+  //               std::endl;
+  //}
 
   return {chi2, nPoints};
 }
