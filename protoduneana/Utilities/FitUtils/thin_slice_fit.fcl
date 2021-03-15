@@ -28,8 +28,8 @@ AnalysisOptions: {
   ]
 
   FakeDataBinnedScales: [
-    [2, [1., 1.488, 1.394, 1.469, 1.521, 1.]],
-    [1, [1., .748, .782, .832, .912, .977, 1.]]
+    [2, [1., 1.488, 1.394, 1.469, 1.]],
+    [1, [1., .748, .782, .832, .912, 1.]]
   ]
 
   FakeDataG4RW: {
@@ -74,6 +74,7 @@ Selections: [
     #             "750 - 800", "800 - 850", "850 - 900", "900 - 950", "950 - 1000", "1000 - 1200"]]
     RecoBins: [[0., 200., 400., 500., 600., 800., 1200.]]
     BinLabels: [["0 - 200", "200 - 400", "400 - 500", "500 - 600", "600 - 800", "800 - 1200"]]
+    AxisTitles: ["Reconstructed KE (MeV)"]
   },
   {
     Name: "Cex"
@@ -86,6 +87,7 @@ Selections: [
     #             "750 - 800", "800 - 850", "850 - 900", "900 - 950", "950 - 1000", "1000 - 1200"]]
     RecoBins: [[0., 400., 500., 600., 800., 1200.]]
     BinLabels: [["0 - 400", "400 - 500", "500 - 600", "600 - 800", "800 - 1200"]]
+    AxisTitles: ["Reconstructed KE (MeV)"]
   } ,
   {
     Name: "RejectedInt"
@@ -96,21 +98,25 @@ Selections: [
     #             "750 - 800", "800 - 850", "850 - 900", "900 - 950", "950 - 1000", "1000 - 1200"]]
     RecoBins: [[0., 400., 500., 600., 800., 1200.]]
     BinLabels: [["0 - 400", "400 - 500", "500 - 600", "600 - 800", "800 - 1200"]]
+    AxisTitles: ["Reconstructed KE (MeV)"]
   },
   {
     Name: "APA2"
     ID: 4
     RecoBins: [[225, 275, 325, 375, 425, 580]]
+    AxisTitles: ["Reconstructed End Z (cm)"]
   },
   {
     Name: "FailedBeamCuts"
     ID: 5
     RecoBins: [[0, 1]]
+    AxisTitles: [""]
   },
   {
     Name: "NoBeamTrack"
     ID: 6
     RecoBins: [[0, 1]]
+    AxisTitles: [""]
   }
 ]
 
@@ -178,7 +184,7 @@ Samples: [
   {
     Name: "OtherInel"
     ID: 3
-    IsSignal: false 
+    IsSignal: false
     SignalBins: @local::DefaultSignalBins
     FluxType: 1
   },
@@ -231,8 +237,8 @@ DrawXSecUnderflow: false
 
 ## Validation
 RandomStart: false 
-DoFakeData: false 
-DoThrows: false
+DoFakeData: false
+DoThrows: true 
 NThrows: 1000
 MaxRethrows: 1000
 #####################

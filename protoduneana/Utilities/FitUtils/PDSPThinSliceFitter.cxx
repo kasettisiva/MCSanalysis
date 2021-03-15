@@ -298,8 +298,11 @@ void protoana::PDSPThinSliceFitter::SaveMCSamples() {
 }
 
 void protoana::PDSPThinSliceFitter::CompareDataMC(bool post_fit) {
-  fThinSliceDriver->CompareDataMC(fSamples, fDataSet, fOutputFile,
-                                  fPlotStyle, fPlotRebinned, post_fit);
+  fThinSliceDriver->CompareDataMC(
+      fSamples, fDataSet, fOutputFile,
+      fPlotStyle, (fTotalFluxParameters + fTotalSignalParameters),
+      fPlotRebinned, post_fit);
+
   if (!post_fit) {
     fOutputFile.mkdir("PreFitXSec");
     fOutputFile.cd("PreFitXSec");
@@ -1207,9 +1210,12 @@ void protoana::PDSPThinSliceFitter::PlotThrows(
                                &xs[0], &ys[0], 
                                &xs_width[0], &xs_width[0], &errs[0], &errs[0]);
 
+    throw_gr.SetTitle(fDataSet.GetSelectionName(selection_ID).c_str());
+    throw_gr.GetXaxis()->SetTitle(data_hist->GetXaxis()->GetTitle());
     throw_gr.SetFillStyle(3144);
     throw_gr.SetFillColor(kRed);
-    throw_gr.Draw("a2");
+    data_hist->Draw();
+    throw_gr.Draw("same a2");
     data_hist->Draw("same e1");
     fOutputFile.cd("Throws");
     cThrow.Write();
@@ -1229,6 +1235,35 @@ void protoana::PDSPThinSliceFitter::PlotThrows(
 
     std::string name = "hNominal" + fSamples[sample_ID][0][0].GetName();
     TH1D temp_nominal(name.c_str(), "", xs.size(), 0, xs.size());
+    std::string dummy_name = "hDummy" + fSamples[sample_ID][0][0].GetName();
+    TH1D dummy(dummy_name.c_str(), "", xs.size(), 0, xs.size());
+    if (fIsSignalSample[sample_ID]) {
+      dummy.GetXaxis()->SetBinLabel(1, "Underflow");
+      dummy.GetXaxis()->SetBinLabel(dummy.GetNbinsX(), "Overflow");
+      for (int i = 2; i < dummy.GetNbinsX(); ++i) {
+        std::ostringstream low_stream, high_stream;
+        low_stream.precision(2);
+        high_stream.precision(2);
+        low_stream << std::fixed <<
+                      fSamples[sample_ID][0][i-1].RangeLowEnd();
+        high_stream
+            << std::fixed <<
+               fSamples[sample_ID][0][i-1].RangeHighEnd();
+        std::string label = low_stream.str();
+        label += " - ";
+        label += high_stream.str();
+        //std::string label
+        //    = std::to_string(fSamples[sample_ID][0][i-1].RangeLowEnd());
+        //label += " - ";
+        //label += std::to_string(fSamples[sample_ID][0][i-1].RangeHighEnd());
+        dummy.GetXaxis()->SetBinLabel(i, label.c_str());
+      }
+    }
+    else {
+      dummy.GetXaxis()->SetBinLabel(1, "");
+    }
+
+
     std::vector<std::vector<ThinSliceSample>> & samples_vec_2D
         = fSamples[sample_ID];
     for (size_t i = 0; i < samples_vec_2D.size(); ++i) {
@@ -1259,7 +1294,10 @@ void protoana::PDSPThinSliceFitter::PlotThrows(
     throw_gr.SetFillColor(kRed);
     throw_gr.SetMinimum(0.);
     throw_gr.SetMaximum(1.5*max);
-    throw_gr.Draw("a2");
+    dummy.SetMaximum(1.5*max);
+    dummy.Draw();
+    //throw_gr.Draw("a2");
+    throw_gr.Draw("same 2");
     throw_gr.Draw("p");
 
     temp_nominal.SetMarkerColor(kBlue);
@@ -1303,15 +1341,50 @@ void protoana::PDSPThinSliceFitter::PlotThrows(
     std::string canvas_name = "cXSecThrow" + fSamples[sample_ID][0][0].GetName();
     TCanvas cThrow(canvas_name.c_str(), "");
     cThrow.SetTicks();
+
+    std::string dummy_name = "hDummyXSec" + fSamples[sample_ID][0][0].GetName();
+    TH1D dummy(dummy_name.c_str(), "", xs.size(), 0, xs.size());
+    for (int i = 1; i <= dummy.GetNbinsX(); ++i) {
+      std::ostringstream low_stream, high_stream;
+      low_stream.precision(2);
+      high_stream.precision(2);
+      low_stream << std::fixed <<
+                    fSamples[sample_ID][0][i].RangeLowEnd();
+      high_stream
+          << std::fixed <<
+             fSamples[sample_ID][0][i].RangeHighEnd();
+      std::string label = low_stream.str();
+      label += " - ";
+      label += high_stream.str();
+      //std::string label
+      //    = std::to_string(fSamples[sample_ID][0][i-1].RangeLowEnd());
+      //label += " - ";
+      //label += std::to_string(fSamples[sample_ID][0][i-1].RangeHighEnd());
+      dummy.GetXaxis()->SetBinLabel(i, label.c_str());
+    }
+
     TGraphAsymmErrors throw_gr(xs.size(),
                                &xs[0], &best_fit_xsec_truth[it->first][0], 
                                &xs_width[0], &xs_width[0],
                                &best_fit_xsec_errs[it->first][0],
                                &best_fit_xsec_errs[it->first][0]);
+    double max = -999.;
+    for (size_t i = 0; i < best_fit_xsec_truth[it->first].size(); ++i) {
+      if ((best_fit_xsec_truth[it->first][i] +
+           best_fit_xsec_errs[it->first][0]) > max) {
+        max = (best_fit_xsec_truth[it->first][i] +
+               best_fit_xsec_errs[it->first][0]);
+      }
+    }
     throw_gr.SetFillStyle(3144);
     throw_gr.SetFillColor(kRed);
     throw_gr.SetMinimum(0.);
-    throw_gr.Draw("a2");
+    dummy.SetMaximum(1.5*max);
+    dummy.SetMinimum(0.);
+    dummy.Draw();
+    dummy.GetXaxis()->SetTitle("Kinetic Energy (MeV)");
+    dummy.GetYaxis()->SetTitle("#sigma (mb)");
+    throw_gr.Draw("same 2");
     throw_gr.Draw("p");
 
     std::vector<double> nominal_xsec_vals;

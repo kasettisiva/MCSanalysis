@@ -66,7 +66,7 @@ class AbsCexDriver : public ThinSliceDriver {
       TFile & output_file,
       std::vector<std::pair<int, int>> plot_style,
       bool plot_rebinned,
-      bool post_fit) override;
+      bool post_fit, int nPars) override;
 
   void GetCurrentHists(
       std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,

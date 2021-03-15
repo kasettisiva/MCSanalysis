@@ -52,7 +52,7 @@ class ThinSliceDriver {
       TFile & output_file,
       std::vector<std::pair<int, int>> plot_style,
       bool plot_rebinned,
-      bool post_fit) = 0;
+      bool post_fit, int nPars) = 0;
 
   virtual void GetCurrentHists(
       std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
@@ -96,6 +96,7 @@ class ThinSliceDriver {
       ThinSliceDataSet & data_set,
       TFile & output_file,
       std::vector<std::pair<int, int>> plot_style,
+      int nPars,
       bool plot_rebinned = false,
       bool post_fit = false);
 
