@@ -157,21 +157,25 @@ namespace pduneana {
 
     calo_point();
     calo_point(size_t w, double p, double dqdx, double dedx, double dq,
-               double cali_dedx, double r, size_t index, double input_z, int t)
+               double cali_dqdx, double cali_dedx, double r, size_t index, double input_z, int t,
+               double efield)
         : wire(w), pitch(p), dQdX(dqdx), dEdX(dedx), dQ(dq),
-          calibrated_dEdX(cali_dedx),
-          res_range(r), hit_index(index), z(input_z), tpc(t) {};
+          calibrated_dQdX(cali_dqdx), calibrated_dEdX(cali_dedx),
+          res_range(r), hit_index(index), z(input_z), tpc(t),
+          EField(efield) {};
 
     size_t wire;
     double pitch;
     double dQdX;
     double dEdX;
     double dQ;
+    double calibrated_dQdX;
     double calibrated_dEdX;
     double res_range;
     size_t hit_index;
     double z;
     int tpc;
+    double EField;
   };
 
   cnnOutput2D GetCNNOutputFromPFParticle(
@@ -401,8 +405,8 @@ private:
   double reco_beam_trackDirX, reco_beam_trackDirY, reco_beam_trackDirZ;
   double reco_beam_trackEndDirX, reco_beam_trackEndDirY, reco_beam_trackEndDirZ;
 
-  std::vector<double> reco_beam_dEdX_SCE, reco_beam_dQdX_SCE, reco_beam_resRange_SCE, reco_beam_TrkPitch_SCE;
-  std::vector<double> reco_beam_calibrated_dEdX_SCE, reco_beam_dQ;
+  std::vector<double> reco_beam_dEdX_SCE, reco_beam_dQdX_SCE, reco_beam_EField_SCE, reco_beam_resRange_SCE, reco_beam_TrkPitch_SCE;
+  std::vector<double> reco_beam_calibrated_dEdX_SCE, reco_beam_calibrated_dQdX_SCE, reco_beam_dQ;
 
   std::vector<double> reco_beam_dEdX_NoSCE, reco_beam_dQdX_NoSCE, reco_beam_resRange_NoSCE, reco_beam_TrkPitch_NoSCE;
   std::vector<double> reco_beam_calibrated_dEdX_NoSCE;
@@ -1123,9 +1127,11 @@ void pduneana::PDSPAnalyzer::beginJob()
   fTree->Branch("reco_beam_trackID", &reco_beam_trackID);
 
   fTree->Branch("reco_beam_dQdX_SCE", &reco_beam_dQdX_SCE);
+  fTree->Branch("reco_beam_EField_SCE", &reco_beam_EField_SCE);
   fTree->Branch("reco_beam_dQ", &reco_beam_dQ);
   fTree->Branch("reco_beam_dEdX_SCE", &reco_beam_dEdX_SCE);
   fTree->Branch("reco_beam_calibrated_dEdX_SCE", &reco_beam_calibrated_dEdX_SCE);
+  fTree->Branch("reco_beam_calibrated_dQdX_SCE", &reco_beam_calibrated_dQdX_SCE);
   fTree->Branch("reco_beam_resRange_SCE", &reco_beam_resRange_SCE);
   fTree->Branch("reco_beam_TrkPitch_SCE", &reco_beam_TrkPitch_SCE);
 
@@ -1855,10 +1861,12 @@ void pduneana::PDSPAnalyzer::reset()
   reco_beam_TrkPitch_NoSCE.clear();
 
   reco_beam_dQdX_SCE.clear();
+  reco_beam_EField_SCE.clear();
   reco_beam_dQ.clear();
   reco_beam_dQ_NoSCE.clear();
   reco_beam_dEdX_SCE.clear();
   reco_beam_calibrated_dEdX_SCE.clear();
+  reco_beam_calibrated_dQdX_SCE.clear();
   reco_beam_vertex_nHits = -999;
   reco_beam_vertex_michel_score = -999.;
 
@@ -2367,10 +2375,23 @@ void pduneana::PDSPAnalyzer::BeamTrackInfo(
 
     //New Calibration
     std::cout << "Getting reco beam calo" << std::endl;
-    std::vector< float > new_dEdX = calibration_SCE.GetCalibratedCalorimetry(*thisTrack, evt, fTrackerTag, fCalorimetryTagSCE, 2, -1.);
+    std::vector< float > new_dEdX = calibration_SCE.GetCalibratedCalorimetry(*thisTrack, evt, fTrackerTag, fCalorimetryTagSCE, 2, -10.);
     std::cout << new_dEdX.size() << " " << reco_beam_resRange_SCE.size() << std::endl;
     for( size_t i = 0; i < new_dEdX.size(); ++i ){ reco_beam_calibrated_dEdX_SCE.push_back( new_dEdX[i] ); }
     std::cout << "got calibrated dedx" << std::endl;
+
+    std::vector<double> new_dQdX = calibration_SCE.CalibratedQdX(
+        *thisTrack, evt, fTrackerTag,
+        fCalorimetryTagSCE, 2, -10.);
+    for (auto dqdx : new_dQdX) {
+      reco_beam_calibrated_dQdX_SCE.push_back(dqdx);
+    }
+
+    std::vector<double> efield = calibration_SCE.GetEFieldVector(
+        *thisTrack, evt, fTrackerTag, fCalorimetryTagSCE, 2, -10.);
+    for (auto ef : efield) {
+      reco_beam_EField_SCE.push_back(ef);
+    }
     ////////////////////////////////////////////
 
     std::pair< double, int > pid_chi2_ndof = trackUtil.Chi2PID( reco_beam_calibrated_dEdX_SCE, reco_beam_resRange_SCE, templates[ 2212 ] );
@@ -2392,9 +2413,11 @@ void pduneana::PDSPAnalyzer::BeamTrackInfo(
           calo_point(reco_beam_calo_wire[i], reco_beam_TrkPitch_SCE[i],
                      reco_beam_dQdX_SCE[i], reco_beam_dEdX_SCE[i],
                      reco_beam_dQ[i],
+                     reco_beam_calibrated_dQdX_SCE[i],
                      reco_beam_calibrated_dEdX_SCE[i],
                      reco_beam_resRange_SCE[i], calo_hit_indices[i],
-                     reco_beam_calo_wire_z[i], reco_beam_calo_TPC[i]));
+                     reco_beam_calo_wire_z[i], reco_beam_calo_TPC[i],
+                     reco_beam_EField_SCE[i]));
       }
 
       //std::cout << "N Calo points: " << reco_beam_calo_points.size() << std::endl;
@@ -2405,6 +2428,7 @@ void pduneana::PDSPAnalyzer::BeamTrackInfo(
       for( size_t i = 0; i < reco_beam_calo_points.size(); ++i ){
         calo_point thePoint = reco_beam_calo_points[i];
         reco_beam_calo_wire[i] = thePoint.wire;
+        reco_beam_calibrated_dQdX_SCE[i] = thePoint.calibrated_dQdX;
         reco_beam_calibrated_dEdX_SCE[i] = thePoint.calibrated_dEdX;
         reco_beam_TrkPitch_SCE[i] = thePoint.pitch;
         calo_hit_indices[i] = thePoint.hit_index;
@@ -2414,6 +2438,7 @@ void pduneana::PDSPAnalyzer::BeamTrackInfo(
         reco_beam_dQdX_SCE[i] = thePoint.dQdX;
         reco_beam_dQ[i] = thePoint.dQ;
         reco_beam_dEdX_SCE[i] = thePoint.dEdX;
+        reco_beam_EField_SCE[i] = thePoint.EField;
       }
 
       //Get the initial Energy KE
@@ -2434,6 +2459,7 @@ void pduneana::PDSPAnalyzer::BeamTrackInfo(
       reco_beam_incidentEnergies.push_back( init_KE );
       for( size_t i = 0; i < reco_beam_calo_points.size() - 1; ++i ){ //-1 to not count the last slice
         //use dedx * pitch or new hit calculation?
+        if (reco_beam_calo_points[i].calibrated_dEdX < 0.) continue;
         double this_energy = reco_beam_incidentEnergies.back() - ( reco_beam_calo_points[i].calibrated_dEdX * reco_beam_calo_points[i].pitch );
         reco_beam_incidentEnergies.push_back( this_energy );
       }
@@ -2501,19 +2527,20 @@ void pduneana::PDSPAnalyzer::BeamTrackInfo(
     std::cout << "ind: " << calo_hit_indices.size() << std::endl;
     std::cout << "range: " << reco_beam_resRange_NoSCE.size() << std::endl;
     std::cout << "wire_z: " << reco_beam_calo_wire_z.size() << std::endl;
-    std::cout << "TPC: " << reco_beam_calo_TPC.size() << std::endl;
+    std::cout << "TPC: " << reco_beam_calo_TPC_NoSCE.size() << std::endl;
     if (reco_beam_calibrated_dEdX_NoSCE.size() &&
         reco_beam_calibrated_dEdX_NoSCE.size() == reco_beam_TrkPitch_NoSCE.size() &&
         reco_beam_calibrated_dEdX_NoSCE.size() == reco_beam_calo_wire.size()) {
 
       for( size_t i = 0; i < reco_beam_calibrated_dEdX_NoSCE.size(); ++i ){
         reco_beam_calo_points.push_back(
-          calo_point(reco_beam_calo_wire[i], reco_beam_TrkPitch_NoSCE[i],
+          calo_point(reco_beam_calo_wire_NoSCE[i], reco_beam_TrkPitch_NoSCE[i],
                      reco_beam_dQdX_NoSCE[i], reco_beam_dEdX_NoSCE[i],
-                     reco_beam_dQ[i],
+                     reco_beam_dQ_NoSCE[i], 0.,
                      reco_beam_calibrated_dEdX_NoSCE[i],
-                     calo_hit_indices[i], reco_beam_resRange_NoSCE[i],
-                     reco_beam_calo_wire_z[i], reco_beam_calo_TPC[i]));
+                     reco_beam_resRange_NoSCE[i], calo_hit_indices[i],
+                     reco_beam_calo_wire_z_NoSCE[i], reco_beam_calo_TPC_NoSCE[i],
+                     0.));
       }
 
       //std::cout << "N Calo points: " << reco_beam_calo_points.size() << std::endl;
@@ -2523,12 +2550,12 @@ void pduneana::PDSPAnalyzer::BeamTrackInfo(
       //And also put these in the right order
       for( size_t i = 0; i < reco_beam_calo_points.size(); ++i ){
         calo_point thePoint = reco_beam_calo_points[i];
-        reco_beam_calo_wire[i] = thePoint.wire;
+        reco_beam_calo_wire_NoSCE[i] = thePoint.wire;
         reco_beam_calibrated_dEdX_NoSCE[i] = thePoint.calibrated_dEdX;
         reco_beam_TrkPitch_NoSCE[i] = thePoint.pitch;
         calo_hit_indices[i] = thePoint.hit_index;
-        reco_beam_calo_wire_z[i] = thePoint.z;
-        reco_beam_calo_TPC[i] = thePoint.tpc;
+        reco_beam_calo_wire_z_NoSCE[i] = thePoint.z;
+        reco_beam_calo_TPC_NoSCE[i] = thePoint.tpc;
         reco_beam_resRange_NoSCE[i] = thePoint.res_range;
         reco_beam_dQdX_NoSCE[i] = thePoint.dQdX;
         reco_beam_dEdX_NoSCE[i] = thePoint.dEdX;

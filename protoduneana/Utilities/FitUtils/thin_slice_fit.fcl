@@ -1,4 +1,5 @@
 #include "FitterPlotStyle.fcl"
+#include "ProtoDUNECalibration.fcl"
 
 #MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_G4RW/eventSelection_mc_beamType.root"
 #DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_G4RW/eventSelection_mc_beamType.root"
@@ -6,8 +7,8 @@
 #DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_G4RW_Full/eventSelection_mc_beamType.root"
 #MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_G4RW_2_18_21/eventSelection_mc_beamType.root"
 #DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_G4RW_2_18_21/eventSelection_mc_beamType.root"
-MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_3_11_21/eventSelection_mc_all.root"
-DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_3_11_21/eventSelection_mc_all.root"
+MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_3_17_21/eventSelection_mc_all.root"
+DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_3_17_21/eventSelection_mc_all.root"
 TreeName: "pduneana/beamana"
 
 #MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_beamType.root"
@@ -56,11 +57,29 @@ AnalysisOptions: {
   EnergyFix: 80.
 
   Systematics: [
+    #{
+    #  Name: "G4RW"
+    #}
     {
-      Name: "G4RW"
+      Name: "dEdX_Cal"
+      C_cal_vars: [.811e-3, .911e-3, 1.111e-3, 1.211e-3]
+      Cal_set: @local::CalorimetryParameters_SPProd4_MC_SCE
     }
   ]
 }
+
+Systematics: [
+  {
+    Name: "dEdX_Cal"
+    Central: 1.
+    LowerLimit: 0.
+    UpperLimit: 2.
+
+    Options: {
+      Cal_set: @local::CalorimetryParameters_SPProd4_MC_SCE
+    }
+  }
+]
 
 Selections: [
   {
@@ -226,19 +245,22 @@ UpperLimit: 10.0
 LowerLimit: 0.05
 ReducedIncidentChi2: false
 FitFlux: true
+
+FitFunctionType: 2
 #####################
 
 ## Plotting
 #PlotStyle: @local::ReducedColorsStyle
 PlotStyle: @local::DefaultColorsStyle
-PlotRebinned: true 
+PlotRebinned: true
 DrawXSecUnderflow: false 
 #####################
 
 ## Validation
 RandomStart: false 
 DoFakeData: false
-DoThrows: true 
+DoThrows: false 
 NThrows: 1000
+DoSysts: false
 MaxRethrows: 1000
 #####################

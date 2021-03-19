@@ -10,6 +10,8 @@
 
 #include "ThinSliceSample.h"
 #include "ThinSliceDataSet.h"
+#include "ThinSliceSystematic.h"
+#include "ThinSliceEvent.h"
 
 #include "fhiclcpp/ParameterSet.h"
 
@@ -30,17 +32,29 @@ class ThinSliceDriver {
     std::map<int, std::vector<double>> & sample_scales) = 0;
 
   virtual void BuildMCSamples(
-      TTree * tree,
+      //TTree * tree,
+      const std::vector<ThinSliceEvent> & events,
       std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
       const std::map<int, bool> & signal_sample_checks,
       std::map<int, double> & nominal_fluxes,
       std::map<int, std::vector<std::vector<double>>> & fluxes_by_sample,
       std::vector<double> & beam_energy_bins) = 0;
 
+  virtual void RefillMCSamples(
+      const std::vector<ThinSliceEvent> & events,
+      std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+      const std::map<int, bool> & signal_sample_checks,
+      std::vector<double> & beam_energy_bins,
+      const std::map<int, std::vector<double>> & signal_pars,
+      const std::map<int, double> & flux_pars,
+      const std::map<std::string, ThinSliceSystematic> & syst_pars,
+      bool fill_incident = false) = 0;
+
   virtual void BuildSystSamples(
       TTree * tree,
       std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
-      const std::map<int, bool> & signal_sample_checks) = 0;
+      const std::map<int, bool> & signal_sample_checks,
+      std::vector<double> & beam_energy_bins) = 0;
 
   virtual std::pair<double, size_t> CalculateChi2(
       std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,

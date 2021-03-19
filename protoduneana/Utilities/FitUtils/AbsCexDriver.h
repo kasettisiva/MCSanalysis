@@ -2,6 +2,10 @@
 #define ABSCEXDRIVER_hh
 
 #include "ThinSliceDriver.h"
+#include "TH2D.h"
+#include "TFile.h"
+#include <map>
+
 namespace protoana {
 class AbsCexDriver : public ThinSliceDriver {
  public:
@@ -36,26 +40,43 @@ class AbsCexDriver : public ThinSliceDriver {
     std::map<int, std::vector<double>> & sample_scales);
 
   void BuildMCSamples(
-      TTree * tree,
+      //TTree * tree,
+      const std::vector<ThinSliceEvent> & events,
       std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
       const std::map<int, bool> & signal_sample_checks,
       std::map<int, double> & nominal_fluxes,
       std::map<int, std::vector<std::vector<double>>> & fluxes_by_sample,
-      std::vector<double> & beam_energy_bins/*,
-      std::map<int, std::pair<TH1D, TH1D>> & signal_eff_parts*/) override;
+      std::vector<double> & beam_energy_bins) override;
+
+  void RefillMCSamples(
+      //TTree * tree,
+      const std::vector<ThinSliceEvent> & events,
+      std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+      const std::map<int, bool> & signal_sample_checks,
+      std::vector<double> & beam_energy_bins,
+      const std::map<int, std::vector<double>> & signal_pars,
+      const std::map<int, double> & flux_pars,
+      const std::map<std::string, ThinSliceSystematic> & syst_pars,
+      bool fill_incident = false) override;
 
   void BuildSystSamples(
       TTree * tree,
       std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
-      const std::map<int, bool> & signal_sample_checks/*,
-      std::map<int, double> & nominal_fluxes,
-      std::map<int, std::vector<double>> & fluxes_by_sample*/) override;
+      const std::map<int, bool> & signal_sample_checks,
+      std::vector<double> & beam_energy_bins) override;
   
-  void SystRoutineG4RW(
+  void SystRoutine_G4RW(
       TTree * tree,
       std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
       const std::map<int, bool> & signal_sample_checks,
       const fhicl::ParameterSet & routine);
+
+  void SystRoutine_dEdX_Cal(
+      TTree * tree,
+      std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+      const std::map<int, bool> & signal_sample_checks,
+      const fhicl::ParameterSet & routine,
+      std::vector<double> & beam_energy_bins);
 
   std::pair<double, size_t> CalculateChi2(
       std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
@@ -96,6 +117,19 @@ class AbsCexDriver : public ThinSliceDriver {
     TFile & output_file, bool plot_rebinned,
     std::map<int, std::vector<double>> * sample_scales = 0x0) override;
 
+ private:
+   TH2D * fEndSlices;
+   TFile * fIn;
+   std::map<int, double> fMeans;
+
+   double fEnergyFix;
+   bool fDoEnergyFix;
+
+   double fPitch;
+   double fZ0;
+   double fEndZCut;
+   std::string fSliceMethod;
+   int fSliceCut;
 };
 }
 #endif

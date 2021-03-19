@@ -20,12 +20,15 @@
 #include "ThinSliceSample.h"
 #include "ThinSliceDataSet.h"
 #include "ThinSliceDriver.h"
+#include "ThinSliceSystematic.h"
+#include "ThinSliceEvent.h"
 
 namespace protoana {
 
 class PDSPThinSliceFitter {
  public:
   PDSPThinSliceFitter(std::string fcl_file, std::string output_file);
+  void FillMCEvents();
   void BuildMCSamples();
   void SaveMCSamples();
   void GetNominalFluxes();
@@ -40,6 +43,7 @@ class PDSPThinSliceFitter {
  private:
   void Configure(std::string fcl_file);
   void DefineFitFunction();
+  void DefineFitFunction2();
   void MakeMinimizer();
   void ParameterScans();
   void DoThrows(const TH1D & pars, const TMatrixD * cov);
@@ -97,13 +101,21 @@ class PDSPThinSliceFitter {
   std::map<int, std::string> fFluxParameterNames;
   size_t fTotalFluxParameters = 0;
 
+  //std::map<int, std::string> fSystParameterNames;
+  std::map<std::string, ThinSliceSystematic> fSystParameters;
+  std::vector<std::string> fSystParameterNames;
+  size_t fTotalSystParameters = 0;
+
   TRandom3 fRNG;
   std::map<int, std::vector<double>> fFakeDataScales;
   std::map<int, std::vector<double>> fBestFitSignalPars;
+  std::map<std::string, ThinSliceSystematic> fBestFitSystPars;
   std::map<int, double> fBestFitFluxPars;
   std::map<int, TH1*> fNominalXSecs, fNominalIncs;
   std::map<int, TH1*> fBestFitXSecs, fBestFitIncs;
   std::map<int, TH1*> fFakeDataXSecs, fFakeDataIncs;
+
+  std::vector<ThinSliceEvent> fEvents;
 
   //Configurable members
   std::string fMCFileName;
@@ -113,6 +125,7 @@ class PDSPThinSliceFitter {
   std::vector<fhicl::ParameterSet> fSampleSets;
   std::map<int, std::string> fFluxTypes;
   int fMaxCalls;
+  size_t fNFitSteps = 0;
   unsigned int fNScanSteps;
   double fTolerance, fLowerLimit, fUpperLimit;
   std::vector<std::pair<int, int>> fPlotStyle;
@@ -121,7 +134,9 @@ class PDSPThinSliceFitter {
   std::string fDriverName;
   std::string fAnalysis;
   fhicl::ParameterSet fAnalysisOptions;
-  bool fDoFakeData, fDoThrows;
+  bool fDoFakeData, fDoThrows, fDoSysts;
+  int fFitFunctionType;
+  bool fFillIncidentInFunction = false;
   bool fFitFlux;
   size_t fNThrows, fMaxRethrows;
   

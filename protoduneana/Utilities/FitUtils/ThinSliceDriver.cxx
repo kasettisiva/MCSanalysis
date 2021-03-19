@@ -17,31 +17,32 @@ void protoana::ThinSliceDriver::CompareDataMC(
     bool plot_rebinned,
     bool post_fit) {
 
-  std::map<int, std::vector<TH1D *>> temp_hists;
+  //std::map<int, std::vector<TH1D *>> temp_hists;
   for (auto it = samples.begin(); it != samples.end(); ++it) {
-    temp_hists[it->first] = std::vector<TH1D *>();
+    //temp_hists[it->first] = std::vector<TH1D *>();
     std::vector<ThinSliceSample> & vec = it->second[0];
     for (size_t i = 0; i < vec.size(); ++i) {
       vec[i].RefillRebinnedHists();
 
-      temp_hists[it->first].push_back(
-          (TH1D*)(plot_rebinned ?
-           vec[i].GetRebinnedIncidentHist() :
-           vec[i].GetIncidentHist()).Clone()); 
+      //temp_hists[it->first].push_back(
+      //    (TH1D*)(plot_rebinned ?
+      //     vec[i].GetRebinnedIncidentHist() :
+      //     vec[i].GetIncidentHist()).Clone()); 
     }
 
     for (size_t i = 1; i < it->second.size(); ++i) {
       std::vector<ThinSliceSample> & vec = it->second[i];
       for (size_t j = 0; j < vec.size(); ++j) {
         vec[j].RefillRebinnedHists();
-        temp_hists[it->first][j]->Add(
-          &(plot_rebinned ?
-            vec[j].GetRebinnedIncidentHist() :
-            vec[j].GetIncidentHist()));
+        //temp_hists[it->first][j]->Add(
+        //  &(plot_rebinned ?
+        //    vec[j].GetRebinnedIncidentHist() :
+        //    vec[j].GetIncidentHist()));
       }
     }
   }
 
+  /*
   //Build the incident stack and compare
   THStack incident_stack(
       (post_fit ? "PostFitIncidentStack" : "NominalIncidentStack"), "");
@@ -56,9 +57,9 @@ void protoana::ThinSliceDriver::CompareDataMC(
       //                   it->second.at(i).GetIncidentHist());
 
       std::pair<int, int> color_fill = GetColorAndStyle(iColor, plot_style);
-      /*inc_hist.*/it->second[i]->SetFillColor(color_fill.first);
-      /*inc_hist.*/it->second[i]->SetFillStyle(color_fill.second);
-      /*inc_hist.*/it->second[i]->SetLineColor(kBlack);
+      it->second[i]->SetFillColor(color_fill.first);
+      it->second[i]->SetFillStyle(color_fill.second);
+      it->second[i]->SetLineColor(kBlack);
       //incident_stack.Add(&inc_hist);
       incident_stack.Add(it->second[i]);
       ++iColor;
@@ -106,6 +107,7 @@ void protoana::ThinSliceDriver::CompareDataMC(
       = (TH1D*)inc_data_hist.Clone(inc_ratio_name.c_str());
   hIncidentRatio->Divide(hIncidentMC);
   hIncidentRatio->Write(); 
+  */
 
   CompareSelections(
       samples, data_set, output_file, plot_style, plot_rebinned,
