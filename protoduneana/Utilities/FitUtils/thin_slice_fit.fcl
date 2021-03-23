@@ -69,14 +69,25 @@ AnalysisOptions: {
 }
 
 Systematics: [
+  #{
+  #  Name: "dEdX_Cal"
+  #  Central: 1.
+  #  LowerLimit: 0.
+  #  UpperLimit: 2.
+
+  #  Options: {
+  #    Cal_set: @local::CalorimetryParameters_SPProd4_MC_SCE
+  #  }
+  #}
   {
-    Name: "dEdX_Cal"
-    Central: 1.
-    LowerLimit: 0.
-    UpperLimit: 2.
+    Name: "dEdX_Cal_Spline"
+    Central: 1.011e-3
+    LowerLimit: .809e-3
+    UpperLimit: 1.2132e-3
 
     Options: {
       Cal_set: @local::CalorimetryParameters_SPProd4_MC_SCE
+      C_cal_vars: [.809e-3, .910e-3, 1.121e-3, 1.2132e-3]
     }
   }
 ]
@@ -261,6 +272,6 @@ RandomStart: false
 DoFakeData: false
 DoThrows: false 
 NThrows: 1000
-DoSysts: false
+DoSysts: true 
 MaxRethrows: 1000
 #####################

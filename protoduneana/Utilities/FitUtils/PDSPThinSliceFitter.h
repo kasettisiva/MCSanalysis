@@ -59,6 +59,8 @@ class PDSPThinSliceFitter {
     std::map<int, std::vector<TH1*>> & truth_xsec_hists);
   void BuildFakeDataXSecs();
 
+  std::vector<double> GetBestFitParsVec();
+
   ThinSliceDriver * fThinSliceDriver;
   std::map<int, std::vector<std::vector<ThinSliceSample>>> fSamples;
   ThinSliceDataSet fDataSet;
@@ -115,6 +117,9 @@ class PDSPThinSliceFitter {
   std::map<int, TH1*> fBestFitXSecs, fBestFitIncs;
   std::map<int, TH1*> fFakeDataXSecs, fFakeDataIncs;
 
+  std::map<int, TH1D*> fBestFitSelectionHists;
+  std::map<int, std::vector<double>> fBestFitTruthVals;
+
   std::vector<ThinSliceEvent> fEvents;
 
   //Configurable members
@@ -134,6 +139,8 @@ class PDSPThinSliceFitter {
   std::string fDriverName;
   std::string fAnalysis;
   fhicl::ParameterSet fAnalysisOptions;
+  double fPitch;
+  std::string fSliceMethod;
   bool fDoFakeData, fDoThrows, fDoSysts;
   int fFitFunctionType;
   bool fFillIncidentInFunction = false;

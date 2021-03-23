@@ -116,6 +116,14 @@ class ThinSliceDriver {
 
   std::pair<int, int> GetColorAndStyle(
       size_t i, const std::vector<std::pair<int, int>> & plot_style);
+
+  virtual void SetupSysts(
+      const std::vector<ThinSliceEvent> & events,
+      std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+      const std::map<int, bool> & signal_sample_checks,
+      std::vector<double> & beam_energy_bins,
+      const std::map<std::string, ThinSliceSystematic> & pars,
+      TFile & output_file) = 0;
  protected:
   fhicl::ParameterSet fExtraOptions;
  private:

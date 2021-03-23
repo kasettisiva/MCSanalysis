@@ -4,6 +4,7 @@
 #include "ThinSliceDriver.h"
 #include "TH2D.h"
 #include "TFile.h"
+#include "TSpline.h"
 #include <map>
 
 namespace protoana {
@@ -72,11 +73,10 @@ class AbsCexDriver : public ThinSliceDriver {
       const fhicl::ParameterSet & routine);
 
   void SystRoutine_dEdX_Cal(
-      TTree * tree,
+      const std::vector<ThinSliceEvent> & events,
       std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
-      const std::map<int, bool> & signal_sample_checks,
-      const fhicl::ParameterSet & routine,
-      std::vector<double> & beam_energy_bins);
+      const std::map<std::string, ThinSliceSystematic> & pars,
+      TFile & output_file);
 
   std::pair<double, size_t> CalculateChi2(
       std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
@@ -104,18 +104,26 @@ class AbsCexDriver : public ThinSliceDriver {
       const std::map<int, std::vector<double>> & signal_bins) override;
 
   void PlotThrows(
-    ThinSliceDataSet & data_set, std::map<int, std::vector<TH1*>> & throw_hists,
-    std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
-    size_t nThrows,
-    std::map<int, std::vector<TH1*>> & truth_throw_hists,
-    std::map<int, std::vector<TH1*>> & truth_inc_hists,
-    std::map<int, std::vector<TH1*>> & truth_xsec_hists,
-    std::map<int, TH1*> & best_fit_incs,
-    std::map<int, TH1*> & best_fit_xsecs,
-    std::map<int, TH1*> & nominal_incs,
-    std::map<int, TH1*> & nominal_xsecs,
-    TFile & output_file, bool plot_rebinned,
-    std::map<int, std::vector<double>> * sample_scales = 0x0) override;
+      ThinSliceDataSet & data_set, std::map<int, std::vector<TH1*>> & throw_hists,
+      std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+      size_t nThrows,
+      std::map<int, std::vector<TH1*>> & truth_throw_hists,
+      std::map<int, std::vector<TH1*>> & truth_inc_hists,
+      std::map<int, std::vector<TH1*>> & truth_xsec_hists,
+      std::map<int, TH1*> & best_fit_incs,
+      std::map<int, TH1*> & best_fit_xsecs,
+      std::map<int, TH1*> & nominal_incs,
+      std::map<int, TH1*> & nominal_xsecs,
+      TFile & output_file, bool plot_rebinned,
+      std::map<int, std::vector<double>> * sample_scales = 0x0) override;
+
+  void SetupSysts(
+      const std::vector<ThinSliceEvent> & events,
+      std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+      const std::map<int, bool> & signal_sample_checks,
+      std::vector<double> & beam_energy_bins,
+      const std::map<std::string, ThinSliceSystematic> & pars,
+      TFile & output_file) override;
 
  private:
    TH2D * fEndSlices;
@@ -130,6 +138,11 @@ class AbsCexDriver : public ThinSliceDriver {
    double fEndZCut;
    std::string fSliceMethod;
    int fSliceCut;
+
+   double fBetaP, fRho, fWion, fAlpha, fNominalCCal;
+
+   std::map<std::string, std::map<int, std::vector<TH1D*>>> fFullSelectionVars;
+   std::map<std::string, std::map<int, std::vector<TSpline3*>>> fFullSelectionSplines;
 };
 }
 #endif
