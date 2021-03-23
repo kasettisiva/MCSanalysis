@@ -124,6 +124,7 @@ class ThinSliceDriver {
       std::vector<double> & beam_energy_bins,
       const std::map<std::string, ThinSliceSystematic> & pars,
       TFile & output_file) = 0;
+
  protected:
   fhicl::ParameterSet fExtraOptions;
  private:

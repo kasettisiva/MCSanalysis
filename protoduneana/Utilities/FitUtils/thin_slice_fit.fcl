@@ -84,6 +84,7 @@ Systematics: [
     Central: 1.011e-3
     LowerLimit: .809e-3
     UpperLimit: 1.2132e-3
+    Sigma: .101e-3
 
     Options: {
       Cal_set: @local::CalorimetryParameters_SPProd4_MC_SCE

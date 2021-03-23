@@ -214,10 +214,6 @@ void protoana::PDSPThinSliceFitter::BuildMCSamples() {
                                  fOutputFile);
   }
 
-  //if (fDoSysts) {
-  //  fThinSliceDriver->BuildSystSamples(fMCTree, fSamples, fIsSignalSample,
-  //                                     fBeamEnergyBins);
-  //}
 }
 
 void protoana::PDSPThinSliceFitter::FillMCEvents() {
@@ -590,10 +586,9 @@ void protoana::PDSPThinSliceFitter::RunFitAndSave() {
       DefineFitFunction();
       break;
   }
+
   fMinimizer->SetFunction(fFitFunction);
   int fit_status = fMinimizer->Minimize();
-
-  //fMCFile.Close();
 
   if (!fit_status) {
     std::cout << "Failed to find minimum" << std::endl;
@@ -1290,8 +1285,6 @@ void protoana::PDSPThinSliceFitter::Configure(std::string fcl_file) {
       fSystParameters[par_vec[i].get<std::string>("Name")] = syst;
       ++fTotalSystParameters;
     }
-
-    //fThinSliceDriver->SetupSysts(fSystParameters);
   }
 }
 
@@ -1880,3 +1873,4 @@ void protoana::PDSPThinSliceFitter::BuildFakeDataXSecs() {
     }
   }
 }
+

@@ -831,6 +831,7 @@ void protoana::AbsCexDriver::SystRoutine_dEdX_Cal(
   for (auto it = fFullSelectionVars["dEdX_Cal_Spline"].begin(); 
        it != fFullSelectionVars["dEdX_Cal_Spline"].end(); ++it) {
     int selection_ID = it->first;
+
     //Build the full hist
     for (auto it2 = samples.begin(); it2 != samples.end(); ++it2) {
       for (size_t i = 0; i < it2->second.size(); ++i) {
@@ -841,6 +842,7 @@ void protoana::AbsCexDriver::SystRoutine_dEdX_Cal(
     }
 
     for (size_t i = 0; i < it->second.size(); ++i) {
+      it->second[i]->Write();
       it->second[i]->Divide(full_hists[selection_ID]);
     }
     

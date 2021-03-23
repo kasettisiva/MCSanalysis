@@ -58,6 +58,7 @@ class PDSPThinSliceFitter {
     std::map<int, std::vector<TH1*>> & truth_inc_hists,
     std::map<int, std::vector<TH1*>> & truth_xsec_hists);
   void BuildFakeDataXSecs();
+  //void Get1DSystPlots();
 
   std::vector<double> GetBestFitParsVec();
 
@@ -141,7 +142,7 @@ class PDSPThinSliceFitter {
   fhicl::ParameterSet fAnalysisOptions;
   double fPitch;
   std::string fSliceMethod;
-  bool fDoFakeData, fDoThrows, fDoSysts;
+  bool fDoFakeData, fDoThrows, fDoSysts/*, f1DSystPlots*/;
   int fFitFunctionType;
   bool fFillIncidentInFunction = false;
   bool fFitFlux;

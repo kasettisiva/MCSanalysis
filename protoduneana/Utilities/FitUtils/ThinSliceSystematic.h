@@ -10,6 +10,7 @@ class ThinSliceSystematic {
       fCentral(pset.get<double>("Central")),
       fUpperLimit(pset.get<double>("UpperLimit")),
       fLowerLimit(pset.get<double>("LowerLimit")),
+      fSigma(pset.get<double>("Sigma")),
       fOptions(pset.get<fhicl::ParameterSet>("Options")) {
     fName = "par_" + fType + "_syst";
   };
@@ -42,6 +43,14 @@ class ThinSliceSystematic {
     fVal = v;
   };
 
+  void SetToNSigma(int n = 1) {
+    SetValue(n*fSigma);
+  }
+
+  void SetToCentral() {
+    SetValue(fCentral); 
+  }
+
   template <typename T> const T GetOption(std::string name) const {
     return fOptions.get<T>(name);
   }
@@ -53,6 +62,7 @@ class ThinSliceSystematic {
   double fCentral;
   double fUpperLimit; 
   double fLowerLimit;
+  double fSigma;
 
   fhicl::ParameterSet fOptions;
 
