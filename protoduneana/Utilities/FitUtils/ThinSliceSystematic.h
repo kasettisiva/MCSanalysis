@@ -10,7 +10,7 @@ class ThinSliceSystematic {
       fCentral(pset.get<double>("Central")),
       fUpperLimit(pset.get<double>("UpperLimit")),
       fLowerLimit(pset.get<double>("LowerLimit")),
-      fSigma(pset.get<double>("Sigma")),
+      fSigma(pset.get<double>("Sigma", 1.)),
       fOptions(pset.get<fhicl::ParameterSet>("Options")) {
     fName = "par_" + fType + "_syst";
   };

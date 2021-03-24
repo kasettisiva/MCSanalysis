@@ -575,6 +575,7 @@ void protoana::AbsCexDriver::RefillMCSamples(
           = fFullSelectionSplines["dEdX_Cal_Spline"][selection_ID][bin-1];
       weight *= spline->Eval(syst_pars.at("dEdX_Cal_Spline").GetValue());
     }
+    weight *= GetSystWeight_BeamRes(event, syst_pars);
 
     this_sample->FillSelectionHist(selection_ID, val, weight);
 
@@ -652,6 +653,9 @@ void protoana::AbsCexDriver::SetupSysts(
     }
     SystRoutine_dEdX_Cal(events, samples, pars, output_file);
   }
+
+  SetupSyst_BeamRes(events, samples, pars, output_file);
+
 }
 
 void protoana::AbsCexDriver::BuildSystSamples(
@@ -864,6 +868,80 @@ void protoana::AbsCexDriver::SystRoutine_dEdX_Cal(
       c.Write();
     }
   }
+}
+
+void protoana::AbsCexDriver::SetupSyst_BeamRes(
+    const std::vector<ThinSliceEvent> & events,
+    std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+    const std::map<std::string, ThinSliceSystematic> & pars,
+    TFile & output_file) {
+  if (pars.find("beam_res_width") == pars.end()) {
+    fStaticBeamResWidth = true;
+  }
+
+  if (pars.find("beam_res_mean") == pars.end()) {
+    fStaticBeamResMean = true;
+  }
+
+  if (fStaticBeamResMean && fStaticBeamResWidth) return; 
+
+  if (fStaticBeamResMean) {
+    fBeamResMeanVal
+        = pars.at("beam_res_width").GetOption<double>("StaticMean");
+  }
+
+  if (fStaticBeamResWidth) {
+    fBeamResWidthVal
+        = pars.at("beam_res_mean").GetOption<double>("StaticWidth");
+  }
+
+}
+
+double protoana::AbsCexDriver::GetSystWeight_BeamRes(
+    const ThinSliceEvent & event, const std::map<std::string, ThinSliceSystematic> & pars) {
+  if (fStaticBeamResMean && fStaticBeamResWidth) {
+    return 1.;
+  }
+
+  if (event.GetPDG() != 211) return 1.;
+
+  double nominal_width = 1.;
+  double varied_width = 1.;
+  double nominal_mean = 1.;
+  double varied_mean = 1.;
+
+  //Width is variable
+  if (!fStaticBeamResWidth) {
+    nominal_width = pars.at("beam_res_width").GetCentral();
+    varied_width = pars.at("beam_res_width").GetValue();
+  }
+  else {
+    nominal_width = fBeamResWidthVal;
+    varied_width = fBeamResWidthVal;
+  }
+
+  if (!fStaticBeamResMean) {
+    nominal_mean = pars.at("beam_res_mean").GetCentral();
+    varied_mean = pars.at("beam_res_mean").GetValue();
+  }
+  else {
+    nominal_mean = fBeamResMeanVal;
+    varied_mean = fBeamResMeanVal;
+  }
+
+  double true_KE
+      = sqrt(std::pow(event.GetTrueStartP()*1.e3, 2) +
+             std::pow(event.GetTrueMass(), 2)) - event.GetTrueMass();
+  double reco_KE
+      = sqrt(std::pow(event.GetBeamInstP()*1.e3, 2) +
+             std::pow(event.GetTrueMass(), 2)) - event.GetTrueMass();
+
+  double res = (true_KE - reco_KE)/true_KE; 
+  double exponent_factor
+      = .5*std::pow(((res - nominal_mean)/nominal_width), 2);
+  exponent_factor
+      -= .5*std::pow(((res - varied_mean)/varied_width), 2);
+  return (nominal_width/varied_width)*exp(exponent_factor);
 }
 
 void protoana::AbsCexDriver::BuildDataHists(
@@ -1905,7 +1983,8 @@ void protoana::AbsCexDriver::GetCurrentTruthHists(
       auto & incident_vec_2D = samples[i_s];
       for (size_t i = 0; i < incident_vec_2D.size(); ++i) {
         for (size_t j = 0; j < incident_vec_2D[i].size(); ++j) {
-          if (fExtraOptions.get<std::string>("SliceMethod") == "E") {
+          //if (fExtraOptions.get<std::string>("SliceMethod") == "E") {
+          if (/*fExtraOptions.get<std::string>("SliceMethod")*/fSliceMethod == "E") {
             incident_vec_2D[i][j].FillESliceHist(*temp_inc_hist);
           }
           else {

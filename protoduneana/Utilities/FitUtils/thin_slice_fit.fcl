@@ -90,7 +90,29 @@ Systematics: [
       Cal_set: @local::CalorimetryParameters_SPProd4_MC_SCE
       C_cal_vars: [.809e-3, .910e-3, 1.121e-3, 1.2132e-3]
     }
-  }
+  } #,
+  #{
+  #  Name: "beam_res_width"
+  #  Central: 2.618e-2
+  #  LowerLimit: 1.e-2
+  #  UpperLimit: 4.e-2
+  #  Sigma: 2.618e-3
+   
+  #  Options: {
+  #    StaticMean: -1.89e-3
+  #  }
+  #} #,
+  #{
+  #  Name: "beam_res_mean"
+  #  Central: -1.89e-3
+  #  LowerLimit: -4.0e-3
+  #  UpperLimit: 1.0e-3
+  #  Sigma: 1.89e-4
+
+  #  Options: {
+  #    StaticWidth: 2.618e-2
+  #  }
+  #}
 ]
 
 Selections: [
@@ -271,7 +293,7 @@ DrawXSecUnderflow: false
 ## Validation
 RandomStart: false 
 DoFakeData: false
-DoThrows: false 
+DoThrows: true
 NThrows: 1000
 DoSysts: true 
 MaxRethrows: 1000

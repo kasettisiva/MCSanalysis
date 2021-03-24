@@ -125,6 +125,15 @@ class AbsCexDriver : public ThinSliceDriver {
       const std::map<std::string, ThinSliceSystematic> & pars,
       TFile & output_file) override;
 
+  void SetupSyst_BeamRes(
+      const std::vector<ThinSliceEvent> & events,
+      std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+      const std::map<std::string, ThinSliceSystematic> & pars,
+      TFile & output_file);
+
+  double GetSystWeight_BeamRes(
+      const ThinSliceEvent & event,
+      const std::map<std::string, ThinSliceSystematic> & pars);
  private:
    TH2D * fEndSlices;
    TFile * fIn;
@@ -140,6 +149,11 @@ class AbsCexDriver : public ThinSliceDriver {
    int fSliceCut;
 
    double fBetaP, fRho, fWion, fAlpha, fNominalCCal;
+
+   bool fStaticBeamResWidth = false;
+   bool fStaticBeamResMean = false;
+   double fBeamResMeanVal = 1.;
+   double fBeamResWidthVal = 1.;
 
    std::map<std::string, std::map<int, std::vector<TH1D*>>> fFullSelectionVars;
    std::map<std::string, std::map<int, std::vector<TSpline3*>>> fFullSelectionSplines;

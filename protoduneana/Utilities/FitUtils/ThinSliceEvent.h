@@ -14,6 +14,7 @@ class ThinSliceEvent {
     true_beam_mass = -999;
     reco_beam_endZ = -999;
     beam_inst_P = -999;
+    pdg = -999;
     reco_beam_incidentEnergies = std::vector<double>();
     true_beam_incidentEnergies = std::vector<double>();
     true_beam_traj_Z = std::vector<double>();
@@ -142,10 +143,19 @@ class ThinSliceEvent {
   double GetBeamInstP() const {
     return beam_inst_P;
   };
+
+  void SetPDG(int p) {
+    pdg = p;
+  };
+  int GetPDG() const {
+    return pdg;
+  };
+
  private:
   int event_ID, subrun_ID, run_ID;
   int sample_ID;
   int selection_ID;
+  int pdg;
   double true_beam_interactingEnergy, reco_beam_interactingEnergy;
   double true_beam_endP, true_beam_mass;
   double reco_beam_endZ, true_beam_startP;

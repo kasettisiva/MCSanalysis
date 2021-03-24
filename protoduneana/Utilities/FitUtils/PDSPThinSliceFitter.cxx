@@ -4,6 +4,8 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <chrono>
+#include <thread>
 #include "math.h"
 #include "stdio.h"
 
@@ -221,6 +223,7 @@ void protoana::PDSPThinSliceFitter::FillMCEvents() {
   std::cout << "Filling MC Events" << std::endl;
 
   int sample_ID, selection_ID, event, run, subrun;
+  int true_beam_PDG;
   double true_beam_interactingEnergy, reco_beam_interactingEnergy;
   double true_beam_endP, true_beam_mass;
   double reco_beam_endZ, true_beam_startP;
@@ -233,6 +236,8 @@ void protoana::PDSPThinSliceFitter::FillMCEvents() {
   fMCTree->SetBranchAddress("event", &event);
   fMCTree->SetBranchAddress("subrun", &subrun);
   fMCTree->SetBranchAddress("run", &run);
+
+  fMCTree->SetBranchAddress("true_beam_PDG", &true_beam_PDG);
 
   fMCTree->SetBranchAddress("new_interaction_topology", &sample_ID);
   fMCTree->SetBranchAddress("selection_ID", &selection_ID);
@@ -281,6 +286,7 @@ void protoana::PDSPThinSliceFitter::FillMCEvents() {
     fEvents.back().SetEField(*beam_EField);
     fEvents.back().SetTrackPitch(*track_pitch);
     fEvents.back().SetBeamInstP(beam_inst_P);
+    fEvents.back().SetPDG(true_beam_PDG);
   }
 
   std::cout << "Filled MC Events" << std::endl;
@@ -613,12 +619,14 @@ void protoana::PDSPThinSliceFitter::RunFitAndSave() {
 
     TH1D parsHist("postFitPars", "", total_parameters, 0,
                   total_parameters);
-
+    TH1D parsHist_normal_val("postFitParsNormal", "", 
+                             total_parameters, 0, total_parameters);
     int n_par = 0;
     for (auto it = fSignalParameters.begin();
          it != fSignalParameters.end(); ++it) {
       for (size_t i = 0; i < it->second.size(); ++i) {
         parsHist.SetBinContent(n_par+1, fMinimizer->X()[n_par]);
+        parsHist_normal_val.SetBinContent(n_par+1, fMinimizer->X()[n_par]);
         parsHist.SetBinError(n_par+1,
                              sqrt(fMinimizer->CovMatrix(n_par, n_par)));
         parsHist.GetXaxis()->SetBinLabel(
@@ -639,6 +647,7 @@ void protoana::PDSPThinSliceFitter::RunFitAndSave() {
     for (auto it = fFluxParameters.begin();
          it != fFluxParameters.end(); ++it) {
       parsHist.SetBinContent(n_par+1, fMinimizer->X()[n_par]);
+      parsHist_normal_val.SetBinContent(n_par+1, fMinimizer->X()[n_par]);
       parsHist.SetBinError(n_par+1,
                            sqrt(fMinimizer->CovMatrix(n_par, n_par)));
       parsHist.GetXaxis()->SetBinLabel(
@@ -660,6 +669,7 @@ void protoana::PDSPThinSliceFitter::RunFitAndSave() {
          it != fSystParameters.end(); ++it) {
 
       parsHist.SetBinContent(n_par+1, fMinimizer->X()[n_par]/it->second.GetCentral());
+      parsHist_normal_val.SetBinContent(n_par+1, fMinimizer->X()[n_par]);
       parsHist.SetBinError(n_par+1,
                            sqrt(fMinimizer->CovMatrix(n_par, n_par))/it->second.GetCentral());
       parsHist.GetXaxis()->SetBinLabel(
@@ -730,7 +740,7 @@ void protoana::PDSPThinSliceFitter::RunFitAndSave() {
     //save post fit stacks
     CompareDataMC(true);
     if (fDoThrows) 
-      DoThrows(parsHist, cov);
+      DoThrows(parsHist_normal_val, cov);
   }
   fMCFile.Close();
 }
@@ -815,10 +825,15 @@ void protoana::PDSPThinSliceFitter::DoThrows(const TH1D & pars, const TMatrixD *
        it != fMeasurementSamples.end(); ++it) {
     truth_inc_throw_hists[*it] = std::vector<TH1*>();
     truth_xsec_throw_hists[*it] = std::vector<TH1*>();
-    std::cout << "Making " << *it << std::endl;
   }
 
+  int n_signal_flux_pars = fTotalSignalParameters + fTotalFluxParameters;
+
   for (size_t i = 0; i < fNThrows; ++i) {
+    //if (! (i%100) ) {
+      std::cout << "Throw " << i << std::endl;
+      //auto start = std::chrono::high_resolution_clock::now();
+    //}
     vals.push_back(std::vector<double>(pars.GetNbinsX(), 1.));
     
     bool rethrow = true;
@@ -832,17 +847,24 @@ void protoana::PDSPThinSliceFitter::DoThrows(const TH1D & pars, const TMatrixD *
       TVectorD rand_times_chol = chol.GetU()*rand;
 
       for (int j = 1; j <= pars.GetNbinsX(); ++j) {
+        std::cout << rand_times_chol[j-1] << " ";
         vals.back()[j-1] = pars.GetBinContent(j) + rand_times_chol[j-1];
 
         //Configure this to truncate at 0 or rethrow
-        if (vals.back()[j-1] < 0.) {
+        if ((j-1 < n_signal_flux_pars) && (vals.back()[j-1] < 0.)) {
           all_pos = false;
         }
         rethrow = !all_pos;
 
       }
+      std::cout << std::endl;
       ++nRethrows;
     }
+    
+    for (double v : vals.back()) {
+      std::cout << v << " ";
+    }
+    std::cout << std::endl;
 
     //Applies the variations according to the thrown parameters
     fFillIncidentInFunction = true;
@@ -878,6 +900,10 @@ void protoana::PDSPThinSliceFitter::DoThrows(const TH1D & pars, const TMatrixD *
         xsec_hist->Scale(1.E27/ (fPitch * 1.4 * 6.022E23 / 39.948 ));
       }
     }
+
+    //auto end = std::chrono::high_resolution_clock::now();
+    //auto difference = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+    //std::cout << "Time taken: " << difference << std::endl;
   }
 
   PlotThrows(throw_hists, truth_throw_hists,
@@ -1192,8 +1218,8 @@ void protoana::PDSPThinSliceFitter::DefineFitFunction2() {
 
         std::pair<double, size_t> chi2_points
             = fThinSliceDriver->CalculateChi2(fSamples, fDataSet);
-        //std::cout << std::fixed;
-        //std::cout << "Fit step: " << fNFitSteps << " " << std::setprecision(8) << chi2_points.first << std::endl;
+        std::cout << std::fixed;
+        std::cout << "Fit step: " << fNFitSteps << " " << std::setprecision(8) << chi2_points.first << std::endl;
         //for (size_t i = 0;
         //     i < fTotalSignalParameters + fTotalFluxParameters + fTotalSystParameters; ++i) {
         //  std::cout << coeffs[i] << " ";
