@@ -342,8 +342,20 @@ void protoana::PDSPThinSliceFitter::BuildDataHists() {
     BuildFakeDataXSecs();
   }
 
+  if (fDoFakeData) {
+    std::cout << "Testing" << std::endl;
+    for (auto it = fFakeDataXSecs.begin(); it != fFakeDataXSecs.end(); ++it) {
+      std::cout << it->first << " " << it->second->GetNbinsX() << std::endl;
+    }
+  }
 
   inputFile.Close();
+  if (fDoFakeData) {
+    std::cout << "Testing" << std::endl;
+    for (auto it = fFakeDataXSecs.begin(); it != fFakeDataXSecs.end(); ++it) {
+      std::cout << it->first << " " << it->second->GetNbinsX() << std::endl;
+    }
+  }
 
   fOutputFile.cd();
   TDirectory * out = (TDirectory *)fOutputFile.mkdir("Data");
@@ -375,33 +387,6 @@ void protoana::PDSPThinSliceFitter::SaveMCSamples() {
     }
   }
 
-  /*if (fDoSysts) {
-    TDirectory * syst_dir = fOutputFile.mkdir("Systs");
-    syst_dir->cd();
-
-    std::vector<fhicl::ParameterSet> routines
-        = fAnalysisOptions.get<std::vector<fhicl::ParameterSet>>("Systematics");
-    for (auto & r : routines) {
-      std::string syst_name = r.get<std::string>("Name");
-      syst_dir->mkdir(syst_name.c_str());
-      syst_dir->cd(syst_name.c_str());
-      for (auto it = fSamples.begin(); it != fSamples.end(); ++it) {
-        for (size_t i = 0; i < it->second.size(); ++i) {
-          for (size_t j = 0; j < it->second[i].size(); ++j) {
-            ThinSliceSample & sample = it->second[i][j];
-            const std::map<int, std::vector<TH1 *>> & shift_hists
-                = sample.GetShifts(syst_name);
-            for (auto it2 = shift_hists.begin(); it2 != shift_hists.end(); ++it2) {
-              for (size_t k = 0; k < it2->second.size(); ++k) {
-                it2->second[k]->Write();
-              }
-            }
-          }
-        }
-      }
-    }
-  }*/
-
   TDirectory * top_dir = fOutputFile.GetDirectory("");
   TDirectory * xsec_dir = fOutputFile.mkdir("PreFitXSec");
   std::string extra_name = "PreFit";
@@ -417,16 +402,6 @@ void protoana::PDSPThinSliceFitter::CompareDataMC(
       plot_dir, fPlotRebinned, post_fit);
 
   xsec_dir->cd();
-  /*
-  if (!post_fit) {
-    fOutputFile.mkdir("PreFitXSec");
-    fOutputFile.cd("PreFitXSec");
-  }
-  else {
-    fOutputFile.mkdir("PostFitXSec");
-    fOutputFile.cd("PostFitXSec");
-  }
-  */
 
   //Get the incident histogram from all of the relevant samples
   for (size_t i = 0; i < fMeasurementSamples.size(); ++i) {
@@ -437,7 +412,6 @@ void protoana::PDSPThinSliceFitter::CompareDataMC(
     std::vector<double> signal_bins = fSignalBins[sample_ID];
     if (fDrawXSecUnderflow) signal_bins.insert(signal_bins.begin(), 0.);
 
-    //std::string signal_name = (post_fit ? "PostFit" : "PreFit");
     std::string signal_name = extra_name;
     signal_name += samples_vec_2D[0][1].GetName() + "Hist";
     TH1D signal_hist(signal_name.c_str(), "", signal_bins.size() - 1,
@@ -459,7 +433,6 @@ void protoana::PDSPThinSliceFitter::CompareDataMC(
     signal_hist.Write();
 
     //Get the incident histogram from all of the relevant samples
-    //std::string inc_name = (post_fit ? "PostFit" : "PreFit");
     std::string inc_name = extra_name;
     inc_name += "TotalIncident" + samples_vec_2D[0][0].GetName();
 
@@ -467,16 +440,13 @@ void protoana::PDSPThinSliceFitter::CompareDataMC(
                                           signal_bins.size() - 1,
                                           &signal_bins[0]);
     std::map<int, std::vector<TH1D*>> temp_hists;
-    //std::map<int, std::vector<std::string>> titles;
     for (size_t i = 0; i < fIncidentSamples.size(); ++i) {
       auto & vec_2D = fSamples[fIncidentSamples[i]];
       temp_hists[fIncidentSamples[i]] = std::vector<TH1D*>();
-      //titles[fIncidentSamples[i]] = std::vector<TH1D*>();
       for (size_t j = 0; j < vec_2D.size(); ++j) {
         auto & samples_vec = vec_2D[j];
         for (size_t k = 0; k < samples_vec.size(); ++k) {
           if (j == 0) {
-            //std::string name = (post_fit ? "PostFit" : "PreFit");
             std::string name = extra_name;
             name += "Incident" + samples_vec_2D[0][1].GetName() +
                      samples_vec[k].GetName() + std::to_string(k);
@@ -508,8 +478,6 @@ void protoana::PDSPThinSliceFitter::CompareDataMC(
       fNominalIncs[sample_ID] = total_incident_hist;
     }
 
-    //std::string xsec_name = (post_fit ? "PostFit" : "PreFit") +
-    //                         samples_vec_2D[0][1].GetName() + "XSec";
     std::string xsec_name = extra_name + samples_vec_2D[0][1].GetName() +
                             "XSec";
     TH1D * xsec_hist = (TH1D*)signal_hist.Clone(xsec_name.c_str());
@@ -546,7 +514,6 @@ void protoana::PDSPThinSliceFitter::CompareDataMC(
       fNominalXSecs[sample_ID] = xsec_hist;
     }
 
-    //std::string stack_name = (post_fit ? "PostFit" : "PreFit");
     std::string stack_name = extra_name;
     stack_name += "IncidentStack" + samples_vec_2D[0][1].GetName();
     THStack inc_stack(stack_name.c_str(), ";Reconstructed KE (MeV)");
@@ -555,7 +522,6 @@ void protoana::PDSPThinSliceFitter::CompareDataMC(
       for (size_t i = 0; i < it->second.size(); ++i) {
         std::pair<int, int> color_fill =
             fThinSliceDriver->GetColorAndStyle(iColor, fPlotStyle);
-        //it->second[i]->SetTitle();
         it->second[i]->SetFillColor(color_fill.first);
         it->second[i]->SetFillStyle(color_fill.second);
         it->second[i]->SetLineColor(1);
@@ -578,8 +544,6 @@ void protoana::PDSPThinSliceFitter::CompareDataMC(
   for (auto it = fSamples.begin(); it != fSamples.end(); ++it) {
     fBestFitTruthVals[it->first]
         = std::vector<double>(it->second[0].size(), 0.);
-    //best_fit_errs[it->first]
-    //    = std::vector<double>(sample_bins[it->first], 0.);
    
     for (size_t i = 0; i < it->second[0].size(); ++i) {
       double best_fit_val_i = 0.;
@@ -1830,15 +1794,17 @@ void protoana::PDSPThinSliceFitter::PlotThrows(
     leg.AddEntry(&nominal_gr, "Nominal", "p");
 
     if (fDoFakeData) {
-      std::cout << "Plotting fake data" << std::endl;
+      //std::cout << "Plotting fake data" << std::endl;
       std::vector<double> fake_xsec_vals;
-      std::cout << xs.size() << std::endl;
+      //std::cout << xs.size() << std::endl;
       for (size_t i = 0; i < xs.size(); ++i) {
 
-        std::cout << fFakeDataXSecs[it->first] << std::endl;
+        //std::cout << fFakeDataXSecs[it->first] << std::endl;
+        //std::cout << "Testing" << std::endl;
+        //std::cout << fFakeDataXSecs[it->first]->GetNbinsX() << std::endl;
         fake_xsec_vals.push_back(
             fFakeDataXSecs[it->first]->GetBinContent(i+1));
-        std::cout << "Adding " << fake_xsec_vals.back() << std::endl;
+        //std::cout << "Adding " << fake_xsec_vals.back() << std::endl;
       }
       TGraph * fake_gr = new TGraph(xs.size(), &xs[0], &fake_xsec_vals[0]);
       fake_gr->Write();
@@ -1937,7 +1903,7 @@ void protoana::PDSPThinSliceFitter::BuildFakeDataXSecs() {
     }
 
     std::string inc_name = "FakeData" +
-                             samples_vec_2D[0][1].GetName() + "XSec";
+                             samples_vec_2D[0][1].GetName() + "Inc";
     TH1D * temp_inc = new TH1D(inc_name.c_str(), "", fSignalBins[s].size() - 1,
                                &fSignalBins[s][0]);
     for (size_t i = 0; i < fIncidentSamples.size(); ++i) {
@@ -1983,6 +1949,14 @@ void protoana::PDSPThinSliceFitter::BuildFakeDataXSecs() {
     fFakeDataXSecs[s] = temp_xsec;
     fFakeDataIncs[s] = temp_inc;
 
+    fFakeDataXSecs[s]->SetDirectory(0);
+    fFakeDataIncs[s]->SetDirectory(0);
+
+    //std::cout << "Xsec vals " << fFakeDataXSecs[s] << std::endl;
+    //for (int i = 1; i <= temp_xsec->GetNbinsX(); ++i) {
+    //  std::cout << temp_xsec->GetBinContent(i) << " ";
+    //}
+    //std::cout << std::endl;
   }
 
   //Now, reset all samples

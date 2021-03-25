@@ -15,7 +15,8 @@ DriverName: "protoana::AbsCexDriver"
 AnalysisOptions: {
   #FakeDataRoutine: "SampleScales"
   #FakeDataRoutine: "BinnedScales"
-  FakeDataRoutine: "G4RW"
+  #FakeDataRoutine: "G4RW"
+  FakeDataRoutine: "dEdX"
 
   FakeDataScales: [
     #[1, 2.]
@@ -31,6 +32,11 @@ AnalysisOptions: {
     Position: 2 
     Shift: 1
     Full: true 
+  }
+
+  FakeDatadEdX: {
+    Cal_set: @local::CalorimetryParameters_SPProd4_MC_SCE
+    VariedCCal: 1.051e-3
   }
 
   #EndZCut: 226. 
@@ -63,30 +69,30 @@ Systematics: [
   #    Cal_set: @local::CalorimetryParameters_SPProd4_MC_SCE
   #  }
   #}
-  #{
-  #  Name: "dEdX_Cal_Spline"
-  #  Central: 1.011e-3
-  #  LowerLimit: .809e-3
-  #  UpperLimit: 1.2132e-3
-  #  Sigma: .101e-3
-   
-  #  Options: {
-  #    Cal_set: @local::CalorimetryParameters_SPProd4_MC_SCE
-  #    C_cal_vars: [.809e-3, .910e-3, 1.121e-3, 1.2132e-3]
-  #  }
-  #} #,
   {
-    Name: "beam_res_width"
-    Central: 2.618e-2
-    LowerLimit: 1.e-2
-    UpperLimit: 4.e-2
-    Sigma: 2.618e-3
+    Name: "dEdX_Cal_Spline"
+    Central: 1.011e-3
+    LowerLimit: .809e-3
+    UpperLimit: 1.2132e-3
+    Sigma: .101e-3
   
     Options: {
-      StaticMean: -1.89e-3
-      WeightCap: 50 
+      Cal_set: @local::CalorimetryParameters_SPProd4_MC_SCE
+      C_cal_vars: [.809e-3, .910e-3, 1.121e-3, 1.2132e-3]
     }
   } #,
+  #{
+  #  Name: "beam_res_width"
+  #  Central: 2.618e-2
+  #  LowerLimit: 1.e-2
+  #  UpperLimit: 4.e-2
+  #  Sigma: 2.618e-3
+  #
+  #  Options: {
+  #    StaticMean: -1.89e-3
+  #    WeightCap: 50 
+  #  }
+  #} #,
   #{
   #  Name: "beam_res_mean"
   #  Central: -1.89e-3
@@ -278,8 +284,8 @@ DrawXSecUnderflow: false
 
 ## Validation
 RandomStart: false 
-DoFakeData: false
-DoThrows: false
+DoFakeData: true 
+DoThrows: true 
 NThrows: 1000
 Do1DShifts: true
 DoSysts: true 

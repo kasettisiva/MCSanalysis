@@ -40,6 +40,11 @@ class AbsCexDriver : public ThinSliceDriver {
     ThinSliceDataSet & data_set, double & flux,
     std::map<int, std::vector<double>> & sample_scales);
 
+  void FakeDatadEdX(
+    TTree * tree,
+    ThinSliceDataSet & data_set, double & flux,
+    std::map<int, std::vector<double>> & sample_scales);
+
   void BuildMCSamples(
       //TTree * tree,
       const std::vector<ThinSliceEvent> & events,
@@ -60,11 +65,11 @@ class AbsCexDriver : public ThinSliceDriver {
       const std::map<std::string, ThinSliceSystematic> & syst_pars,
       bool fill_incident = false) override;
 
-  void BuildSystSamples(
+  /*void BuildSystSamples(
       TTree * tree,
       std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
       const std::map<int, bool> & signal_sample_checks,
-      std::vector<double> & beam_energy_bins) override;
+      std::vector<double> & beam_energy_bins) override;*/
   
   void SystRoutine_G4RW(
       TTree * tree,

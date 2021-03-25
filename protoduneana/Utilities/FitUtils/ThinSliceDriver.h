@@ -50,11 +50,12 @@ class ThinSliceDriver {
       const std::map<std::string, ThinSliceSystematic> & syst_pars,
       bool fill_incident = false) = 0;
 
+  /*
   virtual void BuildSystSamples(
       TTree * tree,
       std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
       const std::map<int, bool> & signal_sample_checks,
-      std::vector<double> & beam_energy_bins) = 0;
+      std::vector<double> & beam_energy_bins) = 0;*/
 
   virtual std::pair<double, size_t> CalculateChi2(
       std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
