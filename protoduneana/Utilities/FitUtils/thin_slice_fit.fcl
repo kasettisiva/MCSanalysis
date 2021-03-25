@@ -1,12 +1,6 @@
 #include "FitterPlotStyle.fcl"
 #include "ProtoDUNECalibration.fcl"
 
-#MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_G4RW/eventSelection_mc_beamType.root"
-#DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_G4RW/eventSelection_mc_beamType.root"
-#MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_G4RW_Full/eventSelection_mc_beamType.root"
-#DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_G4RW_Full/eventSelection_mc_beamType.root"
-#MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_G4RW_2_18_21/eventSelection_mc_beamType.root"
-#DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_G4RW_2_18_21/eventSelection_mc_beamType.root"
 MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_3_17_21/eventSelection_mc_all.root"
 DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_3_17_21/eventSelection_mc_all.root"
 TreeName: "pduneana/beamana"
@@ -56,16 +50,6 @@ AnalysisOptions: {
   DoEnergyFix: true 
   EnergyFix: 80.
 
-  Systematics: [
-    #{
-    #  Name: "G4RW"
-    #}
-    {
-      Name: "dEdX_Cal"
-      C_cal_vars: [.811e-3, .911e-3, 1.111e-3, 1.211e-3]
-      Cal_set: @local::CalorimetryParameters_SPProd4_MC_SCE
-    }
-  ]
 }
 
 Systematics: [
@@ -79,38 +63,40 @@ Systematics: [
   #    Cal_set: @local::CalorimetryParameters_SPProd4_MC_SCE
   #  }
   #}
-  {
-    Name: "dEdX_Cal_Spline"
-    Central: 1.011e-3
-    LowerLimit: .809e-3
-    UpperLimit: 1.2132e-3
-    Sigma: .101e-3
-
-    Options: {
-      Cal_set: @local::CalorimetryParameters_SPProd4_MC_SCE
-      C_cal_vars: [.809e-3, .910e-3, 1.121e-3, 1.2132e-3]
-    }
-  } #,
   #{
-  #  Name: "beam_res_width"
-  #  Central: 2.618e-2
-  #  LowerLimit: 1.e-2
-  #  UpperLimit: 4.e-2
-  #  Sigma: 2.618e-3
+  #  Name: "dEdX_Cal_Spline"
+  #  Central: 1.011e-3
+  #  LowerLimit: .809e-3
+  #  UpperLimit: 1.2132e-3
+  #  Sigma: .101e-3
    
   #  Options: {
-  #    StaticMean: -1.89e-3
+  #    Cal_set: @local::CalorimetryParameters_SPProd4_MC_SCE
+  #    C_cal_vars: [.809e-3, .910e-3, 1.121e-3, 1.2132e-3]
   #  }
   #} #,
+  {
+    Name: "beam_res_width"
+    Central: 2.618e-2
+    LowerLimit: 1.e-2
+    UpperLimit: 4.e-2
+    Sigma: 2.618e-3
+  
+    Options: {
+      StaticMean: -1.89e-3
+      WeightCap: 50 
+    }
+  } #,
   #{
   #  Name: "beam_res_mean"
   #  Central: -1.89e-3
   #  LowerLimit: -4.0e-3
   #  UpperLimit: 1.0e-3
   #  Sigma: 1.89e-4
-
+  #
   #  Options: {
   #    StaticWidth: 2.618e-2
+  #    WeightCap: 50
   #  }
   #}
 ]
@@ -293,8 +279,9 @@ DrawXSecUnderflow: false
 ## Validation
 RandomStart: false 
 DoFakeData: false
-DoThrows: true
+DoThrows: false
 NThrows: 1000
+Do1DShifts: true
 DoSysts: true 
 MaxRethrows: 1000
 #####################

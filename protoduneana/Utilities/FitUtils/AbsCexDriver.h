@@ -87,7 +87,8 @@ class AbsCexDriver : public ThinSliceDriver {
       TFile & output_file,
       std::vector<std::pair<int, int>> plot_style,
       bool plot_rebinned,
-      bool post_fit, int nPars) override;
+      bool post_fit, int nPars,
+      TDirectory * plot_dir) override;
 
   void GetCurrentHists(
       std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
@@ -134,6 +135,8 @@ class AbsCexDriver : public ThinSliceDriver {
   double GetSystWeight_BeamRes(
       const ThinSliceEvent & event,
       const std::map<std::string, ThinSliceSystematic> & pars);
+
+  void WrapUpSysts(TFile & output_file) override;
  private:
    TH2D * fEndSlices;
    TFile * fIn;
@@ -154,6 +157,10 @@ class AbsCexDriver : public ThinSliceDriver {
    bool fStaticBeamResMean = false;
    double fBeamResMeanVal = 1.;
    double fBeamResWidthVal = 1.;
+   TTree * fSystBeamResTree;
+   double fSystBeamResWeight, fSystBeamResMeanOutput;
+   double fSystBeamResWeightCap;
+   bool fSetupSystBeamRes = false;
 
    std::map<std::string, std::map<int, std::vector<TH1D*>>> fFullSelectionVars;
    std::map<std::string, std::map<int, std::vector<TSpline3*>>> fFullSelectionSplines;

@@ -14,6 +14,7 @@ void protoana::ThinSliceDriver::CompareDataMC(
     ThinSliceDataSet & data_set, TFile & output_file,
     std::vector<std::pair<int, int>> plot_style,
     int nPars,
+    TDirectory * plot_dir,
     bool plot_rebinned,
     bool post_fit) {
 
@@ -34,7 +35,7 @@ void protoana::ThinSliceDriver::CompareDataMC(
 
   CompareSelections(
       samples, data_set, output_file, plot_style, plot_rebinned,
-      post_fit, nPars);
+      post_fit, nPars, plot_dir);
 }
 
 

@@ -23,15 +23,9 @@ protoana::AbsCexDriver::AbsCexDriver(
       fSliceMethod(extra_options.get<std::string>("SliceMethod")) {
   fIn = new TFile("end_slices.root", "OPEN");
   fEndSlices = (TH2D*)fIn->Get("h2D")->Clone();
-  std::cout << "Get end slices" << fEndSlices << " " <<
-                fEndSlices->GetXaxis() << " " <<
-                fEndSlices->GetXaxis()->GetNbins() << std::endl;
   for (int i = 1; i <= 735; ++i) {
     fMeans[i] = fEndSlices->ProjectionY("", i, i)->GetMean();
   }
-  std::cout << "Get slices" << fEndSlices << " " <<
-                fEndSlices->GetXaxis() << " " <<
-                fEndSlices->GetXaxis()->GetNbins() << std::endl;
   if (fSliceMethod == "Traj") {
     fSliceCut = extra_options.get<int>("SliceCut");
   }
@@ -595,6 +589,13 @@ void protoana::AbsCexDriver::RefillMCSamples(
 
 }
 
+void protoana::AbsCexDriver::WrapUpSysts(TFile & output_file) {
+  if (fSetupSystBeamRes/*fSystBeamResTree*/) {
+    output_file.cd("SystBeamRes");
+    fSystBeamResTree->Write();
+  }
+}
+
 void protoana::AbsCexDriver::SetupSysts(
     const std::vector<ThinSliceEvent> & events,
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
@@ -878,9 +879,15 @@ void protoana::AbsCexDriver::SetupSyst_BeamRes(
   if (pars.find("beam_res_width") == pars.end()) {
     fStaticBeamResWidth = true;
   }
+  else {
+    fSystBeamResWeightCap = pars.at("beam_res_width").GetOption<double>("WeightCap");
+  }
 
   if (pars.find("beam_res_mean") == pars.end()) {
     fStaticBeamResMean = true;
+  }
+  else {
+    fSystBeamResWeightCap = pars.at("beam_res_mean").GetOption<double>("WeightCap");
   }
 
   if (fStaticBeamResMean && fStaticBeamResWidth) return; 
@@ -888,6 +895,7 @@ void protoana::AbsCexDriver::SetupSyst_BeamRes(
   if (fStaticBeamResMean) {
     fBeamResMeanVal
         = pars.at("beam_res_width").GetOption<double>("StaticMean");
+  //fSystBeamResWeightCap = pars.at("beam_res_width").GetOption<double>("WeightCap");
   }
 
   if (fStaticBeamResWidth) {
@@ -895,15 +903,31 @@ void protoana::AbsCexDriver::SetupSyst_BeamRes(
         = pars.at("beam_res_mean").GetOption<double>("StaticWidth");
   }
 
+  output_file.mkdir("SystBeamRes");
+  output_file.cd("SystBeamRes");
+  fSystBeamResTree = new TTree("tree", "");
+  fSystBeamResTree->Branch("Weight", &fSystBeamResWeight);
+  fSystBeamResTree->Branch("Mean", &fSystBeamResMeanOutput);
+  fSetupSystBeamRes = true;
+
+
 }
 
 double protoana::AbsCexDriver::GetSystWeight_BeamRes(
     const ThinSliceEvent & event, const std::map<std::string, ThinSliceSystematic> & pars) {
+  if ((pars.find("beam_res_width") == pars.end()) &&
+      (pars.find("beam_res_mean") == pars.end())) {
+    return 1.;
+  }
   if (fStaticBeamResMean && fStaticBeamResWidth) {
     return 1.;
   }
 
-  if (event.GetPDG() != 211) return 1.;
+  if (event.GetPDG() != 211) {
+    fSystBeamResWeight = 1.;
+    fSystBeamResTree->Fill();
+    return 1.;
+  }
 
   double nominal_width = 1.;
   double varied_width = 1.;
@@ -928,6 +952,7 @@ double protoana::AbsCexDriver::GetSystWeight_BeamRes(
     nominal_mean = fBeamResMeanVal;
     varied_mean = fBeamResMeanVal;
   }
+  fSystBeamResMeanOutput = varied_mean;
 
   double true_KE
       = sqrt(std::pow(event.GetTrueStartP()*1.e3, 2) +
@@ -941,7 +966,12 @@ double protoana::AbsCexDriver::GetSystWeight_BeamRes(
       = .5*std::pow(((res - nominal_mean)/nominal_width), 2);
   exponent_factor
       -= .5*std::pow(((res - varied_mean)/varied_width), 2);
-  return (nominal_width/varied_width)*exp(exponent_factor);
+  fSystBeamResWeight = (nominal_width/varied_width)*exp(exponent_factor);
+  if (fSystBeamResWeight > fSystBeamResWeightCap)
+    fSystBeamResWeight = fSystBeamResWeightCap;
+  fSystBeamResTree->Fill();
+
+  return fSystBeamResWeight;
 }
 
 void protoana::AbsCexDriver::BuildDataHists(
@@ -1745,9 +1775,11 @@ void protoana::AbsCexDriver::CompareSelections(
     ThinSliceDataSet & data_set, TFile & output_file,
     std::vector<std::pair<int, int>> plot_style,
     bool plot_rebinned,
-    bool post_fit, int nPars) {
+    bool post_fit, int nPars,
+    TDirectory * plot_dir) {
 
-  output_file.cd();
+  plot_dir->cd();
+  //output_file.cd();
   std::map<int, TH1*> data_hists
       = (plot_rebinned ?
          data_set.GetRebinnedSelectionHists() :
@@ -1866,7 +1898,8 @@ void protoana::AbsCexDriver::CompareSelections(
     mc_stack.Draw("hist");
     mc_stack.GetHistogram()->SetTitle("Abs;;");
     for (int i = 1; i < mc_stack.GetHistogram()->GetNbinsX(); ++i) {
-      hRatio->GetXaxis()->SetBinLabel(i, mc_stack.GetHistogram()->GetXaxis()->GetBinLabel(i));
+      hRatio->GetXaxis()->SetBinLabel(
+          i, mc_stack.GetHistogram()->GetXaxis()->GetBinLabel(i));
       mc_stack.GetHistogram()->GetXaxis()->SetBinLabel(i, "");
     }
     mc_stack.Draw("hist");

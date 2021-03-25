@@ -35,7 +35,9 @@ class PDSPThinSliceFitter {
   void BuildDataHists();
   //void BuildSystSamples();
   void InitializeMCSamples();
-  void CompareDataMC(bool post_fit = false);
+  void CompareDataMC(
+      std::string extra_name, TDirectory * xsec_dir, TDirectory * plot_dir,
+      bool post_fit = false);
   void ScaleMCToData();
   void RunFitAndSave();
   ~PDSPThinSliceFitter();
@@ -47,6 +49,7 @@ class PDSPThinSliceFitter {
   void MakeMinimizer();
   void ParameterScans();
   void DoThrows(const TH1D & pars, const TMatrixD * cov);
+  void Do1DShifts(const TH1D & pars);
   void SetBestFit();
   void GetCurrentTruthHists(
     std::map<int, std::vector<TH1*>> & throw_hists,
@@ -142,7 +145,7 @@ class PDSPThinSliceFitter {
   fhicl::ParameterSet fAnalysisOptions;
   double fPitch;
   std::string fSliceMethod;
-  bool fDoFakeData, fDoThrows, fDoSysts/*, f1DSystPlots*/;
+  bool fDoFakeData, fDoThrows, fDo1DShifts, fDoSysts/*, f1DSystPlots*/;
   int fFitFunctionType;
   bool fFillIncidentInFunction = false;
   bool fFitFlux;

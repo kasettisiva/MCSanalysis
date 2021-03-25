@@ -66,7 +66,8 @@ class ThinSliceDriver {
       TFile & output_file,
       std::vector<std::pair<int, int>> plot_style,
       bool plot_rebinned,
-      bool post_fit, int nPars) = 0;
+      bool post_fit, int nPars,
+      TDirectory * plot_dir) = 0;
 
   virtual void GetCurrentHists(
       std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
@@ -111,6 +112,7 @@ class ThinSliceDriver {
       TFile & output_file,
       std::vector<std::pair<int, int>> plot_style,
       int nPars,
+      TDirectory * plot_dir,
       bool plot_rebinned = false,
       bool post_fit = false);
 
@@ -124,7 +126,7 @@ class ThinSliceDriver {
       std::vector<double> & beam_energy_bins,
       const std::map<std::string, ThinSliceSystematic> & pars,
       TFile & output_file) = 0;
-
+  virtual void WrapUpSysts(TFile & output_file) = 0;
  protected:
   fhicl::ParameterSet fExtraOptions;
  private:
