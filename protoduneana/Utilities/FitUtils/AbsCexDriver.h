@@ -163,7 +163,7 @@ class AbsCexDriver : public ThinSliceDriver {
    double fBeamResMeanVal = 1.;
    double fBeamResWidthVal = 1.;
    TTree * fSystBeamResTree;
-   double fSystBeamResWeight, fSystBeamResMeanOutput;
+   double fSystBeamResWeight, fSystBeamResMeanOutput, fSystBeamResWidthOutput;
    double fSystBeamResWeightCap;
    bool fSetupSystBeamRes = false;
 

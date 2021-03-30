@@ -882,6 +882,7 @@ void protoana::AbsCexDriver::SetupSyst_BeamRes(
   fSystBeamResTree = new TTree("tree", "");
   fSystBeamResTree->Branch("Weight", &fSystBeamResWeight);
   fSystBeamResTree->Branch("Mean", &fSystBeamResMeanOutput);
+  fSystBeamResTree->Branch("Width", &fSystBeamResWidthOutput);
   fSetupSystBeamRes = true;
 
 
@@ -927,6 +928,7 @@ double protoana::AbsCexDriver::GetSystWeight_BeamRes(
     varied_mean = fBeamResMeanVal;
   }
   fSystBeamResMeanOutput = varied_mean;
+  fSystBeamResWidthOutput = varied_width;
 
   double true_KE
       = sqrt(std::pow(event.GetTrueStartP()*1.e3, 2) +
@@ -934,8 +936,9 @@ double protoana::AbsCexDriver::GetSystWeight_BeamRes(
   double reco_KE
       = sqrt(std::pow(event.GetBeamInstP()*1.e3, 2) +
              std::pow(event.GetTrueMass(), 2)) - event.GetTrueMass();
-
+  //std::cout << "KE: " << true_KE << " " << reco_KE << std::endl;
   double res = (true_KE - reco_KE)/true_KE; 
+  //std::cout << "Res: " << res << std::endl;
   double exponent_factor
       = .5*std::pow(((res - nominal_mean)/nominal_width), 2);
   exponent_factor
