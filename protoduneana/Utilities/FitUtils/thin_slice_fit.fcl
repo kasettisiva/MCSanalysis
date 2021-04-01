@@ -105,32 +105,44 @@ Systematics: [
   #    WeightCap: 50
   #  }
   #} #,
-  #{
-  #  Name: "g4rw_1"
-  #  Central: 1.
-  #  LowerLimit: 0.8
-  #  UpperLimit: 1.2
-  #  Sigma: .2
+  {
+    Name: "g4rw_1"
+    Central: 1.
+    LowerLimit: 0.8
+    UpperLimit: 1.2
+    Sigma: .2
 
-  #  Options: {
-  #    Position: 0
-  #    PlusBranch: "g4rw_full_primary_plus_sigma_weight"
-  #    MinusBranch: "g4rw_full_primary_minus_sigma_weight"
-  #  }
-  #} #,
-  #{
-  #  Name: "g4rw_2"
-  #  Central: 1.
-  #  LowerLimit: 0.8
-  #  UpperLimit: 1.2
-  #  Sigma: .2
+    Options: {
+      Position: 0
+      PlusBranch: "g4rw_full_primary_plus_sigma_weight"
+      MinusBranch: "g4rw_full_primary_minus_sigma_weight"
 
-  #  Options: {
-  #    Position: 1
-  #    PlusBranch: "g4rw_full_primary_plus_sigma_weight"
-  #    MinusBranch: "g4rw_full_primary_minus_sigma_weight"
-  #  }
-  #} #,
+      IsGrid: true
+      GridBranch: "g4rw_full_grid_weights_0"
+      GridEnd: 2.0
+      GridStart: 0.1
+      GridN: 20
+    }
+  } ,
+  {
+    Name: "g4rw_2"
+    Central: 1.
+    LowerLimit: 0.1
+    UpperLimit: 2.0
+    Sigma: .2
+
+    Options: {
+      Position: 1
+      PlusBranch: "g4rw_full_primary_plus_sigma_weight"
+      MinusBranch: "g4rw_full_primary_minus_sigma_weight"
+
+      IsGrid: true
+      GridBranch: "g4rw_full_grid_weights_1"
+      GridEnd: 2.0
+      GridStart: 0.1
+      GridN: 20
+    }
+  },
   {
     Name: "g4rw_3"
     Central: 1.
@@ -331,7 +343,7 @@ DrawXSecUnderflow: false
 ## Validation
 RandomStart: false 
 DoFakeData: true 
-DoThrows: true
+DoThrows: false 
 NThrows: 1000
 Do1DShifts: true
 DoSysts: true 

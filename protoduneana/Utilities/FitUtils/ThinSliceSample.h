@@ -161,31 +161,29 @@ class ThinSliceSample {
   };
 
   void MakeSystematicSplines(std::string syst_name/*, bool do_insert = true*/) {
-    for (auto it = fSystematicShifts.begin(); it != fSystematicShifts.end();
-         ++it) {
-      for (auto it2 = it->second.begin(); it2 != it->second.end(); ++it2) {
-        int selection_ID = it2->first;
-        std::vector<TH1*> hists = it2->second;
-        TH1D * selection_hist = (TH1D*)fSelectionHists[selection_ID];
-        for (int i = 1; i <= selection_hist->GetNbinsX(); ++i) {
-          std::vector<double> vars;
-          for (size_t j = 0; j < hists.size(); ++j) {
-            if (selection_hist->GetBinContent(i) < 1.e-5) {
-              vars.push_back(1.);
-            }
-            else {
-              vars.push_back(
-                  hists[j]->GetBinContent(i)/selection_hist->GetBinContent(i));
-            }
+    for (auto it2 = fSystematicShifts[syst_name].begin();
+         it2 != fSystematicShifts[syst_name].end(); ++it2) {
+      int selection_ID = it2->first;
+      std::vector<TH1*> hists = it2->second;
+      TH1D * selection_hist = (TH1D*)fSelectionHists[selection_ID];
+      for (int i = 1; i <= selection_hist->GetNbinsX(); ++i) {
+        std::vector<double> vars;
+        for (size_t j = 0; j < hists.size(); ++j) {
+          if (selection_hist->GetBinContent(i) < 1.e-5) {
+            vars.push_back(1.);
           }
-          //if (do_insert)
-            vars.insert(vars.begin() + vars.size()/2, 1.);
-          std::string spline_name = selection_hist->GetName();
-          spline_name += "_" + syst_name + "_Spline_" + std::to_string(i);
-          fSystematicSplines[syst_name][selection_ID].push_back(
-              new TSpline3(spline_name.c_str(), &fSystematicVals[syst_name][0],
-                           &vars[0], vars.size()));
+          else {
+            vars.push_back(
+                hists[j]->GetBinContent(i)/selection_hist->GetBinContent(i));
+          }
         }
+        //if (do_insert)
+          vars.insert(vars.begin() + vars.size()/2, 1.);
+        std::string spline_name = selection_hist->GetName();
+        spline_name += "_" + syst_name + "_Spline_" + std::to_string(i);
+        fSystematicSplines[syst_name][selection_ID].push_back(
+            new TSpline3(spline_name.c_str(), &fSystematicVals[syst_name][0],
+                         &vars[0], vars.size()));
       }
     }
   };
