@@ -72,10 +72,12 @@ class AbsCexDriver : public ThinSliceDriver {
       std::vector<double> & beam_energy_bins) override;*/
   
   void SystRoutine_G4RW(
-      TTree * tree,
+      const std::vector<ThinSliceEvent> & events,
       std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
       const std::map<int, bool> & signal_sample_checks,
-      const fhicl::ParameterSet & routine);
+      std::vector<double> & beam_energy_bins,
+      const std::map<std::string, ThinSliceSystematic> & pars,
+      TFile & output_file);
 
   void SystRoutine_dEdX_Cal(
       const std::vector<ThinSliceEvent> & events,
@@ -140,6 +142,11 @@ class AbsCexDriver : public ThinSliceDriver {
   double GetSystWeight_BeamRes(
       const ThinSliceEvent & event,
       const std::map<std::string, ThinSliceSystematic> & pars);
+  double GetSystWeight_G4RW(
+      const ThinSliceEvent & event,
+      const std::map<std::string, ThinSliceSystematic> & pars,
+      const ThinSliceSample & sample,
+      int selection_ID, double val);
 
   void WrapUpSysts(TFile & output_file) override;
  private:
@@ -164,11 +171,15 @@ class AbsCexDriver : public ThinSliceDriver {
    double fBeamResWidthVal = 1.;
    TTree * fSystBeamResTree;
    double fSystBeamResWeight, fSystBeamResMeanOutput, fSystBeamResWidthOutput;
-   double fSystBeamResWeightCap;
+   double fSystBeamResWeightCap, fSystBeamResOutput;
    bool fSetupSystBeamRes = false;
 
    std::map<std::string, std::map<int, std::vector<TH1D*>>> fFullSelectionVars;
    std::map<std::string, std::map<int, std::vector<TSpline3*>>> fFullSelectionSplines;
+
+   std::map<std::string, std::map<int, std::vector<TH1D*>>> fG4RWSelectionVarsPlus;
+   std::map<std::string, std::map<int, std::vector<TH1D*>>> fG4RWSelectionVarsMinus;
+   std::vector<std::string> fActiveG4RWSysts;
 };
 }
 #endif

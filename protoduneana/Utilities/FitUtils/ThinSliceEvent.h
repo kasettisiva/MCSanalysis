@@ -23,6 +23,7 @@ class ThinSliceEvent {
     calibrated_dQdX = std::vector<double>();
     beam_EField = std::vector<double>();
     track_pitch = std::vector<double>();
+    g4rw_weights = std::map<std::string, std::vector<double>>();
   };
 
   int GetSampleID() const {
@@ -151,6 +152,23 @@ class ThinSliceEvent {
     return pdg;
   };
 
+  void MakeG4RWBranch(const std::string & br, const std::vector<double> & ws) {
+    g4rw_weights[br] = ws;
+  };
+  double GetG4RWWeight(const std::string & br, size_t i) const {
+    if (g4rw_weights.at(br).size() == 0) return 1.;
+    return g4rw_weights.at(br).at(i); 
+  };
+  const std::map<std::string, std::vector<double>> & GetG4RWWeightMap() const {
+    return g4rw_weights; 
+  };
+  const std::vector<double> & GetG4RWBranch(const std::string & br) const {
+    return g4rw_weights.at(br);
+  };
+  bool HasG4RWBranch(const std::string & br) const {
+    return (g4rw_weights.find(br) != g4rw_weights.end());
+  };
+
  private:
   int event_ID, subrun_ID, run_ID;
   int sample_ID;
@@ -167,7 +185,7 @@ class ThinSliceEvent {
   std::vector<int> true_beam_slices;
   std::vector<double> calibrated_dQdX, beam_EField,
                       track_pitch;
-
+  std::map<std::string, std::vector<double>> g4rw_weights;
 };
 }
 #endif

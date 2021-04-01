@@ -571,6 +571,9 @@ void protoana::AbsCexDriver::RefillMCSamples(
     }
     weight *= GetSystWeight_BeamRes(event, syst_pars);
 
+    weight *= GetSystWeight_G4RW(event, syst_pars, *this_sample, selection_ID,
+                                 val[0]);
+
     this_sample->FillSelectionHist(selection_ID, val, weight);
 
     //Fill the total incident hist with truth info
@@ -655,17 +658,275 @@ void protoana::AbsCexDriver::SetupSysts(
     SystRoutine_dEdX_Cal(events, samples, pars, output_file);
   }
 
+  SystRoutine_G4RW(events, samples, signal_sample_checks, beam_energy_bins,
+                   pars, output_file);
+
   SetupSyst_BeamRes(events, samples, pars, output_file);
 
 }
 
 
 void protoana::AbsCexDriver::SystRoutine_G4RW(
-    TTree * tree,
+    const std::vector<ThinSliceEvent> & events,
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     const std::map<int, bool> & signal_sample_checks,
-    const fhicl::ParameterSet & routine) {
-  return;
+    std::vector<double> & beam_energy_bins,
+    const std::map<std::string, ThinSliceSystematic> & pars,
+    TFile & output_file) {
+  
+  for (auto it = pars.begin(); it != pars.end(); ++it) {
+    if (it->first.find("g4rw") != std::string::npos ||
+        it->first.find("G4RW") != std::string::npos) {
+      std::cout << "Setting up g4rw syst: " << it->first << std::endl;
+    }
+    else {
+      continue;
+    }
+    fActiveG4RWSysts.push_back(it->first);
+
+    std::string dir_name = it->first;
+    dir_name += "_Syst_Dir";
+    TDirectory * dir = output_file.mkdir(dir_name.c_str());
+
+    size_t position = it->second.GetOption<size_t>("Position"); 
+    std::string plus_branch = it->second.GetOption<std::string>("PlusBranch");
+    std::string minus_branch = it->second.GetOption<std::string>("MinusBranch");
+    bool is_grid = it->second.GetOption<bool>("IsGrid");
+    std::string grid_branch = it->second.GetOption<std::string>("GridBranch");
+    std::vector<double> syst_vals;
+
+    if (!is_grid) {
+      syst_vals = {
+        it->second.GetLowerLimit(),
+        it->second.GetCentral(),
+        it->second.GetUpperLimit(),
+      };
+    }
+    else {
+      double end = it->second.GetOption<double>("GridEnd");
+      double start = it->second.GetOption<double>("GridStart");
+      int n = it->second.GetOption<int>("GridN"); 
+
+      double delta = (end - start)/(n-1);
+      std::cout << "Added to grid: ";
+      while (start <= end) {
+        syst_vals.push_back(start);
+        std::cout << syst_vals.back() << " ";
+        start += delta;
+      }
+    };
+
+    //Set up the variation hists
+    for (auto it2 = samples.begin(); it2 != samples.end(); ++it2) {
+      for (size_t i = 0; i < it2->second.size(); ++i) {
+        for (size_t j = 0; j < it2->second[i].size(); ++j) {
+          const std::map<int, TH1 *> & sel_hists
+              = it2->second[i][j].GetSelectionHists();
+          for (auto it3 = sel_hists.begin(); it3 != sel_hists.end(); ++it3) {
+            if (!is_grid) {
+              std::string shift_name = it3->second->GetName();
+              shift_name += "Minus";
+              TH1D * temp_hist = (TH1D*)it3->second->Clone(shift_name.c_str());
+
+              temp_hist->Reset();
+              it2->second[i][j].AddSystematicShift(temp_hist, it->first,
+                                                   it3->first);
+
+              shift_name = it3->second->GetName();
+              shift_name += "Plus";
+              temp_hist = (TH1D*)it3->second->Clone(shift_name.c_str());
+              temp_hist->Reset();
+
+              it2->second[i][j].AddSystematicShift(temp_hist, it->first,
+                                                   it3->first);
+            }
+            else {
+              for (size_t k = 0; k < syst_vals.size(); ++k) {
+                if (k == ((syst_vals.size() - 1)/2)) continue;
+                //std::cout << "Adding shift " << k << std::endl;
+                std::string shift_name = it3->second->GetName();
+                shift_name += "_" + std::to_string(k);
+                TH1D * temp_hist = (TH1D*)it3->second->Clone(shift_name.c_str());
+                temp_hist->Reset();
+                it2->second[i][j].AddSystematicShift(temp_hist, it->first,
+                                                     it3->first);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    for (size_t i = 0; i < events.size(); ++i) {
+      const ThinSliceEvent & event = events.at(i);
+      int sample_ID = event.GetSampleID();
+      int selection_ID = event.GetSelectionID();
+
+      double reco_beam_endZ = event.GetRecoEndZ();
+
+      const std::vector<double> & reco_beam_incidentEnergies
+          = event.GetRecoIncidentEnergies();
+      //double beam_inst_P = event.GetBeamInstP();
+      double reco_beam_interactingEnergy = event.GetRecoInteractingEnergy();
+    
+      double end_energy = event.GetTrueInteractingEnergy();
+      double true_beam_endP = event.GetTrueEndP();
+      double true_beam_startP = event.GetTrueStartP();
+      const std::vector<double> & true_beam_traj_Z = event.GetTrueTrajZ();
+      if (fSliceMethod == "Traj") {
+        end_energy = sqrt(true_beam_endP*true_beam_endP*1.e6 + 139.57*139.57) - 139.57;
+      }
+      else if (fSliceMethod == "E") {
+        end_energy = sqrt(true_beam_endP*true_beam_endP*1.e6 + 139.57*139.57) - 139.57;
+      }
+      else if (fSliceMethod == "Alt") {
+        int bin = fEndSlices->GetXaxis()->FindBin(true_beam_traj_Z.back());
+        if (bin > 0)
+          end_energy = fMeans.at(bin);
+      }
+
+      if (samples.find(sample_ID) == samples.end()) {
+        std::cout << "Warning: skipping sample " << sample_ID << std::endl;
+        continue;
+      }
+
+      //Look for the coinciding energy bin
+      int bin = -1;
+      for (size_t j = 1; j < beam_energy_bins.size(); ++j) {
+        if ((beam_energy_bins[j-1] <= 1.e3*true_beam_startP) &&
+            (1.e3*true_beam_startP < beam_energy_bins[j])) {
+          bin = j - 1;
+          break;
+        }
+      }
+      if (bin == -1) {
+        std::string message = "Could not find beam energy bin for " +
+                              std::to_string(true_beam_startP);
+        throw std::runtime_error(message);
+      }
+
+
+      std::vector<ThinSliceSample> & samples_vec = samples.at(sample_ID)[bin];
+      bool is_signal = signal_sample_checks.at(sample_ID);
+
+      ThinSliceSample * this_sample = 0x0;
+      if (!is_signal) {
+        this_sample = &samples_vec.at(0);
+      }
+      else {
+        //Iterate through the true bins and find the correct one
+        bool found = false;
+        for (size_t j = 1; j < samples_vec.size()-1; ++j) {
+          ThinSliceSample & sample = samples_vec.at(j);
+          if (sample.CheckInSignalRange(end_energy)) {
+            this_sample = &sample;
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          //over/underflow here
+          if (end_energy <= samples_vec[1].RangeLowEnd()) {
+            this_sample = &samples_vec[0];
+          }
+          else if (end_energy >
+                   samples_vec[samples_vec.size()-2].RangeHighEnd()) {
+            this_sample = &samples_vec.back();
+          }
+          else {
+            std::cout << "Warning: could not find true bin " <<
+                         end_energy << std::endl;
+          }
+        }
+      }
+
+      std::vector<double> vals;
+      std::vector<double> weights;
+      if (!is_grid) {
+        vals = std::vector<double>(2, 0.);
+        weights = {event.GetG4RWWeight(minus_branch, position), 
+                   event.GetG4RWWeight(plus_branch, position)};
+      }
+      else {
+        if (event.HasG4RWBranch(grid_branch)) {
+          //std::cout << "Accessing " << grid_branch << std::endl;
+          if (!event.GetG4RWBranch(grid_branch).size()) {
+            weights = std::vector<double>(syst_vals.size(), 1.);
+            vals = std::vector<double>(syst_vals.size(), 0.);
+          }
+          else {
+            weights = event.GetG4RWBranch(grid_branch);
+            vals = std::vector<double>(weights.size(), 0.);
+          }
+        }
+        else {
+          weights = std::vector<double>(syst_vals.size(), 1.);
+          vals = std::vector<double>(syst_vals.size(), 0.);
+        }
+        //std::cout << "weights: " << weights.size() << std::endl;
+        weights.erase(weights.begin() + ((weights.size()-1)/2));
+        //std::cout << "weights: " << weights.size() << std::endl;
+        //std::cout << "vals: " << vals.size() << std::endl;
+        vals.erase(vals.begin() + ((vals.size()-1)/2));
+        //std::cout << "vals: " << vals.size() << std::endl;
+      }
+
+      TH1D * selected_hist = (TH1D*)this_sample->GetSelectionHist(selection_ID);
+      if (selection_ID == 4) {
+        if (selected_hist->FindBin(reco_beam_endZ) == 0) {
+          for (double & v : vals) v = selected_hist->GetBinCenter(1);
+        }
+        else if (selected_hist->FindBin(reco_beam_endZ) >
+                 selected_hist->GetNbinsX()) {
+          for (double & v : vals)
+              v = selected_hist->GetBinCenter(selected_hist->GetNbinsX());
+        }
+        else {
+          for (double & v : vals) v = reco_beam_endZ;
+        }
+      }
+      else if (selection_ID > 4) {
+        for (double & v : vals) v = .5;
+      }
+      else if (reco_beam_incidentEnergies.size()) {
+        double energy = reco_beam_interactingEnergy;
+        if (fDoEnergyFix) {
+          for (size_t k = 1; k < reco_beam_incidentEnergies.size(); ++k) {
+            double deltaE = ((reco_beam_incidentEnergies)[k-1] -
+                             (reco_beam_incidentEnergies)[k]);
+            if (deltaE > fEnergyFix) {
+              energy += deltaE; 
+            }
+          }
+        }
+        if (selected_hist->FindBin(energy) == 0) {
+          for (double & v : vals) v = selected_hist->GetBinCenter(1);
+        }
+        else if (selected_hist->FindBin(energy) >
+                 selected_hist->GetNbinsX()) {
+          for (double & v : vals)
+            v = selected_hist->GetBinCenter(selected_hist->GetNbinsX());
+        }
+        else {
+          for (double & v : vals) v = energy;
+        }
+      }
+      else {
+        for (double & v : vals) v = selected_hist->GetBinCenter(1);
+      }
+      this_sample->FillSystematicShift(it->first, selection_ID, vals, weights);
+    }
+    for (auto it2 = samples.begin(); it2 != samples.end(); ++it2) {
+      for (size_t i = 0; i < it2->second.size(); ++i) {
+        for (size_t j = 0; j < it2->second[i].size(); ++j) {
+          it2->second[i][j].SetSystematicVals(it->first, syst_vals);
+          it2->second[i][j].MakeSystematicSplines(it->first/*, !(is_grid)*/);
+          it2->second[i][j].SaveSystematics(it->first, dir);
+        }
+      }
+    }
+  }
+
 }
 
 void protoana::AbsCexDriver::SystRoutine_dEdX_Cal(
@@ -747,7 +1008,8 @@ void protoana::AbsCexDriver::SystRoutine_dEdX_Cal(
       }
       else if (selected_hist->FindBin(reco_beam_endZ) >
                selected_hist->GetNbinsX()) {
-        for (double & v : vals) v = selected_hist->GetBinCenter(selected_hist->GetNbinsX());
+        for (double & v : vals)
+          v = selected_hist->GetBinCenter(selected_hist->GetNbinsX());
       }
       else {
         for (double & v : vals) v = reco_beam_endZ;
@@ -775,18 +1037,18 @@ void protoana::AbsCexDriver::SystRoutine_dEdX_Cal(
             continue;
           energy -= dedx*(track_pitch)[k];
 
-          TH1D * selected_hist
-              = fFullSelectionVars["dEdX_Cal_Spline"][selection_ID][0];
-          if (selected_hist->FindBin(energy) == 0) {
-            vals[j] = selected_hist->GetBinCenter(1);
-          }
-          else if (selected_hist->FindBin(energy) >
-                   selected_hist->GetNbinsX()) {
-            vals[j] = selected_hist->GetBinCenter(selected_hist->GetNbinsX());
-          }
-          else {
-            vals[j] = energy;
-          }
+        }
+        TH1D * selected_hist
+            = fFullSelectionVars["dEdX_Cal_Spline"][selection_ID][0];
+        if (selected_hist->FindBin(energy) == 0) {
+          vals[j] = selected_hist->GetBinCenter(1);
+        }
+        else if (selected_hist->FindBin(energy) >
+                 selected_hist->GetNbinsX()) {
+          vals[j] = selected_hist->GetBinCenter(selected_hist->GetNbinsX());
+        }
+        else {
+          vals[j] = energy;
         }
       }
     }
@@ -815,7 +1077,8 @@ void protoana::AbsCexDriver::SystRoutine_dEdX_Cal(
     for (auto it2 = samples.begin(); it2 != samples.end(); ++it2) {
       for (size_t i = 0; i < it2->second.size(); ++i) {
         for (size_t j = 0; j < it2->second[i].size(); ++j) {
-          full_hists[selection_ID]->Add(it2->second[i][j].GetSelectionHist(selection_ID));
+          full_hists[selection_ID]->Add(it2->second[i][j].GetSelectionHist(
+              selection_ID));
         }
       }
     }
@@ -883,13 +1146,27 @@ void protoana::AbsCexDriver::SetupSyst_BeamRes(
   fSystBeamResTree->Branch("Weight", &fSystBeamResWeight);
   fSystBeamResTree->Branch("Mean", &fSystBeamResMeanOutput);
   fSystBeamResTree->Branch("Width", &fSystBeamResWidthOutput);
+  fSystBeamResTree->Branch("Res", &fSystBeamResOutput);
   fSetupSystBeamRes = true;
 
 
 }
 
+double protoana::AbsCexDriver::GetSystWeight_G4RW(
+    const ThinSliceEvent & event,
+    const std::map<std::string, ThinSliceSystematic> & pars,
+    const ThinSliceSample & sample,
+    int selection_ID, double val) {
+  double weight = 1.;
+  for (std::string & s : fActiveG4RWSysts) {
+    weight *= sample.GetSplineWeight(s, pars.at(s).GetValue(), selection_ID, val);
+  }
+  return weight;
+}
+
 double protoana::AbsCexDriver::GetSystWeight_BeamRes(
-    const ThinSliceEvent & event, const std::map<std::string, ThinSliceSystematic> & pars) {
+    const ThinSliceEvent & event,
+    const std::map<std::string, ThinSliceSystematic> & pars) {
   if ((pars.find("beam_res_width") == pars.end()) &&
       (pars.find("beam_res_mean") == pars.end())) {
     return 1.;
@@ -900,7 +1177,7 @@ double protoana::AbsCexDriver::GetSystWeight_BeamRes(
 
   if (event.GetPDG() != 211) {
     fSystBeamResWeight = 1.;
-    fSystBeamResTree->Fill();
+    //fSystBeamResTree->Fill();
     return 1.;
   }
 
@@ -946,6 +1223,7 @@ double protoana::AbsCexDriver::GetSystWeight_BeamRes(
   fSystBeamResWeight = (nominal_width/varied_width)*exp(exponent_factor);
   if (fSystBeamResWeight > fSystBeamResWeightCap)
     fSystBeamResWeight = fSystBeamResWeightCap;
+  fSystBeamResOutput = res;
   fSystBeamResTree->Fill();
 
   return fSystBeamResWeight;

@@ -5,6 +5,8 @@
 #include "TH2D.h"
 #include "TH3D.h"
 #include "TSpline.h"
+#include "TDirectory.h"
+#include "TCanvas.h"
 
 #include <map>
 #include <sstream>
@@ -36,13 +38,42 @@ class ThinSliceSample {
   };
 
   const std::map<int, std::vector<TH1 *>> &
-      GetShifts(std::string syst_name)const {
+      GetShifts(std::string syst_name) const {
     return fSystematicShifts.at(syst_name); 
+  };
+
+  const std::map<int, std::vector<TSpline3 *>> &
+      GetSplines(std::string syst_name) const {
+    return fSystematicSplines.at(syst_name);
+  };
+
+  double GetSplineWeight(std::string syst_name, double par_val,
+                         int selection_ID, double val) const {
+    int bin = fSelectionHists.at(selection_ID)->FindBin(val);
+    return fSystematicSplines.at(syst_name).at(selection_ID).at(bin-1)->Eval(par_val);
   };
 
   void AddSystematicShift(TH1 * hist, std::string syst_name,
                           int selection_ID) {
     fSystematicShifts[syst_name][selection_ID].push_back(hist);
+  };
+
+  void SaveSystematics(std::string syst_name, TDirectory * dir) {
+    dir->cd();
+    for (auto it = fSystematicShifts[syst_name].begin();
+         it != fSystematicShifts[syst_name].end(); ++it) {
+      for (size_t i = 0; i < it->second.size(); ++i) {
+        it->second[i]->Write();
+      }
+    } 
+    for (auto it = fSystematicSplines[syst_name].begin();
+         it != fSystematicSplines[syst_name].end(); ++it) {
+      for (size_t i = 0; i < it->second.size(); ++i) {
+        TCanvas c(it->second[i]->GetName(), "");
+        it->second[i]->Draw();
+        c.Write(it->second[i]->GetName());
+      }
+    }
   };
 
   const std::map<int, TH1 *> & GetRebinnedSelectionHists() const {
@@ -101,12 +132,61 @@ class ThinSliceSample {
                            const std::vector<double> & vals) {
     if (vals.size() !=
         fSystematicShifts[syst_name][selection_ID].size()) {
-      std::string message = "input systematic shift values and number of shift hists differ"; 
+      std::string message = "ThinSliceSample: Input systematic shift values and number of shift hists differ"; 
       throw std::runtime_error(message);
     }
 
     for (size_t i = 0; i < vals.size(); ++i) {
       fSystematicShifts[syst_name][selection_ID][i]->Fill(vals[i]);
+    }
+  };
+
+  void FillSystematicShift(std::string syst_name,
+                           int selection_ID,
+                           const std::vector<double> & vals,
+                           const std::vector<double> & weights) {
+    if (vals.size() !=
+        fSystematicShifts[syst_name][selection_ID].size()) {
+      std::string message = "ThinSliceSample: Input systematic shift values and number of shift hists differ"; 
+      throw std::runtime_error(message);
+    }
+
+    for (size_t i = 0; i < vals.size(); ++i) {
+      fSystematicShifts[syst_name][selection_ID][i]->Fill(vals[i], weights[i]);
+    }
+  };
+
+  void SetSystematicVals(std::string syst_name, std::vector<double> & vals) {
+    fSystematicVals[syst_name] = vals;
+  };
+
+  void MakeSystematicSplines(std::string syst_name/*, bool do_insert = true*/) {
+    for (auto it = fSystematicShifts.begin(); it != fSystematicShifts.end();
+         ++it) {
+      for (auto it2 = it->second.begin(); it2 != it->second.end(); ++it2) {
+        int selection_ID = it2->first;
+        std::vector<TH1*> hists = it2->second;
+        TH1D * selection_hist = (TH1D*)fSelectionHists[selection_ID];
+        for (int i = 1; i <= selection_hist->GetNbinsX(); ++i) {
+          std::vector<double> vars;
+          for (size_t j = 0; j < hists.size(); ++j) {
+            if (selection_hist->GetBinContent(i) < 1.e-5) {
+              vars.push_back(1.);
+            }
+            else {
+              vars.push_back(
+                  hists[j]->GetBinContent(i)/selection_hist->GetBinContent(i));
+            }
+          }
+          //if (do_insert)
+            vars.insert(vars.begin() + vars.size()/2, 1.);
+          std::string spline_name = selection_hist->GetName();
+          spline_name += "_" + syst_name + "_Spline_" + std::to_string(i);
+          fSystematicSplines[syst_name][selection_ID].push_back(
+              new TSpline3(spline_name.c_str(), &fSystematicVals[syst_name][0],
+                           &vars[0], vars.size()));
+        }
+      }
     }
   };
 
@@ -303,6 +383,7 @@ class ThinSliceSample {
       fSystematicSplines;
   std::map<std::string, std::map<int, std::vector<TH1 *>>>
       fSystematicShifts;
+  std::map<std::string, std::vector<double>> fSystematicVals;
 
 
   std::vector<std::pair<double, double>> fIncidentEnergies;

@@ -264,6 +264,24 @@ void protoana::PDSPThinSliceFitter::FillMCEvents() {
   fMCTree->SetBranchAddress("reco_beam_TrkPitch_SCE", &track_pitch);
   fMCTree->SetBranchAddress("beam_inst_P", &beam_inst_P);
 
+  std::vector<double> * g4rw_alt_primary_plus_sigma_weight = 0x0,
+                      * g4rw_alt_primary_minus_sigma_weight = 0x0,
+                      * g4rw_full_primary_plus_sigma_weight = 0x0,
+                      * g4rw_full_primary_minus_sigma_weight = 0x0;
+  std::vector<std::vector<double>> * g4rw_primary_grid_weights = 0x0,
+                                   * g4rw_full_grid_weights = 0x0;
+  fMCTree->SetBranchAddress("g4rw_alt_primary_plus_sigma_weight",
+                            &g4rw_alt_primary_plus_sigma_weight);
+  fMCTree->SetBranchAddress("g4rw_alt_primary_minus_sigma_weight",
+                            &g4rw_alt_primary_minus_sigma_weight);
+  fMCTree->SetBranchAddress("g4rw_full_primary_plus_sigma_weight",
+                            &g4rw_full_primary_plus_sigma_weight);
+  fMCTree->SetBranchAddress("g4rw_full_primary_minus_sigma_weight",
+                            &g4rw_full_primary_minus_sigma_weight);
+  fMCTree->SetBranchAddress("g4rw_full_grid_weights", &g4rw_full_grid_weights);
+  fMCTree->SetBranchAddress("g4rw_primary_grid_weights",
+                            &g4rw_primary_grid_weights);
+
   for (int i = 0; i < fMCTree->GetEntries(); ++i) {
     fMCTree->GetEntry(i);
 
@@ -287,6 +305,29 @@ void protoana::PDSPThinSliceFitter::FillMCEvents() {
     fEvents.back().SetTrackPitch(*track_pitch);
     fEvents.back().SetBeamInstP(beam_inst_P);
     fEvents.back().SetPDG(true_beam_PDG);
+    fEvents.back().MakeG4RWBranch("g4rw_alt_primary_plus_sigma_weight",
+                                  *g4rw_alt_primary_plus_sigma_weight);
+    fEvents.back().MakeG4RWBranch("g4rw_alt_primary_minus_sigma_weight",
+                                  *g4rw_alt_primary_minus_sigma_weight);
+    fEvents.back().MakeG4RWBranch("g4rw_full_primary_plus_sigma_weight",
+                                  *g4rw_full_primary_plus_sigma_weight);
+    fEvents.back().MakeG4RWBranch("g4rw_full_primary_minus_sigma_weight",
+                                  *g4rw_full_primary_minus_sigma_weight);
+    for (size_t j = 0; j < g4rw_primary_grid_weights->size(); ++j) {
+      std::string name_full = "g4rw_full_grid_weights_" + std::to_string(j);
+      //std::cout << "Adding " << name_full << std::endl;
+      //if (!(*g4rw_full_grid_weights)[j].size())
+      //  std::cout << "Adding empty branch " << event << " " << run << " " << subrun << std::endl;
+      fEvents.back().MakeG4RWBranch(name_full, (*g4rw_full_grid_weights)[j]);
+
+      std::string name_primary = "g4rw_primary_grid_weights_" +
+                                 std::to_string(j);
+      //std::cout << "Adding " << name_primary << std::endl;
+      //if (!(*g4rw_primary_grid_weights)[j].size())
+      //  std::cout << "Adding empty branch " << event << " " << run << " " << subrun << std::endl;
+      fEvents.back().MakeG4RWBranch(name_primary,
+                                    (*g4rw_primary_grid_weights)[j]);
+    }
   }
 
   std::cout << "Filled MC Events" << std::endl;

@@ -222,6 +222,7 @@ namespace pduneana {
 
 using protoana::G4ReweightUtils::CreateRWTraj;
 using protoana::G4ReweightUtils::CreateNRWTrajs;
+using protoana::G4ReweightUtils::GetNTrajWeightFromSetPars;
 
 pduneana::cnnOutput2D::cnnOutput2D() : track(0), em(0), michel(0), none(0), nHits(0) { }
 
@@ -445,6 +446,9 @@ private:
   std::vector<double> g4rw_alt_primary_minus_sigma_weight;
   std::vector<double> g4rw_full_primary_plus_sigma_weight;
   std::vector<double> g4rw_full_primary_minus_sigma_weight;
+
+  std::vector<std::vector<double>> g4rw_full_grid_weights;
+  std::vector<std::vector<double>> g4rw_primary_grid_weights;
 
   //EDIT: STANDARDIZE
   //EndProcess --> endProcess ?
@@ -684,6 +688,7 @@ private:
   TFile * FracsFile;
   TFile * ProtFracsFile;
   std::vector<fhicl::ParameterSet> ParSet;
+  std::vector<double> fGridPoints;
   G4ReweightParameterMaker ParMaker;
   G4MultiReweighter * MultiRW, * ProtMultiRW;
   G4ReweightManager * RWManager;
@@ -736,6 +741,17 @@ pduneana::PDSPAnalyzer::PDSPAnalyzer(fhicl::ParameterSet const& p)
     MultiRW = new G4MultiReweighter(211, *FracsFile, ParSet,
                                     p.get<fhicl::ParameterSet>("Material"),
                                     RWManager);
+    double end = p.get<double>("ParameterGridEnd");
+    double start = p.get<double>("ParameterGridStart");
+    int n = p.get<int>("ParameterGridN"); 
+    double delta = (end - start)/(n-1);
+    std::cout << "Added to grid: ";
+    while (start <= end) {
+      fGridPoints.push_back(start);
+      std::cout << fGridPoints.back() << " ";
+      start += delta;
+    }
+    std::cout << std::endl;
   }
   if (fDoProtReweight) {
     ProtFracsFile =  new TFile((p.get<std::string>("ProtFracsFile")).c_str(),
@@ -1017,7 +1033,8 @@ void pduneana::PDSPAnalyzer::analyze(art::Event const & evt) {
         }
         to_create.pop_front();
       }
-      std::cout << "Created " << full_created.size() << " reweightable pi+" << std::endl;
+      std::cout << "Created " << full_created.size() << " reweightable pi+"
+                << std::endl;
 
       bool new_added = false;
       for (size_t i = 0; i < full_created.size(); ++i) {
@@ -1043,6 +1060,43 @@ void pduneana::PDSPAnalyzer::analyze(art::Event const & evt) {
           }
         }
       }
+
+      //Loop over parameters.
+      //index i is the one that will be set to grid points
+      //all others set to 1.
+      std::vector<double> input(ParSet.size(), 1.);
+      for (size_t i = 0; i < ParSet.size(); ++i) {
+        g4rw_primary_grid_weights.push_back(std::vector<double>());
+        g4rw_full_grid_weights.push_back(std::vector<double>());
+        for (size_t j = 0; j < fGridPoints.size(); ++j) {
+          input[i] = fGridPoints[j];
+          bool set_values = MultiRW->SetAllParameterValues(input);
+          if (set_values) {
+            g4rw_primary_grid_weights.back().push_back(
+                GetNTrajWeightFromSetPars(trajs, *MultiRW));
+
+            //Full
+            if (full_created.size()) {
+              std::vector<G4ReweightTraj *> & init_trajs = full_created[0];
+              g4rw_full_grid_weights.back().push_back(
+                  GetNTrajWeightFromSetPars(init_trajs, *MultiRW)); 
+              for (size_t k = 1; k < full_created.size(); ++k) {
+                std::vector<G4ReweightTraj *> & temp_trajs = full_created[k];
+                g4rw_full_grid_weights.back().back()
+                    *= GetNTrajWeightFromSetPars(temp_trajs, *MultiRW);
+              }
+            }
+          }
+          else {
+            std::string message = "Could not Get N Traj Weight from set pars";
+            throw std::runtime_error(message);
+          }
+        }
+
+        //Reset to 1.
+        input[i] = 1.;
+      }
+
     }
   }
   if (!evt.isRealData() && fDoProtReweight && true_beam_PDG == 2212) {
@@ -1538,6 +1592,8 @@ void pduneana::PDSPAnalyzer::beginJob()
                 &g4rw_full_primary_plus_sigma_weight);
   fTree->Branch("g4rw_full_primary_minus_sigma_weight",
                 &g4rw_full_primary_minus_sigma_weight);
+  fTree->Branch("g4rw_full_grid_weights", &g4rw_full_grid_weights);
+  fTree->Branch("g4rw_primary_grid_weights", &g4rw_primary_grid_weights);
 
   if( fSaveHits ){
     fTree->Branch( "reco_beam_spacePts_X", &reco_beam_spacePts_X );
@@ -2012,6 +2068,8 @@ void pduneana::PDSPAnalyzer::reset()
   g4rw_alt_primary_minus_sigma_weight.clear();
   g4rw_full_primary_plus_sigma_weight.clear();
   g4rw_full_primary_minus_sigma_weight.clear();
+  g4rw_full_grid_weights.clear();
+  g4rw_primary_grid_weights.clear();
 }
 
 
