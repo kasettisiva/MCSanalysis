@@ -83,6 +83,7 @@ pdspanalysis:
   ParameterGridStart: 0.1
   ParameterGridEnd:   2.0
   ParameterGridN:     20
+  GridPair: [1, 2]
 }
 
 END_PROLOG

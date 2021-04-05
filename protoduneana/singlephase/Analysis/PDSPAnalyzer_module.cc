@@ -449,6 +449,7 @@ private:
 
   std::vector<std::vector<double>> g4rw_full_grid_weights;
   std::vector<std::vector<double>> g4rw_primary_grid_weights;
+  std::vector<double> g4rw_primary_grid_pair_weights;
 
   //EDIT: STANDARDIZE
   //EndProcess --> endProcess ?
@@ -689,6 +690,7 @@ private:
   TFile * ProtFracsFile;
   std::vector<fhicl::ParameterSet> ParSet;
   std::vector<double> fGridPoints;
+  std::pair<double, double> fGridPair;
   G4ReweightParameterMaker ParMaker;
   G4MultiReweighter * MultiRW, * ProtMultiRW;
   G4ReweightManager * RWManager;
@@ -752,6 +754,7 @@ pduneana::PDSPAnalyzer::PDSPAnalyzer(fhicl::ParameterSet const& p)
       start += delta;
     }
     std::cout << std::endl;
+    fGridPair = p.get<std::pair<double, double>>("GridPair");
   }
   if (fDoProtReweight) {
     ProtFracsFile =  new TFile((p.get<std::string>("ProtFracsFile")).c_str(),
@@ -1097,6 +1100,17 @@ void pduneana::PDSPAnalyzer::analyze(art::Event const & evt) {
         input[i] = 1.;
       }
 
+      //Set pair wise
+      for (size_t i = 0; i < fGridPoints.size(); ++i) {
+        input[fGridPair.first] = fGridPoints[i];
+        input[fGridPair.second] = fGridPoints[i];
+        bool set_values = MultiRW->SetAllParameterValues(input);
+        if (set_values) {
+          g4rw_primary_grid_pair_weights.push_back(
+              GetNTrajWeightFromSetPars(trajs, *MultiRW));
+
+        }
+      }
     }
   }
   if (!evt.isRealData() && fDoProtReweight && true_beam_PDG == 2212) {
@@ -1594,6 +1608,7 @@ void pduneana::PDSPAnalyzer::beginJob()
                 &g4rw_full_primary_minus_sigma_weight);
   fTree->Branch("g4rw_full_grid_weights", &g4rw_full_grid_weights);
   fTree->Branch("g4rw_primary_grid_weights", &g4rw_primary_grid_weights);
+  fTree->Branch("g4rw_primary_grid_pair_weights", &g4rw_primary_grid_pair_weights);
 
   if( fSaveHits ){
     fTree->Branch( "reco_beam_spacePts_X", &reco_beam_spacePts_X );
@@ -2070,6 +2085,7 @@ void pduneana::PDSPAnalyzer::reset()
   g4rw_full_primary_minus_sigma_weight.clear();
   g4rw_full_grid_weights.clear();
   g4rw_primary_grid_weights.clear();
+  g4rw_primary_grid_pair_weights.clear();
 }
 
 

@@ -109,7 +109,13 @@ void protoana::PDSPThinSliceFitter::MakeMinimizer() {
                             it->second.GetValue(), 0.01);
     fMinimizer->SetVariableLimits(n_par, it->second.GetLowerLimit(),
                                   it->second.GetUpperLimit());
-    parsHist.SetBinContent(n_par+1, it->second.GetValue()/it->second.GetCentral());
+    if (abs(it->second.GetCentral()) < 1.e9) {
+      parsHist.SetBinContent(n_par+1, it->second.GetValue() + 1.);
+    }
+    else {
+      parsHist.SetBinContent(n_par+1, it->second.GetValue()/it->second.GetCentral());
+    }
+    //parsHist.SetBinContent(n_par+1, it->second.GetValue()/it->second.GetCentral());
     parsHist.GetXaxis()->SetBinLabel(
         n_par+1, it->second.GetName().c_str());
     ++n_par;
@@ -703,9 +709,16 @@ void protoana::PDSPThinSliceFitter::RunFitAndSave() {
     for (auto it = fSystParameters.begin();
          it != fSystParameters.end(); ++it) {
 
-      parsHist.SetBinContent(n_par+1, fMinimizer->X()[n_par]/it->second.GetCentral());
-      parsHist.SetBinError(n_par+1,
-                           sqrt(fMinimizer->CovMatrix(n_par, n_par))/it->second.GetCentral());
+      if (abs(it->second.GetCentral()) < 1.e9) {
+        parsHist.SetBinContent(n_par+1, fMinimizer->X()[n_par] + 1.);
+        parsHist.SetBinError(n_par+1,
+                             sqrt(fMinimizer->CovMatrix(n_par, n_par)));
+      }
+      else {
+        parsHist.SetBinContent(n_par+1, fMinimizer->X()[n_par]/it->second.GetCentral());
+        parsHist.SetBinError(n_par+1,
+                             sqrt(fMinimizer->CovMatrix(n_par, n_par))/it->second.GetCentral());
+      }
       parsHist.GetXaxis()->SetBinLabel(
           n_par+1, it->second.GetName().c_str());
 

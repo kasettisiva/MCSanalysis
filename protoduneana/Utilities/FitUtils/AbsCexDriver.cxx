@@ -574,6 +574,8 @@ void protoana::AbsCexDriver::RefillMCSamples(
     weight *= GetSystWeight_G4RW(event, syst_pars, *this_sample, selection_ID,
                                  val[0]);
 
+    weight *= GetSystWeight_BeamShift(event, syst_pars);
+
     this_sample->FillSelectionHist(selection_ID, val, weight);
 
     //Fill the total incident hist with truth info
@@ -596,6 +598,10 @@ void protoana::AbsCexDriver::WrapUpSysts(TFile & output_file) {
   if (fSetupSystBeamRes/*fSystBeamResTree*/) {
     output_file.cd("SystBeamRes");
     fSystBeamResTree->Write();
+  }
+  if (fSetupSystBeamShift) {
+    output_file.cd("SystBeamShift");
+    fSystBeamShiftTree->Write();
   }
 }
 
@@ -662,9 +668,33 @@ void protoana::AbsCexDriver::SetupSysts(
                    pars, output_file);
 
   SetupSyst_BeamRes(events, samples, pars, output_file);
+  SetupSyst_BeamShift(pars, output_file);
 
 }
 
+
+void protoana::AbsCexDriver::SetupSyst_BeamShift(
+    const std::map<std::string, ThinSliceSystematic> & pars,
+    TFile & output_file) {
+  if (pars.find("beam_shift") == pars.end()) {
+    return;
+  }
+
+  TFile shift_file(
+      pars.at("beam_shift").GetOption<std::string>("ShiftFile").c_str());
+  fSystBeamShiftMap = (TGraph2D*)shift_file.Get("g2d");
+  fSystBeamShiftMap->SetDirectory(0);
+  shift_file.Close();
+
+  output_file.mkdir("SystBeamShift");
+  output_file.cd("SystBeamShift");
+  fSystBeamShiftTree = new TTree("tree", "");
+  fSystBeamShiftTree->Branch("Weight", &fSystBeamShiftWeight);
+  fSystBeamShiftTree->Branch("Val", &fSystBeamShiftVal);
+  fSystBeamShiftTree->Branch("R", &fSystBeamShiftR);
+  fSetupSystBeamShift = true;
+
+}
 
 void protoana::AbsCexDriver::SystRoutine_G4RW(
     const std::vector<ThinSliceEvent> & events,
@@ -1163,6 +1193,33 @@ double protoana::AbsCexDriver::GetSystWeight_G4RW(
     weight *= sample.GetSplineWeight(s, pars.at(s).GetValue(), selection_ID, val);
   }
   return weight;
+}
+
+double protoana::AbsCexDriver::GetSystWeight_BeamShift(
+    const ThinSliceEvent & event,
+    const std::map<std::string, ThinSliceSystematic> & pars) {
+  if (pars.find("beam_shift") == pars.end()) return 1.;
+  if (event.GetPDG() != 211) return 1.;
+  double x_val = pars.at("beam_shift").GetValue();
+  double y_val = (event.GetBeamInstP() - event.GetTrueStartP())/
+                  event.GetTrueStartP();
+  if (y_val < fSystBeamShiftMap->GetYmin() ||
+      y_val > fSystBeamShiftMap->GetYmax()) {
+    return 1.;
+  }
+  if (fSystBeamShiftMap->Interpolate(x_val, y_val) < 0.) {
+    std::cout << "WARNING: Interpolated " << x_val << " " << y_val <<
+                 fSystBeamShiftMap->Interpolate(x_val, y_val) << std::endl;
+  }
+  else if (isnan(fSystBeamShiftMap->Interpolate(x_val, y_val))) {
+    std::cout << "WARNING: Interpolated " << x_val << " " << y_val <<
+                 fSystBeamShiftMap->Interpolate(x_val, y_val) << std::endl;
+  }
+  fSystBeamShiftWeight = fSystBeamShiftMap->Interpolate(x_val, y_val);
+  fSystBeamShiftVal = x_val;
+  fSystBeamShiftR = y_val;
+  fSystBeamShiftTree->Fill();
+  return fSystBeamShiftMap->Interpolate(x_val, y_val);
 }
 
 double protoana::AbsCexDriver::GetSystWeight_BeamRes(

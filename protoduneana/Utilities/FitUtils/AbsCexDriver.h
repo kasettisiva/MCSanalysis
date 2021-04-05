@@ -5,6 +5,7 @@
 #include "TH2D.h"
 #include "TFile.h"
 #include "TSpline.h"
+#include "TGraph2D.h"
 #include <map>
 
 namespace protoana {
@@ -138,8 +139,14 @@ class AbsCexDriver : public ThinSliceDriver {
       std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
       const std::map<std::string, ThinSliceSystematic> & pars,
       TFile & output_file);
+  void SetupSyst_BeamShift(
+      const std::map<std::string, ThinSliceSystematic> & pars,
+      TFile & output_file);
 
   double GetSystWeight_BeamRes(
+      const ThinSliceEvent & event,
+      const std::map<std::string, ThinSliceSystematic> & pars);
+  double GetSystWeight_BeamShift(
       const ThinSliceEvent & event,
       const std::map<std::string, ThinSliceSystematic> & pars);
   double GetSystWeight_G4RW(
@@ -169,10 +176,13 @@ class AbsCexDriver : public ThinSliceDriver {
    bool fStaticBeamResMean = false;
    double fBeamResMeanVal = 1.;
    double fBeamResWidthVal = 1.;
-   TTree * fSystBeamResTree;
+   TTree * fSystBeamResTree, * fSystBeamShiftTree;
    double fSystBeamResWeight, fSystBeamResMeanOutput, fSystBeamResWidthOutput;
    double fSystBeamResWeightCap, fSystBeamResOutput;
-   bool fSetupSystBeamRes = false;
+   double fSystBeamShiftWeight, fSystBeamShiftVal, fSystBeamShiftR;
+   bool fSetupSystBeamRes = false, fSetupSystBeamShift = false;
+
+   TGraph2D * fSystBeamShiftMap;
 
    std::map<std::string, std::map<int, std::vector<TH1D*>>> fFullSelectionVars;
    std::map<std::string, std::map<int, std::vector<TSpline3*>>> fFullSelectionSplines;
