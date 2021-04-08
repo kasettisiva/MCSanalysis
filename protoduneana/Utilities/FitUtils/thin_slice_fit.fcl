@@ -143,36 +143,36 @@ Systematics: [
   #    GridN: 20
   #  }
   #},
-  #{
-  #  Name: "g4rw_3"
-  #  Central: 1.
-  #  LowerLimit: 0.1
-  #  UpperLimit: 2.00
-  #  Sigma: .75
-
-  #  Options: {
-  #    Position: 2
-  #    PlusBranch: "g4rw_full_primary_plus_sigma_weight"
-  #    MinusBranch: "g4rw_full_primary_minus_sigma_weight"
-
-  #    IsGrid: true
-  #    GridBranch: "g4rw_full_grid_weights_2"
-  #    GridEnd: 2.0
-  #    GridStart: 0.1
-  #    GridN: 20
-  #  }
-  #} #,
   {
-    Name: "beam_shift"
-    Central: 0. 
-    LowerLimit: -2. 
-    UpperLimit: 2. 
-    Sigma: 1. 
-  
+    Name: "g4rw_3"
+    Central: 1.
+    LowerLimit: 0.1
+    UpperLimit: 2.00
+    Sigma: .75
+
     Options: {
-      ShiftFile: "shift_map.root"
+      Position: 2
+      PlusBranch: "g4rw_full_primary_plus_sigma_weight"
+      MinusBranch: "g4rw_full_primary_minus_sigma_weight"
+
+      IsGrid: true
+      GridBranch: "g4rw_full_grid_weights_2"
+      GridEnd: 2.0
+      GridStart: 0.1
+      GridN: 20
     }
-  }
+  } #,
+  #{
+  #  Name: "beam_shift"
+  #  Central: 0. 
+  #  LowerLimit: -2. 
+  #  UpperLimit: 2. 
+  #  Sigma: 1. 
+  #
+  #  Options: {
+  #    ShiftFile: "shift_map.root"
+  #  }
+  #}
 
 ]
 
@@ -353,8 +353,8 @@ DrawXSecUnderflow: false
 
 ## Validation
 RandomStart: false 
-DoFakeData: false 
-DoThrows: false 
+DoFakeData: true
+DoThrows: true 
 NThrows: 1000
 Do1DShifts: true
 DoSysts: true 

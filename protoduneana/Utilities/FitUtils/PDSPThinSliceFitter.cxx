@@ -109,7 +109,7 @@ void protoana::PDSPThinSliceFitter::MakeMinimizer() {
                             it->second.GetValue(), 0.01);
     fMinimizer->SetVariableLimits(n_par, it->second.GetLowerLimit(),
                                   it->second.GetUpperLimit());
-    if (abs(it->second.GetCentral()) < 1.e9) {
+    if (abs(it->second.GetCentral()) < 1.e-9) {
       parsHist.SetBinContent(n_par+1, it->second.GetValue() + 1.);
     }
     else {
@@ -709,7 +709,7 @@ void protoana::PDSPThinSliceFitter::RunFitAndSave() {
     for (auto it = fSystParameters.begin();
          it != fSystParameters.end(); ++it) {
 
-      if (abs(it->second.GetCentral()) < 1.e9) {
+      if (abs(it->second.GetCentral()) < 1.e-9) {
         parsHist.SetBinContent(n_par+1, fMinimizer->X()[n_par] + 1.);
         parsHist.SetBinError(n_par+1,
                              sqrt(fMinimizer->CovMatrix(n_par, n_par)));
@@ -1786,6 +1786,7 @@ void protoana::PDSPThinSliceFitter::PlotThrows(
 
     fOutputFile.cd("Throws");
     std::string canvas_name = "cXSecThrow" + fSamples[sample_ID][0][0].GetName();
+    std::string gr_name = "grXSecThrow" + fSamples[sample_ID][0][0].GetName();
     TCanvas cThrow(canvas_name.c_str(), "");
     cThrow.SetTicks();
 
@@ -1823,14 +1824,16 @@ void protoana::PDSPThinSliceFitter::PlotThrows(
                best_fit_xsec_errs[it->first][0]);
       }
     }
-    throw_gr.SetFillStyle(3144);
-    throw_gr.SetFillColor(kRed);
+    //throw_gr.SetFillStyle(3144);
+    //throw_gr.SetFillColor(kRed);
+    throw_gr.SetMarkerStyle(20);
     throw_gr.SetMinimum(0.);
     dummy.SetMaximum(1.5*max);
     dummy.SetMinimum(0.);
     dummy.Draw();
     dummy.GetXaxis()->SetTitle("Kinetic Energy (MeV)");
     dummy.GetYaxis()->SetTitle("#sigma (mb)");
+    //throw_gr.Draw("same 2");
     throw_gr.Draw("same 2");
     throw_gr.Draw("p");
 
@@ -1845,7 +1848,7 @@ void protoana::PDSPThinSliceFitter::PlotThrows(
     nominal_gr.Draw("same p");
 
     TLegend leg;
-    leg.AddEntry(&throw_gr, "Throws", "lpf");
+    leg.AddEntry(&throw_gr, "Measured", "lpf");
     leg.AddEntry(&nominal_gr, "Nominal", "p");
 
     if (fDoFakeData) {
@@ -1863,7 +1866,7 @@ void protoana::PDSPThinSliceFitter::PlotThrows(
       }
       TGraph * fake_gr = new TGraph(xs.size(), &xs[0], &fake_xsec_vals[0]);
       fake_gr->Write();
-      fake_gr->SetMarkerColor(kBlack);
+      fake_gr->SetMarkerColor(kRed);
       fake_gr->SetMarkerStyle(20);
       fake_gr->Draw("same p");
       leg.AddEntry(fake_gr, "Fake Data", "p");
@@ -1871,6 +1874,7 @@ void protoana::PDSPThinSliceFitter::PlotThrows(
 
     leg.Draw("same");
     cThrow.Write();
+    throw_gr.Write(gr_name.c_str());
   }
 }
 
@@ -1954,6 +1958,8 @@ void protoana::PDSPThinSliceFitter::BuildFakeDataXSecs() {
     for (size_t i = 0; i < samples_vec_2D.size(); ++i) {
       for (size_t j = 1; j < samples_vec_2D[i].size() - 1; ++j) {
         temp_xsec->AddBinContent(j, samples_vec_2D[i][j].GetVariedFlux());
+        //temp_xsec->AddBinContent(j, samples_vec_2D[i][j].GetVariedFlux()*
+        //                            fFakeDataScales[s][j]);
       }
     }
 
