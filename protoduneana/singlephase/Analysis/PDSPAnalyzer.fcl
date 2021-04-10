@@ -79,8 +79,10 @@ pdspanalysis:
       Sigma: .2
     }
   ]
-
-
+  
+  ParameterGridStart: 0.1
+  ParameterGridEnd:   2.0
+  ParameterGridN:     20
 }
 
 END_PROLOG

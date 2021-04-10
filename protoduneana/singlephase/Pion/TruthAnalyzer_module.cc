@@ -209,7 +209,7 @@ private:
   int output_first_point;
   int event, run, subrun;
   double first_IDE_Z;
-  double first_point_Z;
+  double first_point_Z, first_point_E;
 
   std::vector<double> true_traj_X, true_traj_Y, true_traj_Z, true_traj_E;
 
@@ -376,6 +376,7 @@ void pionana::TruthAnalyzer::analyze(art::Event const& e)
                   true_beam_trajectory.E(true_beam_trajectory.size() - 2));
   output_first_point = first_point_in_TPC;
   first_point_Z = true_beam_trajectory.Z(first_point_in_TPC);
+  first_point_E = true_beam_trajectory.E(first_point_in_TPC);
 
   for (size_t i = 0; i < true_beam_trajectory.size(); ++i) {
     std::cout << "Z, E: " << true_beam_trajectory.Z(i) << " " <<
@@ -542,6 +543,7 @@ void pionana::TruthAnalyzer::reset() {
   true_beam_PDG = -999;
   output_first_point = -999.;
   first_point_Z = -999.;
+  first_point_E = -999.;
   event = -999;
   first_IDE_Z = -999.;
   run = -999;
@@ -564,6 +566,7 @@ void pionana::TruthAnalyzer::beginJob() {
   fTree->Branch("true_beam_PDG", &true_beam_PDG);
   fTree->Branch("output_first_point", &output_first_point);
   fTree->Branch("first_point_Z", &first_point_Z);
+  fTree->Branch("first_point_E", &first_point_E);
   fTree->Branch("event", &event);
   fTree->Branch("run", &run);
   fTree->Branch("subrun", &subrun);

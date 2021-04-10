@@ -20,19 +20,24 @@
 #include "ThinSliceSample.h"
 #include "ThinSliceDataSet.h"
 #include "ThinSliceDriver.h"
+#include "ThinSliceSystematic.h"
+#include "ThinSliceEvent.h"
 
 namespace protoana {
 
 class PDSPThinSliceFitter {
  public:
   PDSPThinSliceFitter(std::string fcl_file, std::string output_file);
+  void FillMCEvents();
   void BuildMCSamples();
   void SaveMCSamples();
   void GetNominalFluxes();
   void BuildDataHists();
   //void BuildSystSamples();
   void InitializeMCSamples();
-  void CompareDataMC(bool post_fit = false);
+  void CompareDataMC(
+      std::string extra_name, TDirectory * xsec_dir, TDirectory * plot_dir,
+      bool post_fit = false);
   void ScaleMCToData();
   void RunFitAndSave();
   ~PDSPThinSliceFitter();
@@ -40,9 +45,11 @@ class PDSPThinSliceFitter {
  private:
   void Configure(std::string fcl_file);
   void DefineFitFunction();
+  void DefineFitFunction2();
   void MakeMinimizer();
   void ParameterScans();
   void DoThrows(const TH1D & pars, const TMatrixD * cov);
+  void Do1DShifts(const TH1D & pars);
   void SetBestFit();
   void GetCurrentTruthHists(
     std::map<int, std::vector<TH1*>> & throw_hists,
@@ -54,6 +61,9 @@ class PDSPThinSliceFitter {
     std::map<int, std::vector<TH1*>> & truth_inc_hists,
     std::map<int, std::vector<TH1*>> & truth_xsec_hists);
   void BuildFakeDataXSecs();
+  //void Get1DSystPlots();
+
+  std::vector<double> GetBestFitParsVec();
 
   ThinSliceDriver * fThinSliceDriver;
   std::map<int, std::vector<std::vector<ThinSliceSample>>> fSamples;
@@ -97,13 +107,24 @@ class PDSPThinSliceFitter {
   std::map<int, std::string> fFluxParameterNames;
   size_t fTotalFluxParameters = 0;
 
+  //std::map<int, std::string> fSystParameterNames;
+  std::map<std::string, ThinSliceSystematic> fSystParameters;
+  std::vector<std::string> fSystParameterNames;
+  size_t fTotalSystParameters = 0;
+
   TRandom3 fRNG;
   std::map<int, std::vector<double>> fFakeDataScales;
   std::map<int, std::vector<double>> fBestFitSignalPars;
+  std::map<std::string, ThinSliceSystematic> fBestFitSystPars;
   std::map<int, double> fBestFitFluxPars;
   std::map<int, TH1*> fNominalXSecs, fNominalIncs;
   std::map<int, TH1*> fBestFitXSecs, fBestFitIncs;
   std::map<int, TH1*> fFakeDataXSecs, fFakeDataIncs;
+
+  std::map<int, TH1D*> fBestFitSelectionHists;
+  std::map<int, std::vector<double>> fBestFitTruthVals;
+
+  std::vector<ThinSliceEvent> fEvents;
 
   //Configurable members
   std::string fMCFileName;
@@ -113,6 +134,7 @@ class PDSPThinSliceFitter {
   std::vector<fhicl::ParameterSet> fSampleSets;
   std::map<int, std::string> fFluxTypes;
   int fMaxCalls;
+  size_t fNFitSteps = 0;
   unsigned int fNScanSteps;
   double fTolerance, fLowerLimit, fUpperLimit;
   std::vector<std::pair<int, int>> fPlotStyle;
@@ -121,7 +143,11 @@ class PDSPThinSliceFitter {
   std::string fDriverName;
   std::string fAnalysis;
   fhicl::ParameterSet fAnalysisOptions;
-  bool fDoFakeData;
+  double fPitch;
+  std::string fSliceMethod;
+  bool fDoFakeData, fDoThrows, fDo1DShifts, fDoSysts/*, f1DSystPlots*/;
+  int fFitFunctionType;
+  bool fFillIncidentInFunction = false;
   bool fFitFlux;
   size_t fNThrows, fMaxRethrows;
   
