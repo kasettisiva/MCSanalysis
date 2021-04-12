@@ -79,6 +79,7 @@ void protoana::PDSPThinSliceFitter::MakeMinimizer() {
                               it->second[i], 0.01);
       fMinimizer->SetVariableLimits(n_par, fLowerLimit, fUpperLimit);
       parsHist.SetBinContent(n_par+1, it->second[i]);
+      parsHist.SetBinError(n_par+1, 0.);
       parsHist.GetXaxis()->SetBinLabel(
           n_par+1, fSignalParameterNames[it->first][i].c_str());
       ++n_par;
@@ -95,26 +96,41 @@ void protoana::PDSPThinSliceFitter::MakeMinimizer() {
                             it->second, 0.01);
     fMinimizer->SetVariableLimits(n_par, fLowerLimit, fUpperLimit);
     parsHist.SetBinContent(n_par+1, it->second);
+    parsHist.SetBinError(n_par+1, 0.);
     parsHist.GetXaxis()->SetBinLabel(
         n_par+1, fFluxParameterNames[it->first].c_str());
     ++n_par;
   }
 
   for (auto it = fSystParameters.begin(); it != fSystParameters.end(); ++it) {
-    std::cout << "Adding parameter " << it->second.GetName().c_str() << std::endl;
+    std::cout << "Adding parameter " << it->second.GetName().c_str() <<
+                 " " << it->second.GetCentral() << std::endl;
+    double val = it->second.GetCentral();
     if (fRandomStart) {
       it->second.SetValue(fRNG.Gaus(1., .1)*it->second.GetCentral());
+      val = it->second.GetValue();
     }
     fMinimizer->SetVariable(n_par, it->second.GetName().c_str(),
-                            it->second.GetValue(), 0.01);
+                            it->second.GetCentral(), 0.01);
     fMinimizer->SetVariableLimits(n_par, it->second.GetLowerLimit(),
                                   it->second.GetUpperLimit());
-    if (abs(it->second.GetCentral()) < 1.e-9) {
-      parsHist.SetBinContent(n_par+1, it->second.GetValue() + 1.);
+    if (abs(it->second.GetCentral()) < 1.e-5) {
+      parsHist.SetBinContent(n_par+1, val + 1.);
+      if (fAddSystTerm) {
+        size_t cov_bin = fCovarianceBins[it->first];
+        parsHist.SetBinError(n_par+1, sqrt((*fCovMatrix)[cov_bin][cov_bin]));
+      }
     }
     else {
-      parsHist.SetBinContent(n_par+1, it->second.GetValue()/it->second.GetCentral());
+      parsHist.SetBinContent(n_par+1,
+          val/it->second.GetCentral());
+      if (fAddSystTerm) {
+        size_t cov_bin = fCovarianceBins[it->first];
+        parsHist.SetBinError(n_par+1,
+            sqrt((*fCovMatrix)[cov_bin][cov_bin])/it->second.GetCentral());
+      }
     }
+
     //parsHist.SetBinContent(n_par+1, it->second.GetValue()/it->second.GetCentral());
     parsHist.GetXaxis()->SetBinLabel(
         n_par+1, it->second.GetName().c_str());
@@ -709,7 +725,7 @@ void protoana::PDSPThinSliceFitter::RunFitAndSave() {
     for (auto it = fSystParameters.begin();
          it != fSystParameters.end(); ++it) {
 
-      if (abs(it->second.GetCentral()) < 1.e-9) {
+      if (abs(it->second.GetCentral()) < 1.e-5) {
         parsHist.SetBinContent(n_par+1, fMinimizer->X()[n_par] + 1.);
         parsHist.SetBinError(n_par+1,
                              sqrt(fMinimizer->CovMatrix(n_par, n_par)));
@@ -769,15 +785,19 @@ void protoana::PDSPThinSliceFitter::RunFitAndSave() {
     cPars.SetTicks();
     parsHist.GetYaxis()->SetTitle("Parameter Values");
     parsHist.SetTitleSize(.05, "Y");
-    parsHist.Draw("e2");
+    //parsHist.Draw("e2");
     TH1D * preFitParsHist = (TH1D*)fOutputFile.Get("preFitPars");
-    preFitParsHist->Draw("p same");
+    preFitParsHist->SetFillColor(kBlue);
+    preFitParsHist->SetFillStyle(3144);
+    //preFitParsHist->Draw("pe2 same");
+    preFitParsHist->Draw("pe2");
+    parsHist.Draw("e2 same");
     TLine l(0., 1., parsHist.GetXaxis()->GetBinUpEdge(parsHist.GetNbinsX()), 1.);
     l.SetLineColor(kBlack);
     l.Draw("same");
     TLegend leg(.15, .65, .45, .85);
-    leg.AddEntry(preFitParsHist, "Pre-Fit", "p");
-    leg.AddEntry(&parsHist, "Post-Fit #pm 1 #sigma", "lpf");
+    leg.AddEntry(preFitParsHist, "Pre-Fit #pm 1 #sigma", "pf");
+    leg.AddEntry(&parsHist, "Post-Fit #pm 1 #sigma", "pf");
     leg.Draw();
     cPars.Write();
 
@@ -1340,7 +1360,9 @@ void protoana::PDSPThinSliceFitter::DefineFitFunction2() {
         //std::cout << std::endl;
         ++fNFitSteps;
 
-        return (chi2_points.first);
+        double syst_chi2 = CalcChi2SystTerm();
+
+        return (chi2_points.first + syst_chi2);
       },
       fTotalSignalParameters + fTotalFluxParameters + fTotalSystParameters);
 
@@ -1418,12 +1440,31 @@ void protoana::PDSPThinSliceFitter::Configure(std::string fcl_file) {
 
   //Initialize systematics
   if (fDoSysts) {
+    fAddSystTerm = pset.get<bool>("AddSystTerm");
     std::vector<fhicl::ParameterSet> par_vec
         = pset.get<std::vector<fhicl::ParameterSet>>("Systematics");
     for (size_t i = 0; i < par_vec.size(); ++i) {
       ThinSliceSystematic syst(par_vec[i]);
       fSystParameters[par_vec[i].get<std::string>("Name")] = syst;
       ++fTotalSystParameters;
+    }
+
+    if (fAddSystTerm) {
+      std::vector<std::pair<std::string, int>> temp_vec
+          = pset.get<std::vector<std::pair<std::string, int>>>("CovarianceBins");
+      fCovarianceBins
+          = std::map<std::string, size_t>(temp_vec.begin(), temp_vec.end());
+
+      TFile cov_file(pset.get<std::string>("CovarianceFile").c_str());
+      fCovMatrix = (TMatrixD*)cov_file.Get(
+          pset.get<std::string>("CovarianceMatrix").c_str());
+      if (!fCovMatrix->IsSymmetric()) {
+        std::string message = "PDSPThinSliceFitter::Configure: ";
+        message += "Error. Input covariance matrix ";
+        message += "is not symmetric";
+        throw std::runtime_error(message);
+      }
+      fCovMatrix->Invert();
     }
   }
 }
@@ -2030,3 +2071,21 @@ void protoana::PDSPThinSliceFitter::BuildFakeDataXSecs() {
   }
 }
 
+double protoana::PDSPThinSliceFitter::CalcChi2SystTerm() {
+  double result = 0.;
+  for (auto it = fSystParameters.begin(); it != fSystParameters.end(); ++it) {
+    for (auto it2 = fSystParameters.begin();
+         it2 != fSystParameters.end(); ++it2) {
+      double val_1 = it->second.GetValue();
+      double val_2 = it2->second.GetValue();
+      double central_1 = it->second.GetCentral();
+      double central_2 = it2->second.GetCentral();
+      int bin_1 = fCovarianceBins[it->first];
+      int bin_2 = fCovarianceBins[it2->first];
+      
+      result += (val_1 - central_1)*(val_2 - central_2)*
+                (*fCovMatrix)[bin_1][bin_2];
+    }
+  }
+  return result;
+}

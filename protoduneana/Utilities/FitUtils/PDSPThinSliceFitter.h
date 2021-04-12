@@ -62,6 +62,7 @@ class PDSPThinSliceFitter {
     std::map<int, std::vector<TH1*>> & truth_xsec_hists);
   void BuildFakeDataXSecs();
   //void Get1DSystPlots();
+  double CalcChi2SystTerm();
 
   std::vector<double> GetBestFitParsVec();
 
@@ -111,6 +112,9 @@ class PDSPThinSliceFitter {
   std::map<std::string, ThinSliceSystematic> fSystParameters;
   std::vector<std::string> fSystParameterNames;
   size_t fTotalSystParameters = 0;
+  std::map<std::string, size_t> fCovarianceBins;
+  bool fAddSystTerm;
+  TMatrixD * fCovMatrix;
 
   TRandom3 fRNG;
   std::map<int, std::vector<double>> fFakeDataScales;
