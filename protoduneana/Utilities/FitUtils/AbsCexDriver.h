@@ -142,11 +142,17 @@ class AbsCexDriver : public ThinSliceDriver {
   void SetupSyst_BeamShift(
       const std::map<std::string, ThinSliceSystematic> & pars,
       TFile & output_file);
+  void SetupSyst_BeamShift2D(
+      const std::map<std::string, ThinSliceSystematic> & pars,
+      TFile & output_file);
 
   double GetSystWeight_BeamRes(
       const ThinSliceEvent & event,
       const std::map<std::string, ThinSliceSystematic> & pars);
   double GetSystWeight_BeamShift(
+      const ThinSliceEvent & event,
+      const std::map<std::string, ThinSliceSystematic> & pars);
+  double GetSystWeight_BeamShift2D(
       const ThinSliceEvent & event,
       const std::map<std::string, ThinSliceSystematic> & pars);
   double GetSystWeight_G4RW(
@@ -176,13 +182,15 @@ class AbsCexDriver : public ThinSliceDriver {
    bool fStaticBeamResMean = false;
    double fBeamResMeanVal = 1.;
    double fBeamResWidthVal = 1.;
-   TTree * fSystBeamResTree, * fSystBeamShiftTree;
+   TTree * fSystBeamResTree, * fSystBeamShiftTree, * fSystBeamShift2DTree;
    double fSystBeamResWeight, fSystBeamResMeanOutput, fSystBeamResWidthOutput;
    double fSystBeamResWeightCap, fSystBeamResOutput;
    double fSystBeamShiftWeight, fSystBeamShiftVal, fSystBeamShiftR;
-   bool fSetupSystBeamRes = false, fSetupSystBeamShift = false;
-
-   TGraph2D * fSystBeamShiftMap;
+   bool fSetupSystBeamRes = false, fSetupSystBeamShift = false,
+        fSetupSystBeamShift2D = false;
+   double fSystBeamShift2DWeight, fSystBeamShift2DBVal, fSystBeamShift2DVal,
+          fSystBeamShift2DR;
+   TGraph2D * fSystBeamShiftMap, * fSystBeam2DMeans, * fSystBeam2DStdDevs;
 
    std::map<std::string, std::map<int, std::vector<TH1D*>>> fFullSelectionVars;
    std::map<std::string, std::map<int, std::vector<TSpline3*>>> fFullSelectionSplines;

@@ -162,25 +162,49 @@ Systematics: [
   #    GridN: 20
   #  }
   #} #,
+  #{
+  #  Name: "beam_shift"
+  #  Central: 0. 
+  #  LowerLimit: -2. 
+  #  UpperLimit: 2. 
+  #  Sigma: 1. 
+  #
+  #  Options: {
+  #    ShiftFile: "shift_map.root"
+  #  }
+  #}
   {
-    Name: "beam_shift"
+    Name: "beam_2D_shift"
     Central: 0. 
     LowerLimit: -2. 
     UpperLimit: 2. 
     Sigma: 1. 
   
     Options: {
-      ShiftFile: "shift_map.root"
+      MapFile: "beam_map_2D.root"
+    }
+  },
+  {
+    Name: "beam_2D_B"
+    Central: 0. 
+    LowerLimit: -2. 
+    UpperLimit: 2. 
+    Sigma: 1. 
+  
+    Options: {
+      MapFile: "beam_map_2D.root"
     }
   }
 
 ]
 
-AddSystTerm: true
+AddSystTerm: true 
 CovarianceBins: [
-  ["beam_shift", 0]
+  #["beam_shift", 0]
+  ["beam_2D_shift", 0],
+  ["beam_2D_B", 0]
 ]
-CovarianceFile: "input_cov.root"
+CovarianceFile: "2D_cov.root"
 CovarianceMatrix: "m"
 
 Selections: [

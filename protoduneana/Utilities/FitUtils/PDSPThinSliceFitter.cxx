@@ -1360,7 +1360,7 @@ void protoana::PDSPThinSliceFitter::DefineFitFunction2() {
         //std::cout << std::endl;
         ++fNFitSteps;
 
-        double syst_chi2 = CalcChi2SystTerm();
+        double syst_chi2 = (fAddSystTerm ? CalcChi2SystTerm() : 0.);
 
         return (chi2_points.first + syst_chi2);
       },
