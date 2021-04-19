@@ -646,6 +646,7 @@ bool protoana::ProtoDUNETrackUtils::IsBeamlike( const recob::Track & track, art:
    return true;
 }
 
+//Jake's implementation
 std::pair<double, int> protoana::ProtoDUNETrackUtils::GetVertexMichelScore(
     const recob::Track & track, const art::Event & evt,
     const std::string trackModule, const std::string hitModule,
@@ -771,5 +772,99 @@ std::pair<double, int> protoana::ProtoDUNETrackUtils::GetVertexMichelScore(
   return results;
 }
 
+//Ajib's implementation
+std::pair<double, int> protoana::ProtoDUNETrackUtils::GetVertexMichelScoreAlt(
+    const recob::Track & track, const art::Event & evt,
+    const std::string trackModule, const std::string hitModule,
+    double min_length, double min_x,
+    double max_x, double min_y, double max_y, double min_z, bool check_wire,
+    double check_x, double check_y, double check_z) {
 
+  // Get all tracks
+  art::Handle < std::vector < recob::Track > > trkListHandle;
+  std::vector < art::Ptr < recob::Track > > trkList;
+  if (evt.getByLabel(trackModule, trkListHandle)) {
+    art::fill_ptr_vector(trkList, trkListHandle);
+  }
 
+  // Get all hits
+  art::Handle < std::vector < recob::Hit > > hitListHandle;
+  std::vector < art::Ptr < recob::Hit > > hitList;
+  if (evt.getByLabel(hitModule, hitListHandle)) {
+    art::fill_ptr_vector(hitList, hitListHandle);
+  }
+
+  // Get track-hit association
+  art::FindManyP<recob::Hit, recob::TrackHitMeta> fmthm(trkListHandle, evt,trackModule); // to associate tracks and hits
+
+  // Get hit-track association
+  art::FindManyP<recob::Track> thass(hitListHandle, evt, trackModule); //to associate hit just trying
+
+  // Get CNN scores
+  anab::MVAReader<recob::Hit, 4> hitResults(evt, "emtrkmichelid:emtrkmichel");
+
+  int endwire = -1;
+  int endtpc = -1;
+  double endpeakt = -1;
+  std::vector<int> wirekeys;
+
+  if (fmthm.isValid()){
+    float zlast0=-99999;
+    auto vhit=fmthm.at(track.ID());
+    auto vmeta=fmthm.data(track.ID());
+    for (size_t ii = 0; ii<vhit.size(); ++ii){ //loop over all meta data hit
+      bool fBadhit = false;
+      if (vmeta[ii]->Index() == std::numeric_limits<int>::max()){
+        fBadhit = true;
+        continue;
+      }
+      if (vmeta[ii]->Index()>=track.NumberTrajectoryPoints()){
+        throw cet::exception("Calorimetry_module.cc") << "Requested track trajectory index "<<vmeta[ii]->Index()<<" exceeds the total number of trajectory points "<<track.NumberTrajectoryPoints()<<" for track index "<<track.ID()<<". Something is wrong with the track reconstruction. Please contact tjyang@fnal.gov!!";
+      }
+      if (!track.HasValidPoint(vmeta[ii]->Index())){
+        fBadhit = true;
+        continue;
+      }
+      auto loc = track.LocationAtPoint(vmeta[ii]->Index());
+      if (fBadhit) continue; //HY::If BAD hit, skip this hit and go next
+      if (loc.Z()<-100) continue; //hit not on track
+      if(vhit[ii]->WireID().Plane==2){
+        wirekeys.push_back(vhit[ii].key());
+        float zlast=loc.Z();
+        if(zlast>zlast0){
+          zlast0=zlast;
+          endwire=vhit[ii]->WireID().Wire;
+          endpeakt=vhit[ii]->PeakTime();
+          endtpc=vhit[ii]->WireID().TPC;
+        }
+      }
+    }
+  }
+
+  int ndaughterhits = 0;
+  double average_daughter_score_mic = 0;
+  
+  for(size_t hitl=0;hitl<hitList.size();hitl++){
+    std::array<float,4> cnn_out=hitResults.getOutput(hitList[hitl]);
+    auto & tracks = thass.at(hitList[hitl].key());
+    // hit not on the track
+    if (std::find(wirekeys.begin(), wirekeys.end(), hitl) != wirekeys.end()) continue;
+    // hit not on a long track
+    if (!tracks.empty() && int(tracks[0].key()) != track.ID() && trkList[tracks[0].key()]->Length()>25) continue;
+    int planeid=hitList[hitl]->WireID().Plane;
+    if (planeid!=2) continue;
+    int tpcid=hitList[hitl]->WireID().TPC;
+    if (tpcid!=endtpc) continue;
+    float peakth1=hitList[hitl]->PeakTime();
+    int wireh1=hitList[hitl]->WireID().Wire;
+    if(std::abs(wireh1-endwire)<8 && std::abs(peakth1-endpeakt)<150 && tpcid==endtpc){
+      ++ndaughterhits;
+      average_daughter_score_mic += cnn_out[hitResults.getIndex("michel")];
+      //std::cout<<hitList[hitl]->WireID().Wire<<" "<<hitList[hitl]->PeakTime()<<" "<<hitList[hitl]->Integral()<<" "<<cnn_out[hitResults.getIndex("michel")]<<std::endl;
+    }
+  }
+
+  if (ndaughterhits) average_daughter_score_mic /= ndaughterhits;
+  
+  return {average_daughter_score_mic, ndaughterhits};
+}

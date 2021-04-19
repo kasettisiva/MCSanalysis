@@ -70,7 +70,7 @@ std::vector<float> protoana::ProtoDUNECalibration::GetCalibratedCalorimetry(
     const std::string trackModule, const std::string caloModule,
     size_t planeID, double negativeZFix) {
 
-  std::vector< float > calibrated_dEdx;
+  std::vector<float> calibrated_dEdx;
   
   //If we can't find the plane ID in the configuration, return empty vector
   if (norm_factors.find(planeID) == norm_factors.end())
@@ -118,8 +118,12 @@ std::vector<float> protoana::ProtoDUNECalibration::GetCalibratedCalorimetry(
     float hit_y = theXYZPoints[i].Y();
     float hit_z = theXYZPoints[i].Z();
 
-    if( hit_y < 0. || hit_y > 600. ) continue;
-    if( hit_z < z_check || hit_z > 695. ) continue;
+    //if( hit_y < 0. || hit_y > 600. ) continue;
+    //if( hit_z < z_check || hit_z > 695. ) continue;
+    if (hit_y < 0. || hit_y > 600. || hit_z < z_check || hit_z > 695.) {
+      calibrated_dEdx.push_back(-999.);
+      continue; 
+    }
 
     //Set the z position to 0. for small (configurable) negative positions
     if (negativeZFix < hit_z && hit_z < 0.) {
@@ -137,15 +141,6 @@ std::vector<float> protoana::ProtoDUNECalibration::GetCalibratedCalorimetry(
     int YZ_bin = YZ_hist->FindBin(hit_z, hit_y);
     double YZ_correction = YZ_hist->GetBinContent(YZ_bin);
 
-    /*
-    double YZ_correction = (
-      ( hit_x < 0 )
-      ? YZ_neg->GetBinContent( YZ_neg->FindBin( hit_z, hit_y ) ) 
-      : YZ_pos->GetBinContent( YZ_pos->FindBin( hit_z, hit_y ) )  
-    );
-    */
-
-
 
     float corrected_dq_dx = dQdX[i] * X_correction *
                             YZ_correction * norm_factors[planeID];
@@ -161,6 +156,89 @@ std::vector<float> protoana::ProtoDUNECalibration::GetCalibratedCalorimetry(
 
 
   return calibrated_dEdx;
+}
+
+std::vector<double> protoana::ProtoDUNECalibration::CalibratedQdX(
+    const recob::Track &track, art::Event const &evt,
+    const std::string trackModule, const std::string caloModule,
+    size_t planeID, double negativeZFix) {
+  std::vector<double> calibrated_dQdX;
+  
+  //If we can't find the plane ID in the configuration, return empty vector
+  if (norm_factors.find(planeID) == norm_factors.end())
+    return calibrated_dQdX;
+
+  //Get the Calorimetry vector from the track
+  std::vector< anab::Calorimetry > caloVector = trackUtil.GetRecoTrackCalorimetry( track, evt, trackModule, caloModule ); 
+  
+  size_t calo_position;
+  bool found_plane = false;
+  for( size_t i = 0; i < caloVector.size(); ++i ){
+     unsigned int thePlane = caloVector.at(i).PlaneID().Plane;
+     if( thePlane == planeID ){
+       calo_position = i;
+       found_plane = true;
+       break;
+     }
+  }
+
+  if( !found_plane ){
+    std::cout << "Could not find the correct plane in the calorimetry vector" << std::endl;
+    return calibrated_dQdX;
+  }
+
+  std::vector< float > dQdX = caloVector.at( calo_position).dQdx();
+  auto theXYZPoints = caloVector.at( calo_position).XYZ();
+
+  //Get the hits from the track from a specific plane
+  const std::vector< const recob::Hit* > hits = trackUtil.GetRecoTrackHitsFromPlane( track, evt, trackModule, planeID ); 
+  if( hits.size() == 0 ){
+    std::cout << "Got empty hits vector" << std::endl;
+    return calibrated_dQdX;
+  }
+
+  if (negativeZFix > 0.) {
+    return calibrated_dQdX;
+  }
+
+  double z_check = negativeZFix;
+
+  //Do Ajib's correction 
+  for( size_t i = 0; i < dQdX.size(); ++i ){ 
+    double hit_x = theXYZPoints[i].X();
+    double hit_y = theXYZPoints[i].Y();
+    double hit_z = theXYZPoints[i].Z();
+
+    //if( hit_y < 0. || hit_y > 600. ) continue;
+    //if( hit_z < z_check || hit_z > 695. ) continue;
+    if (hit_y < 0. || hit_y > 600. || hit_z < z_check || hit_z > 695.) {
+      calibrated_dQdX.push_back(-999.);
+      continue; 
+    }
+
+    //Set the z position to 0. for small (configurable) negative positions
+    if (negativeZFix < hit_z && hit_z < 0.) {
+      hit_z = 0.;
+    }
+
+
+    int X_bin = X_correction_hists[planeID]->FindBin(hit_x);
+    double X_correction = X_correction_hists[planeID]->GetBinContent(X_bin);
+
+    TH2F * YZ_hist = (hit_x < 0 ? 
+                      YZ_neg_hists[planeID] :
+                      YZ_pos_hists[planeID]);
+    int YZ_bin = YZ_hist->FindBin(hit_z, hit_y);
+    double YZ_correction = YZ_hist->GetBinContent(YZ_bin);
+
+
+    double corrected_dq_dx = dQdX[i] * X_correction *
+                            YZ_correction * norm_factors[planeID];
+    double scaled_corrected_dq_dx = corrected_dq_dx / calib_factors[planeID];
+
+    calibrated_dQdX.push_back(scaled_corrected_dq_dx);
+  }
+  return calibrated_dQdX;
 }
 
 float protoana::ProtoDUNECalibration::calc_dEdX(double dqdx, double betap, double Rho, double Efield, double Wion, double alpha){
@@ -182,6 +260,67 @@ double protoana::ProtoDUNECalibration::tot_Ef( double x, double y, double z ){
     return sqrt( (ex*ex) + (ey*ey) + (ez*ez) );
   }
   else return 0.5;
+}
+
+std::vector<double> protoana::ProtoDUNECalibration::GetEFieldVector(
+    const recob::Track &track, art::Event const &evt,
+    const std::string trackModule, const std::string caloModule,
+    size_t planeID, double negativeZFix) {
+  std::vector<double> results;
+
+  //Get the Calorimetry vector from the track
+  std::vector< anab::Calorimetry > caloVector = trackUtil.GetRecoTrackCalorimetry( track, evt, trackModule, caloModule ); 
+  
+  size_t calo_position;
+  bool found_plane = false;
+  for( size_t i = 0; i < caloVector.size(); ++i ){
+     unsigned int thePlane = caloVector.at(i).PlaneID().Plane;
+     if( thePlane == planeID ){
+       calo_position = i;
+       found_plane = true;
+       break;
+     }
+  }
+
+  if( !found_plane ){
+    std::cout << "Could not find the correct plane in the calorimetry vector" << std::endl;
+    return results;
+  }
+
+  auto theXYZPoints = caloVector.at( calo_position).XYZ();
+
+  //Get the hits from the track from a specific plane
+  const std::vector< const recob::Hit* > hits = trackUtil.GetRecoTrackHitsFromPlane( track, evt, trackModule, planeID ); 
+  if( hits.size() == 0 ){
+    std::cout << "Got empty hits vector" << std::endl;
+    return results;
+  }
+
+  if (negativeZFix > 0.) {
+    return results;
+  }
+
+  double z_check = negativeZFix;
+
+  for( size_t i = 0; i < theXYZPoints.size(); ++i ){ 
+    float hit_x = theXYZPoints[i].X();
+    float hit_y = theXYZPoints[i].Y();
+    float hit_z = theXYZPoints[i].Z();
+
+    if( hit_y < 0. || hit_y > 600. || hit_z < z_check || hit_z > 695.) {
+      results.push_back(-999.);
+      continue;
+    }
+
+    //Set the z position to 0. for small (configurable) negative positions
+    if (negativeZFix < hit_z && hit_z < 0.) {
+      //std::cout << "Fixing: " << hit_z << " " << negativeZFix << std::endl;
+      hit_z = 0.;
+    }
+    results.push_back(tot_Ef( hit_x, hit_y, hit_z ));
+  }
+
+  return results;
 }
 
 double protoana::ProtoDUNECalibration::HitToEnergy(

@@ -15,20 +15,27 @@ protoana::ThinSliceDataSet::ThinSliceDataSet(
     std::vector<std::vector<double>> selected_bins =
         it->get<std::vector<std::vector<double>>>("RecoBins");
 
+    std::vector<std::string> titles =
+        it->get<std::vector<std::string>>("AxisTitles");
+    TString title = "Data";
+    for (auto & t : titles) {
+      title += ";" + t; 
+    }
+
     if (selected_bins.size() == 1) {
       fSelectionHists[it->get<int>("ID")] = new TH1D(
-          sel_name.c_str(), "Data;Reconstructed KE (MeV)",
+          sel_name.c_str(), title/*.c_str()"Data;Reconstructed KE (MeV)"*/,
           selected_bins[0].size() - 1, &selected_bins[0][0]);
     }
     else if (selected_bins.size() == 2) {
       fSelectionHists[it->get<int>("ID")] = new TH2D(
-          sel_name.c_str(), "Data;Reconstructed KE (MeV)",
+          sel_name.c_str(), title/*.c_str()"Data;Reconstructed KE (MeV)"*/,
           selected_bins[0].size() - 1, &selected_bins[0][0],
           selected_bins[1].size() - 1, &selected_bins[1][0]);
     }
     else if (selected_bins.size() == 3) {
       fSelectionHists[it->get<int>("ID")] = new TH3D(
-          sel_name.c_str(), "Data;Reconstructed KE (MeV)",
+          sel_name.c_str(), title/*.c_str()"Data;Reconstructed KE (MeV)"*/,
           selected_bins[0].size() - 1, &selected_bins[0][0],
           selected_bins[1].size() - 1, &selected_bins[1][0],
           selected_bins[2].size() - 1, &selected_bins[2][0]);
@@ -66,21 +73,38 @@ void protoana::ThinSliceDataSet::MakeRebinnedHists() {
       if (sel_hist->GetNbinsZ() > 1) ++nAxes;
 
       if (nAxes == 1) {
+        TString title = sel_hist->GetTitle();
+        title += ";";
+        title += sel_hist->GetXaxis()->GetTitle();
         fSelectionHistsRebinned[it->first] = new TH1D(
-            name.c_str(), sel_hist->GetTitle(),
+            name.c_str(), title/*.c_str()sel_hist->GetTitle()*/,
             sel_hist->GetNbinsX(), 0, sel_hist->GetNbinsX());
         Rebin1D(sel_hist, fSelectionHistsRebinned[it->first]);
       }
       else if (nAxes == 2) {
+        std::string title = sel_hist->GetTitle();
+        title += ";";
+        title += sel_hist->GetXaxis()->GetTitle();
+        title += ";";
+        title += sel_hist->GetYaxis()->GetTitle();
+
         fSelectionHistsRebinned[it->first] = new TH2D(
-            name.c_str(), sel_hist->GetTitle(),
+            name.c_str(), title.c_str()/*sel_hist->GetTitle()*/,
             sel_hist->GetNbinsX(), 0, sel_hist->GetNbinsX(),
             sel_hist->GetNbinsY(), 0, sel_hist->GetNbinsY());
         Rebin2D(sel_hist, fSelectionHistsRebinned[it->first]);
       }
       else if (nAxes == 3) {
+        std::string title = sel_hist->GetTitle();
+        title += ";";
+        title += sel_hist->GetXaxis()->GetTitle();
+        title += ";";
+        title += sel_hist->GetYaxis()->GetTitle();
+        title += ";";
+        title += sel_hist->GetZaxis()->GetTitle();
+
         fSelectionHistsRebinned[it->first] = new TH3D(
-            name.c_str(), sel_hist->GetTitle(),
+            name.c_str(), title.c_str()/*sel_hist->GetTitle()*/,
             sel_hist->GetNbinsX(), 0, sel_hist->GetNbinsX(),
             sel_hist->GetNbinsY(), 0, sel_hist->GetNbinsY(),
             sel_hist->GetNbinsZ(), 0, sel_hist->GetNbinsZ());

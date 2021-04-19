@@ -41,7 +41,7 @@ physics:
 
 outputs: {}
 
-physics.analyzers.rwexample.XSecFile: "/dune/data2/users/calcuttj/GeantReweight/FlatTree/cross_section_with_decay.root"
+physics.analyzers.rwexample.DoFull: true
 physics.analyzers.rwexample.ParameterSet: [
                                           { 
                                             Cut:    "reac"

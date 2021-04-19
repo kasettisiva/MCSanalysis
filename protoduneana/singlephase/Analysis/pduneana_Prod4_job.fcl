@@ -26,6 +26,9 @@ services:
   }
 }
 services.message.destinations.LogStandardOut.threshold: "INFO"
+services.SpaceCharge.EnableSimEfieldSCE: true
+services.SpaceCharge.EnableSimSpatialSCE: true
+services.SpaceCharge.EnableSimulationSCE: true
 #services.Geometry: @local::protodunev6_geo
 
 source:
@@ -69,7 +72,38 @@ physics.analyzers.pduneana.CalorimetryTagNoSCE: "pandoracalonosce" ##For no-SCE 
 physics.analyzers.pduneana.Pandora2CaloSCE: "pandora2calinoxyzt"
 #physics.analyzers.pduneana.HitTag: "hitpdune"
 physics.analyzers.pduneana.Verbose: true
-physics.analyzers.pduneana.DoReweight: false 
+physics.analyzers.pduneana.DoReweight: true 
+physics.analyzers.pduneana.ParameterSet: [
+  {
+    Cut: "reac"
+    Name: "fReac"
+    Range: [0., 1200.]
+    Nominal: 1.0 
+    Sigma: .2
+  },
+  {
+    Cut: "abs"
+    Name: "fAbs"
+    Range: [0., 1200.]
+    Nominal: 1.0 
+    Sigma: .2
+  },
+  {
+    Cut: "cex"
+    Name: "fCex"
+    Range: [0., 1200.]
+    Nominal: 1.0 
+    Sigma: .75
+  },
+  {
+    Cut: "elast"
+    Name: "fElast"
+    Range: [0.,  1200.]
+    Nominal: 1.0
+    Sigma: .2
+  }
+]
+
 physics.analyzers.pduneana.DoProtReweight: false 
 physics.analyzers.pduneana.GetTrackMichel: false 
 physics.analyzers.pduneana.CalibrationParsSCE: @local::CalorimetryParameters_SPProd4_MC_SCE #_eLT
