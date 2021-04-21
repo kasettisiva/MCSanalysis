@@ -30,6 +30,7 @@
 #include "TGraph.h"
 #include "TDecompChol.h"
 #include "TF1.h"
+#include "TPad.h"
 
 #include "PDSPThinSliceFitter.h"
 #include "AbsCexDriver.h"
@@ -1915,6 +1916,7 @@ void protoana::PDSPThinSliceFitter::PlotThrows(
 
     leg.Draw("same");
     cThrow.Write();
+    gPad->RedrawAxis();
     throw_gr.Write(gr_name.c_str());
   }
 }

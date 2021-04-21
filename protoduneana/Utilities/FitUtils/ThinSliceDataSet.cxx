@@ -179,3 +179,24 @@ void protoana::ThinSliceDataSet::Rebin3D(TH1 * sel_hist, TH1 * rebinned) {
     }
   }
 }
+
+void protoana::ThinSliceDataSet::GenerateStatFluctuation() {
+
+  for (auto it = fSelectionHists.begin(); it != fSelectionHists.end(); ++it) {
+    it->second->Reset();
+  }
+
+  for (int i = 0; i < fTotal; ++i) {
+    double r = fRNG.Uniform();
+    std::pair<int, int> bin;
+    for (size_t j = 0; j < fCumulatives.size(); ++j) {
+      if ((fCumulatives[j].second - r) > 0.) {
+        bin = fCumulatives[j].first;
+      }
+      else {
+        break;
+      }
+    }
+    fSelectionHists[bin.first]->AddBinContent(bin.second); 
+  }
+}

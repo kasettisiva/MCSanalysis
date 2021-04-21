@@ -3,6 +3,8 @@
 #include "THStack.h"
 #include "TGraphAsymmErrors.h"
 #include "TLegend.h"
+#include "TRandom3.h"
+#include "TMath.h"
 
 #include <iomanip>
 #include <iostream> 
@@ -1462,6 +1464,10 @@ void protoana::AbsCexDriver::BuildFakeData(
     FakeDataG4RW(tree, samples, signal_sample_checks, data_set, flux,
                  sample_scales);
   }
+  else if (routine == "EffVar") {
+    FakeDataEffVar(tree, samples, signal_sample_checks, data_set, flux,
+                 sample_scales);
+  }
   else if (routine == "BinnedScales") {
     FakeDataBinnedScales(tree, samples, signal_sample_checks, data_set, flux,
                          sample_scales);
@@ -2137,6 +2143,206 @@ void protoana::AbsCexDriver::FakeDatadEdX(
   for (auto it = sample_scales.begin(); it != sample_scales.end(); ++it) {
     for (double & s : it->second) {
       s = 1.;
+    }
+  }
+}
+
+void protoana::AbsCexDriver::FakeDataEffVar(
+    TTree * tree,
+    std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+    const std::map<int, bool> & signal_sample_checks,
+    ThinSliceDataSet & data_set, double & flux,
+    std::map<int, std::vector<double>> & sample_scales) {
+
+  //Build the map for fake data scales
+  fhicl::ParameterSet options 
+      = fExtraOptions.get<fhicl::ParameterSet>("FakeDataEffVar");
+
+  int sample_ID, selection_ID; 
+  double true_beam_interactingEnergy, reco_beam_interactingEnergy;
+  double true_beam_endP;
+  std::vector<double> * reco_beam_incidentEnergies = 0x0;
+  double reco_beam_endZ;
+  tree->SetBranchAddress("reco_beam_endZ", &reco_beam_endZ);
+  tree->SetBranchAddress("new_interaction_topology", &sample_ID);
+  tree->SetBranchAddress("selection_ID", &selection_ID);
+  tree->SetBranchAddress("true_beam_interactingEnergy",
+                         &true_beam_interactingEnergy);
+  tree->SetBranchAddress("true_beam_endP", &true_beam_endP);
+  tree->SetBranchAddress("reco_beam_interactingEnergy",
+                         &reco_beam_interactingEnergy);
+  tree->SetBranchAddress("reco_beam_incidentEnergies",
+                         &reco_beam_incidentEnergies);
+  std::vector<double> * true_beam_traj_Z = 0x0;
+  tree->SetBranchAddress("true_beam_traj_Z", &true_beam_traj_Z);
+
+  std::vector<double> * daughter_Theta = 0x0; 
+  tree->SetBranchAddress("reco_daughter_allTrack_Theta",
+                         &daughter_Theta);
+  std::vector<int> * daughter_true_PDG = 0x0;
+  tree->SetBranchAddress("reco_daughter_PFP_true_byHits_PDG",
+                         &daughter_true_PDG);
+
+
+  TH1D & incident_hist = data_set.GetIncidentHist();
+  std::map<int, TH1 *> & selected_hists = data_set.GetSelectionHists();
+
+ // double new_flux = 0.;
+  flux = tree->GetEntries();
+  
+
+  std::map<int, std::vector<double>> nominal_samples;
+  for (auto it = sample_scales.begin(); it != sample_scales.end(); ++it) {
+    nominal_samples[it->first] = std::vector<double>(it->second.size(), 0.);
+  }
+
+  double check_val = options.get<double>("F");
+  TRandom3 rng;
+  for (int i = 0; i < tree->GetEntries(); ++i) {
+    tree->GetEntry(i);
+
+    if (samples.find(sample_ID) == samples.end())
+      continue;
+
+    std::string slice_method = fExtraOptions.get<std::string>("SliceMethod");
+    //double end_energy = true_beam_interactingEnergy;
+    //if (slice_method == "Traj") {
+    //  end_energy = sqrt(true_beam_endP*true_beam_endP*1.e6 + 139.57*139.57) - 139.57;
+    //}
+    //else if (slice_method == "E") {
+    //  end_energy = sqrt(true_beam_endP*true_beam_endP*1.e6 + 139.57*139.57) - 139.57;
+    //}
+    //else if (slice_method == "Alt") {
+    //  int bin = fEndSlices->GetXaxis()->FindBin(true_beam_traj_Z->back());
+    //  if (bin > 0) {
+    //    end_energy = fMeans.at(bin);
+    //  }
+    //}
+
+
+    //bool is_signal = signal_sample_checks.at(sample_ID);
+    //if (is_signal) {
+    //  std::vector<ThinSliceSample> & samples_vec = samples[sample_ID][0];
+    //  //Get the samples vec from the first beam energy bin
+    //  bool found = false;
+    //  for (size_t j = 1; j < samples_vec.size()-1; ++j) {
+    //    ThinSliceSample & sample = samples_vec.at(j);
+    //    if (sample.CheckInSignalRange(end_energy)) {     
+    //      found = true;
+    //      sample_scales[sample_ID][j] += scale;
+    //      nominal_samples[sample_ID][j] += 1.;
+    //      break;
+    //    }
+    //  }
+    //  if (!found) {
+    //    if (end_energy < samples_vec[1].RangeLowEnd()) {
+    //      sample_scales[sample_ID][0] += scale;
+    //      nominal_samples[sample_ID][0] += 1.;
+    //    }
+    //    else {
+    //      sample_scales[sample_ID].back() += scale;
+    //      nominal_samples[sample_ID].back() += 1.;
+    //    }
+    //  }
+    //}
+    //else {
+    //  sample_scales[sample_ID][0] += scale;
+    //  nominal_samples[sample_ID][0] += 1.;
+    //}
+
+    //new_flux ++;
+    double val = 0.;
+    if (selection_ID == 4) {
+      if (selected_hists[selection_ID]->FindBin(reco_beam_endZ) == 0) {
+        val = selected_hists[selection_ID]->GetBinCenter(1);
+      }
+      else if (selected_hists[selection_ID]->FindBin(reco_beam_endZ) >
+               selected_hists[selection_ID]->GetNbinsX()) {
+        val = selected_hists[selection_ID]->GetBinCenter(
+            selected_hists[selection_ID]->GetNbinsX());
+      }
+      else {
+        val = reco_beam_endZ;
+      }
+    }
+    else if (selection_ID > 4) {
+      val = .5;
+    }
+    else if (reco_beam_incidentEnergies->size()) {
+      for (size_t j = 0; j < reco_beam_incidentEnergies->size(); ++j) {
+        incident_hist.Fill((*reco_beam_incidentEnergies)[j]);
+      }
+      if (selected_hists.find(selection_ID) != selected_hists.end()) {
+        if (selection_ID != 4 && selection_ID != 5 && selection_ID != 6) {
+          double energy = reco_beam_interactingEnergy;
+          if (fExtraOptions.get<bool>("DoEnergyFix")) {
+            for (size_t k = 1; k < reco_beam_incidentEnergies->size(); ++k) {
+              double deltaE = ((*reco_beam_incidentEnergies)[k-1] -
+                               (*reco_beam_incidentEnergies)[k]);
+              if (deltaE > fExtraOptions.get<double>("EnergyFix")) {
+                energy += deltaE; 
+              }
+            }
+          }
+          if (selected_hists[selection_ID]->FindBin(energy) == 0) {
+            val = selected_hists[selection_ID]->GetBinCenter(1);
+          }
+          else if (selected_hists[selection_ID]->FindBin(energy) >
+                   selected_hists[selection_ID]->GetNbinsX()) {
+            val = selected_hists[selection_ID]->GetBinCenter(
+                selected_hists[selection_ID]->GetNbinsX());
+          }
+          else {
+            val = energy;
+          }
+        }
+      }
+    }
+    else {
+      val = selected_hists[selection_ID]->GetBinCenter(1);
+    }
+
+    if (selection_ID < 3) {
+      int new_selection = selection_ID;
+      for (size_t j = 0; j < daughter_Theta->size(); ++j) {
+        if ((abs((*daughter_true_PDG)[j]) == 211) &&
+            ((*daughter_Theta)[j] > -999) &&
+            ((*daughter_Theta)[j]*180./TMath::Pi() < 20.)) {
+          double r = rng.Uniform();
+          if (r < check_val) {
+            new_selection = 3;
+            break;
+          }
+        }
+      }
+      selected_hists[new_selection]->Fill(val);
+    }
+    else {
+      selected_hists[selection_ID]->Fill(val);
+    }
+  }
+
+  //for (auto it = sample_scales.begin(); it != sample_scales.end(); ++it) {
+  //  for (size_t i = 0; i < it->second.size(); ++i) {
+  //    if (it->second[i] > 0.) {
+  //      it->second[i] /= nominal_samples[it->first][i];
+  //    }
+  //    else {
+  //      it->second[i] = 1.;
+  //    }
+  //    it->second[i] *= (flux/new_flux);
+  //  }
+  //}
+
+  //incident_hist.Scale(flux/new_flux);
+  //for (auto it = selected_hists.begin(); it != selected_hists.end(); ++it) {
+  //  it->second->Scale(flux/new_flux);
+  //}
+
+  //std::cout << "Fluxes: " << flux << " " << new_flux << std::endl;
+  for (auto it = sample_scales.begin(); it != sample_scales.end(); ++it) {
+    for (size_t i = 0; i < it->second.size(); ++i) {
+      it->second[i] = 1.;
     }
   }
 }

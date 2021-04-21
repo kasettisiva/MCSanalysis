@@ -1,8 +1,10 @@
 #include "FitterPlotStyle.fcl"
 #include "ProtoDUNECalibration.fcl"
 
-MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_3_31_21/eventSelection_mc_all.root"
-DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_3_31_21/eventSelection_mc_all.root"
+#MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_3_31_21/eventSelection_mc_all.root"
+#DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_3_31_21/eventSelection_mc_all.root"
+MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_4_20_21_with_data/eventSelection_mc_all.root"
+DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_4_20_21_with_data/eventSelection_mc_all.root"
 TreeName: "pduneana/beamana"
 
 #MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_beamType.root"
@@ -15,8 +17,9 @@ DriverName: "protoana::AbsCexDriver"
 AnalysisOptions: {
   #FakeDataRoutine: "SampleScales"
   #FakeDataRoutine: "BinnedScales"
-  FakeDataRoutine: "G4RW"
+  #FakeDataRoutine: "G4RW"
   #FakeDataRoutine: "dEdX"
+  FakeDataRoutine: "EffVar"
 
   FakeDataScales: [
     #[1, 2.]
@@ -37,6 +40,10 @@ AnalysisOptions: {
   FakeDatadEdX: {
     Cal_set: @local::CalorimetryParameters_SPProd4_MC_SCE
     VariedCCal: 1.051e-3
+  }
+
+  FakeDataEffVar: {
+    F: .333
   }
 
   #EndZCut: 226. 
@@ -162,49 +169,50 @@ Systematics: [
   #    GridN: 20
   #  }
   #} #,
+  {
+    Name: "beam_shift"
+    Central: 0. 
+    LowerLimit: -2. 
+    UpperLimit: 2. 
+    Sigma: 1. 
+  
+    Options: {
+      #ShiftFile: "shift_map.root"
+      ShiftFile: "map_B_theta.root"
+    }
+  }
   #{
-  #  Name: "beam_shift"
+  #  Name: "beam_2D_shift"
   #  Central: 0. 
   #  LowerLimit: -2. 
   #  UpperLimit: 2. 
   #  Sigma: 1. 
   #
   #  Options: {
-  #    ShiftFile: "shift_map.root"
+  #    MapFile: "beam_map_2D.root"
+  #  }
+  #},
+  #{
+  #  Name: "beam_2D_B"
+  #  Central: 0. 
+  #  LowerLimit: -2. 
+  #  UpperLimit: 2. 
+  #  Sigma: 1. 
+  #
+  #  Options: {
+  #    MapFile: "beam_map_2D.root"
   #  }
   #}
-  {
-    Name: "beam_2D_shift"
-    Central: 0. 
-    LowerLimit: -2. 
-    UpperLimit: 2. 
-    Sigma: 1. 
-  
-    Options: {
-      MapFile: "beam_map_2D.root"
-    }
-  },
-  {
-    Name: "beam_2D_B"
-    Central: 0. 
-    LowerLimit: -2. 
-    UpperLimit: 2. 
-    Sigma: 1. 
-  
-    Options: {
-      MapFile: "beam_map_2D.root"
-    }
-  }
 
 ]
 
 AddSystTerm: true 
 CovarianceBins: [
-  #["beam_shift", 0]
-  ["beam_2D_shift", 0],
-  ["beam_2D_B", 0]
+  ["beam_shift", 0]
+  #["beam_2D_shift", 0],
+  #["beam_2D_B", 0]
 ]
-CovarianceFile: "2D_cov.root"
+CovarianceFile: "input_cov.root" #"2D_cov.root"
 CovarianceMatrix: "m"
 
 Selections: [
@@ -384,10 +392,10 @@ DrawXSecUnderflow: false
 
 ## Validation
 RandomStart: false 
-DoFakeData: false
-DoThrows: false 
+DoFakeData: true 
+DoThrows: true 
 NThrows: 1000
 Do1DShifts: true
-DoSysts: true 
+DoSysts: false 
 MaxRethrows: 1000
 #####################

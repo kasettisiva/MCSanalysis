@@ -9,6 +9,7 @@
 #include "TH1D.h"
 #include "TH2D.h"
 #include "TH3D.h"
+#include "TRandom3.h"
 
 namespace protoana {
 class ThinSliceDataSet {
@@ -84,6 +85,26 @@ class ThinSliceDataSet {
 
   void MakeRebinnedHists();
 
+  void GetCumulatives() {
+    fTotal = 0;
+    for (auto it = fSelectionHists.begin();
+         it != fSelectionHists.end(); ++it) {
+      for (int i = 1; i <= it->second->GetNbinsX(); ++i) {
+        fCumulatives.push_back({{it->first, i}, it->second->GetBinContent(i)});
+        fTotal += it->second->GetBinContent(i);
+      }
+    }
+
+    for (auto it = fCumulatives.begin(); it != fCumulatives.end(); ++it) {
+      it->second /= fTotal;
+    }
+
+    std::sort(fCumulatives.begin(), fCumulatives.end(),
+              [](auto a, auto b){return (a.second > b.second);});
+  };
+
+  void GenerateStatFluctuation();
+
  private:
   void Rebin1D(TH1 * sel_hist, TH1 * rebinned);
   void Rebin2D(TH1 * sel_hist, TH1 * rebinned);
@@ -94,6 +115,9 @@ class ThinSliceDataSet {
   TH1D fIncidentHistRebinned;
   bool fMadeRebinned = false;
   std::map<int, std::string> fSelectionNames;
+  std::vector<std::pair<std::pair<int, int>, double>> fCumulatives;
+  TRandom3 fRNG = TRandom3(0);
+  int fTotal;
 
 };
 }
