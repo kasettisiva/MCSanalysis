@@ -26,6 +26,18 @@ class ThinSliceEvent {
     g4rw_weights = std::map<std::string, std::vector<double>>();
   };
 
+  int GetEventID() const {
+    return event_ID;
+  };
+
+  int GetSubrunID() const {
+    return subrun_ID;
+  };
+
+  int GetRunID() const {
+    return run_ID;
+  };
+
   int GetSampleID() const {
     return sample_ID;
   };
