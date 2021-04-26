@@ -15,6 +15,7 @@
 #include "TGraphAsymmErrors.h"
 #include "TMatrixD.h"
 #include "TVectorD.h"
+#include "TDecompChol.h"
 
 
 #include "ThinSliceSample.h"
@@ -43,6 +44,8 @@ class PDSPThinSliceFitter {
   ~PDSPThinSliceFitter();
 
  private:
+  void NormalFit();
+  void Pulls();
   void Configure(std::string fcl_file);
   void DefineFitFunction();
   void DefineFitFunction2();
@@ -61,6 +64,7 @@ class PDSPThinSliceFitter {
     std::map<int, std::vector<TH1*>> & truth_inc_hists,
     std::map<int, std::vector<TH1*>> & truth_xsec_hists);
   void BuildFakeDataXSecs();
+  void BuildDataFromToy();
   //void Get1DSystPlots();
   double CalcChi2SystTerm();
 
@@ -77,6 +81,7 @@ class PDSPThinSliceFitter {
   TFile fOutputFile;
   ROOT::Math::Functor fFitFunction;
   std::unique_ptr<ROOT::Math::Minimizer> fMinimizer;
+  std::vector<double> fMinimizerInitVals;
 
   //std::map<int, TGraphAsymmErrors> fSignalEfficiencies;
   //std::map<int, std::pair<TH1D, TH1D>> fSignalEffParts;
@@ -115,8 +120,11 @@ class PDSPThinSliceFitter {
   std::map<std::string, size_t> fCovarianceBins;
   bool fAddSystTerm;
   TMatrixD * fCovMatrix;
+  TDecompChol * fInputChol;
 
-  TRandom3 fRNG;
+  std::map<std::string, double> fToyValues;
+
+  TRandom3 fRNG = TRandom3(0);
   std::map<int, std::vector<double>> fFakeDataScales;
   std::map<int, std::vector<double>> fBestFitSignalPars;
   std::map<std::string, ThinSliceSystematic> fBestFitSystPars;
@@ -154,6 +162,8 @@ class PDSPThinSliceFitter {
   bool fFillIncidentInFunction = false;
   bool fFitFlux;
   size_t fNThrows, fMaxRethrows;
+  std::string fFitType = "Normal";
+  size_t fNPulls;
   
   std::vector<double> fIncidentRecoBins, fTrueIncidentBins, fBeamEnergyBins;
   std::vector<int> fIncidentSamples, fMeasurementSamples;

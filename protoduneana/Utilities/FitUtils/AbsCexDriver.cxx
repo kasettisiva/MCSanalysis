@@ -692,6 +692,13 @@ void protoana::AbsCexDriver::SetupSyst_BeamShift(
       pars.at("beam_shift").GetOption<std::string>("ShiftFile").c_str());
   fSystBeamShiftMap = (TGraph2D*)shift_file.Get("g2d");
   fSystBeamShiftMap->SetDirectory(0);
+  fSystBeamShiftLimits
+      = pars.at("beam_shift").GetOption<std::pair<double, double>>("Limits");
+
+  fSystBeamShiftMeans = (TGraph*)shift_file.Get("gMeans");
+  //fSystBeamShiftMeans->SetDirectory(0);
+  fSystBeamShiftWidths = (TGraph*)shift_file.Get("gWidths");
+  //fSystBeamShiftWidths->SetDirectory(0);
   shift_file.Close();
 
   output_file.mkdir("SystBeamShift");
@@ -1242,23 +1249,33 @@ double protoana::AbsCexDriver::GetSystWeight_BeamShift(
   double x_val = pars.at("beam_shift").GetValue();
   double y_val = (event.GetBeamInstP() - event.GetTrueStartP())/
                   event.GetTrueStartP();
-  if (y_val < fSystBeamShiftMap->GetYmin() ||
-      y_val > fSystBeamShiftMap->GetYmax()) {
+  if (y_val < fSystBeamShiftLimits.first/*fSystBeamShiftMap->GetYmin()*/ ||
+      y_val > fSystBeamShiftLimits.second/*fSystBeamShiftMap->GetYmax()*/) {
     return 1.;
   }
-  if (fSystBeamShiftMap->Interpolate(x_val, y_val) < 0.) {
-    std::cout << "WARNING: Interpolated " << x_val << " " << y_val <<
-                 fSystBeamShiftMap->Interpolate(x_val, y_val) << std::endl;
-  }
-  else if (isnan(fSystBeamShiftMap->Interpolate(x_val, y_val))) {
-    std::cout << "WARNING: Interpolated " << x_val << " " << y_val <<
-                 fSystBeamShiftMap->Interpolate(x_val, y_val) << std::endl;
-  }
-  fSystBeamShiftWeight = fSystBeamShiftMap->Interpolate(x_val, y_val);
+  //if (fSystBeamShiftMap->Interpolate(x_val, y_val) < 0.) {
+  //  std::cout << "WARNING: Interpolated " << x_val << " " << y_val <<
+  //               fSystBeamShiftMap->Interpolate(x_val, y_val) << std::endl;
+  //}
+  //else if (isnan(fSystBeamShiftMap->Interpolate(x_val, y_val))) {
+  //  std::cout << "WARNING: Interpolated " << x_val << " " << y_val <<
+  //               fSystBeamShiftMap->Interpolate(x_val, y_val) << std::endl;
+  //}
+
+  double nominal_mean = fSystBeamShiftMeans->Eval(0.);
+  double nominal_width = fSystBeamShiftWidths->Eval(0.);
+  double varied_mean = fSystBeamShiftMeans->Eval(x_val);
+  double varied_width = fSystBeamShiftWidths->Eval(x_val);
+  double weight = (nominal_width/varied_width)*
+                  exp(.5*std::pow(((y_val - nominal_mean)/nominal_width), 2)
+                      - .5*std::pow(((y_val - varied_mean)/varied_width), 2));
+
+  //fSystBeamShiftWeight = fSystBeamShiftMap->Interpolate(x_val, y_val);
+  fSystBeamShiftWeight = weight;
   fSystBeamShiftVal = x_val;
   fSystBeamShiftR = y_val;
   fSystBeamShiftTree->Fill();
-  return fSystBeamShiftMap->Interpolate(x_val, y_val);
+  return weight;
 }
 
 double protoana::AbsCexDriver::GetSystWeight_BeamShift2D(

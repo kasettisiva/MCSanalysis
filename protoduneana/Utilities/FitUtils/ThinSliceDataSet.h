@@ -5,6 +5,7 @@
 #include <map>
 
 #include "fhiclcpp/ParameterSet.h"
+#include "ThinSliceSample.h"
 
 #include "TH1D.h"
 #include "TH2D.h"
@@ -90,7 +91,10 @@ class ThinSliceDataSet {
     for (auto it = fSelectionHists.begin();
          it != fSelectionHists.end(); ++it) {
       for (int i = 1; i <= it->second->GetNbinsX(); ++i) {
-        fCumulatives.push_back({{it->first, i}, it->second->GetBinContent(i)});
+        double val = it->second->GetBinContent(i);
+        if (fCumulatives.size())
+          val += fCumulatives.back().second;
+        fCumulatives.push_back({{it->first, i}, val});
         fTotal += it->second->GetBinContent(i);
       }
     }
@@ -101,9 +105,17 @@ class ThinSliceDataSet {
 
     std::sort(fCumulatives.begin(), fCumulatives.end(),
               [](auto a, auto b){return (a.second > b.second);});
+    std::cout << "N Cumulatives: " << fCumulatives.size() << std::endl;
+    for (auto c : fCumulatives) {
+      std::cout << c.second << std::endl;
+    }
   };
 
   void GenerateStatFluctuation();
+
+  void FillHistsFromSamples(
+      const std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+      double & flux);
 
  private:
   void Rebin1D(TH1 * sel_hist, TH1 * rebinned);

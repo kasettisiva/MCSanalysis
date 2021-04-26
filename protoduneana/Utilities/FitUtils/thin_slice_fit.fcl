@@ -178,7 +178,9 @@ Systematics: [
   
     Options: {
       #ShiftFile: "shift_map.root"
-      ShiftFile: "map_B_theta.root"
+      ShiftFile: "map_B_theta_2.root"
+      #Limits: [-.15, .15]
+      Limits: [-.2, .2]
     }
   }
   #{
@@ -392,10 +394,15 @@ DrawXSecUnderflow: false
 
 ## Validation
 RandomStart: false 
-DoFakeData: true 
-DoThrows: true 
+DoFakeData: false 
+DoThrows: false 
 NThrows: 1000
 Do1DShifts: true
-DoSysts: false 
+DoSysts: true 
 MaxRethrows: 1000
 #####################
+
+#FitType: "Normal"
+#FitType: "Pulls"
+FitType: "Toy"
+NPulls: 10

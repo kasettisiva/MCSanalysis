@@ -6,6 +6,7 @@
 #include "TFile.h"
 #include "TSpline.h"
 #include "TGraph2D.h"
+#include "TGraph.h"
 #include <map>
 
 namespace protoana {
@@ -197,6 +198,8 @@ class AbsCexDriver : public ThinSliceDriver {
    double fSystBeamShift2DWeight, fSystBeamShift2DBVal, fSystBeamShift2DVal,
           fSystBeamShift2DR;
    TGraph2D * fSystBeamShiftMap, * fSystBeam2DMeans, * fSystBeam2DStdDevs;
+   TGraph * fSystBeamShiftMeans, * fSystBeamShiftWidths;
+   std::pair<double, double> fSystBeamShiftLimits;
 
    std::map<std::string, std::map<int, std::vector<TH1D*>>> fFullSelectionVars;
    std::map<std::string, std::map<int, std::vector<TSpline3*>>> fFullSelectionSplines;

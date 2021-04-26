@@ -190,6 +190,8 @@ void protoana::ThinSliceDataSet::GenerateStatFluctuation() {
     double r = fRNG.Uniform();
     std::pair<int, int> bin;
     for (size_t j = 0; j < fCumulatives.size(); ++j) {
+      //std::cout << fCumulatives[j].second << " " <<  r <<
+      //             " "  << fCumulatives[j].second - r << std::endl;
       if ((fCumulatives[j].second - r) > 0.) {
         bin = fCumulatives[j].first;
       }
@@ -197,6 +199,33 @@ void protoana::ThinSliceDataSet::GenerateStatFluctuation() {
         break;
       }
     }
+    //std::cout << "Found bin: " << bin.first << " " << bin.second << std::endl;
     fSelectionHists[bin.first]->AddBinContent(bin.second); 
+  }
+
+ // std::cout << "Bin vals: ";
+ // std::cout << bin.second << " ";
+ // std::cout << std::endl;
+}
+
+void protoana::ThinSliceDataSet::FillHistsFromSamples(
+    const std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+    double & flux) {
+
+  flux = 0.;
+  for (auto it = fSelectionHists.begin(); it != fSelectionHists.end(); ++it) {
+    it->second->Reset();
+  }
+
+  for (auto it = samples.begin(); it != samples.end(); ++it) {
+    for (size_t i = 0; i < it->second.size(); ++i) {
+      for (size_t j = 0; j < it->second[i].size(); ++j) {
+        const auto & hists = it->second[i][j].GetSelectionHists();
+        for (auto it2 = hists.begin(); it2 != hists.end(); ++it2) {
+          fSelectionHists[it2->first]->Add(it2->second);
+          flux += it2->second->Integral();
+        }
+      }
+    }
   }
 }
