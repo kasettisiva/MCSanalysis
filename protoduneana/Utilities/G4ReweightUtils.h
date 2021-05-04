@@ -22,6 +22,12 @@ namespace protoana {
       art::ServiceHandle < geo::Geometry > geo_serv, int event,
       bool fVerbose=false);
 
+  std::vector<std::vector<G4ReweightTraj *>> BuildHierarchy(
+      int ID, int PDG,
+      const sim::ParticleList & plist,
+      art::ServiceHandle<geo::Geometry> geo_serv, int event,
+      bool fVerbose=false);
+
   double GetNTrajWeightFromSetPars(
     const std::vector<G4ReweightTraj *> & trajs, G4MultiReweighter & rw);
 

@@ -257,7 +257,9 @@ void protoana::PDSPThinSliceFitter::FillMCEvents() {
   std::vector<double> * reco_beam_incidentEnergies = 0x0,
                       * true_beam_incidentEnergies = 0x0,
                       * true_beam_traj_Z = 0x0,
-                      * true_beam_traj_KE = 0x0;
+                      * true_beam_traj_KE = 0x0,
+                      * reco_daughter_track_thetas = 0x0,
+                      * reco_daughter_track_scores = 0x0;
   std::vector<int> * true_beam_slices = 0x0;
   fMCTree->SetBranchAddress("event", &event);
   fMCTree->SetBranchAddress("subrun", &subrun);
@@ -289,6 +291,9 @@ void protoana::PDSPThinSliceFitter::FillMCEvents() {
   fMCTree->SetBranchAddress("reco_beam_EField_SCE", &beam_EField);
   fMCTree->SetBranchAddress("reco_beam_TrkPitch_SCE", &track_pitch);
   fMCTree->SetBranchAddress("beam_inst_P", &beam_inst_P);
+  fMCTree->SetBranchAddress("reco_daughter_allTrack_Theta", &reco_daughter_track_thetas);
+  fMCTree->SetBranchAddress("reco_daughter_PFP_trackScore_collection",
+                            &reco_daughter_track_scores);
 
   std::vector<double> * g4rw_alt_primary_plus_sigma_weight = 0x0,
                       * g4rw_alt_primary_minus_sigma_weight = 0x0,
@@ -331,6 +336,8 @@ void protoana::PDSPThinSliceFitter::FillMCEvents() {
     fEvents.back().SetTrackPitch(*track_pitch);
     fEvents.back().SetBeamInstP(beam_inst_P);
     fEvents.back().SetPDG(true_beam_PDG);
+    fEvents.back().SetRecoDaughterTrackThetas(*reco_daughter_track_thetas);
+    fEvents.back().SetRecoDaughterTrackScores(*reco_daughter_track_scores);
     fEvents.back().MakeG4RWBranch("g4rw_alt_primary_plus_sigma_weight",
                                   *g4rw_alt_primary_plus_sigma_weight);
     fEvents.back().MakeG4RWBranch("g4rw_alt_primary_minus_sigma_weight",
@@ -2212,6 +2219,12 @@ void protoana::PDSPThinSliceFitter::BuildFakeDataXSecs() {
     //  std::cout << temp_xsec->GetBinContent(i) << " ";
     //}
     //std::cout << std::endl;
+  }
+  fOutputFile.cd();
+  TDirectory * out = (TDirectory *)fOutputFile.mkdir("FakeDataXSecs");
+  out->cd();
+  for (auto it = fFakeDataXSecs.begin(); it != fFakeDataXSecs.end(); ++it) {
+    it->second->Write();
   }
 
   //Now, reset all samples

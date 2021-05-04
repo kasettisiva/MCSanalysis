@@ -24,6 +24,11 @@ class ThinSliceEvent {
     beam_EField = std::vector<double>();
     track_pitch = std::vector<double>();
     g4rw_weights = std::map<std::string, std::vector<double>>();
+    reco_daughter_track_thetas = std::vector<double>();
+    reco_daughter_track_scores = std::vector<double>();
+    reco_daughter_track_dQdX = std::vector<std::vector<double>>();
+    reco_daughter_track_res_range = std::vector<std::vector<double>>();
+    reco_daughter_efield = std::vector<std::vector<double>>();
   };
 
   int GetSampleID() const {
@@ -110,6 +115,44 @@ class ThinSliceEvent {
     true_beam_traj_KE = v;
   };
 
+  const std::vector<double> & GetRecoDaughterTrackThetas() const {
+    return reco_daughter_track_thetas;
+  };
+  void SetRecoDaughterTrackThetas(std::vector<double> v) {
+    reco_daughter_track_thetas = v;
+  };
+
+  const std::vector<double> & GetRecoDaughterTrackScores() const {
+    return reco_daughter_track_scores;
+  };
+  void SetRecoDaughterTrackScores(std::vector<double> v) {
+    reco_daughter_track_scores = v;
+  };
+
+  const std::vector<std::vector<double>>
+      & GetRecoDaughterTrackResRanges() const {
+    return reco_daughter_track_res_range;
+  };
+  void AddRecoDaughterTrackResRange(std::vector<double> v) {
+    reco_daughter_track_res_range.push_back(v);
+  };
+
+  const std::vector<std::vector<double>>
+      & GetRecoDaughterTrackdQdXs() const {
+    return reco_daughter_track_dQdX;
+  };
+  void AddRecoDaughterTrackdQdX(std::vector<double> v) {
+    reco_daughter_track_dQdX.push_back(v);
+  };
+
+  const std::vector<std::vector<double>>
+      & GetRecoDaughterEFields() const {
+    return reco_daughter_efield;
+  };
+  void AddRecoDaughterEField(std::vector<double> v) {
+    reco_daughter_efield.push_back(v);
+  };
+
   const std::vector<int> & GetTrueSlices() const {
     return true_beam_slices;
   };
@@ -181,7 +224,13 @@ class ThinSliceEvent {
   std::vector<double> reco_beam_incidentEnergies,
                       true_beam_incidentEnergies,
                       true_beam_traj_Z,
-                      true_beam_traj_KE;
+                      true_beam_traj_KE,
+                      reco_daughter_track_thetas,
+                      reco_daughter_track_scores;
+  std::vector<std::vector<double>> reco_daughter_track_dQdX,
+                                   reco_daughter_track_res_range,
+                                   reco_daughter_efield;
+
   std::vector<int> true_beam_slices;
   std::vector<double> calibrated_dQdX, beam_EField,
                       track_pitch;

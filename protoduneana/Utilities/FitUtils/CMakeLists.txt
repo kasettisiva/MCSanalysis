@@ -29,6 +29,7 @@ art_make_library( LIBRARY_NAME protodune_fitutils
 			    ${ROOT_MINUIT2}
 			    ${ROOT_CORE}
 			    ${ROOT_MATHCORE}
+                            ProtoDUNEUtilities
 	    )
 
 art_make_exec( NAME runProtoDUNEFit

@@ -7,7 +7,9 @@
 #include "TSpline.h"
 #include "TGraph2D.h"
 #include "TGraph.h"
+#include "TRandom3.h"
 #include <map>
+#include "protoduneana/Utilities/ProtoDUNETrackUtils.h"
 
 namespace protoana {
 class AbsCexDriver : public ThinSliceDriver {
@@ -36,6 +38,12 @@ class AbsCexDriver : public ThinSliceDriver {
     ThinSliceDataSet & data_set, double & flux,
     std::map<int, std::vector<double>> & sample_scales);
   void FakeDataG4RW(
+    TTree * tree,
+    std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+    const std::map<int, bool> & signal_sample_checks,
+    ThinSliceDataSet & data_set, double & flux,
+    std::map<int, std::vector<double>> & sample_scales);
+  void FakeDataG4RWGrid(
     TTree * tree,
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     const std::map<int, bool> & signal_sample_checks,
@@ -79,7 +87,7 @@ class AbsCexDriver : public ThinSliceDriver {
       const std::map<int, bool> & signal_sample_checks,
       std::vector<double> & beam_energy_bins) override;*/
   
-  void SystRoutine_G4RW(
+  void SetupSyst_G4RW(
       const std::vector<ThinSliceEvent> & events,
       std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
       const std::map<int, bool> & signal_sample_checks,
@@ -87,7 +95,7 @@ class AbsCexDriver : public ThinSliceDriver {
       const std::map<std::string, ThinSliceSystematic> & pars,
       TFile & output_file);
 
-  void SystRoutine_dEdX_Cal(
+  void SetupSyst_dEdX_Cal(
       const std::vector<ThinSliceEvent> & events,
       std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
       const std::map<std::string, ThinSliceSystematic> & pars,
@@ -141,21 +149,28 @@ class AbsCexDriver : public ThinSliceDriver {
       const std::map<std::string, ThinSliceSystematic> & pars,
       TFile & output_file) override;
 
-  void SetupSyst_BeamRes(
+  /*void SetupSyst_BeamRes(
       const std::vector<ThinSliceEvent> & events,
       std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
       const std::map<std::string, ThinSliceSystematic> & pars,
-      TFile & output_file);
+      TFile & output_file);*/
   void SetupSyst_BeamShift(
       const std::map<std::string, ThinSliceSystematic> & pars,
       TFile & output_file);
   void SetupSyst_BeamShift2D(
       const std::map<std::string, ThinSliceSystematic> & pars,
       TFile & output_file);
-
-  double GetSystWeight_BeamRes(
-      const ThinSliceEvent & event,
+  void SetupSyst_EffVar(
+      const std::vector<ThinSliceEvent> & events,
+      std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+      const std::map<std::string, ThinSliceSystematic> & pars,
+      TFile & output_file);
+  void SetupSyst_EffVarWeight(
       const std::map<std::string, ThinSliceSystematic> & pars);
+
+  /*double GetSystWeight_BeamRes(
+      const ThinSliceEvent & event,
+      const std::map<std::string, ThinSliceSystematic> & pars);*/
   double GetSystWeight_BeamShift(
       const ThinSliceEvent & event,
       const std::map<std::string, ThinSliceSystematic> & pars);
@@ -167,8 +182,15 @@ class AbsCexDriver : public ThinSliceDriver {
       const std::map<std::string, ThinSliceSystematic> & pars,
       const ThinSliceSample & sample,
       int selection_ID, double val);
-
+  double GetSystWeight_EffVar(
+      const ThinSliceEvent & event,
+      const std::map<std::string, ThinSliceSystematic> & pars);
   void WrapUpSysts(TFile & output_file) override;
+  int RecalculateSelectionID(
+      const ThinSliceEvent & event,
+      double C_cal,
+      TProfile * prot_template);
+  double TruncatedMean(const std::vector<double> & dEdX);
  private:
    TH2D * fEndSlices;
    TFile * fIn;
@@ -185,18 +207,19 @@ class AbsCexDriver : public ThinSliceDriver {
 
    double fBetaP, fRho, fWion, fAlpha, fNominalCCal;
 
-   bool fStaticBeamResWidth = false;
-   bool fStaticBeamResMean = false;
-   double fBeamResMeanVal = 1.;
-   double fBeamResWidthVal = 1.;
-   TTree * fSystBeamResTree, * fSystBeamShiftTree, * fSystBeamShift2DTree;
-   double fSystBeamResWeight, fSystBeamResMeanOutput, fSystBeamResWidthOutput;
-   double fSystBeamResWeightCap, fSystBeamResOutput;
+   //bool fStaticBeamResWidth = false;
+   //bool fStaticBeamResMean = false;
+   //double fBeamResMeanVal = 1.;
+   //double fBeamResWidthVal = 1.;
+   TTree /** fSystBeamResTree, */* fSystBeamShiftTree, * fSystBeamShift2DTree;
+   //double fSystBeamResWeight, fSystBeamResMeanOutput, fSystBeamResWidthOutput;
+   //double fSystBeamResWeightCap, fSystBeamResOutput;
    double fSystBeamShiftWeight, fSystBeamShiftVal, fSystBeamShiftR;
-   bool fSetupSystBeamRes = false, fSetupSystBeamShift = false,
-        fSetupSystBeamShift2D = false;
+   bool /*fSetupSystBeamRes = false,*/ fSetupSystBeamShift = false,
+        fSetupSystBeamShift2D = false, fSetupSystEffVar = false;
    double fSystBeamShift2DWeight, fSystBeamShift2DBVal, fSystBeamShift2DVal,
           fSystBeamShift2DR;
+  // double fEffVarSystVal;
    TGraph2D * fSystBeamShiftMap, * fSystBeam2DMeans, * fSystBeam2DStdDevs;
    TGraph * fSystBeamShiftMeans, * fSystBeamShiftWidths;
    std::pair<double, double> fSystBeamShiftLimits;
@@ -207,6 +230,10 @@ class AbsCexDriver : public ThinSliceDriver {
    std::map<std::string, std::map<int, std::vector<TH1D*>>> fG4RWSelectionVarsPlus;
    std::map<std::string, std::map<int, std::vector<TH1D*>>> fG4RWSelectionVarsMinus;
    std::vector<std::string> fActiveG4RWSysts;
+   TRandom3 fRNG = TRandom3(0);
+
+   double fEffVarF, fEffVarCut;
+   ProtoDUNETrackUtils fTrackUtil;
 };
 }
 #endif

@@ -305,3 +305,43 @@ std::pair<double, double> protoana::G4ReweightUtils::GetNTrajPMSigmaWeights(
   }
   return results;
 }
+
+std::vector<std::vector<G4ReweightTraj *>>
+    protoana::G4ReweightUtils::BuildHierarchy(
+        int ID, int PDG, const sim::ParticleList & plist,
+        art::ServiceHandle<geo::Geometry> geo_serv, int event,
+        bool verbose) {
+
+  std::deque<int> to_create = {ID};
+  std::vector<std::vector<G4ReweightTraj *>> full_created;
+
+  while (to_create.size()) {
+    auto part = plist[to_create[0]];
+    std::vector<G4ReweightTraj *> temp_trajs =
+        CreateNRWTrajs(*part, plist, geo_serv,
+                       event, true);
+    for (int i = 0; i < part->NumberDaughters(); ++i) {
+      int daughter_ID = part->Daughter(i);
+      auto d_part = plist[daughter_ID];
+      if ((d_part->PdgCode() == 2212) || (d_part->PdgCode() == 2112) ||
+          (abs(d_part->PdgCode()) == 211)) {
+        to_create.push_back(daughter_ID);
+        std::cout << "Adding daughter " << to_create.back() << std::endl;
+      }
+    }
+  
+  
+    if (temp_trajs.size()) {
+      auto last_traj = temp_trajs.back();
+      std::cout << "created " << last_traj->GetTrackID() << " " <<
+                   last_traj->GetPDG() << std::endl;
+  
+      if (temp_trajs[0]->GetPDG() == PDG) {
+        full_created.push_back(temp_trajs);
+      }
+    }
+    to_create.pop_front();
+  }
+
+  return full_created;
+}

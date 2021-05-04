@@ -5,9 +5,12 @@
 #include "TLegend.h"
 #include "TRandom3.h"
 #include "TMath.h"
+#include "TProfile.h"
+#include "protoduneana/Utilities/ProtoDUNETrackUtils.h"
 
 #include <iomanip>
 #include <iostream> 
+#include <numeric>
 
 #include "ThinSliceDriverFactory.h"
 DECLARE_THINSLICEDRIVER_FACTORY_NS(protoana::AbsCexDriver, protoana, AbsCexDriver)
@@ -306,18 +309,6 @@ void protoana::AbsCexDriver::RefillMCSamples(
     }
   }
 
-/*
-  TH2D * h2D = 0x0;
-  std::map<int, double> * means = 0x0;
-  if (slice_method == "Alt") {
-    tree->Draw("true_beam_traj_KE:true_beam_traj_Z>>h2D(734, -.49375, 351.63541, 200, 0, 2000)",
-               "true_beam_PDG == 211 && new_interaction_topology != 4 && new_interaction_topology != 5 && true_beam_traj_Z > -.43975 && true_beam_traj_KE > 10.");
-    h2D = (TH2D*)gDirectory->Get("h2D");
-    means = new std::map<int, double>();
-    for (int i = 1; i <= 735; ++i) {
-      (*means)[i] = h2D->ProjectionY("", i, i)->GetMean();
-    }
-  }*/
 
   for (size_t i = 0; i < events.size(); ++i) {
     const ThinSliceEvent & event = events.at(i);
@@ -347,7 +338,10 @@ void protoana::AbsCexDriver::RefillMCSamples(
         = event.GetEField();
     const std::vector<double> track_pitch
         = event.GetTrackPitch();
-
+    const std::vector<double> daughter_thetas
+        = event.GetRecoDaughterTrackThetas();
+//    const std::vector<double> track_scores
+//        = event.GetRecoDaughterTrackScores();
 
     double end_energy = true_beam_interactingEnergy;
     if (fSliceMethod == "Traj") {
@@ -478,9 +472,28 @@ void protoana::AbsCexDriver::RefillMCSamples(
     }
 
     double val[1] = {0};
+    
+    //EffVar check
+    int new_selection = selection_ID;
+    //if (fSetupSystEffVar && selection_ID < 3) {
+    //  for (size_t j = 0; j < daughter_thetas.size(); ++j) {
+    //    if (/*(abs((*daughter_true_PDG)[j]) == 211) &&*/
+    //        //(track_scores[j] > .3) &&
+    //        (daughter_thetas[j] > -999) &&
+    //        (daughter_thetas[j]*180./TMath::Pi() < 20.)) {
+    //      double r = fRNG.Uniform();
+    //      if (r < syst_pars.at("eff_var").GetValue()/*fEffVarSystVal*/) {
+    //        new_selection = 3;
+    //        break;
+    //      }
+    //    }
+    //  }
+    //  //selected_hists[new_selection]->Fill(val);
+    //}
+
     TH1D * selected_hist
-        = (TH1D*)this_sample->GetSelectionHists().at(selection_ID);
-    if (selection_ID == 4) {
+        = (TH1D*)this_sample->GetSelectionHists().at(new_selection/*selection_ID*/);
+    if (new_selection/*selection_ID*/ == 4) {
       if (selected_hist->FindBin(reco_beam_endZ) == 0) {
         val[0] = selected_hist->GetBinCenter(1);
       }
@@ -492,21 +505,20 @@ void protoana::AbsCexDriver::RefillMCSamples(
         val[0] = reco_beam_endZ;
       }
     }
-    else if (selection_ID > 4) {
+    else if (new_selection/*selection_ID*/ > 4) {
       val[0] = .5;
     }
     else if (reco_beam_incidentEnergies.size()) {
 
       double energy[1] = {0.};
       if (syst_pars.find("dEdX_Cal") != syst_pars.end()) {
-        //std::cout << "Doing dEdX_Cal" << std::endl;
         energy[0] = sqrt(beam_inst_P*beam_inst_P*1.e6 + 139.57*139.57) -
                         139.57;
         //limits?
         for (size_t k = 0; k < calibrated_dQdX.size()-1; ++k) {
           if ((calibrated_dQdX)[k] < 0.) continue;
 
-          double dedx = (1./(syst_pars.at("dEdX_Cal").GetValue()/**fNominalCCal*/));
+          double dedx = (1./(syst_pars.at("dEdX_Cal").GetValue()));
           dedx *= (calibrated_dQdX)[k];
           dedx *= (fBetaP / ( fRho * (beam_EField)[k] ) * fWion);
           dedx = exp(dedx);
@@ -516,20 +528,7 @@ void protoana::AbsCexDriver::RefillMCSamples(
           if (dedx*(track_pitch)[k] > fEnergyFix)
             continue;
           energy[0] -= dedx*(track_pitch)[k];
-          //std::cout << "Energy: " << energy[0] << " dedx: " << dedx <<
-          //             std::endl;
         }
-        //double int_energy = {reco_beam_interactingEnergy};
-        //if (fDoEnergyFix) {
-        //  for (size_t k = 1; k < reco_beam_incidentEnergies.size(); ++k) {
-        //    double deltaE = ((reco_beam_incidentEnergies)[k-1] -
-        //                     (reco_beam_incidentEnergies)[k]);
-        //    if (deltaE > fEnergyFix) {
-        //      int_energy += deltaE; 
-        //    }
-        //  }
-        //}
-        //std::cout << syst_pars.at("dEdX_Cal").GetValue() << " " << energy[0] << " " << int_energy << std::endl;
       }
 
       else {
@@ -545,8 +544,6 @@ void protoana::AbsCexDriver::RefillMCSamples(
         }
       }
 
-      //TH1D * selected_hist
-      //    = (TH1D*)this_sample->GetSelectionHists().at(selection_ID);
       if (selected_hist->FindBin(energy[0]) == 0) {
         val[0] = selected_hist->GetBinCenter(1);
       }
@@ -559,27 +556,30 @@ void protoana::AbsCexDriver::RefillMCSamples(
       }
     }
     else {
-      //TH1D * selected_hist
-      //    = (TH1D*)this_sample->GetSelectionHists().at(selection_ID);
       val[0] = selected_hist->GetBinCenter(1);
     }
 
     if (syst_pars.find("dEdX_Cal_Spline") != syst_pars.end()) {
-      //std::cout << "Doing dEdX_Cal_spline" << std::endl;
       int bin = selected_hist->FindBin(val[0]);
       TSpline3 * spline
-          = fFullSelectionSplines["dEdX_Cal_Spline"][selection_ID][bin-1];
+          = fFullSelectionSplines["dEdX_Cal_Spline"][new_selection/*selection_ID*/][bin-1];
       weight *= spline->Eval(syst_pars.at("dEdX_Cal_Spline").GetValue());
     }
-    weight *= GetSystWeight_BeamRes(event, syst_pars);
+    if (syst_pars.find("eff_var") != syst_pars.end()) {
+      int bin = selected_hist->FindBin(val[0]);
+      TSpline3 * spline
+          = fFullSelectionSplines["EffVar_Spline"][new_selection/*selection_ID*/][bin-1];
+      weight *= spline->Eval(syst_pars.at("eff_var").GetValue());
+    }
 
-    weight *= GetSystWeight_G4RW(event, syst_pars, *this_sample, selection_ID,
+    weight *= GetSystWeight_G4RW(event, syst_pars, *this_sample, new_selection/*selection_ID*/,
                                  val[0]);
 
     weight *= GetSystWeight_BeamShift(event, syst_pars);
     weight *= GetSystWeight_BeamShift2D(event, syst_pars);
+    weight *= GetSystWeight_EffVar(event, syst_pars);
 
-    this_sample->FillSelectionHist(selection_ID, val, weight);
+    this_sample->FillSelectionHist(new_selection/*selection_ID*/, val, weight);
 
     //Fill the total incident hist with truth info
     if (fill_incident) {
@@ -598,10 +598,10 @@ void protoana::AbsCexDriver::RefillMCSamples(
 }
 
 void protoana::AbsCexDriver::WrapUpSysts(TFile & output_file) {
-  if (fSetupSystBeamRes/*fSystBeamResTree*/) {
-    output_file.cd("SystBeamRes");
-    fSystBeamResTree->Write();
-  }
+  //if (fSetupSystBeamRes/*fSystBeamResTree*/) {
+  //  output_file.cd("SystBeamRes");
+  //  fSystBeamResTree->Write();
+  //}
   if (fSetupSystBeamShift) {
     output_file.cd("SystBeamShift");
     fSystBeamShiftTree->Write();
@@ -668,18 +668,262 @@ void protoana::AbsCexDriver::SetupSysts(
       std::string message = "Could not find collection plane calibration factor";
       throw std::runtime_error(message);
     }
-    SystRoutine_dEdX_Cal(events, samples, pars, output_file);
+    SetupSyst_dEdX_Cal(events, samples, pars, output_file);
   }
 
-  SystRoutine_G4RW(events, samples, signal_sample_checks, beam_energy_bins,
+  SetupSyst_G4RW(events, samples, signal_sample_checks, beam_energy_bins,
                    pars, output_file);
 
-  SetupSyst_BeamRes(events, samples, pars, output_file);
+  //SetupSyst_BeamRes(events, samples, pars, output_file);
   SetupSyst_BeamShift(pars, output_file);
   SetupSyst_BeamShift2D(pars, output_file);
+  SetupSyst_EffVar(events, samples, pars, output_file);
+  SetupSyst_EffVarWeight(pars);
 
 }
 
+void protoana::AbsCexDriver::SetupSyst_EffVarWeight(
+    const std::map<std::string, ThinSliceSystematic> & pars) {
+  if (pars.find("eff_var_weight") == pars.end()) {
+    return;
+  }
+  fEffVarF = pars.at("eff_var_weight").GetOption<double>("F");
+  fEffVarCut = pars.at("eff_var_weight").GetOption<double>("Cut");
+}
+
+double protoana::AbsCexDriver::GetSystWeight_EffVar(
+    const ThinSliceEvent & event,
+    const std::map<std::string, ThinSliceSystematic> & pars) {
+  
+  if (pars.find("eff_var_weight") == pars.end()) return 1.;
+
+  const int selection_ID = event.GetSelectionID();
+  if (selection_ID > 3) return 1.;
+
+  const std::vector<double> daughter_thetas 
+      = event.GetRecoDaughterTrackThetas();
+  const std::vector<double> track_scores
+      = event.GetRecoDaughterTrackScores();
+  size_t n = 0;
+  for (size_t i = 0; i < track_scores.size(); ++i) {
+    if ((track_scores[i] > fEffVarCut) &&
+        (daughter_thetas[i]*180./TMath::Pi() < 20.) &&
+        (daughter_thetas[i] > -999.))
+      ++n;
+  }
+  //std::cout << selection_ID << " Has " << n << " tracks under 20. degrees. Weight: ";
+ 
+  double weight = 1.;
+  if (n > 0) {
+    if (selection_ID == 3) {
+      weight = (1 - std::pow(fEffVarF*pars.at("eff_var_weight").GetValue(), n))/
+               (1 - std::pow(fEffVarF, n));
+    }
+    else {
+      weight = (std::pow(pars.at("eff_var_weight").GetValue(), n));
+    }
+  }
+  //std::cout << weight << std::endl;
+  //std::cout << "\tF: " << fEffVarF << " Val: " <<
+  //             pars.at("eff_var_weight").GetValue() << std::endl;
+  return weight;
+}
+
+void protoana::AbsCexDriver::SetupSyst_EffVar(
+    const std::vector<ThinSliceEvent> & events,
+    std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+    const std::map<std::string, ThinSliceSystematic> & pars,
+    TFile & output_file) {
+
+  if (pars.find("eff_var") == pars.end()) {
+    return;
+  }
+
+  fSetupSystEffVar = true;
+  //fEffVarSystVal = pars.at("eff_var").GetOption<double>("Val");
+  //Get the systematic variations to the effeciency 
+  //then build systematic shift hists
+  std::vector<double> vars;
+  for (size_t i = 0; i < 11; ++i) {
+    vars.push_back(.1*i);
+    std::cout << vars.back() << " ";
+  }
+  std::cout << std::endl;
+
+  //Get the first sample and get the selection hists
+  //also make full hist
+  std::map<int, TH1D*> full_hists;
+
+  ThinSliceSample & temp_sample = samples.begin()->second[0][0];
+  const std::map<int, TH1*> & sel_hists = temp_sample.GetSelectionHists();
+  for (auto it = sel_hists.begin(); it != sel_hists.end(); ++it) {
+    std::string sel_hist_name = it->second->GetName();
+    sel_hist_name += "Syst_EffVar_Spline";
+
+    fFullSelectionVars["EffVar_Spline"][it->first] = std::vector<TH1D*>();
+    for (size_t k = 0; k < vars.size(); ++k) {
+      std::string shift_name = sel_hist_name;
+      shift_name += std::to_string(k);
+      fFullSelectionVars["EffVar_Spline"][it->first].push_back((TH1D*)it->second->Clone(shift_name.c_str()));
+      fFullSelectionVars["EffVar_Spline"][it->first].back()->Reset();
+
+    }
+
+    sel_hist_name += "_FullVar";
+    full_hists[it->first] = (TH1D*)it->second->Clone(sel_hist_name.c_str());
+    full_hists[it->first]->Reset();
+  }
+
+  for (size_t i = 0; i < events.size(); ++i) {
+    const ThinSliceEvent & event = events.at(i);
+    int sample_ID = event.GetSampleID();
+    int selection_ID = event.GetSelectionID();
+
+    double reco_beam_endZ = event.GetRecoEndZ();
+
+    const std::vector<double> & reco_beam_incidentEnergies
+        = event.GetRecoIncidentEnergies();
+    double reco_beam_interactingEnergy = event.GetRecoInteractingEnergy();
+    const std::vector<double> calibrated_dQdX
+        = event.GetdQdXCalibrated();
+    const std::vector<double> beam_EField
+        = event.GetEField();
+    const std::vector<double> track_pitch
+        = event.GetTrackPitch();
+    const std::vector<double> daughter_thetas 
+        = event.GetRecoDaughterTrackThetas();
+    const std::vector<double> track_scores
+        = event.GetRecoDaughterTrackScores();
+
+    if (samples.find(sample_ID) == samples.end()) {
+      std::cout << "Warning: skipping sample " << sample_ID << std::endl;
+      continue;
+    }
+
+    std::vector<int> new_selections(vars.size(), selection_ID);
+    if (selection_ID < 3) {
+      for (size_t j = 0; j < vars.size(); ++j) {
+        //Need check for CNN here
+        for (size_t k = 0; k < daughter_thetas.size(); ++k) {
+          if ((daughter_thetas[k] > -999) &&
+              (track_scores[k] > .3) &&
+              (daughter_thetas[k]*180./TMath::Pi() < 20.)) {
+            double r = fRNG.Uniform();
+            //std::cout << "Checking: " << r << " " << vars[j] << std::endl;
+            if (r < vars[j]) {
+              new_selections[j] = 3;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    std::vector<double> vals(vars.size(), 0.);
+    if (selection_ID == 4) {
+      TH1D * selected_hist
+          = fFullSelectionVars["EffVar_Spline"][selection_ID][0];
+      if (selected_hist->FindBin(reco_beam_endZ) == 0) {
+        for (double & v : vals) v = selected_hist->GetBinCenter(1);
+      }
+      else if (selected_hist->FindBin(reco_beam_endZ) >
+               selected_hist->GetNbinsX()) {
+        for (double & v : vals)
+          v = selected_hist->GetBinCenter(selected_hist->GetNbinsX());
+      }
+      else {
+        for (double & v : vals) v = reco_beam_endZ;
+      }
+    }
+    else if (selection_ID > 4) {
+      for (double & v : vals) v = .5;
+    }
+    else if (reco_beam_incidentEnergies.size()) {
+      double energy = reco_beam_interactingEnergy;
+      if (fDoEnergyFix) {
+        for (size_t k = 1; k < reco_beam_incidentEnergies.size(); ++k) {
+          double deltaE = ((reco_beam_incidentEnergies)[k-1] -
+                           (reco_beam_incidentEnergies)[k]);
+          if (deltaE > fEnergyFix) {
+            energy += deltaE; 
+          }
+        }
+      }
+
+      for (size_t j = 0; j < new_selections.size(); ++j) {
+        TH1D * selected_hist
+            = fFullSelectionVars["EffVar_Spline"][new_selections[j]][0];
+        if (selected_hist->FindBin(energy) == 0) {
+          vals[j] = selected_hist->GetBinCenter(1);
+        }
+        else if (selected_hist->FindBin(energy) >
+                 selected_hist->GetNbinsX()) {
+          vals[j] = selected_hist->GetBinCenter(selected_hist->GetNbinsX());
+        }
+        else {
+          vals[j] = energy;
+        }
+      }
+    }
+    else {
+      for (size_t j = 0; j < new_selections.size(); ++j) {
+        TH1D * selected_hist
+            = fFullSelectionVars["EffVar_Spline"][new_selections[j]][0];
+        vals[j] = selected_hist->GetBinCenter(1);
+      }
+    }
+
+    for (size_t j = 0; j < vals.size(); ++j) {
+      int ID = (selection_ID < 3 ? new_selections[j] : selection_ID);
+      //std::cout << "Filling " << ID << " " << j << std::endl;
+      //std::cout << selection_ID << " " << new_selections[j] << std::endl;
+      //std::cout << fFullSelectionVars["EffVar_Spline"][ID][j] << std::endl;
+      fFullSelectionVars["EffVar_Spline"][ID][j]->Fill(vals[j]);
+    }
+  }
+
+  TDirectory * dir = output_file.mkdir("EffVar_Spline_Syst");
+  dir->cd();
+
+  //Take the vars and make into ratios, then turn into splines
+  for (auto it = fFullSelectionVars["EffVar_Spline"].begin(); 
+       it != fFullSelectionVars["EffVar_Spline"].end(); ++it) {
+    int selection_ID = it->first;
+
+    //Build the full hist
+    for (auto it2 = samples.begin(); it2 != samples.end(); ++it2) {
+      for (size_t i = 0; i < it2->second.size(); ++i) {
+        for (size_t j = 0; j < it2->second[i].size(); ++j) {
+          full_hists[selection_ID]->Add(it2->second[i][j].GetSelectionHist(
+              selection_ID));
+        }
+      }
+    }
+
+    for (size_t i = 0; i < it->second.size(); ++i) {
+      it->second[i]->Write();
+      it->second[i]->Divide(full_hists[selection_ID]);
+    }
+    
+    fFullSelectionSplines["EffVar_Spline"][selection_ID] = std::vector<TSpline3*>();
+    for (int i = 1; i <= full_hists[selection_ID]->GetNbinsX(); ++i) {
+      std::vector<double> vals;
+      for (size_t j = 0; j < it->second.size(); ++j) {
+        vals.push_back(it->second[j]->GetBinContent(i));
+      }
+
+      std::string spline_name = full_hists[selection_ID]->GetName();
+      spline_name += "_Spline" + std::to_string(i);
+
+      fFullSelectionSplines["EffVar_Spline"][selection_ID].push_back(
+        new TSpline3(spline_name.c_str(), &vars[0], &vals[0], vals.size()));
+      TCanvas c(spline_name.c_str(), "");
+      fFullSelectionSplines["EffVar_Spline"][selection_ID].back()->Draw();
+      c.Write();
+    }
+  }
+
+}
 
 void protoana::AbsCexDriver::SetupSyst_BeamShift(
     const std::map<std::string, ThinSliceSystematic> & pars,
@@ -742,7 +986,7 @@ void protoana::AbsCexDriver::SetupSyst_BeamShift2D(
 
 }
 
-void protoana::AbsCexDriver::SystRoutine_G4RW(
+void protoana::AbsCexDriver::SetupSyst_G4RW(
     const std::vector<ThinSliceEvent> & events,
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     const std::map<int, bool> & signal_sample_checks,
@@ -779,13 +1023,15 @@ void protoana::AbsCexDriver::SystRoutine_G4RW(
       };
     }
     else {
-      double end = it->second.GetOption<double>("GridEnd");
+      //double end = it->second.GetOption<double>("GridEnd");
+      double delta = it->second.GetOption<double>("GridDelta");
       double start = it->second.GetOption<double>("GridStart");
       int n = it->second.GetOption<int>("GridN"); 
 
-      double delta = (end - start)/(n-1);
+      //double delta = (end - start)/(n-1);
       std::cout << "Added to grid: ";
-      while (start <= end) {
+      //while (start <= end) {
+      for (int i = 0; i < n; ++i) {
         syst_vals.push_back(start);
         std::cout << syst_vals.back() << " ";
         start += delta;
@@ -1006,7 +1252,7 @@ void protoana::AbsCexDriver::SystRoutine_G4RW(
 
 }
 
-void protoana::AbsCexDriver::SystRoutine_dEdX_Cal(
+void protoana::AbsCexDriver::SetupSyst_dEdX_Cal(
     const std::vector<ThinSliceEvent> & events,
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     const std::map<std::string, ThinSliceSystematic> & pars,
@@ -1020,10 +1266,14 @@ void protoana::AbsCexDriver::SystRoutine_dEdX_Cal(
   //make sure the number of shifts are even
   //such that you have same number +/-
   if (C_cal_vars.size() % 2) {
-    std::string message = "SystRoutine_dEdX_Cal Error: ";
+    std::string message = "SetupSyst_dEdX_Cal Error: ";
     message += "odd number of variations to cal constant";
     throw std::runtime_error(message);
   }
+
+  TFile template_file(
+      pars.at("dEdX_Cal_Spline").GetOption<std::string>("TemplateFile").c_str());
+  //TProfile * prot_template = (TProfile*)template_file.Get("dedx_range_pro");
 
   //Get the first sample and get the selection hists
   //also make full hist
@@ -1185,50 +1435,6 @@ void protoana::AbsCexDriver::SystRoutine_dEdX_Cal(
   }
 }
 
-void protoana::AbsCexDriver::SetupSyst_BeamRes(
-    const std::vector<ThinSliceEvent> & events,
-    std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
-    const std::map<std::string, ThinSliceSystematic> & pars,
-    TFile & output_file) {
-  if (pars.find("beam_res_width") == pars.end()) {
-    fStaticBeamResWidth = true;
-  }
-  else {
-    fSystBeamResWeightCap = pars.at("beam_res_width").GetOption<double>("WeightCap");
-  }
-
-  if (pars.find("beam_res_mean") == pars.end()) {
-    fStaticBeamResMean = true;
-  }
-  else {
-    fSystBeamResWeightCap = pars.at("beam_res_mean").GetOption<double>("WeightCap");
-  }
-
-  if (fStaticBeamResMean && fStaticBeamResWidth) return; 
-
-  if (fStaticBeamResMean) {
-    fBeamResMeanVal
-        = pars.at("beam_res_width").GetOption<double>("StaticMean");
-  //fSystBeamResWeightCap = pars.at("beam_res_width").GetOption<double>("WeightCap");
-  }
-
-  if (fStaticBeamResWidth) {
-    fBeamResWidthVal
-        = pars.at("beam_res_mean").GetOption<double>("StaticWidth");
-  }
-
-  output_file.mkdir("SystBeamRes");
-  output_file.cd("SystBeamRes");
-  fSystBeamResTree = new TTree("tree", "");
-  fSystBeamResTree->Branch("Weight", &fSystBeamResWeight);
-  fSystBeamResTree->Branch("Mean", &fSystBeamResMeanOutput);
-  fSystBeamResTree->Branch("Width", &fSystBeamResWidthOutput);
-  fSystBeamResTree->Branch("Res", &fSystBeamResOutput);
-  fSetupSystBeamRes = true;
-
-
-}
-
 double protoana::AbsCexDriver::GetSystWeight_G4RW(
     const ThinSliceEvent & event,
     const std::map<std::string, ThinSliceSystematic> & pars,
@@ -1326,71 +1532,6 @@ double protoana::AbsCexDriver::GetSystWeight_BeamShift2D(
   return weight;//fSystBeamShiftMap->Interpolate(x_val, y_val);
 }
 
-double protoana::AbsCexDriver::GetSystWeight_BeamRes(
-    const ThinSliceEvent & event,
-    const std::map<std::string, ThinSliceSystematic> & pars) {
-  if ((pars.find("beam_res_width") == pars.end()) &&
-      (pars.find("beam_res_mean") == pars.end())) {
-    return 1.;
-  }
-  if (fStaticBeamResMean && fStaticBeamResWidth) {
-    return 1.;
-  }
-
-  if (event.GetPDG() != 211) {
-    fSystBeamResWeight = 1.;
-    //fSystBeamResTree->Fill();
-    return 1.;
-  }
-
-  double nominal_width = 1.;
-  double varied_width = 1.;
-  double nominal_mean = 1.;
-  double varied_mean = 1.;
-
-  //Width is variable
-  if (!fStaticBeamResWidth) {
-    nominal_width = pars.at("beam_res_width").GetCentral();
-    varied_width = pars.at("beam_res_width").GetValue();
-  }
-  else {
-    nominal_width = fBeamResWidthVal;
-    varied_width = fBeamResWidthVal;
-  }
-
-  if (!fStaticBeamResMean) {
-    nominal_mean = pars.at("beam_res_mean").GetCentral();
-    varied_mean = pars.at("beam_res_mean").GetValue();
-  }
-  else {
-    nominal_mean = fBeamResMeanVal;
-    varied_mean = fBeamResMeanVal;
-  }
-  fSystBeamResMeanOutput = varied_mean;
-  fSystBeamResWidthOutput = varied_width;
-
-  double true_KE
-      = sqrt(std::pow(event.GetTrueStartP()*1.e3, 2) +
-             std::pow(event.GetTrueMass(), 2)) - event.GetTrueMass();
-  double reco_KE
-      = sqrt(std::pow(event.GetBeamInstP()*1.e3, 2) +
-             std::pow(event.GetTrueMass(), 2)) - event.GetTrueMass();
-  //std::cout << "KE: " << true_KE << " " << reco_KE << std::endl;
-  double res = (true_KE - reco_KE)/true_KE; 
-  //std::cout << "Res: " << res << std::endl;
-  double exponent_factor
-      = .5*std::pow(((res - nominal_mean)/nominal_width), 2);
-  exponent_factor
-      -= .5*std::pow(((res - varied_mean)/varied_width), 2);
-  fSystBeamResWeight = (nominal_width/varied_width)*exp(exponent_factor);
-  if (fSystBeamResWeight > fSystBeamResWeightCap)
-    fSystBeamResWeight = fSystBeamResWeightCap;
-  fSystBeamResOutput = res;
-  fSystBeamResTree->Fill();
-
-  return fSystBeamResWeight;
-}
-
 void protoana::AbsCexDriver::BuildDataHists(
     TTree * tree, ThinSliceDataSet & data_set, double & flux) {
   int selection_ID; 
@@ -1479,6 +1620,10 @@ void protoana::AbsCexDriver::BuildFakeData(
   }
   else if (routine == "G4RW") {
     FakeDataG4RW(tree, samples, signal_sample_checks, data_set, flux,
+                 sample_scales);
+  }
+  else if (routine == "G4RWGrid") {
+    FakeDataG4RWGrid(tree, samples, signal_sample_checks, data_set, flux,
                  sample_scales);
   }
   else if (routine == "EffVar") {
@@ -2049,6 +2194,201 @@ void protoana::AbsCexDriver::FakeDataG4RW(
   //std::cout << "Fluxes: " << flux << " " << new_flux << std::endl;
 }
 
+void protoana::AbsCexDriver::FakeDataG4RWGrid(
+    TTree * tree,
+    std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+    const std::map<int, bool> & signal_sample_checks,
+    ThinSliceDataSet & data_set, double & flux,
+    std::map<int, std::vector<double>> & sample_scales) {
+
+  //Build the map for fake data scales
+  fhicl::ParameterSet g4rw_options 
+      = fExtraOptions.get<fhicl::ParameterSet>("FakeDataG4RWGrid");
+
+  int sample_ID, selection_ID; 
+  double true_beam_interactingEnergy, reco_beam_interactingEnergy;
+  double true_beam_endP;
+  std::vector<double> * reco_beam_incidentEnergies = 0x0;
+  double reco_beam_endZ;
+  tree->SetBranchAddress("reco_beam_endZ", &reco_beam_endZ);
+  tree->SetBranchAddress("new_interaction_topology", &sample_ID);
+  tree->SetBranchAddress("selection_ID", &selection_ID);
+  tree->SetBranchAddress("true_beam_interactingEnergy",
+                         &true_beam_interactingEnergy);
+  tree->SetBranchAddress("true_beam_endP", &true_beam_endP);
+  tree->SetBranchAddress("reco_beam_interactingEnergy",
+                         &reco_beam_interactingEnergy);
+  tree->SetBranchAddress("reco_beam_incidentEnergies",
+                         &reco_beam_incidentEnergies);
+  std::vector<double> * true_beam_traj_Z = 0x0;
+  tree->SetBranchAddress("true_beam_traj_Z", &true_beam_traj_Z);
+
+  //std::vector<double> * g4rw_weight = 0x0;
+  std::vector<std::vector<double>> * g4rw_full_grid_weights = 0x0;
+  std::string branch = g4rw_options.get<std::string>("Branch");
+  tree->SetBranchAddress(branch.c_str(), &g4rw_full_grid_weights);
+
+  //size_t g4rw_pos = g4rw_options.get<size_t>("Position");
+  //size_t g4rw_shift = g4rw_options.get<size_t>("Shift");
+  std::vector<size_t> g4rw_pos = g4rw_options.get<std::vector<size_t>>("Position");
+  std::vector<size_t> g4rw_shift = g4rw_options.get<std::vector<size_t>>("Shift");
+
+  TH1D & incident_hist = data_set.GetIncidentHist();
+  std::map<int, TH1 *> & selected_hists = data_set.GetSelectionHists();
+
+  double new_flux = 0.;
+  flux = tree->GetEntries();
+  
+
+  std::map<int, std::vector<double>> nominal_samples;
+  for (auto it = sample_scales.begin(); it != sample_scales.end(); ++it) {
+    nominal_samples[it->first] = std::vector<double>(it->second.size(), 0.);
+  }
+
+  for (int i = 0; i < tree->GetEntries(); ++i) {
+    tree->GetEntry(i);
+
+    if (samples.find(sample_ID) == samples.end())
+      continue;
+
+    std::string slice_method = fExtraOptions.get<std::string>("SliceMethod");
+    double end_energy = true_beam_interactingEnergy;
+    if (slice_method == "Traj") {
+      end_energy = sqrt(true_beam_endP*true_beam_endP*1.e6 + 139.57*139.57) - 139.57;
+    }
+    else if (slice_method == "E") {
+      end_energy = sqrt(true_beam_endP*true_beam_endP*1.e6 + 139.57*139.57) - 139.57;
+    }
+    else if (slice_method == "Alt") {
+      int bin = fEndSlices->GetXaxis()->FindBin(true_beam_traj_Z->back());
+      if (bin > 0) {
+        end_energy = fMeans.at(bin);
+      }
+    }
+
+    double scale = 1.;
+    //if (g4rw_weight->size() > 0) {
+    //if (g4rw_full_grid_weights->size() > 0) {
+    //  if ((*g4rw_full_grid_weights)[g4rw_pos].size() > 0) {
+    //    scale = (*g4rw_full_grid_weights)[g4rw_pos][g4rw_shift];
+    //  }
+    //}
+
+    if (g4rw_full_grid_weights->size() > 0) {
+      for (size_t j = 0; j < g4rw_pos.size(); ++j) {
+        size_t pos = g4rw_pos[j];
+        size_t shift = g4rw_shift[j];
+        if ((*g4rw_full_grid_weights)[pos].size() > 0) {
+          scale *= (*g4rw_full_grid_weights)[pos][shift];
+        }
+      }
+    }
+
+    bool is_signal = signal_sample_checks.at(sample_ID);
+    if (is_signal) {
+      std::vector<ThinSliceSample> & samples_vec = samples[sample_ID][0];
+      //Get the samples vec from the first beam energy bin
+      bool found = false;
+      for (size_t j = 1; j < samples_vec.size()-1; ++j) {
+        ThinSliceSample & sample = samples_vec.at(j);
+        if (sample.CheckInSignalRange(end_energy)) {     
+          found = true;
+          sample_scales[sample_ID][j] += scale;
+          nominal_samples[sample_ID][j] += 1.;
+          break;
+        }
+      }
+      if (!found) {
+        if (end_energy < samples_vec[1].RangeLowEnd()) {
+          sample_scales[sample_ID][0] += scale;
+          nominal_samples[sample_ID][0] += 1.;
+        }
+        else {
+          sample_scales[sample_ID].back() += scale;
+          nominal_samples[sample_ID].back() += 1.;
+        }
+      }
+    }
+    else {
+      sample_scales[sample_ID][0] += scale;
+      nominal_samples[sample_ID][0] += 1.;
+    }
+
+    new_flux += scale; //1 or scaled
+    double val = 0.;
+    if (selection_ID == 4) {
+      if (selected_hists[selection_ID]->FindBin(reco_beam_endZ) == 0) {
+        val = selected_hists[selection_ID]->GetBinCenter(1);
+      }
+      else if (selected_hists[selection_ID]->FindBin(reco_beam_endZ) >
+               selected_hists[selection_ID]->GetNbinsX()) {
+        val = selected_hists[selection_ID]->GetBinCenter(
+            selected_hists[selection_ID]->GetNbinsX());
+      }
+      else {
+        val = reco_beam_endZ;
+      }
+    }
+    else if (selection_ID > 4) {
+      val = .5;
+    }
+    else if (reco_beam_incidentEnergies->size()) {
+      for (size_t j = 0; j < reco_beam_incidentEnergies->size(); ++j) {
+        incident_hist.Fill((*reco_beam_incidentEnergies)[j]);
+      }
+      if (selected_hists.find(selection_ID) != selected_hists.end()) {
+        if (selection_ID != 4 && selection_ID != 5 && selection_ID != 6) {
+          double energy = reco_beam_interactingEnergy;
+          if (fExtraOptions.get<bool>("DoEnergyFix")) {
+            for (size_t k = 1; k < reco_beam_incidentEnergies->size(); ++k) {
+              double deltaE = ((*reco_beam_incidentEnergies)[k-1] -
+                               (*reco_beam_incidentEnergies)[k]);
+              if (deltaE > fExtraOptions.get<double>("EnergyFix")) {
+                energy += deltaE; 
+              }
+            }
+          }
+          if (selected_hists[selection_ID]->FindBin(energy) == 0) {
+            val = selected_hists[selection_ID]->GetBinCenter(1);
+          }
+          else if (selected_hists[selection_ID]->FindBin(energy) >
+                   selected_hists[selection_ID]->GetNbinsX()) {
+            val = selected_hists[selection_ID]->GetBinCenter(
+                selected_hists[selection_ID]->GetNbinsX());
+          }
+          else {
+            val = energy;
+          }
+        }
+      }
+    }
+    else {
+      val = selected_hists[selection_ID]->GetBinCenter(1);
+    }
+
+    selected_hists[selection_ID]->Fill(val, scale);
+  }
+
+  for (auto it = sample_scales.begin(); it != sample_scales.end(); ++it) {
+    for (size_t i = 0; i < it->second.size(); ++i) {
+      if (it->second[i] > 0.) {
+        it->second[i] /= nominal_samples[it->first][i];
+      }
+      else {
+        it->second[i] = 1.;
+      }
+      it->second[i] *= (flux/new_flux);
+    }
+  }
+
+  incident_hist.Scale(flux/new_flux);
+  for (auto it = selected_hists.begin(); it != selected_hists.end(); ++it) {
+    it->second->Scale(flux/new_flux);
+  }
+
+  //std::cout << "Fluxes: " << flux << " " << new_flux << std::endl;
+}
+
 void protoana::AbsCexDriver::FakeDatadEdX(
     TTree * tree, ThinSliceDataSet & data_set, double & flux,
     std::map<int, std::vector<double>> & sample_scales) {
@@ -2199,7 +2539,9 @@ void protoana::AbsCexDriver::FakeDataEffVar(
   std::vector<int> * daughter_true_PDG = 0x0;
   tree->SetBranchAddress("reco_daughter_PFP_true_byHits_PDG",
                          &daughter_true_PDG);
-
+  std::vector<double> * daughter_track_score = 0x0;
+  tree->SetBranchAddress("reco_daughter_PFP_trackScore_collection",
+                         &daughter_track_score);
 
   TH1D & incident_hist = data_set.GetIncidentHist();
   std::map<int, TH1 *> & selected_hists = data_set.GetSelectionHists();
@@ -2214,7 +2556,6 @@ void protoana::AbsCexDriver::FakeDataEffVar(
   }
 
   double check_val = options.get<double>("F");
-  TRandom3 rng;
   for (int i = 0; i < tree->GetEntries(); ++i) {
     tree->GetEntry(i);
 
@@ -2322,10 +2663,11 @@ void protoana::AbsCexDriver::FakeDataEffVar(
     if (selection_ID < 3) {
       int new_selection = selection_ID;
       for (size_t j = 0; j < daughter_Theta->size(); ++j) {
-        if ((abs((*daughter_true_PDG)[j]) == 211) &&
+        if (/*(abs((*daughter_true_PDG)[j]) == 211) &&*/
+            ((*daughter_track_score)[j] < 1. && (*daughter_track_score)[j] > .3) &&
             ((*daughter_Theta)[j] > -999) &&
             ((*daughter_Theta)[j]*180./TMath::Pi() < 20.)) {
-          double r = rng.Uniform();
+          double r = fRNG.Uniform();
           if (r < check_val) {
             new_selection = 3;
             break;
@@ -3034,4 +3376,70 @@ void protoana::AbsCexDriver::PlotThrows(
 
     cThrow.Write();
   }
+}
+
+int protoana::AbsCexDriver::RecalculateSelectionID(
+    const ThinSliceEvent & event,
+    double C_cal,
+    TProfile * prot_template) {
+
+  if (event.GetSelectionID() > 3) {
+    return event.GetSelectionID();
+  }
+
+  //Look for charged pions
+  const std::vector<double> & track_scores = event.GetRecoDaughterTrackScores();
+  for (size_t i = 0; i < track_scores.size(); ++i) {
+
+    if (track_scores[i] > 0.3) {
+      //Here: recalculate dEdX and truncated mean dEdX
+      std::vector<double> new_dEdX;
+      const std::vector<double> & calibrated_dQdX
+          = event.GetRecoDaughterTrackdQdXs()[i];
+      const std::vector<double> & daughter_EField
+          = event.GetRecoDaughterEFields()[i];
+      for (size_t j = 0; j < calibrated_dQdX.size(); ++j) {
+        double dedx = (1./(C_cal));
+        dedx *= (calibrated_dQdX)[j];
+        dedx *= (fBetaP / ( fRho * (daughter_EField)[j] ) * fWion);
+        dedx = exp(dedx);
+        dedx -= fAlpha;
+        dedx *= ((fRho*(daughter_EField)[j])/fBetaP);
+        new_dEdX.push_back(dedx);
+      }
+
+      double truncated_mean = TruncatedMean(new_dEdX);
+
+      if (truncated_mean < 2.8 && truncated_mean > 0.5) {
+        return 3;
+      }
+      else if (truncated_mean > 2.8 && truncated_mean < 3.4) {
+        const std::vector<double> & res_range
+            =event.GetRecoDaughterTrackResRanges()[i];
+        std::pair<double, int> pid_chi2_ndof
+            = fTrackUtil.Chi2PID(
+                new_dEdX, res_range, prot_template);
+        if (pid_chi2_ndof.second > 0 &&
+            pid_chi2_ndof.first/pid_chi2_ndof.second > 70.) {
+          return 3;
+        }
+      }
+    }
+  }
+
+  //Look for showers
+  return 1;
+}
+
+double protoana::AbsCexDriver::TruncatedMean(const std::vector<double> & dEdX) {
+  if (!dEdX.size()) return -999.;
+  std::vector<double> temp_dEdX = dEdX;
+  std::sort(temp_dEdX.begin(), temp_dEdX.end());
+  size_t low = std::rint(temp_dEdX.size()*0.16);
+  size_t high = std::rint(temp_dEdX.size()*0.16);
+  std::vector<double> temp;
+  for (size_t i = low; i <= high; ++i) {
+    temp.push_back(temp_dEdX[i]);
+  }
+  return std::accumulate(temp.begin(), temp.end(), 0.0)/temp.size();
 }
