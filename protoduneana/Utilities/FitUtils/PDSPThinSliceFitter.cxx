@@ -68,6 +68,8 @@ void protoana::PDSPThinSliceFitter::MakeMinimizer() {
 
   size_t total_parameters = fTotalSignalParameters + fTotalFluxParameters + fTotalSystParameters;
   TH1D parsHist("preFitPars", "", total_parameters, 0, total_parameters);
+  fPreFitParsNormal = TH1D("preFitParsNormal", "", 
+                           total_parameters, 0, total_parameters);
 
   size_t n_par = 0;
   for (auto it = fSignalParameters.begin();
@@ -84,6 +86,12 @@ void protoana::PDSPThinSliceFitter::MakeMinimizer() {
       parsHist.SetBinError(n_par+1, 0.);
       parsHist.GetXaxis()->SetBinLabel(
           n_par+1, fSignalParameterNames[it->first][i].c_str());
+
+      fPreFitParsNormal.SetBinContent(n_par+1, it->second[i]);
+      fPreFitParsNormal.SetBinError(n_par+1, 0.);
+      fPreFitParsNormal.GetXaxis()->SetBinLabel(
+          n_par+1, fSignalParameterNames[it->first][i].c_str());
+
       ++n_par;
 
     }
@@ -101,6 +109,10 @@ void protoana::PDSPThinSliceFitter::MakeMinimizer() {
     parsHist.SetBinContent(n_par+1, it->second);
     parsHist.SetBinError(n_par+1, 0.);
     parsHist.GetXaxis()->SetBinLabel(
+        n_par+1, fFluxParameterNames[it->first].c_str());
+    fPreFitParsNormal.SetBinContent(n_par+1, it->second);
+    fPreFitParsNormal.SetBinError(n_par+1, 0.);
+    fPreFitParsNormal.GetXaxis()->SetBinLabel(
         n_par+1, fFluxParameterNames[it->first].c_str());
     ++n_par;
   }
@@ -138,6 +150,14 @@ void protoana::PDSPThinSliceFitter::MakeMinimizer() {
     //parsHist.SetBinContent(n_par+1, it->second.GetValue()/it->second.GetCentral());
     parsHist.GetXaxis()->SetBinLabel(
         n_par+1, it->second.GetName().c_str());
+
+    fPreFitParsNormal.SetBinContent(n_par+1, it->second.GetValue());
+    fPreFitParsNormal.GetXaxis()->SetBinLabel(
+        n_par+1, it->second.GetName().c_str());
+    if (fAddSystTerm) {
+      size_t cov_bin = fCovarianceBins[it->first];
+      fPreFitParsNormal.SetBinError(n_par+1, sqrt((*fCovMatrix)[cov_bin][cov_bin]));
+    }
     ++n_par;
   }
 
@@ -843,8 +863,11 @@ void protoana::PDSPThinSliceFitter::NormalFit() {
     if (fDoThrows) 
       DoThrows(parsHist_normal_val, cov);
 
-    if (fDo1DShifts)
+    if (fDo1DShifts) {
+      if (fAddSystTerm)
+        Do1DShifts(fPreFitParsNormal, true);
       Do1DShifts(parsHist_normal_val);
+    }
   }
 }
 
@@ -1149,8 +1172,9 @@ void protoana::PDSPThinSliceFitter::DoThrows(const TH1D & pars, const TMatrixD *
              truth_inc_throw_hists, truth_xsec_throw_hists);
 }
 
-void protoana::PDSPThinSliceFitter::Do1DShifts(const TH1D & pars) {
-  TDirectory * shift_dir = fOutputFile.mkdir("1DShifts");
+void protoana::PDSPThinSliceFitter::Do1DShifts(const TH1D & pars, bool prefit) {
+  //std::string dir_name = (prefit ? "PreFit1DShifts" : "1DShifts");
+  TDirectory * shift_dir = fOutputFile.mkdir((prefit ? "PreFit1DShifts" : "1DShifts"));
   fFillIncidentInFunction = false;
 
   //Iterate over the bins in the parameter hist
@@ -1159,7 +1183,7 @@ void protoana::PDSPThinSliceFitter::Do1DShifts(const TH1D & pars) {
     std::string par_name = pars.GetXaxis()->GetBinLabel(i);
 
     std::vector<double> vals;
-
+    if (pars.GetBinError(i) < 1.e-9) continue;
     //Set to +1 sigma for parameter i
     for (int j = 1; j <= pars.GetNbinsX(); ++j) {
       if (j == i) {

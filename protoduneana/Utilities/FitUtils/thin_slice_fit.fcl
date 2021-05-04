@@ -338,7 +338,7 @@ Systematics: [
   #@local::G4RWSysts.g4rw_Cex3,
   #@local::G4RWSysts.g4rw_Reac1,
   #@local::G4RWSysts.g4rw_Reac2
-  @local::G4RWSysts.g4rw_DCex,
+  #@local::G4RWSysts.g4rw_DCex,
   @local::G4RWSysts.g4rw_Prod
   #{
   #  Name: "beam_shift"
@@ -380,7 +380,7 @@ Systematics: [
 
 ]
 
-AddSystTerm: false 
+AddSystTerm: false
 CovarianceBins: [
   ["beam_shift", 0]
   #["beam_2D_shift", 0],
@@ -567,7 +567,7 @@ DrawXSecUnderflow: false
 ## Validation
 RandomStart: false 
 DoFakeData: true
-DoThrows: false 
+DoThrows: true 
 NThrows: 1000
 Do1DShifts: true
 DoSysts: true 

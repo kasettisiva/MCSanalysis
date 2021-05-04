@@ -52,7 +52,7 @@ class PDSPThinSliceFitter {
   void MakeMinimizer();
   void ParameterScans();
   void DoThrows(const TH1D & pars, const TMatrixD * cov);
-  void Do1DShifts(const TH1D & pars);
+  void Do1DShifts(const TH1D & pars, bool prefit=false);
   void SetBestFit();
   void GetCurrentTruthHists(
     std::map<int, std::vector<TH1*>> & throw_hists,
@@ -82,6 +82,7 @@ class PDSPThinSliceFitter {
   ROOT::Math::Functor fFitFunction;
   std::unique_ptr<ROOT::Math::Minimizer> fMinimizer;
   std::vector<double> fMinimizerInitVals;
+  TH1D fPreFitParsNormal;
 
   //std::map<int, TGraphAsymmErrors> fSignalEfficiencies;
   //std::map<int, std::pair<TH1D, TH1D>> fSignalEffParts;

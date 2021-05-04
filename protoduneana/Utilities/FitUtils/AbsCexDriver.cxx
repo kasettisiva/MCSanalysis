@@ -2936,6 +2936,64 @@ void protoana::AbsCexDriver::CompareSelections(
 
     cRatio.Write();
 
+
+    //Differences
+    //Get the full incident hist from stack
+    TH1D * hMC2 = (TH1D*)l->At(0)->Clone();
+    for (int i = 1; i < l->GetSize(); ++i) {
+      hMC2->Add((TH1D*)l->At(i));
+    }
+
+    std::string diff_name = data_set.GetSelectionName(selection_ID) + "Diff" +
+                             (post_fit ? "PostFit" : "Nominal");
+    TH1D * hDiff
+        = (TH1D*)data_hist->Clone(diff_name.c_str());
+    hMC2->Scale(-1.);
+    hDiff->Add(hMC2);
+    hMC2->Scale(-1.);
+    hDiff->Divide(hMC2);
+    hDiff->Write(); 
+
+    canvas_name += "Diff";
+    TCanvas cDiff(canvas_name.c_str(), "");
+    cDiff.SetTicks();
+    /*TPad p1((canvas_name + "pad1").c_str(), "", 0, 0.3, 1., 1.);
+    p1.SetBottomMargin(0.1);
+    p1.Draw();
+    p1.cd();
+    mc_stack.Draw("hist");
+    mc_stack.GetHistogram()->SetTitle("Abs;;");
+    for (int i = 1; i < mc_stack.GetHistogram()->GetNbinsX(); ++i) {
+      hDiff->GetXaxis()->SetBinLabel(
+          i, mc_stack.GetHistogram()->GetXaxis()->GetBinLabel(i));
+      mc_stack.GetHistogram()->GetXaxis()->SetBinLabel(i, "");
+    }
+    mc_stack.Draw("hist");
+    data_hist->Draw("e1 same");*/
+
+    cDiff.cd();
+    /*TPad p3((canvas_name + "pad3").c_str(), "", 0, 0, 1., 0.3);
+    p3.SetTopMargin(0.1);
+    p3.SetBottomMargin(.2);
+    p3.Draw();
+    p3.cd();*/
+    //hDiff->Sumw2();
+    /*std::string r_title = "";*//*(selection_ID != 4 ?
+                           ";Reconstructed KE (MeV)" :
+                           ";Reconstructed End Z (cm)");*/
+    //if (selection_ID == 4) {
+    //  r_title += ";Reconstructed End Z (cm)";
+    //}
+    //else if (selection_ID < 4) {
+    //  r_title += ";Reconstructed KE (MeV)";
+    //}
+    //r_title += ";Data/MC";
+    //hDiff->SetTitle(r_title.c_str());
+    hDiff->GetYaxis()->SetTitle("r");
+    hDiff->SetTitleSize(.04, "XY");
+    hDiff->Draw("ep");
+
+    cDiff.Write();
   }
 }
 
