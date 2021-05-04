@@ -1,6 +1,6 @@
 
 cet_make_exec( make_yz_correction
-               SOURCE YZcalo_r5387.C
+               SOURCE protoDUNE_YZ_calib.C
                LIBRARIES
                ${ROOT_BASIC_LIB_LIST}
                )
