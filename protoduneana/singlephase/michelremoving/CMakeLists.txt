@@ -88,6 +88,8 @@ cet_remove_compiler_flags(CXX -pedantic)
 install_headers()
 install_fhicl()
 install_source()
+install_scripts()
+
 #install_fw( LIST toyWaveform.txt)
 add_subdirectory(Xcalo)
 add_subdirectory(YZcalo)
