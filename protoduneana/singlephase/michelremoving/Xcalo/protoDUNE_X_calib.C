@@ -159,13 +159,14 @@ void protoDUNE_X_calib::Loop(TString mn)
   //Filling the TTree
 
  Long64_t nentries = fChain->GetEntriesFast();
+ Long64_t real_nentries = fChain->GetEntries();
   Long64_t nbytes = 0, nb = 0;
    for (Long64_t jentry=0; jentry<nentries;jentry++) {
   // for (Long64_t jentry=0; jentry<10000;jentry++) {
     Long64_t ientry = LoadTree(jentry);
     if (ientry < 0) break;
     nb = fChain->GetEntry(jentry);   nbytes += nb;
-    if(jentry%100==0) cout<<jentry<<"/"<<nentries<<endl;
+    if(jentry%100==0) cout<<jentry<<"/"<<real_nentries<<endl;
     if(jentry==0){
       time1=evttime;
       runvalue=run;
@@ -458,7 +459,7 @@ int main(int argc, char *argv[]) {
     shtree->Add(Form("%s/michelremoving%s/Event", infile.c_str(), michelnumber.c_str()));
   }
 
-  else if(infile.substr(infile.find_last_of(".") + 1) == "list"){
+  else /*if(infile.substr(infile.find_last_of(".") + 1) == "list" || infile.substr(infile.find_last_of(".") + 1) == "txt")*/{
     std::ifstream in;
     in.open(infile.c_str());
     char line[1024];
