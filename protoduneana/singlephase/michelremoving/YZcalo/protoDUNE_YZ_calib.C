@@ -502,7 +502,7 @@ int main(int argc, char *argv[]) {
   string michelnumber = argv[2];
   cout <<michelnumber <<endl;
 
-  if (!(michelnumber == "0"||michelnumber == "1"||michelnumber == "2")){
+  if (!(michelnumber == "0"||michelnumber == "1"||michelnumber == "2"||michelnumber == "3")){
     cout << "Error: Michel tree number must be 0,1, or 2" << endl;
     return 0;
     }
