@@ -333,6 +333,16 @@ void protoana::PDSPThinSliceFitter::FillMCEvents() {
   fMCTree->SetBranchAddress("g4rw_primary_grid_weights",
                             &g4rw_primary_grid_weights);
 
+  std::vector<std::vector<double>> * daughter_dQdXs = 0x0,
+                                   * daughter_resRanges = 0x0,
+                                   * daughter_EFields = 0x0;
+  fMCTree->SetBranchAddress(
+      "reco_daughter_allTrack_calibrated_dQdX_SCE", &daughter_dQdXs);
+  fMCTree->SetBranchAddress(
+      "reco_daughter_allTrack_resRange_SCE", &daughter_resRanges);
+  fMCTree->SetBranchAddress(
+      "reco_daughter_allTrack_EField_SCE", &daughter_EFields);
+
   for (int i = 0; i < fMCTree->GetEntries(); ++i) {
     fMCTree->GetEntry(i);
 
@@ -366,6 +376,12 @@ void protoana::PDSPThinSliceFitter::FillMCEvents() {
                                   *g4rw_full_primary_plus_sigma_weight);
     fEvents.back().MakeG4RWBranch("g4rw_full_primary_minus_sigma_weight",
                                   *g4rw_full_primary_minus_sigma_weight);
+    for (size_t j = 0; j < daughter_dQdXs->size(); ++j) {
+      fEvents.back().AddRecoDaughterTrackdQdX((*daughter_dQdXs)[j]);
+      fEvents.back().AddRecoDaughterTrackResRange((*daughter_resRanges)[j]);
+      fEvents.back().AddRecoDaughterEField((*daughter_EFields)[j]);
+    }
+
     for (size_t j = 0; j < g4rw_primary_grid_weights->size(); ++j) {
       std::string name_full = "g4rw_full_grid_weights_" + std::to_string(j);
       //std::cout << "Adding " << name_full << std::endl;

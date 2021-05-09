@@ -1273,7 +1273,7 @@ void protoana::AbsCexDriver::SetupSyst_dEdX_Cal(
 
   TFile template_file(
       pars.at("dEdX_Cal_Spline").GetOption<std::string>("TemplateFile").c_str());
-  //TProfile * prot_template = (TProfile*)template_file.Get("dedx_range_pro");
+  TProfile * prot_template = (TProfile*)template_file.Get("dedx_range_pro");
 
   //Get the first sample and get the selection hists
   //also make full hist
@@ -1308,6 +1308,12 @@ void protoana::AbsCexDriver::SetupSyst_dEdX_Cal(
     int sample_ID = event.GetSampleID();
     int selection_ID = event.GetSelectionID();
 
+    int new_selection_ID = RecalculateSelectionID(
+        event, pars.at("dEdX_Cal_Spline").GetCentral(), prot_template);
+    if (new_selection_ID != selection_ID && (selection_ID == 3 || new_selection_ID == 3)) {
+      std::cout << "Warning: diff selection " << selection_ID << " " << new_selection_ID << std::endl;
+      std::cout << event.GetEventID() << " " << event.GetSubrunID() << " " << event.GetRunID() << std::endl;
+    }
     double reco_beam_endZ = event.GetRecoEndZ();
 
     const std::vector<double> & reco_beam_incidentEnergies
@@ -3451,37 +3457,55 @@ int protoana::AbsCexDriver::RecalculateSelectionID(
 
     if (track_scores[i] > 0.3) {
       //Here: recalculate dEdX and truncated mean dEdX
-      std::vector<double> new_dEdX;
+      std::vector<double> new_dEdX, new_res_range;
       const std::vector<double> & calibrated_dQdX
           = event.GetRecoDaughterTrackdQdXs()[i];
       const std::vector<double> & daughter_EField
           = event.GetRecoDaughterEFields()[i];
+      const std::vector<double> & res_range
+          =event.GetRecoDaughterTrackResRanges()[i];
       for (size_t j = 0; j < calibrated_dQdX.size(); ++j) {
-        double dedx = (1./(C_cal));
+      //std::cout << C_cal << " " << (calibrated_dQdX)[j] << " " << fBetaP << " "
+      //          << fRho << " " << daughter_EField[j] << " " << fWion << " "
+      //          << fAlpha << std::endl;
+        if (calibrated_dQdX[j] < 0)
+          continue;
+          //std::cout << "Warning dqdx < 0: " << calibrated_dQdX[j] << std::endl;
+        double dedx = (1./*/(C_cal)*/);
         dedx *= (calibrated_dQdX)[j];
         dedx *= (fBetaP / ( fRho * (daughter_EField)[j] ) * fWion);
         dedx = exp(dedx);
         dedx -= fAlpha;
         dedx *= ((fRho*(daughter_EField)[j])/fBetaP);
         new_dEdX.push_back(dedx);
+        new_res_range.push_back(res_range[j]);
+
+        //std::cout << "Added " << dedx << std::endl;
       }
 
       double truncated_mean = TruncatedMean(new_dEdX);
+      //std::cout << i << " trunc mean: " << truncated_mean << " "; 
 
       if (truncated_mean < 2.8 && truncated_mean > 0.5) {
+       // std::cout << std::endl;
         return 3;
       }
       else if (truncated_mean > 2.8 && truncated_mean < 3.4) {
-        const std::vector<double> & res_range
-            =event.GetRecoDaughterTrackResRanges()[i];
         std::pair<double, int> pid_chi2_ndof
             = fTrackUtil.Chi2PID(
-                new_dEdX, res_range, prot_template);
+                new_dEdX, new_res_range, prot_template);
+       // std::cout <<  pid_chi2_ndof.first/pid_chi2_ndof.second;
         if (pid_chi2_ndof.second > 0 &&
             pid_chi2_ndof.first/pid_chi2_ndof.second > 70.) {
+            if (event.GetSelectionID() != 3) {
+              std::cout << i << " chi2: " << pid_chi2_ndof.first/pid_chi2_ndof.second << " " << truncated_mean << std::endl;
+              std::cout << "\t" << new_dEdX.size() << " " << new_res_range.size() << std::endl;
+            }
+ //         std::cout << std::endl;
           return 3;
         }
       }
+   //   std::cout << std::endl;
     }
   }
 
@@ -3491,13 +3515,18 @@ int protoana::AbsCexDriver::RecalculateSelectionID(
 
 double protoana::AbsCexDriver::TruncatedMean(const std::vector<double> & dEdX) {
   if (!dEdX.size()) return -999.;
-  std::vector<double> temp_dEdX = dEdX;
+  std::vector<double> temp_dEdX;
+  for (auto d : dEdX) {
+    if (d < 0) continue;
+    temp_dEdX.push_back(d);
+  }
   std::sort(temp_dEdX.begin(), temp_dEdX.end());
   size_t low = std::rint(temp_dEdX.size()*0.16);
-  size_t high = std::rint(temp_dEdX.size()*0.16);
+  size_t high = std::rint(temp_dEdX.size()*0.84);
   std::vector<double> temp;
-  for (size_t i = low; i <= high; ++i) {
+  for (size_t i = low; i < high; ++i) {
     temp.push_back(temp_dEdX[i]);
   }
+  if (temp.empty()) return -999.;
   return std::accumulate(temp.begin(), temp.end(), 0.0)/temp.size();
 }

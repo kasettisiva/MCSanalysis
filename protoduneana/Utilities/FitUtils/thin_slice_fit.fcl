@@ -3,8 +3,8 @@
 
 #MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_3_31_21/eventSelection_mc_all.root"
 #DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_3_31_21/eventSelection_mc_all.root"
-MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_4_29_21_with_data/eventSelection_mc_all.root"
-DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_4_29_21_with_data/eventSelection_mc_all.root"
+MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_5_8_21_with_data/eventSelection_mc_all.root"
+DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_5_8_21_with_data/eventSelection_mc_all.root"
 TreeName: "pduneana/beamana"
 
 #MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_beamType.root"
@@ -317,20 +317,22 @@ G4RWSysts: {
 }
 
 Systematics: [
-  #{
-  #  Name: "dEdX_Cal_Spline"
-  #  Central: 1.011e-3
-  #  LowerLimit: .809e-3
-  #  UpperLimit: 1.2132e-3
-  #  Sigma: .101e-3
-  #
-  #  Options: {
-  #    Cal_set: @local::CalorimetryParameters_SPProd4_MC_SCE
-  #    C_cal_vars: [.809e-3, .910e-3, 1.121e-3, 1.2132e-3]
-  #  }
-  #} #,
-  @local::G4RWSysts.g4rw_QE1,
-  @local::G4RWSysts.g4rw_QE2,
+  {
+    Name: "dEdX_Cal_Spline"
+    Central: 1.011e-3
+    LowerLimit: .809e-3
+    UpperLimit: 1.2132e-3
+    Sigma: .101e-3
+  
+    Options: {
+      Cal_set: @local::CalorimetryParameters_SPProd4_MC_SCE
+      C_cal_vars: [.809e-3, .910e-3, 1.121e-3, 1.2132e-3]
+      TemplateFile: "/cvmfs/larsoft.opensciencegrid.org/products/larsoft_data/v1_02_01/ParticleIdentification/dEdxrestemplates.root"
+  
+    }
+  } #,
+  #@local::G4RWSysts.g4rw_QE1,
+  #@local::G4RWSysts.g4rw_QE2,
   #@local::G4RWSysts.g4rw_Abs1,
   #@local::G4RWSysts.g4rw_Abs2,
   #@local::G4RWSysts.g4rw_Cex1,
@@ -339,7 +341,7 @@ Systematics: [
   #@local::G4RWSysts.g4rw_Reac1,
   #@local::G4RWSysts.g4rw_Reac2
   #@local::G4RWSysts.g4rw_DCex,
-  @local::G4RWSysts.g4rw_Prod
+  #@local::G4RWSysts.g4rw_Prod
   #{
   #  Name: "beam_shift"
   #  Central: 0. 
@@ -566,11 +568,11 @@ DrawXSecUnderflow: false
 
 ## Validation
 RandomStart: false 
-DoFakeData: true
-DoThrows: true 
+DoFakeData: false 
+DoThrows: false 
 NThrows: 1000
 Do1DShifts: true
-DoSysts: true 
+DoSysts: true
 MaxRethrows: 1000
 #####################
 

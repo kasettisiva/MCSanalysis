@@ -212,6 +212,10 @@ class ThinSliceEvent {
     return (g4rw_weights.find(br) != g4rw_weights.end());
   };
 
+  int GetEventID() const {return event_ID;};
+  int GetSubrunID() const {return subrun_ID;};
+  int GetRunID() const {return run_ID;};
+
  private:
   int event_ID, subrun_ID, run_ID;
   int sample_ID;
