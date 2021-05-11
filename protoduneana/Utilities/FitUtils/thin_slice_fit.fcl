@@ -314,25 +314,47 @@ G4RWSysts: {
       GridN: 20
     }
   }
+
+  g4rw_proton: {
+    Name: "g4rw_proton"
+    Central: 1.
+    LowerLimit: 0.1
+    UpperLimit: 2.00
+    Sigma: .75
+
+    Options: {
+      Position: 0
+      PlusBranch: "g4rw_full_primary_plus_sigma_weight"
+      MinusBranch: "g4rw_full_primary_minus_sigma_weight"
+
+      IsGrid: true
+      GridBranch: "g4rw_full_grid_proton_weights"
+      GridEnd: 2.0
+      GridDelta: 0.1
+      GridStart: 0.1
+      GridN: 20
+    }
+  }
+
 }
 
 Systematics: [
-  {
-    Name: "dEdX_Cal_Spline"
-    Central: 1.011e-3
-    LowerLimit: .809e-3
-    UpperLimit: 1.2132e-3
-    Sigma: .101e-3
-  
-    Options: {
-      Cal_set: @local::CalorimetryParameters_SPProd4_MC_SCE
-      C_cal_vars: [.809e-3, .910e-3, 1.121e-3, 1.2132e-3]
-      TemplateFile: "/cvmfs/larsoft.opensciencegrid.org/products/larsoft_data/v1_02_01/ParticleIdentification/dEdxrestemplates.root"
-  
-    }
-  } #,
-  #@local::G4RWSysts.g4rw_QE1,
-  #@local::G4RWSysts.g4rw_QE2,
+  #{
+  #  Name: "dEdX_Cal_Spline"
+  #  Central: 1.011e-3
+  #  LowerLimit: .809e-3
+  #  UpperLimit: 1.2132e-3
+  #  Sigma: .101e-3
+  #
+  #  Options: {
+  #    Cal_set: @local::CalorimetryParameters_SPProd4_MC_SCE
+  #    C_cal_vars: [.809e-3, .910e-3, 1.121e-3, 1.2132e-3]
+  #    TemplateFile: "/cvmfs/larsoft.opensciencegrid.org/products/larsoft_data/v1_02_01/ParticleIdentification/dEdxrestemplates.root"
+  #
+  #  }
+  #} #,
+  @local::G4RWSysts.g4rw_QE1,
+  @local::G4RWSysts.g4rw_QE2,
   #@local::G4RWSysts.g4rw_Abs1,
   #@local::G4RWSysts.g4rw_Abs2,
   #@local::G4RWSysts.g4rw_Cex1,
@@ -341,7 +363,8 @@ Systematics: [
   #@local::G4RWSysts.g4rw_Reac1,
   #@local::G4RWSysts.g4rw_Reac2
   #@local::G4RWSysts.g4rw_DCex,
-  #@local::G4RWSysts.g4rw_Prod
+  @local::G4RWSysts.g4rw_Prod
+  #@local::G4RWSysts.g4rw_proton
   #{
   #  Name: "beam_shift"
   #  Central: 0. 

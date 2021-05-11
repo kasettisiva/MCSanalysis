@@ -320,7 +320,8 @@ void protoana::PDSPThinSliceFitter::FillMCEvents() {
                       * g4rw_full_primary_plus_sigma_weight = 0x0,
                       * g4rw_full_primary_minus_sigma_weight = 0x0;
   std::vector<std::vector<double>> * g4rw_primary_grid_weights = 0x0,
-                                   * g4rw_full_grid_weights = 0x0;
+                                   * g4rw_full_grid_weights = 0x0,
+                                   * g4rw_full_grid_proton_weights = 0x0;
   fMCTree->SetBranchAddress("g4rw_alt_primary_plus_sigma_weight",
                             &g4rw_alt_primary_plus_sigma_weight);
   fMCTree->SetBranchAddress("g4rw_alt_primary_minus_sigma_weight",
@@ -330,6 +331,8 @@ void protoana::PDSPThinSliceFitter::FillMCEvents() {
   fMCTree->SetBranchAddress("g4rw_full_primary_minus_sigma_weight",
                             &g4rw_full_primary_minus_sigma_weight);
   fMCTree->SetBranchAddress("g4rw_full_grid_weights", &g4rw_full_grid_weights);
+  fMCTree->SetBranchAddress("g4rw_full_grid_proton_weights", &g4rw_full_grid_proton_weights);
+
   fMCTree->SetBranchAddress("g4rw_primary_grid_weights",
                             &g4rw_primary_grid_weights);
 
@@ -400,6 +403,8 @@ void protoana::PDSPThinSliceFitter::FillMCEvents() {
       fEvents.back().MakeG4RWBranch(name_primary,
                                     (*g4rw_primary_grid_weights)[j]);
     }
+    fEvents.back().MakeG4RWBranch("g4rw_full_grid_proton_weights",
+                                  (*g4rw_full_grid_proton_weights)[0]);
   }
 
   std::cout << "Filled MC Events" << std::endl;
