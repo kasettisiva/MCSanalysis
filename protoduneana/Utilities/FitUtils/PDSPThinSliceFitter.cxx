@@ -342,6 +342,8 @@ void protoana::PDSPThinSliceFitter::FillMCEvents() {
       "reco_daughter_allTrack_resRange_SCE", &daughter_resRanges);
   fMCTree->SetBranchAddress(
       "reco_daughter_allTrack_EField_SCE", &daughter_EFields);
+  bool has_pi0_shower;
+  fMCTree->SetBranchAddress("has_shower_dist_energy", &has_pi0_shower);
 
   for (int i = 0; i < fMCTree->GetEntries(); ++i) {
     fMCTree->GetEntry(i);
@@ -368,6 +370,7 @@ void protoana::PDSPThinSliceFitter::FillMCEvents() {
     fEvents.back().SetPDG(true_beam_PDG);
     fEvents.back().SetRecoDaughterTrackThetas(*reco_daughter_track_thetas);
     fEvents.back().SetRecoDaughterTrackScores(*reco_daughter_track_scores);
+    fEvents.back().SetHasPi0Shower(has_pi0_shower);
     fEvents.back().MakeG4RWBranch("g4rw_alt_primary_plus_sigma_weight",
                                   *g4rw_alt_primary_plus_sigma_weight);
     fEvents.back().MakeG4RWBranch("g4rw_alt_primary_minus_sigma_weight",

@@ -29,6 +29,7 @@ class ThinSliceEvent {
     reco_daughter_track_dQdX = std::vector<std::vector<double>>();
     reco_daughter_track_res_range = std::vector<std::vector<double>>();
     reco_daughter_efield = std::vector<std::vector<double>>();
+    has_pi0_shower = false;
   };
 
   /*
@@ -56,6 +57,13 @@ class ThinSliceEvent {
   };
   void SetSelectionID(int s) {
     selection_ID = s;
+  };
+
+  bool GetHasPi0Shower() const {
+    return has_pi0_shower;
+  };
+  void SetHasPi0Shower(bool s) {
+    has_pi0_shower = s;
   };
 
   double GetTrueInteractingEnergy() const {
@@ -238,6 +246,7 @@ class ThinSliceEvent {
   double true_beam_endP, true_beam_mass;
   double reco_beam_endZ, true_beam_startP;
   double beam_inst_P;
+  bool has_pi0_shower;
   std::vector<double> reco_beam_incidentEnergies,
                       true_beam_incidentEnergies,
                       true_beam_traj_Z,
