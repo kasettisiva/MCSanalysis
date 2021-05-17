@@ -3,8 +3,10 @@
 
 #MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_3_31_21/eventSelection_mc_all.root"
 #DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_3_31_21/eventSelection_mc_all.root"
-MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_5_8_21_with_data/eventSelection_mc_all.root"
-DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_5_8_21_with_data/eventSelection_mc_all.root"
+#MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_5_8_21_with_data2/eventSelection_mc_all.root"
+#DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_5_8_21_with_data2/eventSelection_mc_all.root"
+MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4a_5_15_21_with_data/eventSelection_mc_all.root"
+DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4a_5_15_21_with_data/eventSelection_mc_all.root"
 TreeName: "pduneana/beamana"
 
 #MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_beamType.root"
@@ -48,8 +50,9 @@ AnalysisOptions: {
     Position: [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 29, 20]
     Shift:    [7, 8, 9, 10, 11, 12, 13, 18, 17, 16, 15, 07, 06, 05]
     Branch: "g4rw_full_grid_piplus_weights_fake_data"
+
     ###(reac, 0), (abs, 1), (cex, 2), (dcex, 3), (prod, 4), (inel, 5) 
-    ### x7 each (200 MeV bins) -- total range: 0, 41 (0, 1200)
+    ### x7 each (200 MeV bins) -- total range: 0, 41 (0, 1400)
   }
 
   FakeDatadEdX: {
@@ -67,9 +70,9 @@ AnalysisOptions: {
   WirePitch: .47974
   Z0: 0.56035
 
-  #SliceMethod: "Traj"
+  SliceMethod: "Traj"
   #SliceMethod: "E"
-  SliceMethod: "Alt"
+  #SliceMethod: "Alt"
   #SliceMethod: "Default"
 
   TrajZStart: -.49375
@@ -89,6 +92,7 @@ G4RWSysts: {
     Central: 1.
     LowerLimit: 0.1
     UpperLimit: 2.0
+    ThrowLimit: 0.
     Sigma: .2
 
     Options: {
@@ -110,6 +114,7 @@ G4RWSysts: {
     Central: 1.
     LowerLimit: 0.1
     UpperLimit: 2.0
+    ThrowLimit: 0.
     Sigma: .2
 
     Options: {
@@ -131,6 +136,7 @@ G4RWSysts: {
     Central: 1.
     LowerLimit: 0.1
     UpperLimit: 2.00
+    ThrowLimit: 0.
     Sigma: .75
 
     Options: {
@@ -152,6 +158,7 @@ G4RWSysts: {
     Central: 1.
     LowerLimit: 0.1
     UpperLimit: 2.00
+    ThrowLimit: 0.
     Sigma: .75
 
     Options: {
@@ -173,6 +180,7 @@ G4RWSysts: {
     Central: 1.
     LowerLimit: 0.1
     UpperLimit: 2.00
+    ThrowLimit: 0.
     Sigma: .75
 
     Options: {
@@ -194,6 +202,7 @@ G4RWSysts: {
     Central: 1.
     LowerLimit: 0.1
     UpperLimit: 2.00
+    ThrowLimit: 0.
     Sigma: .75
 
     Options: {
@@ -215,6 +224,7 @@ G4RWSysts: {
     Central: 1.
     LowerLimit: 0.1
     UpperLimit: 2.00
+    ThrowLimit: 0.
     Sigma: .75
 
     Options: {
@@ -236,6 +246,7 @@ G4RWSysts: {
     Central: 1.
     LowerLimit: 0.1
     UpperLimit: 2.00
+    ThrowLimit: 0.
     Sigma: .75
 
     Options: {
@@ -257,6 +268,7 @@ G4RWSysts: {
     Central: 1.
     LowerLimit: 0.1
     UpperLimit: 2.00
+    ThrowLimit: 0.
     Sigma: .75
 
     Options: {
@@ -278,6 +290,7 @@ G4RWSysts: {
     Central: 1.
     LowerLimit: 0.1
     UpperLimit: 2.00
+    ThrowLimit: 0.
     Sigma: .75
 
     Options: {
@@ -299,6 +312,7 @@ G4RWSysts: {
     Central: 1.
     LowerLimit: 0.1
     UpperLimit: 2.00
+    ThrowLimit: 0.
     Sigma: .75
 
     Options: {
@@ -320,6 +334,7 @@ G4RWSysts: {
     Central: 1.
     LowerLimit: 0.1
     UpperLimit: 2.00
+    ThrowLimit: 0.
     Sigma: .75
 
     Options: {
@@ -339,20 +354,26 @@ G4RWSysts: {
 }
 
 Systematics: [
-  #{
-  #  Name: "dEdX_Cal_Spline"
-  #  Central: 1.011e-3
-  #  LowerLimit: .809e-3
-  #  UpperLimit: 1.2132e-3
-  #  Sigma: .101e-3
-  #
-  #  Options: {
-  #    Cal_set: @local::CalorimetryParameters_SPProd4_MC_SCE
-  #    C_cal_vars: [.809e-3, .910e-3, 1.121e-3, 1.2132e-3]
-  #    TemplateFile: "/cvmfs/larsoft.opensciencegrid.org/products/larsoft_data/v1_02_01/ParticleIdentification/dEdxrestemplates.root"
-  #
-  #  }
-  #} #,
+  {
+    Name: "dEdX_Cal_Spline"
+    #Central: 1.011e-3
+    #LowerLimit: .809e-3
+    #UpperLimit: 1.2132e-3
+
+    Central: 1.0
+    LowerLimit: 0.8
+    UpperLimit: 1.2
+
+    ThrowLimit: 0.
+    Sigma: .101e-3
+  
+    Options: {
+      Cal_set: @local::CalorimetryParameters_SPProd4_MC_SCE
+      C_cal_vars: [.8, .9, 1.1, 1.2]
+      #C_cal_vars: [.809e-3, .910e-3, 1.121e-3, 1.2132e-3]
+      TemplateFile: "/cvmfs/larsoft.opensciencegrid.org/products/larsoft_data/v1_02_01/ParticleIdentification/dEdxrestemplates.root"
+    }
+  },
   @local::G4RWSysts.g4rw_QE1,
   @local::G4RWSysts.g4rw_QE2,
   #@local::G4RWSysts.g4rw_Abs1,
@@ -363,55 +384,58 @@ Systematics: [
   #@local::G4RWSysts.g4rw_Reac1,
   #@local::G4RWSysts.g4rw_Reac2
   #@local::G4RWSysts.g4rw_DCex,
-  @local::G4RWSysts.g4rw_Prod
-  #@local::G4RWSysts.g4rw_proton
-  #{
-  #  Name: "beam_shift"
-  #  Central: 0. 
-  #  LowerLimit: -2. 
-  #  UpperLimit: 2. 
-  #  Sigma: 1. 
-  #
-  #  Options: {
-  #    #ShiftFile: "shift_map.root"
-  #    ShiftFile: "map_B_theta_2.root"
-  #    #Limits: [-.15, .15]
-  #    Limits: [-.2, .2]
-  #  }
-  #}
-  #{
-  #  Name: "eff_var"
-  #  Central: .333
-  #  LowerLimit: 0.
-  #  UpperLimit: 1.
-  #  sigma: .111
+  @local::G4RWSysts.g4rw_Prod,
+  @local::G4RWSysts.g4rw_proton,
+  {
+    Name: "beam_shift"
+    Central: 0. 
+    LowerLimit: -2. 
+    UpperLimit: 2. 
+    ThrowLimit: -999.
+    Sigma: 1. 
+  
+    Options: {
+      #ShiftFile: "shift_map.root"
+      ShiftFile: "map_B_theta_2.root"
+      #Limits: [-.15, .15]
+      Limits: [-.2, .2]
+    }
+  },
+  {
+    Name: "eff_var_weight"
+    Central: 1.0
+    LowerLimit: 0.
+    UpperLimit: 1.99585
+    ThrowLimit: 0.
+    sigma: .111
 
-  #  Options: {
-  #    
-  #  }
-  #}
-  #{
-  #  Name: "eff_var_weight"
-  #  Central: 1. 
-  #  LowerLimit: 0.
-  #  UpperLimit: 1.99585
-  #  sigma: .111
-
-  #  Options: {
-  #    F: .50104
-  #    Cut: .3
-  #  }
-  #}
+    Options: {
+      F: .50704
+      Cut: .3
+    }
+  }
 
 ]
 
-AddSystTerm: false
+AddSystTerm: true 
+#CovarianceBins: [
+#  ["beam_shift", 0]
+#  #["beam_2D_shift", 0],
+#  #["beam_2D_B", 0]
+#]
+#CovarianceFile: "input_cov.root" #"2D_cov.root"
+
 CovarianceBins: [
-  ["beam_shift", 0]
-  #["beam_2D_shift", 0],
-  #["beam_2D_B", 0]
+  ["dEdX_Cal_Spline", 0],
+  ["g4rw_QE1", 1],
+  ["g4rw_QE2", 2],
+  ["g4rw_Prod", 3],
+  ["g4rw_proton", 4],
+  ["eff_var_weight", 5],
+  ["beam_shift", 6]
 ]
-CovarianceFile: "input_cov.root" #"2D_cov.root"
+CovarianceFile: "dEdX_unit.root"
+#CovarianceFile: "full_cov.root"
 CovarianceMatrix: "m"
 
 Selections: [
@@ -592,10 +616,11 @@ DrawXSecUnderflow: false
 ## Validation
 RandomStart: false 
 DoFakeData: false 
-DoThrows: false 
+DoThrows: true 
 NThrows: 1000
+DoScans: true
 Do1DShifts: true
-DoSysts: true
+DoSysts: true 
 MaxRethrows: 1000
 #####################
 

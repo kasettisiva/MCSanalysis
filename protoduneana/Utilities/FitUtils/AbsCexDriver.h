@@ -202,6 +202,7 @@ class AbsCexDriver : public ThinSliceDriver {
    double fPitch;
    double fZ0;
    double fEndZCut;
+   double fTrajZStart;
    std::string fSliceMethod;
    int fSliceCut;
 

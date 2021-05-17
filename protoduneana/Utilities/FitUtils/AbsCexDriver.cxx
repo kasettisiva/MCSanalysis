@@ -33,6 +33,7 @@ protoana::AbsCexDriver::AbsCexDriver(
   }
   if (fSliceMethod == "Traj") {
     fSliceCut = extra_options.get<int>("SliceCut");
+    fTrajZStart = extra_options.get<double>("TrajZStart");
   }
   else {
     fSliceCut = std::floor((fEndZCut - (fZ0 - fPitch/2.))/fPitch);
@@ -99,7 +100,7 @@ void protoana::AbsCexDriver::BuildMCSamples(
     //Build the true incident energy vector based on the slice cut
     std::vector<double> good_true_incEnergies;
     if (fSliceMethod == "Traj") {
-      double next_slice_z = fExtraOptions.get<double>("TrajZStart");
+      double next_slice_z = fTrajZStart;
       //slice_cut = fExtraOptions.get<int>("SliceCut");
       int next_slice_num = 0;
       //bool found = false;
@@ -107,7 +108,7 @@ void protoana::AbsCexDriver::BuildMCSamples(
         double z = (/***/true_beam_traj_Z)[j];
         double ke = (/***/true_beam_traj_KE)[j];
 
-        if (z < fExtraOptions.get<double>("TrajZStart")) {
+        if (z < fTrajZStart) {
           //std::cout << "Skipping " << z << std::endl;
           continue;
         }
@@ -139,6 +140,9 @@ void protoana::AbsCexDriver::BuildMCSamples(
                            (next_slice_z - fExtraOptions.get<double>("TrajZStart"))/next_slice_num <<std::endl;
               std::cout << "\t\tsub z: " << sub_z << " delta_z: " << delta_z << std::endl;
             }*/
+            //if (temp_e < end_energy)
+            //  std::cout << "Warning adding energy less than end " << 
+            //               temp_e << " " << end_energy << std::endl;
             good_true_incEnergies.push_back(temp_e);
             temp_z = next_slice_z;
             next_slice_z += fPitch;
@@ -148,6 +152,11 @@ void protoana::AbsCexDriver::BuildMCSamples(
           //std::cout << "Next: " << next_slice_z << " Z: " << z << " slice: " << next_slice_num << std::endl;
         }
       }
+      //double last_slice_z = fSliceCut*fPitch + fTrajZStart;
+      //std::cout << next_slice_num << " " <<
+      //             std::floor((true_beam_traj_Z[true_beam_traj_Z.size() - 2]
+      //                        - fTrajZStart)/fPitch) <<
+      //             " " << good_true_incEnergies.size() << std::endl;
     }
     else if (fSliceMethod == "Default") {
       for (size_t j = 0; j < true_beam_incidentEnergies./*->*/size(); ++j) {
@@ -1313,7 +1322,8 @@ void protoana::AbsCexDriver::SetupSyst_dEdX_Cal(
 
       int new_selection_ID = RecalculateSelectionID(
           event,
-          (pars.at("dEdX_Cal_Spline").GetCentral()/c),
+          /*(pars.at("dEdX_Cal_Spline").GetCentral()/c),*/
+          (1./c),
           prot_template);
       new_selection_IDs.push_back(new_selection_ID);
       //std::cout << "\t" << c << " " <<
@@ -1373,7 +1383,7 @@ void protoana::AbsCexDriver::SetupSyst_dEdX_Cal(
           for (size_t k = 0; k < calibrated_dQdX.size()-1; ++k) {
             if ((calibrated_dQdX)[k] < 0.) continue;
 
-            double dedx = (pars.at("dEdX_Cal_Spline").GetCentral()/C_cal_vars[j]);
+            double dedx = (C_cal_vars[j]);/*(pars.at("dEdX_Cal_Spline").GetCentral()/C_cal_vars[j]);*/
             dedx *= (calibrated_dQdX)[k];
             dedx *= (fBetaP / ( fRho * (beam_EField)[k] ) * fWion);
             dedx = exp(dedx);
@@ -1453,6 +1463,7 @@ void protoana::AbsCexDriver::SetupSyst_dEdX_Cal(
       TCanvas c(spline_name.c_str(), "");
       fFullSelectionSplines["dEdX_Cal_Spline"][selection_ID].back()->Draw();
       c.Write();
+      fFullSelectionSplines["dEdX_Cal_Spline"][selection_ID].back()->Write(spline_name.c_str());
     }
   }
 }
@@ -2916,6 +2927,10 @@ void protoana::AbsCexDriver::CompareSelections(
         = (TH1D*)data_hist->Clone(ratio_name.c_str());
     hRatio->Divide(hMC);
     hRatio->Write(); 
+    std::string total_name = (post_fit ? "PostFit" : "Nominal") +
+                             data_set.GetSelectionName(selection_ID) +
+                             "Total";
+    hMC->Write(total_name.c_str());
 
     canvas_name += "Ratio";
     TCanvas cRatio(canvas_name.c_str(), "");

@@ -16,7 +16,9 @@ lines = input_file.readlines()
 cov_vals = []
 n = 0
 for l in lines:
-  if "#" in l: continue 
+  if "#" in l:
+    print(l)
+    continue 
   l = l.strip("\n")
   l_split = l.split()
   print(l_split)

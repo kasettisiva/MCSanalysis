@@ -2,4 +2,5 @@
 
 process_name: PDSPAna
 
-physics.reco: [ emtrkmichelid ]
+physics.reco: [ nhitsfilter, emtrkmichelid ]
+#physics.producers.emtrkmichelid.SelectEvents: ["fpath"]

@@ -67,6 +67,7 @@ class PDSPThinSliceFitter {
   void BuildDataFromToy();
   //void Get1DSystPlots();
   double CalcChi2SystTerm();
+  void MakeThrowsTree(TTree & tree, std::vector<double> & branches);
 
   std::vector<double> GetBestFitParsVec();
 
@@ -117,10 +118,11 @@ class PDSPThinSliceFitter {
   //std::map<int, std::string> fSystParameterNames;
   std::map<std::string, ThinSliceSystematic> fSystParameters;
   std::vector<std::string> fSystParameterNames;
+  std::vector<double> fParLimits;
   size_t fTotalSystParameters = 0;
   std::map<std::string, size_t> fCovarianceBins;
   bool fAddSystTerm;
-  TMatrixD * fCovMatrix;
+  TMatrixD * fCovMatrix, * fCovMatrixDisplay;
   TDecompChol * fInputChol;
 
   std::map<std::string, double> fToyValues;
@@ -158,7 +160,7 @@ class PDSPThinSliceFitter {
   fhicl::ParameterSet fAnalysisOptions;
   double fPitch;
   std::string fSliceMethod;
-  bool fDoFakeData, fDoThrows, fDo1DShifts, fDoSysts/*, f1DSystPlots*/;
+  bool fDoFakeData, fDoThrows, fDoScans, fDo1DShifts, fDoSysts/*, f1DSystPlots*/;
   int fFitFunctionType;
   bool fFillIncidentInFunction = false;
   bool fFitFlux;

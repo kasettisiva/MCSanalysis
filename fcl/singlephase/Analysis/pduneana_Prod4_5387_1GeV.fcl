@@ -3,6 +3,7 @@
 #include "ProtoDUNEFembFilter.fcl"
 #include "ProtoDUNEUnstableHVFilter.fcl"
 #include "protoDUNE_reco_data_prolog.fcl"
+#include "missingproductfilter.fcl"
 
 process_name: PDSPAna
 
@@ -46,9 +47,11 @@ physics:
  filters: { 
    f1: @local::HVfilter
    f2: @local::pdsp_fembfilter_beamside
+   f3: @local::standard_missingproductfilter
+   @table::protoDUNE_reco_data_filters
  }
 
- fpath: [f1, f2]
+ fpath: [f1, f2, f3]
 
  analyzers:
  {

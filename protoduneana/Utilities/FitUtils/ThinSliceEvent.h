@@ -11,6 +11,7 @@ class ThinSliceEvent {
     reco_beam_interactingEnergy = -999;
     true_beam_endP = -999;
     true_beam_startP = -999;
+    true_beam_endZ = -999.;
     true_beam_mass = -999;
     reco_beam_endZ = -999;
     beam_inst_P = -999;
@@ -85,6 +86,13 @@ class ThinSliceEvent {
   };
   void SetTrueEndP(double p) {
     true_beam_endP = p;
+  };
+
+  double GetTrueEndZ() const {
+    return true_beam_endZ;
+  };
+  void SetTrueEndZ(double z) {
+    true_beam_endZ = z;
   };
 
   double GetRecoEndZ() const {
@@ -244,7 +252,7 @@ class ThinSliceEvent {
   int pdg;
   double true_beam_interactingEnergy, reco_beam_interactingEnergy;
   double true_beam_endP, true_beam_mass;
-  double reco_beam_endZ, true_beam_startP;
+  double reco_beam_endZ, true_beam_startP, true_beam_endZ;
   double beam_inst_P;
   bool has_pi0_shower;
   std::vector<double> reco_beam_incidentEnergies,
