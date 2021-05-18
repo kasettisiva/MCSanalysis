@@ -256,11 +256,11 @@ void protoana::AbsCexDriver::BuildMCSamples(
     else if (reco_beam_incidentEnergies./*->*/size()) {
       //this_sample->FillIncidentHist(*reco_beam_incidentEnergies);
       double energy[1] = {reco_beam_interactingEnergy};
-      if (fExtraOptions.get<bool>("DoEnergyFix")) {
+      if (fDoEnergyFix) {
         for (size_t k = 1; k < reco_beam_incidentEnergies./*->*/size(); ++k) {
           double deltaE = ((/***/reco_beam_incidentEnergies)[k-1] -
                            (/***/reco_beam_incidentEnergies)[k]);
-          if (deltaE > fExtraOptions.get<double>("EnergyFix")) {
+          if (deltaE > fEnergyFix) {
             energy[0] += deltaE; 
           }
         }
@@ -374,14 +374,14 @@ void protoana::AbsCexDriver::RefillMCSamples(
     std::vector<double> good_true_incEnergies;
     if (fill_incident) {
     if (fSliceMethod == "Traj") {
-      double next_slice_z = fExtraOptions.get<double>("TrajZStart");
+      double next_slice_z = fTrajZStart;
       //slice_cut = fExtraOptions.get<int>("SliceCut");
       int next_slice_num = 0;
       for (size_t j = 1; j < true_beam_traj_Z.size() - 1; ++j) {
         double z = (true_beam_traj_Z)[j];
         double ke = (true_beam_traj_KE)[j];
 
-        if (z < fExtraOptions.get<double>("TrajZStart")) {
+        if (z < fTrajZStart) {
           continue;
         }
 

@@ -920,9 +920,12 @@ void protoana::PDSPThinSliceFitter::Pulls() {
   for (size_t i = 0; i < fNPulls; ++i) {
     std::cout << "Fitting for pulls: " << i << "/" << fNPulls << std::endl;
     fMinimizer->SetVariableValues(&fMinimizerInitVals[0]);
+    std::cout << "\tGenerating fluctuation" << std::endl;
     fDataSet.GenerateStatFluctuation();
+    std::cout << "\tDone" << std::endl;
     int fit_status = fMinimizer->Minimize();
     if (fit_status) {
+      std::cout << "Fit successful" << std::endl;
       pulls.clear();
       vals.clear();
       for (size_t j = 0; j < total_parameters; ++j) {
@@ -1133,7 +1136,7 @@ void protoana::PDSPThinSliceFitter::DoThrows(const TH1D & pars, const TMatrixD *
 
   for (size_t i = 0; i < fNThrows; ++i) {
     if (! (i%100) ) {
-      std::cout << "Throw " << i << std::endl;
+      std::cout << "Throw " << i << "/" << fNThrows << std::endl;
     //auto start = std::chrono::high_resolution_clock::now();
     }
     vals.push_back(std::vector<double>(pars.GetNbinsX(), 1.));
@@ -1155,7 +1158,7 @@ void protoana::PDSPThinSliceFitter::DoThrows(const TH1D & pars, const TMatrixD *
         //Configure this to truncate at 0 or rethrow
         if (vals.back()[j-1] < fParLimits[j-1]) {
           all_pos = false;
-          //std::cout << "Rethrowing " << j-1 << " " << vals.back()[j-1] << " " << fParLimits[j-1] << std::endl;
+          std::cout << "Rethrowing " << j-1 << " " << vals.back()[j-1] << " " << fParLimits[j-1] << std::endl;
         }
         //if ((j-1 < n_signal_flux_pars) && (vals.back()[j-1] < 0.)) {
         //  all_pos = false;
@@ -1813,6 +1816,7 @@ void protoana::PDSPThinSliceFitter::PlotThrows(
 
   //TH2D incident_cov("incident_cov", "", nBins, 0, nBins, nBins, 0, nBins);
   TH2D xsec_cov("xsec_cov", "", nBins, 0, nBins, nBins, 0, nBins);
+  TMatrixD xsec_cov_matrix(nBins, nBins);
 
   for (size_t z = 0; z < fNThrows; ++z) {
     int bin_i = 1;
@@ -1911,11 +1915,46 @@ void protoana::PDSPThinSliceFitter::PlotThrows(
     }
   }
 
+  for (int i = 0; i < nBins; ++i) {
+    for (int j = 0; j < nBins; ++j) {
+      xsec_cov_matrix[i][j] = xsec_cov.GetBinContent(i+1, j+1);
+    }
+  }
+  xsec_cov_matrix.Invert();
+
 
   fOutputFile.cd("Throws");
   selection_cov.Write();
   interaction_cov.Write();
   xsec_cov.Write();
+
+  double xsec_chi2 = 0.;
+  int bin_i = 0;
+  for (auto it = best_fit_xsec_truth.begin(); it != best_fit_xsec_truth.end();
+       ++it) {
+    for (size_t i = 0; i < it->second.size(); ++i) {
+      double measured_val_i = it->second[i];
+      double mc_val_i = (fDoFakeData ?
+                         fFakeDataXSecs[it->first]->GetBinContent(i+1) :
+                         fNominalXSecs[it->first]->GetBinContent(i+1));
+      int bin_j = 0;
+      for (auto it2 = best_fit_xsec_truth.begin();
+           it2 != best_fit_xsec_truth.end();
+           ++it2) {
+        for (size_t j = 0; j < it2->second.size(); ++j) {
+          double measured_val_j = it2->second[j];
+          double mc_val_j = (fDoFakeData ?
+                             fFakeDataXSecs[it2->first]->GetBinContent(j+1) :
+                             fNominalXSecs[it2->first]->GetBinContent(j+1));
+          xsec_chi2 += ((measured_val_i - mc_val_i)*
+                        xsec_cov_matrix[bin_i][bin_j]*
+                        (measured_val_j - mc_val_j));
+        }
+        ++bin_j;
+      }
+    }
+    ++bin_i;
+  }
 
   int bin_count = 0;
   for (auto it = data_hists.begin(); it != data_hists.end(); ++it) {
@@ -2160,6 +2199,9 @@ void protoana::PDSPThinSliceFitter::PlotThrows(
       leg.AddEntry(fake_gr, "Fake Data", "p");
     }
 
+    std::string chi2_str = "#chi^{2} = " +
+                           std::to_string(xsec_chi2);
+    leg.AddEntry((TObject*)0x0, chi2_str.c_str(), "");
     leg.Draw("same");
     cThrow.Write();
     gPad->RedrawAxis();

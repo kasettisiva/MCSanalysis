@@ -413,7 +413,21 @@ Systematics: [
       F: .50704
       Cut: .3
     }
-  }
+  } #,
+  #{
+  #  Name: "ediv_break_weight"
+  #  Central: 1.0
+  #  LowerLimit: 0.
+  #  UpperLimit: 2.0
+  #  ThrowLimit: 0.
+  #  sigma: .1
+
+  #  Options: {
+  #    F: .50704
+  #    Cut: .3
+  #  }
+  #}
+  
 
 ]
 
@@ -618,7 +632,7 @@ RandomStart: false
 DoFakeData: false 
 DoThrows: true 
 NThrows: 1000
-DoScans: true
+DoScans: false 
 Do1DShifts: true
 DoSysts: true 
 MaxRethrows: 1000
