@@ -5,8 +5,10 @@
 #DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_3_31_21/eventSelection_mc_all.root"
 #MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_5_8_21_with_data2/eventSelection_mc_all.root"
 #DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_5_8_21_with_data2/eventSelection_mc_all.root"
-MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4a_5_15_21_with_data/eventSelection_mc_all.root"
-DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4a_5_15_21_with_data/eventSelection_mc_all.root"
+#MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4a_5_15_21_with_data/eventSelection_mc_all.root"
+#DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4a_5_15_21_with_data/eventSelection_mc_all.root"
+MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4a_5_18_21_with_data/eventSelection_mc_all.root"
+DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4a_5_18_21_with_data/eventSelection_mc_all.root"
 TreeName: "pduneana/beamana"
 
 #MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_beamType.root"
@@ -64,9 +66,10 @@ AnalysisOptions: {
     F: .333
   }
 
-  #EndZCut: 226. 
-  EndZCut: 225.94353
-  SliceCut: 472
+  #EndZCut: 225.94353
+  EndZCut: 222.10561
+  #SliceCut: 472
+  SliceCut: 464
   WirePitch: .47974
   Z0: 0.56035
 
@@ -376,14 +379,14 @@ Systematics: [
   },
   @local::G4RWSysts.g4rw_QE1,
   @local::G4RWSysts.g4rw_QE2,
-  #@local::G4RWSysts.g4rw_Abs1,
-  #@local::G4RWSysts.g4rw_Abs2,
-  #@local::G4RWSysts.g4rw_Cex1,
-  #@local::G4RWSysts.g4rw_Cex2,
-  #@local::G4RWSysts.g4rw_Cex3,
-  #@local::G4RWSysts.g4rw_Reac1,
-  #@local::G4RWSysts.g4rw_Reac2
-  #@local::G4RWSysts.g4rw_DCex,
+  ##@local::G4RWSysts.g4rw_Abs1,
+  ##@local::G4RWSysts.g4rw_Abs2,
+  ##@local::G4RWSysts.g4rw_Cex1,
+  ##@local::G4RWSysts.g4rw_Cex2,
+  ##@local::G4RWSysts.g4rw_Cex3,
+  ##@local::G4RWSysts.g4rw_Reac1,
+  ##@local::G4RWSysts.g4rw_Reac2
+  ##@local::G4RWSysts.g4rw_DCex,
   @local::G4RWSysts.g4rw_Prod,
   @local::G4RWSysts.g4rw_proton,
   {
@@ -401,37 +404,37 @@ Systematics: [
       Limits: [-.2, .2]
     }
   },
-  {
-    Name: "eff_var_weight"
-    Central: 1.0
-    LowerLimit: 0.
-    UpperLimit: 1.99585
-    ThrowLimit: 0.
-    sigma: .111
-
-    Options: {
-      F: .50704
-      Cut: .3
-    }
-  } #,
   #{
-  #  Name: "ediv_break_weight"
+  #  Name: "eff_var_weight"
   #  Central: 1.0
   #  LowerLimit: 0.
-  #  UpperLimit: 2.0
+  #  UpperLimit: 1.99585
   #  ThrowLimit: 0.
-  #  sigma: .1
+  #  sigma: .111
 
   #  Options: {
   #    F: .50704
   #    Cut: .3
   #  }
-  #}
+  #} #,
+  {
+    Name: "ediv_weight"
+    Central: 1.0
+    LowerLimit: 0.
+    UpperLimit: 2.0
+    ThrowLimit: 0.
+    sigma: .1
+
+    Options: {
+      F: .61329
+      Cut: 234. 
+    }
+  }
   
 
 ]
 
-AddSystTerm: true 
+AddSystTerm: true
 #CovarianceBins: [
 #  ["beam_shift", 0]
 #  #["beam_2D_shift", 0],
@@ -439,17 +442,32 @@ AddSystTerm: true
 #]
 #CovarianceFile: "input_cov.root" #"2D_cov.root"
 
+#CovarianceBins: [
+#  ["dEdX_Cal_Spline", 0],
+#  ["g4rw_QE1", 1],
+#  ["g4rw_QE2", 2],
+#  ["g4rw_Prod", 3],
+#  ["g4rw_proton", 4],
+#  ["eff_var_weight", 5],
+#  ["beam_shift", 6]
+#]
+#CovarianceFile: "dEdX_unit.root"
+
+#CovarianceBins: [
+#  ["ediv_weight", 0]
+#]
+#CovarianceFile: "ediv_cov.root"
+
 CovarianceBins: [
   ["dEdX_Cal_Spline", 0],
   ["g4rw_QE1", 1],
   ["g4rw_QE2", 2],
   ["g4rw_Prod", 3],
   ["g4rw_proton", 4],
-  ["eff_var_weight", 5],
+  ["ediv_weight", 5],
   ["beam_shift", 6]
 ]
-CovarianceFile: "dEdX_unit.root"
-#CovarianceFile: "full_cov.root"
+CovarianceFile: "full_with_ediv.root"
 CovarianceMatrix: "m"
 
 Selections: [
@@ -493,7 +511,7 @@ Selections: [
   {
     Name: "APA2"
     ID: 4
-    RecoBins: [[225, 275, 325, 375, 425, 580]]
+    RecoBins: [[222, 275, 325, 375, 425, 580]]
     AxisTitles: ["Reconstructed End Z (cm)"]
   },
   {
@@ -630,9 +648,9 @@ DrawXSecUnderflow: false
 ## Validation
 RandomStart: false 
 DoFakeData: false 
-DoThrows: true 
+DoThrows: true
 NThrows: 1000
-DoScans: false 
+DoScans: true 
 Do1DShifts: true
 DoSysts: true 
 MaxRethrows: 1000

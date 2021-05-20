@@ -1606,6 +1606,7 @@ void protoana::PDSPThinSliceFitter::DefineFitFunction2() {
         return (chi2_points.first + syst_chi2);
       },
       fTotalSignalParameters + fTotalFluxParameters + fTotalSystParameters);
+      std::cout << "Done F2" << std::endl;
 
 }
 
@@ -1928,27 +1929,35 @@ void protoana::PDSPThinSliceFitter::PlotThrows(
   interaction_cov.Write();
   xsec_cov.Write();
 
-  double xsec_chi2 = 0.;
+  double nominal_xsec_chi2 = 0.;
+  double fake_xsec_chi2 = 0.;
   int bin_i = 0;
   for (auto it = best_fit_xsec_truth.begin(); it != best_fit_xsec_truth.end();
        ++it) {
     for (size_t i = 0; i < it->second.size(); ++i) {
       double measured_val_i = it->second[i];
-      double mc_val_i = (fDoFakeData ?
-                         fFakeDataXSecs[it->first]->GetBinContent(i+1) :
-                         fNominalXSecs[it->first]->GetBinContent(i+1));
+      double mc_val_i = fNominalXSecs[it->first]->GetBinContent(i+1);
+      double fake_val_i = (fDoFakeData ?
+                           fFakeDataXSecs[it->first]->GetBinContent(i+1) :
+                           0.);
       int bin_j = 0;
       for (auto it2 = best_fit_xsec_truth.begin();
            it2 != best_fit_xsec_truth.end();
            ++it2) {
         for (size_t j = 0; j < it2->second.size(); ++j) {
           double measured_val_j = it2->second[j];
-          double mc_val_j = (fDoFakeData ?
-                             fFakeDataXSecs[it2->first]->GetBinContent(j+1) :
-                             fNominalXSecs[it2->first]->GetBinContent(j+1));
-          xsec_chi2 += ((measured_val_i - mc_val_i)*
-                        xsec_cov_matrix[bin_i][bin_j]*
-                        (measured_val_j - mc_val_j));
+          double mc_val_j = fNominalXSecs[it2->first]->GetBinContent(j+1);
+          double fake_val_j = (fDoFakeData ?
+                               fFakeDataXSecs[it2->first]->GetBinContent(j+1) :
+                               0.);
+          nominal_xsec_chi2 += ((measured_val_i - mc_val_i)*
+                                xsec_cov_matrix[bin_i][bin_j]*
+                                (measured_val_j - mc_val_j));
+          if (fDoFakeData) {
+            fake_xsec_chi2 += ((measured_val_i - fake_val_i)*
+                               xsec_cov_matrix[bin_i][bin_j]*
+                               (measured_val_j - fake_val_j));
+          }
         }
         ++bin_j;
       }
@@ -2199,12 +2208,17 @@ void protoana::PDSPThinSliceFitter::PlotThrows(
       leg.AddEntry(fake_gr, "Fake Data", "p");
     }
 
-    std::string chi2_str = "#chi^{2} = " +
-                           std::to_string(xsec_chi2);
+    std::string chi2_str = "Nominal #chi^{2} = " +
+                           std::to_string(nominal_xsec_chi2);
     leg.AddEntry((TObject*)0x0, chi2_str.c_str(), "");
+    if (fDoFakeData) {
+      std::string fake_chi2_str = "Fake Data #chi^{2} = " +
+                                  std::to_string(fake_xsec_chi2);
+      leg.AddEntry((TObject*)0x0, fake_chi2_str.c_str(), "");
+    }
     leg.Draw("same");
-    cThrow.Write();
     gPad->RedrawAxis();
+    cThrow.Write();
     throw_gr.Write(gr_name.c_str());
   }
 }
