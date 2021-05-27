@@ -59,10 +59,15 @@ physics:
                   module_type: "michelremoving"
                   SelectEvents: [fpath]
               }
+              michelremoving3:
+              {
+                  module_type: "michelremoving"
+                  SelectEvents: [fpath]
+              }
           }
  
           
-          ana:  [ michelremoving, michelremoving1, michelremoving2 ]
+          ana:  [ michelremoving, michelremoving1, michelremoving2, michelremoving3 ]
           end_paths:     [  ana ] 
 }
 
@@ -82,3 +87,8 @@ physics.analyzers.michelremoving2.TrackModuleLabel:        "pandoraTrack"
 physics.analyzers.michelremoving2.CalorimetryModuleLabel:  "pandoracalinoxyzt"
 physics.analyzers.michelremoving2.HitsModuleLabel:  "hitpdune"
 physics.analyzers.michelremoving2.SaveTrackInfo: true
+
+physics.analyzers.michelremoving3.TrackModuleLabel:        "pandoraTrack"
+physics.analyzers.michelremoving3.CalorimetryModuleLabel:  "pandoracali"
+physics.analyzers.michelremoving3.HitsModuleLabel:  "hitpdune"
+physics.analyzers.michelremoving3.SaveTrackInfo: true
