@@ -255,7 +255,7 @@ private:
   void BeamTrackInfo(const art::Event & evt,
                      const recob::Track * thisTrack,
                      detinfo::DetectorClocksData const& clockData);
-  void BeamShowerInfo(const recob::Shower* thisShower);
+  void BeamShowerInfo(const art::Event & evt, const recob::Shower* thisShower);
   void BeamPFPInfo(const art::Event & evt,
                    const recob::PFParticle* particle,
                    anab::MVAReader<recob::Hit,4> * hitResults);
@@ -668,6 +668,7 @@ private:
   std::string fGeneratorTag;
   std::string fBeamModuleLabel;
   protoana::ProtoDUNEBeamlineUtils fBeamlineUtils;
+  double fBeamPIDMomentum;
   std::string dEdX_template_name;
   TFile * dEdX_template_file;
   bool fVerbose;    
@@ -718,6 +719,7 @@ pduneana::PDSPAnalyzer::PDSPAnalyzer(fhicl::ParameterSet const& p)
   fGeneratorTag(p.get<std::string>("GeneratorTag")),
   fBeamModuleLabel(p.get<std::string>("BeamModuleLabel")),
   fBeamlineUtils(p.get< fhicl::ParameterSet >("BeamlineUtils")),
+  fBeamPIDMomentum(p.get<double>("BeamPIDMomentum")),
   dEdX_template_name(p.get<std::string>("dEdX_template_name")),
   //dEdX_template_file( dEdX_template_name.c_str(), "OPEN" ),
   fVerbose(p.get<bool>("Verbose")),
@@ -951,7 +953,7 @@ void pduneana::PDSPAnalyzer::analyze(art::Event const & evt) {
       BeamTrackInfo(evt, thisTrack, clockData);
     }
     else if( thisShower ){
-      BeamShowerInfo(thisShower);
+      BeamShowerInfo(evt, thisShower);
     }
 
     DaughterPFPInfo(evt, particle, clockData, hitResults);
@@ -2818,9 +2820,47 @@ void pduneana::PDSPAnalyzer::BeamTrackInfo(
   }
 }
 
-void pduneana::PDSPAnalyzer::BeamShowerInfo(const recob::Shower* thisShower) {
+void pduneana::PDSPAnalyzer::BeamShowerInfo(const art::Event & evt, const recob::Shower* thisShower) {
   reco_beam_type = 11;
   reco_beam_trackID = thisShower->ID();
+  reco_beam_startX = thisShower->ShowerStart().X();
+  reco_beam_startY = thisShower->ShowerStart().Y();
+  reco_beam_startZ = thisShower->ShowerStart().Z();
+  reco_beam_trackDirX = thisShower->Direction().X();
+  reco_beam_trackDirY = thisShower->Direction().Y();
+  reco_beam_trackDirZ = thisShower->Direction().Z();
+
+  auto allHits = evt.getValidHandle<std::vector<recob::Hit> >(fHitTag);
+  auto calo = showerUtil.GetRecoShowerCalorimetry(*thisShower, evt, fShowerTag, "pandoraShowercalo");
+  bool found_calo = false;
+  size_t index = 0;
+  std::cout << "Searching for planes" << std::endl;
+  for ( index = 0; index < calo.size(); ++index) {
+    std::cout << calo[index].PlaneID().Plane << std::endl;
+    if (calo[index].PlaneID().Plane == 2) {
+      found_calo = true;
+      break; 
+    }
+  }
+  if (found_calo) {
+    auto TpIndices = calo[index].TpIndices();
+    for( size_t i = 0; i < TpIndices.size(); ++i ){
+      const recob::Hit & theHit = (*allHits)[ TpIndices[i] ];
+      reco_beam_calo_TPC.push_back(theHit.WireID().TPC);
+      if (theHit.WireID().TPC == 1) {
+        reco_beam_calo_wire.push_back( theHit.WireID().Wire );
+      }
+      else if (theHit.WireID().TPC == 5) {
+        reco_beam_calo_wire.push_back( theHit.WireID().Wire + 479);
+      }
+      //Need other TPCs?
+      else {
+        reco_beam_calo_wire.push_back(theHit.WireID().Wire );
+      }
+
+      reco_beam_calo_tick.push_back( theHit.PeakTime() );
+    }
+  }
 
   if (fVerbose) {
     std::cout << "Beam particle is shower-like" << std::endl;

@@ -24,6 +24,7 @@ pdspanalysis:
   dEdX_template_name:     "dEdxrestemplates.root"
   BeamModuleLabel:        "beamevent"
   BeamlineUtils: @local::standard_protodunebeamlineutils
+  BeamPIDMomentum: 1.
   Verbose:                false 
 
   SelectEvents: []

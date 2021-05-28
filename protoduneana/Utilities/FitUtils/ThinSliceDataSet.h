@@ -88,14 +88,17 @@ class ThinSliceDataSet {
 
   void GetCumulatives() {
     fTotal = 0;
+    std::cout << "Making cumulatives" << std::endl;
     for (auto it = fSelectionHists.begin();
          it != fSelectionHists.end(); ++it) {
       for (int i = 1; i <= it->second->GetNbinsX(); ++i) {
         double val = it->second->GetBinContent(i);
-        if (fCumulatives.size())
+        if (fCumulatives.size()) {
           val += fCumulatives.back().second;
+        }
         fCumulatives.push_back({{it->first, i}, val});
         fTotal += it->second->GetBinContent(i);
+        std::cout << fCumulatives.back().second << " " << fTotal << std::endl;
       }
     }
 
@@ -129,7 +132,7 @@ class ThinSliceDataSet {
   std::map<int, std::string> fSelectionNames;
   std::vector<std::pair<std::pair<int, int>, double>> fCumulatives;
   TRandom3 fRNG = TRandom3(0);
-  int fTotal;
+  double fTotal;
 
 };
 }

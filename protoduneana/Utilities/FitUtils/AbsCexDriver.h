@@ -18,48 +18,56 @@ class AbsCexDriver : public ThinSliceDriver {
   virtual ~AbsCexDriver();
 
   void BuildDataHists(
-    TTree * tree, ThinSliceDataSet & data_set, double & flux) override;
+    TTree * tree, ThinSliceDataSet & data_set, double & flux,
+    int split_val = 0) override;
   void BuildFakeData(
     TTree * tree,
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     const std::map<int, bool> & signal_sample_checks,
     ThinSliceDataSet & data_set, double & flux,
-    std::map<int, std::vector<double>> & sample_scales) override;
+    std::map<int, std::vector<double>> & sample_scales,
+    int split_val = 0) override;
   void FakeDataSampleScales(
     TTree * tree,
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     const std::map<int, bool> & signal_sample_checks,
     ThinSliceDataSet & data_set, double & flux,
-    std::map<int, std::vector<double>> & sample_scales);
+    std::map<int, std::vector<double>> & sample_scales,
+    int split_val = 0);
   void FakeDataBinnedScales(
     TTree * tree,
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     const std::map<int, bool> & signal_sample_checks,
     ThinSliceDataSet & data_set, double & flux,
-    std::map<int, std::vector<double>> & sample_scales);
+    std::map<int, std::vector<double>> & sample_scales,
+    int split_val = 0);
   void FakeDataG4RW(
     TTree * tree,
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     const std::map<int, bool> & signal_sample_checks,
     ThinSliceDataSet & data_set, double & flux,
-    std::map<int, std::vector<double>> & sample_scales);
+    std::map<int, std::vector<double>> & sample_scales,
+    int split_val = 0);
   void FakeDataG4RWGrid(
     TTree * tree,
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     const std::map<int, bool> & signal_sample_checks,
     ThinSliceDataSet & data_set, double & flux,
-    std::map<int, std::vector<double>> & sample_scales);
+    std::map<int, std::vector<double>> & sample_scales,
+    int split_val = 0);
   void FakeDataEffVar(
     TTree * tree,
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     const std::map<int, bool> & signal_sample_checks,
     ThinSliceDataSet & data_set, double & flux,
-    std::map<int, std::vector<double>> & sample_scales);
+    std::map<int, std::vector<double>> & sample_scales,
+    int split_val = 0);
 
   void FakeDatadEdX(
     TTree * tree,
     ThinSliceDataSet & data_set, double & flux,
-    std::map<int, std::vector<double>> & sample_scales);
+    std::map<int, std::vector<double>> & sample_scales,
+    int split_val = 0);
 
   void BuildMCSamples(
       //TTree * tree,
@@ -222,7 +230,8 @@ class AbsCexDriver : public ThinSliceDriver {
    //double fSystBeamResWeightCap, fSystBeamResOutput;
    double fSystBeamShiftWeight, fSystBeamShiftVal, fSystBeamShiftR;
    bool /*fSetupSystBeamRes = false,*/ fSetupSystBeamShift = false,
-        fSetupSystBeamShift2D = false, fSetupSystEffVar = false;
+        fSetupSystBeamShift2D = false, fSetupSystEffVar = false,
+        fSystBeamShiftTreeSave = false;
    double fSystBeamShift2DWeight, fSystBeamShift2DBVal, fSystBeamShift2DVal,
           fSystBeamShift2DR;
   // double fEffVarSystVal;

@@ -26,12 +26,14 @@ protoana::AbsCexDriver::AbsCexDriver(
       fZ0(extra_options.get<double>("Z0")),
       fEndZCut(extra_options.get<double>("EndZCut")),
       fSliceMethod(extra_options.get<std::string>("SliceMethod")) {
-  fIn = new TFile("end_slices.root", "OPEN");
-  fEndSlices = (TH2D*)fIn->Get("h2D")->Clone();
-  for (int i = 1; i <= 735; ++i) {
-    fMeans[i] = fEndSlices->ProjectionY("", i, i)->GetMean();
+  if (fSliceMethod == "Alt") {
+    fIn = new TFile("end_slices.root", "OPEN");
+    fEndSlices = (TH2D*)fIn->Get("h2D")->Clone();
+    for (int i = 1; i <= 735; ++i) {
+      fMeans[i] = fEndSlices->ProjectionY("", i, i)->GetMean();
+    }
   }
-  if (fSliceMethod == "Traj") {
+  else if (fSliceMethod == "Traj") {
     fSliceCut = extra_options.get<int>("SliceCut");
     fTrajZStart = extra_options.get<double>("TrajZStart");
   }
@@ -612,7 +614,7 @@ void protoana::AbsCexDriver::WrapUpSysts(TFile & output_file) {
   //  output_file.cd("SystBeamRes");
   //  fSystBeamResTree->Write();
   //}
-  if (fSetupSystBeamShift) {
+  if (fSetupSystBeamShift && fSystBeamShiftTreeSave) {
     output_file.cd("SystBeamShift");
     fSystBeamShiftTree->Write();
   }
@@ -989,12 +991,15 @@ void protoana::AbsCexDriver::SetupSyst_BeamShift(
   //fSystBeamShiftWidths->SetDirectory(0);
   shift_file.Close();
 
-  output_file.mkdir("SystBeamShift");
-  output_file.cd("SystBeamShift");
-  fSystBeamShiftTree = new TTree("tree", "");
-  fSystBeamShiftTree->Branch("Weight", &fSystBeamShiftWeight);
-  fSystBeamShiftTree->Branch("Val", &fSystBeamShiftVal);
-  fSystBeamShiftTree->Branch("R", &fSystBeamShiftR);
+  fSystBeamShiftTreeSave = pars.at("beam_shift").GetOption<bool>("SaveInfo");
+  if (fSystBeamShiftTreeSave) {
+    output_file.mkdir("SystBeamShift");
+    output_file.cd("SystBeamShift");
+    fSystBeamShiftTree = new TTree("tree", "");
+    fSystBeamShiftTree->Branch("Weight", &fSystBeamShiftWeight);
+    fSystBeamShiftTree->Branch("Val", &fSystBeamShiftVal);
+    fSystBeamShiftTree->Branch("R", &fSystBeamShiftR);
+  }
   fSetupSystBeamShift = true;
 
 }
@@ -1510,6 +1515,12 @@ double protoana::AbsCexDriver::GetSystWeight_G4RW(
     int selection_ID, double val) {
   double weight = 1.;
   for (std::string & s : fActiveG4RWSysts) {
+    if (std::isnan(pars.at(s).GetValue())) {
+      std::string message = "protoana::AbsCexDriver::GetSystWeight_G4RW ";
+      message += s;
+      message += " has nan value";
+      throw std::runtime_error(message);
+    }
     weight *= sample.GetSplineWeight(s, pars.at(s).GetValue(), selection_ID, val);
   }
   return weight;
@@ -1545,10 +1556,12 @@ double protoana::AbsCexDriver::GetSystWeight_BeamShift(
                       - .5*std::pow(((y_val - varied_mean)/varied_width), 2));
 
   //fSystBeamShiftWeight = fSystBeamShiftMap->Interpolate(x_val, y_val);
-  fSystBeamShiftWeight = weight;
-  fSystBeamShiftVal = x_val;
-  fSystBeamShiftR = y_val;
-  fSystBeamShiftTree->Fill();
+  if (fSystBeamShiftTreeSave) {
+    fSystBeamShiftWeight = weight;
+    fSystBeamShiftVal = x_val;
+    fSystBeamShiftR = y_val;
+    fSystBeamShiftTree->Fill();
+  }
   return weight;
 }
 
@@ -1601,7 +1614,8 @@ double protoana::AbsCexDriver::GetSystWeight_BeamShift2D(
 }
 
 void protoana::AbsCexDriver::BuildDataHists(
-    TTree * tree, ThinSliceDataSet & data_set, double & flux) {
+    TTree * tree, ThinSliceDataSet & data_set, double & flux,
+    int split_val) {
   int selection_ID; 
   double reco_beam_interactingEnergy, reco_beam_endZ;
   std::vector<double> * reco_beam_incidentEnergies = 0x0;
@@ -1615,9 +1629,9 @@ void protoana::AbsCexDriver::BuildDataHists(
   TH1D & incident_hist = data_set.GetIncidentHist();
   std::map<int, TH1 *> & selected_hists = data_set.GetSelectionHists();
 
-  flux = tree->GetEntries();
+  flux = tree->GetEntries() - split_val;
 
-  for (int i = 0; i < tree->GetEntries(); ++i) {
+  for (int i = /*0*/split_val; i < tree->GetEntries(); ++i) {
     tree->GetEntry(i);
     double val = 0.;
     if (selection_ID == 4) {
@@ -1680,30 +1694,30 @@ void protoana::AbsCexDriver::BuildFakeData(
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     const std::map<int, bool> & signal_sample_checks,
     ThinSliceDataSet & data_set, double & flux,
-    std::map<int, std::vector<double>> & sample_scales) {
+    std::map<int, std::vector<double>> & sample_scales, int split_val) {
   std::string routine = fExtraOptions.get<std::string>("FakeDataRoutine");
   if (routine == "SampleScales") {
     FakeDataSampleScales(tree, samples, signal_sample_checks, data_set, flux,
-                         sample_scales);
+                         sample_scales, split_val);
   }
   else if (routine == "G4RW") {
     FakeDataG4RW(tree, samples, signal_sample_checks, data_set, flux,
-                 sample_scales);
+                 sample_scales, split_val);
   }
   else if (routine == "G4RWGrid") {
     FakeDataG4RWGrid(tree, samples, signal_sample_checks, data_set, flux,
-                 sample_scales);
+                 sample_scales, split_val);
   }
   else if (routine == "EffVar") {
     FakeDataEffVar(tree, samples, signal_sample_checks, data_set, flux,
-                 sample_scales);
+                 sample_scales, split_val);
   }
   else if (routine == "BinnedScales") {
     FakeDataBinnedScales(tree, samples, signal_sample_checks, data_set, flux,
-                         sample_scales);
+                         sample_scales, split_val);
   }
   else if (routine == "dEdX") {
-    FakeDatadEdX(tree, data_set, flux, sample_scales);
+    FakeDatadEdX(tree, data_set, flux, sample_scales, split_val);
   }
 }
 
@@ -1712,7 +1726,8 @@ void protoana::AbsCexDriver::FakeDataSampleScales(
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     const std::map<int, bool> & signal_sample_checks,
     ThinSliceDataSet & data_set, double & flux,
-    std::map<int, std::vector<double>> & sample_scales) {
+    std::map<int, std::vector<double>> & sample_scales,
+    int split_val) {
 
 
   //Build the map for fake data scales
@@ -1744,14 +1759,14 @@ void protoana::AbsCexDriver::FakeDataSampleScales(
 
   double new_flux = 0.;
   //flux = 0.;
-  flux = tree->GetEntries(); 
+  flux = tree->GetEntries() - split_val;
 
   std::map<int, std::vector<double>> nominal_samples;
   for (auto it = sample_scales.begin(); it != sample_scales.end(); ++it) {
     nominal_samples[it->first] = std::vector<double>(it->second.size(), 0.);
   }
 
-  for (int i = 0; i < tree->GetEntries(); ++i) {
+  for (int i = split_val; i < tree->GetEntries(); ++i) {
     tree->GetEntry(i);
 
     //double end_energy = (fExtraOptions.get<bool>("TrajSlices") ?
@@ -1890,7 +1905,7 @@ void protoana::AbsCexDriver::FakeDataBinnedScales(
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     const std::map<int, bool> & signal_sample_checks,
     ThinSliceDataSet & data_set, double & flux,
-    std::map<int, std::vector<double>> & sample_scales) {
+    std::map<int, std::vector<double>> & sample_scales, int split_val) {
 
   //Build the map for fake data scales
   std::vector<std::pair<int, std::vector<double>>> temp_vec
@@ -1921,14 +1936,14 @@ void protoana::AbsCexDriver::FakeDataBinnedScales(
 
 
   double new_flux = 0.;
-  flux = tree->GetEntries(); 
+  flux = tree->GetEntries() - split_val;
 
   std::map<int, std::vector<double>> nominal_samples;
   for (auto it = sample_scales.begin(); it != sample_scales.end(); ++it) {
     nominal_samples[it->first] = std::vector<double>(it->second.size(), 0.);
   }
 
-  for (int i = 0; i < tree->GetEntries(); ++i) {
+  for (int i = /*0*/split_val; i < tree->GetEntries(); ++i) {
     tree->GetEntry(i);
 
     std::string slice_method = fExtraOptions.get<std::string>("SliceMethod");
@@ -2073,7 +2088,8 @@ void protoana::AbsCexDriver::FakeDataG4RW(
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     const std::map<int, bool> & signal_sample_checks,
     ThinSliceDataSet & data_set, double & flux,
-    std::map<int, std::vector<double>> & sample_scales) {
+    std::map<int, std::vector<double>> & sample_scales,
+    int split_val) {
 
   //Build the map for fake data scales
   fhicl::ParameterSet g4rw_options 
@@ -2123,7 +2139,7 @@ void protoana::AbsCexDriver::FakeDataG4RW(
   std::map<int, TH1 *> & selected_hists = data_set.GetSelectionHists();
 
   double new_flux = 0.;
-  flux = tree->GetEntries();
+  flux = tree->GetEntries() - split_val;
   
 
   std::map<int, std::vector<double>> nominal_samples;
@@ -2131,7 +2147,7 @@ void protoana::AbsCexDriver::FakeDataG4RW(
     nominal_samples[it->first] = std::vector<double>(it->second.size(), 0.);
   }
 
-  for (int i = 0; i < tree->GetEntries(); ++i) {
+  for (int i = /*0*/split_val; i < tree->GetEntries(); ++i) {
     tree->GetEntry(i);
 
     if (samples.find(sample_ID) == samples.end())
@@ -2267,7 +2283,7 @@ void protoana::AbsCexDriver::FakeDataG4RWGrid(
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     const std::map<int, bool> & signal_sample_checks,
     ThinSliceDataSet & data_set, double & flux,
-    std::map<int, std::vector<double>> & sample_scales) {
+    std::map<int, std::vector<double>> & sample_scales, int split_val) {
 
   //Build the map for fake data scales
   fhicl::ParameterSet g4rw_options 
@@ -2305,7 +2321,7 @@ void protoana::AbsCexDriver::FakeDataG4RWGrid(
   std::map<int, TH1 *> & selected_hists = data_set.GetSelectionHists();
 
   double new_flux = 0.;
-  flux = tree->GetEntries();
+  flux = tree->GetEntries() - split_val;
   
 
   std::map<int, std::vector<double>> nominal_samples;
@@ -2313,7 +2329,7 @@ void protoana::AbsCexDriver::FakeDataG4RWGrid(
     nominal_samples[it->first] = std::vector<double>(it->second.size(), 0.);
   }
 
-  for (int i = 0; i < tree->GetEntries(); ++i) {
+  for (int i = /*0*/split_val; i < tree->GetEntries(); ++i) {
     tree->GetEntry(i);
 
     if (samples.find(sample_ID) == samples.end())
@@ -2459,7 +2475,7 @@ void protoana::AbsCexDriver::FakeDataG4RWGrid(
 
 void protoana::AbsCexDriver::FakeDatadEdX(
     TTree * tree, ThinSliceDataSet & data_set, double & flux,
-    std::map<int, std::vector<double>> & sample_scales) {
+    std::map<int, std::vector<double>> & sample_scales, int split_val) {
 
   fhicl::ParameterSet dEdX_options 
       = fExtraOptions.get<fhicl::ParameterSet>("FakeDatadEdX");
@@ -2505,8 +2521,8 @@ void protoana::AbsCexDriver::FakeDatadEdX(
   tree->SetBranchAddress("reco_beam_endZ", &reco_beam_endZ);
 
   std::map<int, TH1 *> & selection_hists = data_set.GetSelectionHists();
-  flux = tree->GetEntries();
-  for (int i = 0; i < tree->GetEntries(); ++i) {
+  flux = tree->GetEntries() - split_val;
+  for (int i = /*0*/split_val; i < tree->GetEntries(); ++i) {
     tree->GetEntry(i);
     TH1D * selection_hist = (TH1D*)selection_hists[selection_ID];
 
@@ -2577,7 +2593,7 @@ void protoana::AbsCexDriver::FakeDataEffVar(
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     const std::map<int, bool> & signal_sample_checks,
     ThinSliceDataSet & data_set, double & flux,
-    std::map<int, std::vector<double>> & sample_scales) {
+    std::map<int, std::vector<double>> & sample_scales, int split_val) {
 
   //Build the map for fake data scales
   fhicl::ParameterSet options 
@@ -2615,7 +2631,7 @@ void protoana::AbsCexDriver::FakeDataEffVar(
   std::map<int, TH1 *> & selected_hists = data_set.GetSelectionHists();
 
  // double new_flux = 0.;
-  flux = tree->GetEntries();
+  flux = tree->GetEntries() - split_val;
   
 
   std::map<int, std::vector<double>> nominal_samples;
@@ -2624,7 +2640,7 @@ void protoana::AbsCexDriver::FakeDataEffVar(
   }
 
   double check_val = options.get<double>("F");
-  for (int i = 0; i < tree->GetEntries(); ++i) {
+  for (int i = /*0*/split_val; i < tree->GetEntries(); ++i) {
     tree->GetEntry(i);
 
     if (samples.find(sample_ID) == samples.end())

@@ -63,7 +63,7 @@ class PDSPThinSliceFitter {
     std::map<int, std::vector<TH1*>> & truth_throw_hists,
     std::map<int, std::vector<TH1*>> & truth_inc_hists,
     std::map<int, std::vector<TH1*>> & truth_xsec_hists);
-  void BuildFakeDataXSecs();
+  void BuildFakeDataXSecs(bool use_scales = true);
   void BuildDataFromToy();
   //void Get1DSystPlots();
   double CalcChi2SystTerm();
@@ -127,7 +127,7 @@ class PDSPThinSliceFitter {
 
   std::map<std::string, double> fToyValues;
 
-  TRandom3 fRNG = TRandom3(0);
+  TRandom3 fRNG;
   std::map<int, std::vector<double>> fFakeDataScales;
   std::map<int, std::vector<double>> fBestFitSignalPars;
   std::map<std::string, ThinSliceSystematic> fBestFitSystPars;
@@ -161,6 +161,10 @@ class PDSPThinSliceFitter {
   double fPitch;
   std::string fSliceMethod;
   bool fDoFakeData, fDoThrows, fDoScans, fDo1DShifts, fDoSysts/*, f1DSystPlots*/;
+  std::string fFakeDataRoutine;
+  bool fDoFluctuateStats;
+  bool fSplitMC;
+  int fSplitVal = 0;
   int fFitFunctionType;
   bool fFillIncidentInFunction = false;
   bool fFitFlux;
