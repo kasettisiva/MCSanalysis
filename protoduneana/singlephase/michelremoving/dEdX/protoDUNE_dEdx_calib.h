@@ -11,6 +11,8 @@
 #include <TROOT.h>
 #include <TChain.h>
 #include <TFile.h>
+#include <TH3F.h>
+#include "fhiclcpp/ParameterSet.h"
 
 // Header file for the classes stored in the TTree if any.
 
@@ -105,9 +107,29 @@ class protoDUNE_dEdx_calib {
   virtual Int_t    GetEntry(Long64_t entry);
   virtual Long64_t LoadTree(Long64_t entry);
   virtual void     Init(TTree *tree);
-  virtual void     Loop();
+  virtual void     Loop(int hitplane, double norm_factor, double calib_factor);
   virtual Bool_t   Notify();
   virtual void     Show(Long64_t entry = -1);
+
+  void GetEFMaps(TFile * ef);
+  void SetCaloMaps(const fhicl::ParameterSet & pset) {
+    std::string x_filename = pset.get<std::string>("XCaloFile");
+    fXFile = new TFile(x_filename.c_str(), "OPEN");
+    std::string yz_filename = pset.get<std::string>("YZCaloFile");
+    fYZFile = new TFile(yz_filename.c_str(), "OPEN");
+  };
+
+  private:
+    //TFile * ef;
+    TH3F *xneg;
+    TH3F *yneg;
+    TH3F *zneg;
+    TH3F *xpos;
+    TH3F *ypos;
+    TH3F *zpos;
+    TFile * fXFile, * fYZFile;
+
+    float tot_Ef(float xval,float yval,float zval);
 };
 
 #endif
@@ -233,6 +255,15 @@ Bool_t protoDUNE_dEdx_calib::Notify()
   // user if needed. The return value is currently not used.
 
   return kTRUE;
+}
+
+void protoDUNE_dEdx_calib::GetEFMaps(TFile * ef) {
+  xneg = (TH3F*)ef->Get("Reco_ElecField_X_Neg");
+  yneg = (TH3F*)ef->Get("Reco_ElecField_Y_Neg");
+  zneg = (TH3F*)ef->Get("Reco_ElecField_Z_Neg");
+  xpos = (TH3F*)ef->Get("Reco_ElecField_X_Pos");
+  ypos = (TH3F*)ef->Get("Reco_ElecField_Y_Pos");
+  zpos = (TH3F*)ef->Get("Reco_ElecField_Z_Pos");
 }
 
 void protoDUNE_dEdx_calib::Show(Long64_t entry)

@@ -1,6 +1,9 @@
 FieldMap: "SCE_DataDriven_180kV_v4.root"
 
-NormFactors = [
+YZCaloFile: "/dune/data/users/mmote/calib_results/YZcalo_mich2_r5432.root"
+XCaloFile:  "/dune/data/users/mmote/calib_results/Xcalo_mich2_r5432.root"
+
+NormFactors: [
   0.992, #0
   0.990, #1
   0.989  #2
@@ -8,7 +11,7 @@ NormFactors = [
 
 KE_Range: [
   [10,  0.70437],
-  [14  1.27937],
+  [14,  1.27937],
   [20,  2.37894],
   [30,  4.72636],
   [40,  7.5788],

@@ -38,17 +38,13 @@
 
 using namespace std;
 
-int hitplane=1;
-bool usemap=true;
+//int hitplane=1;
+//bool usemap=true;
 //const double calib_factor =4.50e-3; // ******************* change the calibraion factor here with the normalisation ****************** //
-double calib_factor =1.029e-3;
+//double calib_factor =1.029e-3;
 double pitchvalue=0.65;
-double Rho = 1.383;//g/cm^3 (liquid argon density at a pressure 18.0 psia) 
-double betap = 0.212;//(kV/cm)(g/cm^2)/MeV
-double alpha = 0.93;//parameter from ArgoNeuT experiment at 0.481kV/cm 
-double Wion = 23.6e-6;//parameter from ArgoNeuT experiment at 0.481kV/cm
-double Efield = 0.50;//kV/cm protoDUNE electric filed
-double normalisation_factor[3]={0.992,0.990,0.989};//for plane 0
+//double Efield = 0.50;//kV/cm protoDUNE electric filed
+//double normalisation_factor[3]={0.992,0.990,0.989};//for plane 0
 const int Z=18; //Atomic number of Argon
 const double A=39.948; // g/mol Atomic mass of Argon
 const double I=188.0e-6; // ev
@@ -61,19 +57,50 @@ TString mn = "2";
 
 double spline_KE[13];
 double spline_Range[13];
-TFile * OpenFile(const std::string filename);
+//TFile * OpenFile(const std::string filename);
+TFile * OpenFile(const std::string filename) {
+  TFile * theFile = 0x0;
+  mf::LogInfo("OpenFile") << "Searching for " << filename;
+  if (cet::file_exists(filename)) {
+    mf::LogInfo("OpenFile") << "File exists. Opening " << filename;
+    theFile = new TFile(filename.c_str());
+    if (!theFile ||theFile->IsZombie() || !theFile->IsOpen()) {
+      delete theFile;
+      theFile = 0x0;
+      throw cet::exception("ProtoDUNECalibration.cxx") << "Could not open " << filename;
+    }
+  }
+  else {
+    mf::LogInfo("OpenFile") << "File does not exist here. Searching FW_SEARCH_PATH";
+    cet::search_path sp{"FW_SEARCH_PATH"};
+    std::string found_filename;
+    auto found = sp.find_file(filename, found_filename);
+    if (!found) {
+      throw cet::exception("ProtoDUNECalibration.cxx") << "Could not find " << filename;
+    }
+
+    mf::LogInfo("OpenFile") << "Found file " << found_filename;
+    theFile = new TFile(found_filename.c_str());
+    if (!theFile ||theFile->IsZombie() || !theFile->IsOpen()) {
+      delete theFile;
+      theFile = 0x0;
+      throw cet::exception("ProtoDUNECalibration.cxx") << "Could not open " << found_filename;
+    }
+  }
+  return theFile;
+};
 
 ////getting the variable Efield using data driven maps
-TFile *ef/*=new TFile("SCE_DataDriven_180kV_v4.root")*/;
-TH3F *xneg=(TH3F*)ef->Get("Reco_ElecField_X_Neg");
-TH3F *yneg=(TH3F*)ef->Get("Reco_ElecField_Y_Neg");
-TH3F *zneg=(TH3F*)ef->Get("Reco_ElecField_Z_Neg");
-TH3F *xpos=(TH3F*)ef->Get("Reco_ElecField_X_Pos");
-TH3F *ypos=(TH3F*)ef->Get("Reco_ElecField_Y_Pos");
-TH3F *zpos=(TH3F*)ef->Get("Reco_ElecField_Z_Pos");
- float tot_Ef(float xval,float yval,float zval){
+//TFile *ef/*=new TFile("SCE_DataDriven_180kV_v4.root")*/;
+//TH3F *xneg=(TH3F*)ef->Get("Reco_ElecField_X_Neg");
+//TH3F *yneg=(TH3F*)ef->Get("Reco_ElecField_Y_Neg");
+//TH3F *zneg=(TH3F*)ef->Get("Reco_ElecField_Z_Neg");
+//TH3F *xpos=(TH3F*)ef->Get("Reco_ElecField_X_Pos");
+//TH3F *ypos=(TH3F*)ef->Get("Reco_ElecField_Y_Pos");
+//TH3F *zpos=(TH3F*)ef->Get("Reco_ElecField_Z_Pos");
+float protoDUNE_dEdx_calib::tot_Ef(float xval,float yval,float zval){
   float E0value=0.4867;
-  if(!usemap) return E0value;
+  //if(!usemap) return E0value;
   if(xval>=0){
     float ex=E0value+E0value*xpos->Interpolate(xval,yval,zval);
     float ey=E0value*ypos->Interpolate(xval,yval,zval);
@@ -311,14 +338,17 @@ Int_t langaupro(Double_t *params, Double_t &maxx, Double_t &FWHM) {
 ////////////////////////////////// Function definition ////////////////////////////////
 
 Float_t Dedx(float dqdx, float Ef){
+  double Rho = 1.383;//g/cm^3 (liquid argon density at a pressure 18.0 psia) 
+  double betap = 0.212;//(kV/cm)(g/cm^2)/MeV
+  double Wion = 23.6e-6;//parameter from ArgoNeuT experiment at 0.481kV/cm
+  double alpha = 0.93;//parameter from ArgoNeuT experiment at 0.481kV/cm 
   return (exp(dqdx*(betap/(Rho*Ef)*Wion))-alpha)/(betap/(Rho*Ef));
 }
 
 //////////////////////////////////////////////////////////////////////////////////////
 
 
-void protoDUNE_dEdx_calib::Loop()
-{
+void protoDUNE_dEdx_calib::Loop(int hitplane, double norm_factor, double calib_factor) {
   std::cout << "******************************* Calibration.C is running *******************************" << std::endl;
   TH2F *fhist_dedx= new TH2F("dedx_vs_residual_range",Form("plane %d calibrated dE/dx vs residual range;residual range in cm;dEdx in MeV/cm",hitplane),200,0,200,50,0,5);
   TH1F *fhist_trkpitch = new TH1F("trkpitch",Form("trkpitch plane %d;trkpitch in cm",hitplane),30,0,3);
@@ -367,11 +397,13 @@ void protoDUNE_dEdx_calib::Loop()
 
   /////////////////////Importing X fractional corrections//////////////////////
 
-  TFile my_file0(Form("YZcalo_mich%s_r%d.root",mn.Data(), run));
-  TFile my_file2(Form("Xcalo_mich%s_r%d.root",mn.Data(), run));
-  TH1F *X_correction_hist = (TH1F*)my_file2.Get(Form("dqdx_X_correction_hist_%d",hitplane));
-  TH2F *YZ_correction_neg_hist=(TH2F*)my_file0.Get(Form("correction_dqdx_ZvsY_negativeX_hist_%d",hitplane));
-  TH2F *YZ_correction_pos_hist=(TH2F*)my_file0.Get(Form("correction_dqdx_ZvsY_positiveX_hist_%d",hitplane));
+  //TFile my_file0(Form("YZcalo_mich%s_r%d.root",mn.Data(), run));
+  //TFile my_file2(Form("Xcalo_mich%s_r%d.root",mn.Data(), run));
+  //TFile fYZFile(Form("YZcalo_mich%s_r%d.root",mn.Data(), run));
+  //TFile fXFile(Form("Xcalo_mich%s_r%d.root",mn.Data(), run));
+  TH1F *X_correction_hist = (TH1F*)fXFile->Get(Form("dqdx_X_correction_hist_%d",hitplane));
+  TH2F *YZ_correction_neg_hist=(TH2F*)fYZFile->Get(Form("correction_dqdx_ZvsY_negativeX_hist_%d",hitplane));
+  TH2F *YZ_correction_pos_hist=(TH2F*)fYZFile->Get(Form("correction_dqdx_ZvsY_positiveX_hist_%d",hitplane));
  
   TFile *file = new TFile(Form("dedx_plane_%d_r%d.root",hitplane,run),"recreate");
  
@@ -381,14 +413,15 @@ void protoDUNE_dEdx_calib::Loop()
   int used_trks=0;
  
  if (fChain == 0) return;
-  Long64_t nentries = fChain->GetEntriesFast();
+  //Long64_t nentries = fChain->GetEntriesFast();
+  Long64_t nentries = fChain->GetEntries();
   Long64_t nbytes = 0, nb = 0;
   for (Long64_t jentry=0; jentry<nentries;jentry++) {
 //   for (Long64_t jentry=0; jentry<10000;jentry++) {
     Long64_t ientry = LoadTree(jentry);
     if (ientry < 0) break;
     nb = fChain->GetEntry(jentry);   nbytes += nb;
-    if(jentry%100==0) cout<<jentry<<"/"<<nentries<<endl;
+    if(jentry%1000==0) cout<<jentry<<"/"<<nentries<< endl;
     vector<float> res, dq, first5dq, last5dq;
     for(int i=0; i<cross_trks; ++i){
       total_trks++; //total tracks filtered by the module
@@ -468,7 +501,8 @@ void protoDUNE_dEdx_calib::Loop()
 		int x_bin=X_correction_hist->FindBin(trkhitx[i][hitplane][j]);
                 float Cx=X_correction_hist->GetBinContent(x_bin);
                 float Cyzneg=YZ_correction_neg_hist->GetBinContent(YZ_correction_neg_hist->FindBin(trkhitz[i][hitplane][j],trkhity[i][hitplane][j]));
-                float corrected_dq_dx=trkdqdx[i][hitplane][j]*Cx*normalisation_factor[hitplane]*Cyzneg;
+                //float corrected_dq_dx=trkdqdx[i][hitplane][j]*Cx*normalisation_factor[hitplane]*Cyzneg;
+                float corrected_dq_dx=trkdqdx[i][hitplane][j]*Cx*norm_factor*Cyzneg;
                 float scaled_corrected_dq_dx=float(corrected_dq_dx)/calib_factor;
 		float cal_de_dx=Dedx(scaled_corrected_dq_dx,tot_Ef(trkhitx[i][hitplane][j],trkhity[i][hitplane][j],trkhitz[i][hitplane][j]));
 //		float cal_de_dx=-1;
@@ -489,7 +523,8 @@ void protoDUNE_dEdx_calib::Loop()
 		int x_bin=X_correction_hist->FindBin(trkhitx[i][hitplane][j]);
 		float Cx=X_correction_hist->GetBinContent(x_bin);
 		float Cyzneg=YZ_correction_neg_hist->GetBinContent(YZ_correction_neg_hist->FindBin(trkhitz[i][hitplane][j],trkhity[i][hitplane][j]));
-		float corrected_dq_dx=trkdqdx[i][hitplane][j]*Cx*normalisation_factor[hitplane]*Cyzneg;
+		//float corrected_dq_dx=trkdqdx[i][hitplane][j]*Cx*normalisation_factor[hitplane]*Cyzneg;
+		float corrected_dq_dx=trkdqdx[i][hitplane][j]*Cx*norm_factor*Cyzneg;
 		float scaled_corrected_dq_dx=float(corrected_dq_dx)/calib_factor;
 		float cal_de_dx=Dedx(scaled_corrected_dq_dx,tot_Ef(trkhitx[i][hitplane][j],trkhity[i][hitplane][j],trkhitz[i][hitplane][j]));
 //		float cal_de_dx=-1;
@@ -510,7 +545,8 @@ void protoDUNE_dEdx_calib::Loop()
 		int x_bin=X_correction_hist->FindBin(trkhitx[i][hitplane][j]);
                 float Cx=X_correction_hist->GetBinContent(x_bin);
                 float Cyzneg=YZ_correction_neg_hist->GetBinContent(YZ_correction_neg_hist->FindBin(trkhitz[i][hitplane][j],trkhity[i][hitplane][j]));
-                float corrected_dq_dx=trkdqdx[i][hitplane][j]*Cx*normalisation_factor[hitplane]*Cyzneg;
+                //float corrected_dq_dx=trkdqdx[i][hitplane][j]*Cx*normalisation_factor[hitplane]*Cyzneg;
+                float corrected_dq_dx=trkdqdx[i][hitplane][j]*Cx*norm_factor*Cyzneg;
                 float scaled_corrected_dq_dx=float(corrected_dq_dx)/calib_factor;
 		float cal_de_dx=Dedx(scaled_corrected_dq_dx,tot_Ef(trkhitx[i][hitplane][j],trkhity[i][hitplane][j],trkhitz[i][hitplane][j]));
 //		float cal_de_dx=-1;
@@ -533,7 +569,8 @@ void protoDUNE_dEdx_calib::Loop()
 		int x_bin=X_correction_hist->FindBin(trkhitx[i][hitplane][j]);
                 float Cx=X_correction_hist->GetBinContent(x_bin);
                 float Cyzpos=YZ_correction_pos_hist->GetBinContent(YZ_correction_pos_hist->FindBin(trkhitz[i][hitplane][j],trkhity[i][hitplane][j]));
-                float corrected_dq_dx=trkdqdx[i][hitplane][j]*Cx*normalisation_factor[hitplane]*Cyzpos;
+                //float corrected_dq_dx=trkdqdx[i][hitplane][j]*Cx*normalisation_factor[hitplane]*Cyzpos;
+                float corrected_dq_dx=trkdqdx[i][hitplane][j]*Cx*norm_factor*Cyzpos;
                 float scaled_corrected_dq_dx=float(corrected_dq_dx)/calib_factor;
 		float cal_de_dx=Dedx(scaled_corrected_dq_dx,tot_Ef(trkhitx[i][hitplane][j],trkhity[i][hitplane][j],trkhitz[i][hitplane][j]));
 //		float cal_de_dx=-1;
@@ -555,7 +592,8 @@ void protoDUNE_dEdx_calib::Loop()
 		int x_bin=X_correction_hist->FindBin(trkhitx[i][hitplane][j]);
 		float Cx=X_correction_hist->GetBinContent(x_bin);
 		float Cyzpos=YZ_correction_pos_hist->GetBinContent(YZ_correction_pos_hist->FindBin(trkhitz[i][hitplane][j],trkhity[i][hitplane][j]));
-		float corrected_dq_dx=trkdqdx[i][hitplane][j]*Cx*normalisation_factor[hitplane]*Cyzpos;
+		//float corrected_dq_dx=trkdqdx[i][hitplane][j]*Cx*normalisation_factor[hitplane]*Cyzpos;
+		float corrected_dq_dx=trkdqdx[i][hitplane][j]*Cx*norm_factor*Cyzpos;
 		float scaled_corrected_dq_dx=float(corrected_dq_dx)/calib_factor;
 		float cal_de_dx=Dedx(scaled_corrected_dq_dx,tot_Ef(trkhitx[i][hitplane][j],trkhity[i][hitplane][j],trkhitz[i][hitplane][j]));
 //		float cal_de_dx=-1;
@@ -576,7 +614,8 @@ void protoDUNE_dEdx_calib::Loop()
 		int x_bin=X_correction_hist->FindBin(trkhitx[i][hitplane][j]);
                 float Cx=X_correction_hist->GetBinContent(x_bin);
                 float Cyzpos=YZ_correction_pos_hist->GetBinContent(YZ_correction_pos_hist->FindBin(trkhitz[i][hitplane][j],trkhity[i][hitplane][j]));
-                float corrected_dq_dx=trkdqdx[i][hitplane][j]*Cx*normalisation_factor[hitplane]*Cyzpos;
+                //float corrected_dq_dx=trkdqdx[i][hitplane][j]*Cx*normalisation_factor[hitplane]*Cyzpos;
+                float corrected_dq_dx=trkdqdx[i][hitplane][j]*Cx*norm_factor*Cyzpos;
                 float scaled_corrected_dq_dx=float(corrected_dq_dx)/calib_factor;
 		float cal_de_dx=Dedx(scaled_corrected_dq_dx,tot_Ef(trkhitx[i][hitplane][j],trkhity[i][hitplane][j],trkhitz[i][hitplane][j]));
 //		float cal_de_dx=-1;
@@ -851,7 +890,7 @@ void protoDUNE_dEdx_calib::Loop()
 
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char ** argv) {
 
   bool found_input = false,
        found_fcl = false,
@@ -871,6 +910,7 @@ int main(int argc, char *argv[]) {
     }
     if (!strcasecmp(argv[iArg],"-o")) {
       outfile_name = argv[++iArg];
+      found_out = true;
     }
     if (!strcasecmp(argv[iArg],"-h")) {
       std::cout << "Usage: dEdX_calibration " <<
@@ -890,7 +930,7 @@ int main(int argc, char *argv[]) {
     return 0;
   }
   if (!found_out) {
-    cout << "Error: No fcl file was provided! Please provide with '-o'" << endl;
+    cout << "Error: No output file was provided! Please provide with '-o'" << endl;
     return 0;
   }
 
@@ -914,8 +954,10 @@ int main(int argc, char *argv[]) {
 
   //here
   std::string field_file = pset.get<std::string>("FieldMap");
-  //ef = new TFile(field_file.c_str(), "OPEN");
-  ef = OpenFile(field_file);
+  TFile * ef = new TFile("$DUNE_PARDATA_DIR/SpaceChargeProtoDUNE/SCE_DataDriven_180kV_v4.root", "OPEN");
+  //TFile * ef = OpenFile(field_file);
+
+  std::vector<double> norm_factors = pset.get<std::vector<double>>("NormFactors");
 
   std::vector<std::pair<int, double>> KE_Range
       = pset.get<std::vector<std::pair<int, double>>>("KE_Range");
@@ -926,7 +968,7 @@ int main(int argc, char *argv[]) {
     spline_Range[i] = KE_Range[i].second;
   }
 
-  usemap=true;
+  //usemap=true;
 
   TChain* shtree = new TChain("Event");
   TChain* shtree1 = new TChain("Event");
@@ -954,8 +996,10 @@ int main(int argc, char *argv[]) {
     in.clear();
   }
   
-  hitplane = 0;
+  //hitplane = 0;
   protoDUNE_dEdx_calib *t=new protoDUNE_dEdx_calib(shtree);
+  t->GetEFMaps(ef);
+  t->SetCaloMaps(pset);
   
   double plane_0_low = pset.get<double>("Plane0Start");
   double plane_0_high = pset.get<double>("Plane0End");
@@ -967,53 +1011,26 @@ int main(int argc, char *argv[]) {
   double plane_2_high = pset.get<double>("Plane2End");
   double plane_2_diff = pset.get<double>("Plane2Diff");
   //for(calib_factor = 1.028e-3; calib_factor<1.029e-3; calib_factor+=.001e-3) t->Loop();
-  for(calib_factor = plane_0_low; calib_factor<plane_0_high; calib_factor+=plane_0_diff) t->Loop();
+  for(double calib_factor = plane_0_low; calib_factor<plane_0_high; calib_factor+=plane_0_diff) t->Loop(0, norm_factors[0], calib_factor);
   delete t;
   std::cout << "************************* Start of hitplane 1 ***************************" << std::endl;
   
-  hitplane = 1;
+  //hitplane = 1;
   protoDUNE_dEdx_calib *t1=new protoDUNE_dEdx_calib(shtree1);
+  t1->GetEFMaps(ef);
+  t1->SetCaloMaps(pset);
   //for(calib_factor = 1.025e-3;  calib_factor<1.026e-3; calib_factor+=.001e-3) t1->Loop();
-  for(calib_factor = plane_1_low; calib_factor<plane_1_high; calib_factor+=plane_1_diff) t1->Loop();
+  for(double calib_factor = plane_1_low; calib_factor<plane_1_high; calib_factor+=plane_1_diff) t1->Loop(1, norm_factors[1], calib_factor);
   delete t1;
   std::cout << "************************* Start of hitplane 2 ***************************" << std::endl;
 
-  hitplane = 2;
+  //hitplane = 2;
   protoDUNE_dEdx_calib *t2=new protoDUNE_dEdx_calib(shtree2);
+  t2->GetEFMaps(ef);
+  t2->SetCaloMaps(pset);
   //for(calib_factor = 1.011e-3; calib_factor<1.012e-3; calib_factor+=.001e-3) t2->Loop();
-  for(calib_factor = plane_2_low; calib_factor<plane_2_high; calib_factor+=plane_2_diff) t2->Loop();
+  for(double calib_factor = plane_2_low; calib_factor<plane_2_high; calib_factor+=plane_2_diff) t2->Loop(2, norm_factors[2], calib_factor);
   delete t2; 
 
 } // main
 
-TFile * OpenFile(const std::string filename) {
-  TFile * theFile = 0x0;
-  mf::LogInfo("OpenFile") << "Searching for " << filename;
-  if (cet::file_exists(filename)) {
-    mf::LogInfo("OpenFile") << "File exists. Opening " << filename;
-    theFile = new TFile(filename.c_str());
-    if (!theFile ||theFile->IsZombie() || !theFile->IsOpen()) {
-      delete theFile;
-      theFile = 0x0;
-      throw cet::exception("ProtoDUNECalibration.cxx") << "Could not open " << filename;
-    }
-  }
-  else {
-    mf::LogInfo("OpenFile") << "File does not exist here. Searching FW_SEARCH_PATH";
-    cet::search_path sp{"FW_SEARCH_PATH"};
-    std::string found_filename;
-    auto found = sp.find_file(filename, found_filename);
-    if (!found) {
-      throw cet::exception("ProtoDUNECalibration.cxx") << "Could not find " << filename;
-    }
-
-    mf::LogInfo("OpenFile") << "Found file " << found_filename;
-    theFile = new TFile(found_filename.c_str());
-    if (!theFile ||theFile->IsZombie() || !theFile->IsOpen()) {
-      delete theFile;
-      theFile = 0x0;
-      throw cet::exception("ProtoDUNECalibration.cxx") << "Could not open " << found_filename;
-    }
-  }
-  return theFile;
-};
