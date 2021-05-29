@@ -185,9 +185,9 @@ double dpdx(double KE,double x,double mass){
 
 Double_t langaufun(Double_t *x, Double_t *par) {
   Double_t invsq2pi = 0.398942280401;// Control constants
-  //Double_t mpshift = -0.22278298; 
+  //Double_t mpshift = -0.22278298;
   Double_t np = 500.0;
-  Double_t sc = 5.0;// convolution extends to +-sc Gaussian sigmas   
+  Double_t sc = 5.0;// convolution extends to +-sc Gaussian sigmas 
   Double_t xx;
   Double_t mpc;
   Double_t fland;
@@ -440,8 +440,8 @@ void protoDUNE_dEdx_calib::Loop(int hitplane, double norm_factor, double calib_f
  
 
       for(int j=0;j<ntrkhits[i][hitplane];j++){
-	res.push_back(trkresrange[i][hitplane][j]);
-	dq.push_back(trkdqdx[i][hitplane][j]);
+        res.push_back(trkresrange[i][hitplane][j]);
+        dq.push_back(trkdqdx[i][hitplane][j]);
       }//ntrkhits
       /**********************end of buffer filling*****************************/
 
@@ -456,186 +456,110 @@ void protoDUNE_dEdx_calib::Loop(int hitplane, double norm_factor, double calib_f
       /************************flipping wrongly ordered residual range values****************************/
       bool test=true;
       if((trkhity[i][hitplane][siz1-1]<trkhity[i][hitplane][0] && trkresrange[i][hitplane][siz1-1]>trkresrange[i][hitplane][0])||(trkhity[i][hitplane][0]<trkhity[i][hitplane][siz1-1] && trkresrange[i][hitplane][0]>trkresrange[i][hitplane][siz1-1])){
-	test=false;
-	for(int i1=0;i1<ntrkhits[i][hitplane];i1++){
-	  trkresrange[i][hitplane][i1]=res[siz1-i1-1];
-	}
-	cout<<"This is a flipped track"<<endl;
+        test=false;
+        for(int i1=0;i1<ntrkhits[i][hitplane];i1++){
+          trkresrange[i][hitplane][i1]=res[siz1-i1-1];
+        }
+        cout<<"This is a flipped track"<<endl;
       }
      
       /***************calculating the ratio of dQdx for first 5cm and last 5 cm of a track********************/ 
       for(size_t k=0;k<res.size();k++){
-	if(trkresrange[i][hitplane][k]<5) first5dq.push_back(dq[k]);
-	if(trkresrange[i][hitplane][k]>max-5) last5dq.push_back(dq[k]);
+        if(trkresrange[i][hitplane][k]<5) first5dq.push_back(dq[k]);
+        if(trkresrange[i][hitplane][k]>max-5) last5dq.push_back(dq[k]);
       }
      
       if(first5dq.size()<5){
-	res.erase(res.begin(),res.end());
-	dq.erase(dq.begin(),dq.end());
-	first5dq.clear();
-	last5dq.clear();
-	continue;
-	}
+        res.erase(res.begin(),res.end());
+        dq.erase(dq.begin(),dq.end());
+        first5dq.clear();
+        last5dq.clear();
+        continue;
+        }
 
       
-	 float med1 = TMath::Median(first5dq.size(), &first5dq[0]);
-	 float med2= TMath::Median(last5dq.size(), &last5dq[0]);
-	 dqdx_rat->Fill(med1/med2);
-	 res.erase(res.begin(),res.end());
-	 first5dq.erase(first5dq.begin(),first5dq.end());
-	 last5dq.erase(last5dq.begin(),last5dq.end());
-	 dq.erase(dq.begin(),dq.end());
-	   if(!((med1/med2)>1.4)) continue;
-	   if(!test) continue;
-	 used_trks++;
+         float med1 = TMath::Median(first5dq.size(), &first5dq[0]);
+         float med2= TMath::Median(last5dq.size(), &last5dq[0]);
+         dqdx_rat->Fill(med1/med2);
+         res.erase(res.begin(),res.end());
+         first5dq.erase(first5dq.begin(),first5dq.end());
+         last5dq.erase(last5dq.begin(),last5dq.end());
+         dq.erase(dq.begin(),dq.end());
+           if(!((med1/med2)>1.4)) continue;
+           if(!test) continue;
+         used_trks++;
+
 
 
      
       for(int j=0; j<TMath::Min(ntrkhits[i][hitplane],3000); ++j){
-	fhist_trkpitch->Fill(trkpitch[i][hitplane][j]);
-	if(trkpitch[i][hitplane][j]>=0.5 && trkpitch[i][hitplane][j]<=0.8){
-	  if(trkhity[i][hitplane][j]>0 && trkhity[i][hitplane][j]<600){
-	    if(trkhitz[i][hitplane][j]>0 && trkhitz[i][hitplane][j]<695){
-	      if(trkhitx[i][hitplane][j]>-360 && trkhitx[i][hitplane][j]<0){ //negative X direction
-		if(hitplane == 1 && abs(180/3.14*trackthetaxz[i])>130 && !(abs(180/3.14*trackthetayz[i])>80 && abs(180/3.14*trackthetayz[i])<100)){ //plane 1
-		int x_bin=X_correction_hist->FindBin(trkhitx[i][hitplane][j]);
-                float Cx=X_correction_hist->GetBinContent(x_bin);
-                float Cyzneg=YZ_correction_neg_hist->GetBinContent(YZ_correction_neg_hist->FindBin(trkhitz[i][hitplane][j],trkhity[i][hitplane][j]));
-                //float corrected_dq_dx=trkdqdx[i][hitplane][j]*Cx*normalisation_factor[hitplane]*Cyzneg;
-                float corrected_dq_dx=trkdqdx[i][hitplane][j]*Cx*norm_factor*Cyzneg;
-                float scaled_corrected_dq_dx=float(corrected_dq_dx)/calib_factor;
-		float cal_de_dx=Dedx(scaled_corrected_dq_dx,tot_Ef(trkhitx[i][hitplane][j],trkhity[i][hitplane][j],trkhitz[i][hitplane][j]));
-//		float cal_de_dx=-1;
-//     		if(usemap) float cal_de_dx=Dedx(scaled_corrected_dq_dx,tot_Ef(trkhitx[i][hitplane][j],trkhity[i][hitplane][j],trkhitz[i][hitplane][j]));
-//                else float cal_de_dx=Dedx(scaled_corrected_dq_dx,0.4867);
-                hdedx->Fill(cal_de_dx);
-                int bin=int(trkresrange[i][hitplane][j])/binsize;
-                fhist_dedx->Fill(trkresrange[i][hitplane][j],cal_de_dx);
-                fhist_dqdxcal->Fill(trkresrange[i][hitplane][j],corrected_dq_dx);
-                fhist_dqdxuncal->Fill(trkresrange[i][hitplane][j],trkdqdx[i][hitplane][j]);
-                dqdx_cal->Fill(corrected_dq_dx/calib_factor);
-                dqdx_uncal->Fill(trkdqdx[i][hitplane][j]/calib_factor);
-		 if(bin<nbin){
-                  dedx[bin]->Fill(cal_de_dx);
-                 } // bin <40
-		}
-		else if(hitplane == 0 && abs(180/3.14*trackthetaxz[i])<40 && !(abs(180/3.14*trackthetayz[i])>80 && abs(180/3.14*trackthetayz[i])<100)){ //plane 0
-		int x_bin=X_correction_hist->FindBin(trkhitx[i][hitplane][j]);
-		float Cx=X_correction_hist->GetBinContent(x_bin);
-		float Cyzneg=YZ_correction_neg_hist->GetBinContent(YZ_correction_neg_hist->FindBin(trkhitz[i][hitplane][j],trkhity[i][hitplane][j]));
-		//float corrected_dq_dx=trkdqdx[i][hitplane][j]*Cx*normalisation_factor[hitplane]*Cyzneg;
-		float corrected_dq_dx=trkdqdx[i][hitplane][j]*Cx*norm_factor*Cyzneg;
-		float scaled_corrected_dq_dx=float(corrected_dq_dx)/calib_factor;
-		float cal_de_dx=Dedx(scaled_corrected_dq_dx,tot_Ef(trkhitx[i][hitplane][j],trkhity[i][hitplane][j],trkhitz[i][hitplane][j]));
-//		float cal_de_dx=-1;
-//		if(usemap) float cal_de_dx=Dedx(scaled_corrected_dq_dx,tot_Ef(trkhitx[i][hitplane][j],trkhity[i][hitplane][j],trkhitz[i][hitplane][j]));
-//		else float cal_de_dx=Dedx(scaled_corrected_dq_dx,0.4867);
-		hdedx->Fill(cal_de_dx);
-	       	int bin=int(trkresrange[i][hitplane][j])/binsize;
-		fhist_dedx->Fill(trkresrange[i][hitplane][j],cal_de_dx);
-		fhist_dqdxcal->Fill(trkresrange[i][hitplane][j],corrected_dq_dx);
-		fhist_dqdxuncal->Fill(trkresrange[i][hitplane][j],trkdqdx[i][hitplane][j]);
-		dqdx_cal->Fill(corrected_dq_dx/calib_factor);
-		dqdx_uncal->Fill(trkdqdx[i][hitplane][j]/calib_factor);
-		if(bin<nbin){
-		  dedx[bin]->Fill(cal_de_dx);
-		} // bin <40
-	       }
-		else if(hitplane == 2){ //plane 2
-		int x_bin=X_correction_hist->FindBin(trkhitx[i][hitplane][j]);
-                float Cx=X_correction_hist->GetBinContent(x_bin);
-                float Cyzneg=YZ_correction_neg_hist->GetBinContent(YZ_correction_neg_hist->FindBin(trkhitz[i][hitplane][j],trkhity[i][hitplane][j]));
-                //float corrected_dq_dx=trkdqdx[i][hitplane][j]*Cx*normalisation_factor[hitplane]*Cyzneg;
-                float corrected_dq_dx=trkdqdx[i][hitplane][j]*Cx*norm_factor*Cyzneg;
-                float scaled_corrected_dq_dx=float(corrected_dq_dx)/calib_factor;
-		float cal_de_dx=Dedx(scaled_corrected_dq_dx,tot_Ef(trkhitx[i][hitplane][j],trkhity[i][hitplane][j],trkhitz[i][hitplane][j]));
-//		float cal_de_dx=-1;
-//                if(usemap) float cal_de_dx=Dedx(scaled_corrected_dq_dx,tot_Ef(trkhitx[i][hitplane][j],trkhity[i][hitplane][j],trkhitz[i][hitplane][j]));
-//                else float cal_de_dx=Dedx(scaled_corrected_dq_dx,0.4867);
-                hdedx->Fill(cal_de_dx);
-                int bin=int(trkresrange[i][hitplane][j])/binsize;
-                fhist_dedx->Fill(trkresrange[i][hitplane][j],cal_de_dx);
-                fhist_dqdxcal->Fill(trkresrange[i][hitplane][j],corrected_dq_dx);
-                fhist_dqdxuncal->Fill(trkresrange[i][hitplane][j],trkdqdx[i][hitplane][j]);
-                dqdx_cal->Fill(corrected_dq_dx/calib_factor);
-                dqdx_uncal->Fill(trkdqdx[i][hitplane][j]/calib_factor);
-                if(bin<nbin){
-                  dedx[bin]->Fill(cal_de_dx);
-                } // bin <40
-               }
-	      }
-	      if(trkhitx[i][hitplane][j]>0 && trkhitx[i][hitplane][j]<360){ //positive X direction
-	        if(hitplane == 1 && abs(180/3.14*trackthetaxz[i])<40 && !(abs(180/3.14*trackthetayz[i])>80 && abs(180/3.14*trackthetayz[i])<100)){ //plane 1
-		int x_bin=X_correction_hist->FindBin(trkhitx[i][hitplane][j]);
-                float Cx=X_correction_hist->GetBinContent(x_bin);
-                float Cyzpos=YZ_correction_pos_hist->GetBinContent(YZ_correction_pos_hist->FindBin(trkhitz[i][hitplane][j],trkhity[i][hitplane][j]));
-                //float corrected_dq_dx=trkdqdx[i][hitplane][j]*Cx*normalisation_factor[hitplane]*Cyzpos;
-                float corrected_dq_dx=trkdqdx[i][hitplane][j]*Cx*norm_factor*Cyzpos;
-                float scaled_corrected_dq_dx=float(corrected_dq_dx)/calib_factor;
-		float cal_de_dx=Dedx(scaled_corrected_dq_dx,tot_Ef(trkhitx[i][hitplane][j],trkhity[i][hitplane][j],trkhitz[i][hitplane][j]));
-//		float cal_de_dx=-1;
-//                if(usemap) float cal_de_dx=Dedx(scaled_corrected_dq_dx,tot_Ef(trkhitx[i][hitplane][j],trkhity[i][hitplane][j],trkhitz[i][hitplane][j]));
-//                else float cal_de_dx=Dedx(scaled_corrected_dq_dx,0.4867);
-                hdedx->Fill(cal_de_dx);
-                int bin=int(trkresrange[i][hitplane][j])/binsize;
-                fhist_dedx->Fill(trkresrange[i][hitplane][j],cal_de_dx);
-                fhist_dqdxcal->Fill(trkresrange[i][hitplane][j],corrected_dq_dx);
-                fhist_dqdxuncal->Fill(trkresrange[i][hitplane][j],trkdqdx[i][hitplane][j]);
-                dqdx_cal->Fill(corrected_dq_dx/calib_factor);
-                dqdx_uncal->Fill(trkdqdx[i][hitplane][j]/calib_factor);
-                if(bin<nbin){
-                  dedx[bin]->Fill(cal_de_dx);
-                } // x containment....
-                }
-	
-		else if(hitplane == 0 && abs(180/3.14*trackthetaxz[i])>130 && !(abs(180/3.14*trackthetayz[i])>80 && abs(180/3.14*trackthetayz[i])<100)){ //plane 0
-		int x_bin=X_correction_hist->FindBin(trkhitx[i][hitplane][j]);
-		float Cx=X_correction_hist->GetBinContent(x_bin);
-		float Cyzpos=YZ_correction_pos_hist->GetBinContent(YZ_correction_pos_hist->FindBin(trkhitz[i][hitplane][j],trkhity[i][hitplane][j]));
-		//float corrected_dq_dx=trkdqdx[i][hitplane][j]*Cx*normalisation_factor[hitplane]*Cyzpos;
-		float corrected_dq_dx=trkdqdx[i][hitplane][j]*Cx*norm_factor*Cyzpos;
-		float scaled_corrected_dq_dx=float(corrected_dq_dx)/calib_factor;
-		float cal_de_dx=Dedx(scaled_corrected_dq_dx,tot_Ef(trkhitx[i][hitplane][j],trkhity[i][hitplane][j],trkhitz[i][hitplane][j]));
-//		float cal_de_dx=-1;
-//                if(usemap) float cal_de_dx=Dedx(scaled_corrected_dq_dx,tot_Ef(trkhitx[i][hitplane][j],trkhity[i][hitplane][j],trkhitz[i][hitplane][j]));
-//                else float cal_de_dx=Dedx(scaled_corrected_dq_dx,0.4867);
-		hdedx->Fill(cal_de_dx);
-		int bin=int(trkresrange[i][hitplane][j])/binsize;
-		fhist_dedx->Fill(trkresrange[i][hitplane][j],cal_de_dx);
-		fhist_dqdxcal->Fill(trkresrange[i][hitplane][j],corrected_dq_dx);
-		fhist_dqdxuncal->Fill(trkresrange[i][hitplane][j],trkdqdx[i][hitplane][j]);
-		dqdx_cal->Fill(corrected_dq_dx/calib_factor);
-		dqdx_uncal->Fill(trkdqdx[i][hitplane][j]/calib_factor);
-		if(bin<nbin){
-		  dedx[bin]->Fill(cal_de_dx);
-		} // x containment....
-		}
-		else if(hitplane == 2){ //plane 2
-		int x_bin=X_correction_hist->FindBin(trkhitx[i][hitplane][j]);
-                float Cx=X_correction_hist->GetBinContent(x_bin);
-                float Cyzpos=YZ_correction_pos_hist->GetBinContent(YZ_correction_pos_hist->FindBin(trkhitz[i][hitplane][j],trkhity[i][hitplane][j]));
-                //float corrected_dq_dx=trkdqdx[i][hitplane][j]*Cx*normalisation_factor[hitplane]*Cyzpos;
-                float corrected_dq_dx=trkdqdx[i][hitplane][j]*Cx*norm_factor*Cyzpos;
-                float scaled_corrected_dq_dx=float(corrected_dq_dx)/calib_factor;
-		float cal_de_dx=Dedx(scaled_corrected_dq_dx,tot_Ef(trkhitx[i][hitplane][j],trkhity[i][hitplane][j],trkhitz[i][hitplane][j]));
-//		float cal_de_dx=-1;
-//                if(usemap) float cal_de_dx=Dedx(scaled_corrected_dq_dx,tot_Ef(trkhitx[i][hitplane][j],trkhity[i][hitplane][j],trkhitz[i][hitplane][j]));
-//                else float cal_de_dx=Dedx(scaled_corrected_dq_dx,0.4867);
-                hdedx->Fill(cal_de_dx);
-                int bin=int(trkresrange[i][hitplane][j])/binsize;
-                fhist_dedx->Fill(trkresrange[i][hitplane][j],cal_de_dx);
-                fhist_dqdxcal->Fill(trkresrange[i][hitplane][j],corrected_dq_dx);
-                fhist_dqdxuncal->Fill(trkresrange[i][hitplane][j],trkdqdx[i][hitplane][j]);
-                dqdx_cal->Fill(corrected_dq_dx/calib_factor);
-                dqdx_uncal->Fill(trkdqdx[i][hitplane][j]/calib_factor);
-                if(bin<nbin){
-                  dedx[bin]->Fill(cal_de_dx);
-                } // x containment....
-                }
-	      } // bin <40		 
-	    } // track pitch cut
-	  } // z containment.......
-	} // y containment.....
+        fhist_trkpitch->Fill(trkpitch[i][hitplane][j]);
+
+        if (trkpitch[i][hitplane][j]>=0.5 && trkpitch[i][hitplane][j]<=0.8 &&
+            trkhity[i][hitplane][j]>0 && trkhity[i][hitplane][j]<600 &&
+            trkhitz[i][hitplane][j]>0 && trkhitz[i][hitplane][j]<695) {
+
+          TH2F * YZ_hist = 0x0;           
+
+          if(trkhitx[i][hitplane][j]>-360 && trkhitx[i][hitplane][j]<0){ //negative X direction
+            if(!(hitplane == 1 && abs(180/3.14*trackthetaxz[i])>130 &&
+               !(abs(180/3.14*trackthetayz[i])>80 &&
+               abs(180/3.14*trackthetayz[i])<100))) {
+              continue;
+            } //plane 1
+            else if(!(hitplane == 0 && abs(180/3.14*trackthetaxz[i])<40 &&
+                    !(abs(180/3.14*trackthetayz[i])>80 &&
+                    abs(180/3.14*trackthetayz[i])<100))){ //plane 0
+              continue;
+            }
+            YZ_hist = YZ_correction_neg_hist;
+          }
+          else if(trkhitx[i][hitplane][j]>0 && trkhitx[i][hitplane][j]<360){ //positive X direction
+            if(!(hitplane == 1 && abs(180/3.14*trackthetaxz[i])<40 &&
+               !(abs(180/3.14*trackthetayz[i])>80 &&
+               abs(180/3.14*trackthetayz[i])<100))){ //plane 1
+              continue;
+            }
+            else if(!(hitplane == 0 && abs(180/3.14*trackthetaxz[i])>130 &&
+                    !(abs(180/3.14*trackthetayz[i])>80 &&
+                    abs(180/3.14*trackthetayz[i])<100))){ //plane 0
+              continue;
+            }
+
+            YZ_hist = YZ_correction_pos_hist;
+          }
+          else {
+            continue;
+          }
+
+          int x_bin = X_correction_hist->FindBin(trkhitx[i][hitplane][j]);
+          float Cx = X_correction_hist->GetBinContent(x_bin);
+
+          float Cyz = YZ_hist->GetBinContent(
+              YZ_hist->FindBin(trkhitz[i][hitplane][j],
+                                              trkhity[i][hitplane][j]));
+
+          float corrected_dq_dx = trkdqdx[i][hitplane][j]*Cx*norm_factor*Cyz;
+          float scaled_corrected_dq_dx = corrected_dq_dx/calib_factor;
+          float cal_de_dx = Dedx(
+              scaled_corrected_dq_dx,
+              tot_Ef(trkhitx[i][hitplane][j],
+                     trkhity[i][hitplane][j],
+                     trkhitz[i][hitplane][j]));
+          hdedx->Fill(cal_de_dx);
+
+          int bin = int(trkresrange[i][hitplane][j])/binsize;
+          fhist_dedx->Fill(trkresrange[i][hitplane][j], cal_de_dx);
+          fhist_dqdxcal->Fill(trkresrange[i][hitplane][j], corrected_dq_dx);
+          fhist_dqdxuncal->Fill(trkresrange[i][hitplane][j],
+                                trkdqdx[i][hitplane][j]);
+          dqdx_cal->Fill(corrected_dq_dx/calib_factor);
+          dqdx_uncal->Fill(trkdqdx[i][hitplane][j]/calib_factor);
+          if(bin < nbin){
+            dedx[bin]->Fill(cal_de_dx);
+          } // x containment....
+
+        } // y containment.....
       } // loop over hits....
     } // loop over crossing trks.......
   } // loop over jentries...........
@@ -739,31 +663,31 @@ void protoDUNE_dEdx_calib::Loop(int hitplane, double norm_factor, double calib_f
       if(fitsnr->GetNDF() != 0 && status > 2){
 //      if(test.EqualTo("CONVERGED ") && (fitsnr->GetParError(1)<1000) && ((fitsnr->GetChisquare()/fitsnr->GetNDF()<10))/* && (fitsnr->GetParError(0)<0.1)*/){
       if((fitsnr->GetParError(1)<1000) && ((fitsnr->GetChisquare()/fitsnr->GetNDF()<10))/* && (fitsnr->GetParError(0)<0.1)*/){
-	 range.push_back(sp->Eval((i*binsize+double(binsize)/2)));
-	 erange.push_back(double(sp->Eval((i+1)*binsize)-sp->Eval(i*binsize))/2);
-	 range_measured[i]=i*binsize+double(binsize)/2;
-	 energy_measured[i]=fitsnr->GetParameter(1);
-	 cout<<" i "<<i<<" res range "<<i*binsize+double(binsize)/2<<"  KE "<<sp->Eval(i*binsize+double(binsize)/2)<<endl;
-	 energy.push_back(fitsnr->GetParameter(1));
-	 eenergy.push_back(fitsnr->GetParError(1));
-	  
-	      
-	  ////////////////////////////////////////////// Chi 2 calculation ////////////////////////////
-	      
-	  if(sp->Eval((i*binsize+double(binsize)/2))<=450 && sp->Eval((i*binsize+double(binsize)/2))>=250){
-	    double mpv_err=TMath::Power(fitsnr->GetParError(1),2);
-	    //double recom_err=TMath::Power(fitsnr->GetParameter(1)*0.015,2);
-	    //double meth_err=TMath::Power(fitsnr->GetParameter(1)*0.01,2);
-	    double tot_err=mpv_err;//+recom_err;//+meth_err;
-	    chi_denominator.push_back(tot_err);
-	    double num=dpdx(sp->Eval(i*binsize+double(binsize)/2),pitchvalue,Mmu)-fitsnr->GetParameter(1);
-	    num=TMath::Power(num,2);
-	    chi_numerator.push_back(num);
-	    dof++;
-	  }
-	   
-	  ///////////////////////////////////////////// End of chi 2 cal. //////////////////////////
-	}
+         range.push_back(sp->Eval((i*binsize+double(binsize)/2)));
+         erange.push_back(double(sp->Eval((i+1)*binsize)-sp->Eval(i*binsize))/2);
+         range_measured[i]=i*binsize+double(binsize)/2;
+         energy_measured[i]=fitsnr->GetParameter(1);
+         cout<<" i "<<i<<" res range "<<i*binsize+double(binsize)/2<<"  KE "<<sp->Eval(i*binsize+double(binsize)/2)<<endl;
+         energy.push_back(fitsnr->GetParameter(1));
+         eenergy.push_back(fitsnr->GetParError(1));
+          
+              
+          ////////////////////////////////////////////// Chi 2 calculation ////////////////////////////
+              
+          if(sp->Eval((i*binsize+double(binsize)/2))<=450 && sp->Eval((i*binsize+double(binsize)/2))>=250){
+            double mpv_err=TMath::Power(fitsnr->GetParError(1),2);
+            //double recom_err=TMath::Power(fitsnr->GetParameter(1)*0.015,2);
+            //double meth_err=TMath::Power(fitsnr->GetParameter(1)*0.01,2);
+            double tot_err=mpv_err;//+recom_err;//+meth_err;
+            chi_denominator.push_back(tot_err);
+            double num=dpdx(sp->Eval(i*binsize+double(binsize)/2),pitchvalue,Mmu)-fitsnr->GetParameter(1);
+            num=TMath::Power(num,2);
+            chi_numerator.push_back(num);
+            dof++;
+          }
+           
+          ///////////////////////////////////////////// End of chi 2 cal. //////////////////////////
+        }
       }
     }
   }
@@ -818,7 +742,7 @@ void protoDUNE_dEdx_calib::Loop(int hitplane, double norm_factor, double calib_f
   legend0->SetTextFont(72);
   legend0->SetTextSize(0.04);
   legend0->AddEntry(th_mpv_graph,"Theory","lep");
-  legend0->AddEntry(e_graph,"Measured","lep");     	 
+  legend0->AddEntry(e_graph,"Measured","lep");              
   legend0->Draw("same");
   lable_1-> DrawText(0.66, 0.58, "Region for chi^2 minimization (250 MeV - 450 MeV)");
   //th_ave_graph->Draw("samePE1");
@@ -861,7 +785,7 @@ void protoDUNE_dEdx_calib::Loop(int hitplane, double norm_factor, double calib_f
   gr3->SetLineColor(kBlue);
   gr3->SetMarkerStyle(33);
   gr3->Draw("sameCP");
-  legdedx->AddEntry(gr3,"Measured using Gauss-Landau fit","LP");     	 
+  legdedx->AddEntry(gr3,"Measured using Gauss-Landau fit","LP");              
   legdedx->Draw("same");
  
   cdedx->Draw();
@@ -979,7 +903,7 @@ int main(int argc, char ** argv) {
     shtree1->Add(Form("%s/michelremoving2/Event", infile.c_str()));
     shtree2->Add(Form("%s/michelremoving2/Event", infile.c_str()));
   }
-	
+        
   else /*if(infile.substr(infile.find_last_of(".") + 1) == "txt")*/{
     std::ifstream in;
     in.open(infile.c_str());
