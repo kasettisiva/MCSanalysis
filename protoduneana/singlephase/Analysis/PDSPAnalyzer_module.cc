@@ -1057,7 +1057,7 @@ void pduneana::PDSPAnalyzer::analyze(art::Event const & evt) {
       
       std::vector<std::vector<G4ReweightTraj *>> new_full_created
           = BuildHierarchy(true_beam_ID, 211, plist, fGeometryService,
-                           event, true);
+                           event, "LAr", true);
       std::cout << "Created " << new_full_created.size() << " reweightable pi+"
                 << std::endl;
 
@@ -1164,7 +1164,7 @@ void pduneana::PDSPAnalyzer::analyze(art::Event const & evt) {
   if (!evt.isRealData()) {
     std::vector<std::vector<G4ReweightTraj *>> piplus_hierarchy 
         = BuildHierarchy(true_beam_ID, 211, plist, fGeometryService,
-                         event, true);
+                         event, "LAr", true);
 
     std::vector<double> input(ParSet.size(), 1.);
     for (size_t i = 0; i < ParSet.size(); ++i) {
@@ -1258,7 +1258,7 @@ void pduneana::PDSPAnalyzer::analyze(art::Event const & evt) {
 
     std::vector<std::vector<G4ReweightTraj *>> proton_hierarchy 
         = BuildHierarchy(true_beam_ID, 2212, plist, fGeometryService,
-                         event, true);
+                         event, "LAr", true);
     std::vector<double> proton_input(ProtParSet.size(), 1.);
     for (size_t i = 0; i < ProtParSet.size(); ++i) {
       g4rw_full_grid_proton_weights.push_back(std::vector<double>());

@@ -375,7 +375,7 @@ void protoana::G4RWExampleAnalyzer::analyze(art::Event const& e) {
 
     std::vector<G4ReweightTraj *> trajs = CreateNRWTrajs(
         *true_beam_particle, plist,
-        fGeometryService, event, true);
+        fGeometryService, event, "LAr", true);
     std::cout << "Made " << trajs.size() << " trajs" << std::endl; 
     bool added = false;
     for (size_t i = 0; i < trajs.size(); ++i) {
@@ -428,7 +428,7 @@ void protoana::G4RWExampleAnalyzer::analyze(art::Event const& e) {
         auto part = plist[to_create[0]];
         std::vector<G4ReweightTraj *> temp_trajs =
             CreateNRWTrajs(*part, plist, fGeometryService,
-                           event, true);
+                           event, "LAr", true);
         std::cout << "size: " << temp_trajs.size() << std::endl;
         if (temp_trajs.size()) {
           auto last_traj = temp_trajs.back();
