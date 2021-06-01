@@ -590,6 +590,7 @@ void protoana::AbsCexDriver::RefillMCSamples(
     weight *= GetSystWeight_BeamShift2D(event, syst_pars);
     weight *= GetSystWeight_EffVar(event, syst_pars);
     weight *= GetSystWeight_EDiv(event, syst_pars);
+    weight *= GetSystWeight_NoTrack(event, syst_pars);
 
     this_sample->FillSelectionHist(new_selection/*selection_ID*/, val, weight);
 
@@ -752,6 +753,14 @@ void protoana::AbsCexDriver::SetupSyst_EDivWeight(
   fEDivCut = pars.at("ediv_weight").GetOption<double>("Cut");
 }
 
+void protoana::AbsCexDriver::SetupSyst_NoTrackWeight(
+    const std::map<std::string, ThinSliceSystematic> & pars) {
+  if (pars.find("no_track_weight") == pars.end()) {
+    return;
+  }
+  fNoTrackF = pars.at("no_track_weight").GetOption<double>("F");
+}
+
 double protoana::AbsCexDriver::GetSystWeight_EDiv(
     const ThinSliceEvent & event,
     const std::map<std::string, ThinSliceSystematic> & pars) {
@@ -770,6 +779,26 @@ double protoana::AbsCexDriver::GetSystWeight_EDiv(
   }
   else {
     weight = (1. - var*fEDivF)/(1. - fEDivF);
+  }
+
+  return weight;
+}
+
+double protoana::AbsCexDriver::GetSystWeight_NoTrack(
+    const ThinSliceEvent & event,
+    const std::map<std::string, ThinSliceSystematic> & pars) {
+  
+  if (pars.find("no_track_weight") == pars.end()) return 1.;
+
+  const int selection_ID = event.GetSelectionID();
+
+  double weight = 1.;
+  double var = pars.at("no_track_weight").GetValue();
+  if (selection_ID == 6) {
+    weight = var;
+  }
+  else {
+    weight = (1. - var*fNoTrackF)/(1. - fNoTrackF);
   }
 
   return weight;

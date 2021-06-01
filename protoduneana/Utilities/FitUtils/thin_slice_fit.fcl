@@ -25,8 +25,8 @@ AnalysisOptions: {
   #FakeDataRoutine: "G4RW"
   #FakeDataRoutine: "dEdX"
   #FakeDataRoutine: "EffVar"
-  FakeDataRoutine: "G4RWGrid"
-  #FakeDataRoutine: "Asimov"
+  #FakeDataRoutine: "G4RWGrid"
+  FakeDataRoutine: "Asimov"
   #FakeDataRoutine: "Toy"
 
   FakeDataScales: [
@@ -92,355 +92,18 @@ AnalysisOptions: {
   }
 }
 
-#G4RWSysts: {
-#  g4rw_QE1: {
-#    Name: "g4rw_QE1"
-#    Central: 1.
-#    LowerLimit: 0.1
-#    UpperLimit: 2.0
-#    ThrowLimit: 0.
-#    Sigma: .2
-#
-#    Options: {
-#      Position: 0
-#      PlusBranch: "g4rw_full_primary_plus_sigma_weight"
-#      MinusBranch: "g4rw_full_primary_minus_sigma_weight"
-#
-#      IsGrid: true
-#      GridBranch: "g4rw_full_grid_weights_0"
-#      GridEnd: 2.0
-#      GridDelta: 0.1
-#      GridStart: 0.1
-#      GridN: 20
-#    }
-#  }
-#
-#  g4rw_QE2: {
-#    Name: "g4rw_QE2"
-#    Central: 1.
-#    LowerLimit: 0.1
-#    UpperLimit: 2.0
-#    ThrowLimit: 0.
-#    Sigma: .2
-#
-#    Options: {
-#      Position: 1
-#      PlusBranch: "g4rw_full_primary_plus_sigma_weight"
-#      MinusBranch: "g4rw_full_primary_minus_sigma_weight"
-#
-#      IsGrid: true
-#      GridBranch: "g4rw_full_grid_weights_1"
-#      GridEnd: 2.0
-#      GridDelta: 0.1
-#      GridStart: 0.1
-#      GridN: 20
-#    }
-#  }
-#
-#  g4rw_Abs1: {
-#    Name: "g4rw_Abs1"
-#    Central: 1.
-#    LowerLimit: 0.1
-#    UpperLimit: 2.00
-#    ThrowLimit: 0.
-#    Sigma: .75
-#
-#    Options: {
-#      Position: 2
-#      PlusBranch: "g4rw_full_primary_plus_sigma_weight"
-#      MinusBranch: "g4rw_full_primary_minus_sigma_weight"
-#
-#      IsGrid: true
-#      GridBranch: "g4rw_full_grid_weights_2"
-#      GridEnd: 2.0
-#      GridDelta: 0.1
-#      GridStart: 0.1
-#      GridN: 20
-#    }
-#  }
-#
-#  g4rw_Abs2: {
-#    Name: "g4rw_Abs2"
-#    Central: 1.
-#    LowerLimit: 0.1
-#    UpperLimit: 2.00
-#    ThrowLimit: 0.
-#    Sigma: .75
-#
-#    Options: {
-#      Position: 3
-#      PlusBranch: "g4rw_full_primary_plus_sigma_weight"
-#      MinusBranch: "g4rw_full_primary_minus_sigma_weight"
-#
-#      IsGrid: true
-#      GridBranch: "g4rw_full_grid_weights_3"
-#      GridEnd: 2.0
-#      GridDelta: 0.1
-#      GridStart: 0.1
-#      GridN: 20
-#    }
-#  }
-#
-#  g4rw_Cex1: {
-#    Name: "g4rw_Cex1"
-#    Central: 1.
-#    LowerLimit: 0.1
-#    UpperLimit: 2.00
-#    ThrowLimit: 0.
-#    Sigma: .75
-#
-#    Options: {
-#      Position: 4
-#      PlusBranch: "g4rw_full_primary_plus_sigma_weight"
-#      MinusBranch: "g4rw_full_primary_minus_sigma_weight"
-#
-#      IsGrid: true
-#      GridBranch: "g4rw_full_grid_weights_4"
-#      GridEnd: 2.0
-#      GridDelta: 0.1
-#      GridStart: 0.1
-#      GridN: 20
-#    }
-#  }
-#
-#  g4rw_Cex2: {
-#    Name: "g4rw_Cex2"
-#    Central: 1.
-#    LowerLimit: 0.1
-#    UpperLimit: 2.00
-#    ThrowLimit: 0.
-#    Sigma: .75
-#
-#    Options: {
-#      Position: 5
-#      PlusBranch: "g4rw_full_primary_plus_sigma_weight"
-#      MinusBranch: "g4rw_full_primary_minus_sigma_weight"
-#
-#      IsGrid: true
-#      GridBranch: "g4rw_full_grid_weights_5"
-#      GridEnd: 2.0
-#      GridDelta: 0.1
-#      GridStart: 0.1
-#      GridN: 20
-#    }
-#  }
-#
-#  g4rw_Cex3: {
-#    Name: "g4rw_Cex3"
-#    Central: 1.
-#    LowerLimit: 0.1
-#    UpperLimit: 2.00
-#    ThrowLimit: 0.
-#    Sigma: .75
-#
-#    Options: {
-#      Position: 6
-#      PlusBranch: "g4rw_full_primary_plus_sigma_weight"
-#      MinusBranch: "g4rw_full_primary_minus_sigma_weight"
-#
-#      IsGrid: true
-#      GridBranch: "g4rw_full_grid_weights_6"
-#      GridEnd: 2.0
-#      GridDelta: 0.1
-#      GridStart: 0.1
-#      GridN: 20
-#    }
-#  }
-#
-#  g4rw_Reac1: {
-#    Name: "g4rw_Reac1"
-#    Central: 1.
-#    LowerLimit: 0.1
-#    UpperLimit: 2.00
-#    ThrowLimit: 0.
-#    Sigma: .75
-#
-#    Options: {
-#      Position: 7
-#      PlusBranch: "g4rw_full_primary_plus_sigma_weight"
-#      MinusBranch: "g4rw_full_primary_minus_sigma_weight"
-#
-#      IsGrid: true
-#      GridBranch: "g4rw_full_grid_weights_7"
-#      GridEnd: 2.0
-#      GridDelta: 0.1
-#      GridStart: 0.1
-#      GridN: 20
-#    }
-#  }
-#
-#  g4rw_Reac2: {
-#    Name: "g4rw_Reac2"
-#    Central: 1.
-#    LowerLimit: 0.1
-#    UpperLimit: 2.00
-#    ThrowLimit: 0.
-#    Sigma: .75
-#
-#    Options: {
-#      Position: 8
-#      PlusBranch: "g4rw_full_primary_plus_sigma_weight"
-#      MinusBranch: "g4rw_full_primary_minus_sigma_weight"
-#
-#      IsGrid: true
-#      GridBranch: "g4rw_full_grid_weights_8"
-#      GridEnd: 2.0
-#      GridDelta: 0.1
-#      GridStart: 0.1
-#      GridN: 20
-#    }
-#  }
-#
-#  g4rw_DCex: {
-#    Name: "g4rw_DCex"
-#    Central: 1.
-#    LowerLimit: 0.1
-#    UpperLimit: 2.00
-#    ThrowLimit: 0.
-#    Sigma: .75
-#
-#    Options: {
-#      Position: 9
-#      PlusBranch: "g4rw_full_primary_plus_sigma_weight"
-#      MinusBranch: "g4rw_full_primary_minus_sigma_weight"
-#
-#      IsGrid: true
-#      GridBranch: "g4rw_full_grid_weights_9"
-#      GridEnd: 2.0
-#      GridDelta: 0.1
-#      GridStart: 0.1
-#      GridN: 20
-#    }
-#  }
-#
-#  g4rw_Prod: {
-#    Name: "g4rw_Prod"
-#    Central: 1.
-#    LowerLimit: 0.1
-#    UpperLimit: 2.00
-#    ThrowLimit: 0.
-#    Sigma: .75
-#
-#    Options: {
-#      Position: 10
-#      PlusBranch: "g4rw_full_primary_plus_sigma_weight"
-#      MinusBranch: "g4rw_full_primary_minus_sigma_weight"
-#
-#      IsGrid: true
-#      GridBranch: "g4rw_full_grid_weights_10"
-#      GridEnd: 2.0
-#      GridDelta: 0.1
-#      GridStart: 0.1
-#      GridN: 20
-#    }
-#  }
-#
-#  g4rw_proton: {
-#    Name: "g4rw_proton"
-#    Central: 1.
-#    LowerLimit: 0.1
-#    UpperLimit: 2.00
-#    ThrowLimit: 0.
-#    Sigma: .75
-#
-#    Options: {
-#      Position: 0
-#      PlusBranch: "g4rw_full_primary_plus_sigma_weight"
-#      MinusBranch: "g4rw_full_primary_minus_sigma_weight"
-#
-#      IsGrid: true
-#      GridBranch: "g4rw_full_grid_proton_weights"
-#      GridEnd: 2.0
-#      GridDelta: 0.1
-#      GridStart: 0.1
-#      GridN: 20
-#    }
-#  }
-#
-#}
-
 Systematics: [
-  #{
-  #  Name: "dEdX_Cal_Spline"
-  #  #Central: 1.011e-3
-  #  #LowerLimit: .809e-3
-  #  #UpperLimit: 1.2132e-3
-
-  #  Central: 1.0
-  #  LowerLimit: 0.8
-  #  UpperLimit: 1.2
-
-  #  ThrowLimit: 0.
-  #  Sigma: .101e-3
-  #
-  #  Options: {
-  #    Cal_set: @local::CalorimetryParameters_SPProd4_MC_SCE
-  #    C_cal_vars: [.8, .9, 1.1, 1.2]
-  #    #C_cal_vars: [.809e-3, .910e-3, 1.121e-3, 1.2132e-3]
-  #    TemplateFile: "/cvmfs/larsoft.opensciencegrid.org/products/larsoft_data/v1_02_01/ParticleIdentification/dEdxrestemplates.root"
-  #  }
-  #},
   @local::SystematicsList.dEdX_Cal_Spline,
   @local::G4RWSysts.g4rw_QE1,
   @local::G4RWSysts.g4rw_QE2,
-  ##@local::G4RWSysts.g4rw_Abs1,
-  ##@local::G4RWSysts.g4rw_Abs2,
-  ##@local::G4RWSysts.g4rw_Cex1,
-  ##@local::G4RWSysts.g4rw_Cex2,
-  ##@local::G4RWSysts.g4rw_Cex3,
-  ##@local::G4RWSysts.g4rw_Reac1,
-  ##@local::G4RWSysts.g4rw_Reac2
-  ##@local::G4RWSysts.g4rw_DCex,
   @local::G4RWSysts.g4rw_Prod,
   @local::G4RWSysts.g4rw_proton,
   @local::SystematicsList.beam_shift,
-  #{
-  #  Name: "beam_shift"
-  #  Central: 0. 
-  #  LowerLimit: -2. 
-  #  UpperLimit: 2. 
-  #  ThrowLimit: -999.
-  #  Sigma: 1. 
-  #
-  #  Options: {
-  #    #ShiftFile: "shift_map.root"
-  #    ShiftFile: "map_B_theta_2.root"
-  #    #Limits: [-.15, .15]
-  #    Limits: [-.2, .2]
-  #  }
-  #},
-  #{
-  #  Name: "eff_var_weight"
-  #  Central: 1.0
-  #  LowerLimit: 0.
-  #  UpperLimit: 1.99585
-  #  ThrowLimit: 0.
-  #  sigma: .111
-
-  #  Options: {
-  #    F: .50704
-  #    Cut: .3
-  #  }
-  #} #,
-  @local::SystematicsList.ediv_weight
-  #{
-  #  Name: "ediv_weight"
-  #  Central: 1.0
-  #  LowerLimit: 0.
-  #  UpperLimit: 2.0
-  #  ThrowLimit: 0.
-  #  sigma: .1
-
-  #  Options: {
-  #    F: .61329
-  #    Cut: 234. 
-  #  }
-  #}
-  
-
+  @local::SystematicsList.ediv_weight,
+  @local::SystematicsList.no_track_weight
 ]
 
-AddSystTerm: true
+AddSystTerm: false 
 #CovarianceBins: [
 #  ["beam_shift", 0]
 #  #["beam_2D_shift", 0],
@@ -654,12 +317,12 @@ DrawXSecUnderflow: false
 
 ## Validation
 RandomStart: false 
-SplitMC: true
+SplitMC: false 
 DoFakeData: true 
 FluctuateStats: false 
 DoThrows: true
 NThrows: 10 #00
-DoScans: false 
+DoScans: true
 Do1DShifts: true
 DoSysts: true 
 MaxRethrows: 1000

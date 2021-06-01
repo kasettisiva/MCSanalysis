@@ -177,6 +177,8 @@ class AbsCexDriver : public ThinSliceDriver {
       const std::map<std::string, ThinSliceSystematic> & pars);
   void SetupSyst_EDivWeight(
       const std::map<std::string, ThinSliceSystematic> & pars);
+  void SetupSyst_NoTrackWeight(
+      const std::map<std::string, ThinSliceSystematic> & pars);
 
   /*double GetSystWeight_BeamRes(
       const ThinSliceEvent & event,
@@ -196,6 +198,9 @@ class AbsCexDriver : public ThinSliceDriver {
       const ThinSliceEvent & event,
       const std::map<std::string, ThinSliceSystematic> & pars);
   double GetSystWeight_EDiv(
+      const ThinSliceEvent & event,
+      const std::map<std::string, ThinSliceSystematic> & pars);
+  double GetSystWeight_NoTrack(
       const ThinSliceEvent & event,
       const std::map<std::string, ThinSliceSystematic> & pars);
   void WrapUpSysts(TFile & output_file) override;
@@ -248,7 +253,7 @@ class AbsCexDriver : public ThinSliceDriver {
    TRandom3 fRNG = TRandom3(0);
 
    double fEffVarF, fEffVarCut;
-   double fEDivF, fEDivCut;
+   double fEDivF, fEDivCut, fNoTrackF;
    ProtoDUNETrackUtils fTrackUtil;
 };
 }
