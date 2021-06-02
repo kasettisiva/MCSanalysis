@@ -75,8 +75,8 @@ physics.analyzers.pduneana.Verbose: true
 physics.analyzers.pduneana.DoReweight: false 
 physics.analyzers.pduneana.DoProtReweight: false 
 physics.analyzers.pduneana.GetTrackMichel: false 
-physics.analyzers.pduneana.CalibrationParsSCE: @local::CalorimetryParameters_SPProd4_MC_SCE #_eLT
-physics.analyzers.pduneana.CalibrationParsNoSCE: @local::CalorimetryParameters_SPProd4_MC_SCE #_eLT
+physics.analyzers.pduneana.CalibrationParsSCE: @local::CalorimetryParameters_SPProd4_Data_r5387 #_eLT
+physics.analyzers.pduneana.CalibrationParsNoSCE: @local::CalorimetryParameters_SPProd4_Data_r5387 #_eLT
 services.ParticleInventoryService.ParticleInventory.EveIdCalculator: "EmEveIdCalculator"
 physics.producers.emtrkmichelid.PointIdAlg.AdcMin: -10 # This was previously -50
 physics.producers.emtrkmichelid.PointIdAlg.AdcMax: 30  # This was previously 150
