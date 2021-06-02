@@ -108,6 +108,9 @@ class protoDUNE_dEdx_calib {
   virtual Long64_t LoadTree(Long64_t entry);
   virtual void     Init(TTree *tree);
   virtual void     Loop(int hitplane, double norm_factor, double calib_factor);
+  void LoopLite(std::vector<double> & norm_factors,
+                std::vector<double> & calib_factors,
+                TFile & outfile);
   virtual Bool_t   Notify();
   virtual void     Show(Long64_t entry = -1);
 
@@ -128,6 +131,8 @@ class protoDUNE_dEdx_calib {
     TH3F *ypos;
     TH3F *zpos;
     TFile * fXFile, * fYZFile;
+
+    std::vector<TH3F*> pos_hists, neg_hists;
 
     float tot_Ef(float xval,float yval,float zval);
 };
@@ -264,6 +269,9 @@ void protoDUNE_dEdx_calib::GetEFMaps(TFile * ef) {
   xpos = (TH3F*)ef->Get("Reco_ElecField_X_Pos");
   ypos = (TH3F*)ef->Get("Reco_ElecField_Y_Pos");
   zpos = (TH3F*)ef->Get("Reco_ElecField_Z_Pos");
+
+  pos_hists = {xpos, ypos, zpos};
+  neg_hists = {xneg, yneg, zneg};
 }
 
 void protoDUNE_dEdx_calib::Show(Long64_t entry)

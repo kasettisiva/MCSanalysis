@@ -1,5 +1,7 @@
 FieldMap: "SCE_DataDriven_180kV_v4.root"
 
+OutputFile: "dedx_cal_out.root"
+
 YZCaloFile: "/dune/data/users/mmote/calib_results/YZcalo_mich2_r5432.root"
 XCaloFile:  "/dune/data/users/mmote/calib_results/Xcalo_mich2_r5432.root"
 
@@ -25,8 +27,12 @@ KE_Range: [
   [1000,  441.476]
 ]
 
-Plane0Start: 1.028e-3
-Plane0End: 1.029e-3
+#Plane0Start: 1.025e-3
+#Plane0End: 1.030e-3
+#Plane0Diff: .001e-3
+
+Plane0Start: 0.990e-3
+Plane0End: 1.030e-3
 Plane0Diff: .001e-3
 
 Plane1Start: 1.025e-3
