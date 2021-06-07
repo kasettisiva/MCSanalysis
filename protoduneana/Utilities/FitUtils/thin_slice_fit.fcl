@@ -26,7 +26,8 @@ AnalysisOptions: {
   #FakeDataRoutine: "dEdX"
   #FakeDataRoutine: "EffVar"
   #FakeDataRoutine: "G4RWGrid"
-  FakeDataRoutine: "Asimov"
+  FakeDataRoutine: "PionAngle"
+  #FakeDataRoutine: "Asimov"
   #FakeDataRoutine: "Toy"
 
   FakeDataScales: [
@@ -69,6 +70,14 @@ AnalysisOptions: {
     F: .333
   }
 
+  FakeDataPionAngle: {
+    #RatioFile: "angle_weight.root"
+    #RatioFile: "flat_pion_weights.root"
+    RatioFile: "half_shift.root"
+    Limits: [0., .4, .6, .8, 1.]
+    RatioNames: ["r1", "r2", "r3", "r4", "r5"]
+  }
+
   #EndZCut: 225.94353
   EndZCut: 222.10561
   #SliceCut: 472
@@ -103,7 +112,7 @@ Systematics: [
   @local::SystematicsList.no_track_weight
 ]
 
-AddSystTerm: false 
+AddSystTerm: true
 #CovarianceBins: [
 #  ["beam_shift", 0]
 #  #["beam_2D_shift", 0],
@@ -321,10 +330,10 @@ SplitMC: false
 DoFakeData: true 
 FluctuateStats: false 
 DoThrows: true
-NThrows: 10 #00
-DoScans: true
-Do1DShifts: true
-DoSysts: true 
+NThrows: 1000
+DoScans: false 
+Do1DShifts: false 
+DoSysts: true
 MaxRethrows: 1000
 #####################
 
