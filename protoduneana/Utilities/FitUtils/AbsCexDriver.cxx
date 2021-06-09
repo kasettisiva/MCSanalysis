@@ -693,6 +693,7 @@ void protoana::AbsCexDriver::SetupSysts(
   SetupSyst_EffVar(events, samples, pars, output_file);
   SetupSyst_EffVarWeight(pars);
   SetupSyst_EDivWeight(pars);
+  SetupSyst_NoTrackWeight(pars);
 
 }
 
@@ -788,7 +789,10 @@ double protoana::AbsCexDriver::GetSystWeight_NoTrack(
     const ThinSliceEvent & event,
     const std::map<std::string, ThinSliceSystematic> & pars) {
   
-  if (pars.find("no_track_weight") == pars.end()) return 1.;
+  if (pars.find("no_track_weight") == pars.end()) {
+    std::cout << "Can't find no track_weight" << std::endl;
+    return 1.;
+  }
 
   const int selection_ID = event.GetSelectionID();
 
@@ -800,6 +804,7 @@ double protoana::AbsCexDriver::GetSystWeight_NoTrack(
   else {
     weight = (1. - var*fNoTrackF)/(1. - fNoTrackF);
   }
+  //std::cout << selection_ID << " " << fNoTrackF << " " << var << " " << weight << std::endl;
 
   return weight;
 }

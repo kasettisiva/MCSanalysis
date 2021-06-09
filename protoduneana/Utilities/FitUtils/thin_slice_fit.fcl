@@ -26,8 +26,8 @@ AnalysisOptions: {
   #FakeDataRoutine: "dEdX"
   #FakeDataRoutine: "EffVar"
   #FakeDataRoutine: "G4RWGrid"
-  FakeDataRoutine: "PionAngle"
-  #FakeDataRoutine: "Asimov"
+  #FakeDataRoutine: "PionAngle"
+  FakeDataRoutine: "Asimov"
   #FakeDataRoutine: "Toy"
 
   FakeDataScales: [
@@ -108,8 +108,8 @@ Systematics: [
   @local::G4RWSysts.g4rw_Prod,
   @local::G4RWSysts.g4rw_proton,
   @local::SystematicsList.beam_shift,
-  @local::SystematicsList.ediv_weight #,
-  #@local::SystematicsList.no_track_weight
+  @local::SystematicsList.ediv_weight,
+  @local::SystematicsList.no_track_weight
 ]
 
 AddSystTerm: true
@@ -121,9 +121,10 @@ CovarianceBins: [
   ["g4rw_Prod", 3],
   ["g4rw_proton", 4],
   ["ediv_weight", 5],
-  ["beam_shift", 6]
+  ["beam_shift", 6],
+  ["no_track_weight", 7]
 ]
-CovarianceFile: "full_with_ediv.root"
+CovarianceFile: "full_with_no_track.root"
 CovarianceMatrix: "m"
 
 Selections: [
@@ -290,7 +291,7 @@ UpperLimit: 10.0
 LowerLimit: 0.05
 ReducedIncidentChi2: false
 FitFlux: true
-ScaleDataToNorm: true
+ScaleDataToNorm: false 
 DataNorm: 20500. 
 #RNGSeed: 0
 
@@ -312,7 +313,7 @@ FluctuateStats: false
 DoThrows: true
 NThrows: 10 #00
 DoScans: false 
-Do1DShifts: false 
+Do1DShifts: true 
 DoSysts: true
 MaxRethrows: 1000
 #####################
