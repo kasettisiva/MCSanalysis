@@ -40,6 +40,7 @@ class PDSPThinSliceFitter {
       std::string extra_name, TDirectory * xsec_dir, TDirectory * plot_dir,
       bool post_fit = false);
   void ScaleMCToData();
+  void ScaleDataToNorm();
   void RunFitAndSave();
   ~PDSPThinSliceFitter();
 
@@ -171,6 +172,8 @@ class PDSPThinSliceFitter {
   size_t fNThrows, fMaxRethrows;
   std::string fFitType = "Normal";
   size_t fNPulls;
+  bool fDoScaleDataToNorm;
+  double fDataNorm;
   
   std::vector<double> fIncidentRecoBins, fTrueIncidentBins, fBeamEnergyBins;
   std::vector<int> fIncidentSamples, fMeasurementSamples;

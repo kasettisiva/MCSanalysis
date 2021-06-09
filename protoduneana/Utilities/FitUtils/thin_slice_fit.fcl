@@ -108,33 +108,11 @@ Systematics: [
   @local::G4RWSysts.g4rw_Prod,
   @local::G4RWSysts.g4rw_proton,
   @local::SystematicsList.beam_shift,
-  @local::SystematicsList.ediv_weight,
-  @local::SystematicsList.no_track_weight
+  @local::SystematicsList.ediv_weight #,
+  #@local::SystematicsList.no_track_weight
 ]
 
 AddSystTerm: true
-#CovarianceBins: [
-#  ["beam_shift", 0]
-#  #["beam_2D_shift", 0],
-#  #["beam_2D_B", 0]
-#]
-#CovarianceFile: "input_cov.root" #"2D_cov.root"
-
-#CovarianceBins: [
-#  ["dEdX_Cal_Spline", 0],
-#  ["g4rw_QE1", 1],
-#  ["g4rw_QE2", 2],
-#  ["g4rw_Prod", 3],
-#  ["g4rw_proton", 4],
-#  ["eff_var_weight", 5],
-#  ["beam_shift", 6]
-#]
-#CovarianceFile: "dEdX_unit.root"
-
-#CovarianceBins: [
-#  ["ediv_weight", 0]
-#]
-#CovarianceFile: "ediv_cov.root"
 
 CovarianceBins: [
   ["dEdX_Cal_Spline", 0],
@@ -312,6 +290,8 @@ UpperLimit: 10.0
 LowerLimit: 0.05
 ReducedIncidentChi2: false
 FitFlux: true
+ScaleDataToNorm: true
+DataNorm: 20500. 
 #RNGSeed: 0
 
 FitFunctionType: 2
@@ -330,7 +310,7 @@ SplitMC: false
 DoFakeData: true 
 FluctuateStats: false 
 DoThrows: true
-NThrows: 1000
+NThrows: 10 #00
 DoScans: false 
 Do1DShifts: false 
 DoSysts: true

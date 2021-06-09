@@ -427,7 +427,14 @@ void protoana::PDSPThinSliceFitter::FillMCEvents() {
   std::cout << "Filled MC Events" << std::endl;
 }
 
-//Good
+void protoana::PDSPThinSliceFitter::ScaleDataToNorm() {
+  std::map<int, TH1 *> & selected_hists = fDataSet.GetSelectionHists();
+  for (auto it = selected_hists.begin(); it != selected_hists.end(); ++it) {
+    it->second->Scale(fDataNorm/fDataFlux);
+  }
+  fDataFlux = fDataNorm; 
+}
+
 void protoana::PDSPThinSliceFitter::ScaleMCToData() {
   double total_nominal = 0.;
   for (auto it = fNominalFluxes.begin(); it != fNominalFluxes.end(); ++it) {
@@ -524,6 +531,9 @@ void protoana::PDSPThinSliceFitter::BuildDataHists() {
     it->second->Write();
   }
 
+  if (fDoScaleDataToNorm) {
+    ScaleDataToNorm();
+  }
   fDataSet.MakeRebinnedHists();
 }
 
@@ -1006,6 +1016,7 @@ void protoana::PDSPThinSliceFitter::RunFitAndSave() {
     fDataSet.GetCumulatives();
     fDataSet.GenerateStatFluctuation();
   }
+
   ScaleMCToData();
   SaveMCSamples();
 
@@ -1768,6 +1779,9 @@ void protoana::PDSPThinSliceFitter::Configure(std::string fcl_file) {
 
   fFitType = pset.get<std::string>("FitType");
   fNPulls = pset.get<size_t>("NPulls");
+
+  fDoScaleDataToNorm = pset.get<bool>("ScaleDataToNorm", false);
+  fDataNorm = pset.get<double>("DataNorm", 1.);
 
 //  fRNGSeed = pset.get<int>("RNGSeed", 0);
  // fRNG = TRandom3(fRNGSeed);
