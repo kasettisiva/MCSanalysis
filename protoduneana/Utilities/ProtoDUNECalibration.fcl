@@ -131,7 +131,7 @@ CalorimetryParameters_SPProd4_Data_r5432.PlaneParameters: [
   {
     PlaneID: 2
     norm_factor: 0.977 
-    calib_factor: 1.029e-3
+    calib_factor: 1.033e-3
   }
 ]
 ##########################################
