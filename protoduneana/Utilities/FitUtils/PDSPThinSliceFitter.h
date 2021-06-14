@@ -34,7 +34,6 @@ class PDSPThinSliceFitter {
   void SaveMCSamples();
   void GetNominalFluxes();
   void BuildDataHists();
-  //void BuildSystSamples();
   void InitializeMCSamples();
   void CompareDataMC(
       std::string extra_name, TDirectory * xsec_dir, TDirectory * plot_dir,
@@ -49,7 +48,6 @@ class PDSPThinSliceFitter {
   void Pulls();
   void Configure(std::string fcl_file);
   void DefineFitFunction();
-  void DefineFitFunction2();
   void MakeMinimizer();
   void ParameterScans();
   void DoThrows(const TH1D & pars, const TMatrixD * cov);
@@ -66,14 +64,14 @@ class PDSPThinSliceFitter {
     std::map<int, std::vector<TH1*>> & truth_xsec_hists);
   void BuildFakeDataXSecs(bool use_scales = true);
   void BuildDataFromToy();
-  //void Get1DSystPlots();
   double CalcChi2SystTerm();
   void MakeThrowsTree(TTree & tree, std::vector<double> & branches);
 
   std::vector<double> GetBestFitParsVec();
 
   ThinSliceDriver * fThinSliceDriver;
-  std::map<int, std::vector<std::vector<ThinSliceSample>>> fSamples;
+  std::map<int, std::vector<std::vector<ThinSliceSample>>> fSamples,
+                                                           fFakeSamples;
   ThinSliceDataSet fDataSet;
   std::map<int, bool> fIsSignalSample;
   TFile fMCFile;
@@ -102,15 +100,16 @@ class PDSPThinSliceFitter {
   //std::map<int, THStack *> fNominalSelectedMCStacks;
   //std::map<int, THStack *> fPostFitSelectedMCStacks;
 
-  std::map<int, double> fNominalFluxes;
-  std::map<int, std::vector<std::vector<double>>> fFluxesBySample;
+  std::map<int, double> fNominalFluxes, fFakeFluxes;
+  std::map<int, std::vector<std::vector<double>>> fFluxesBySample,
+                                                  fFakeFluxesBySample;
   std::map<int, std::vector<int>> fFluxParsToSamples;
   double fDataFlux;
   double fMCDataScale = 1.;
 
   std::map<int, std::vector<double>> fSignalParameters;
   std::map<int, std::vector<std::string>> fSignalParameterNames;
-  size_t fTotalSignalParameters;
+  size_t fTotalSignalParameters = 0;
 
   std::map<int, double> fFluxParameters;
   std::map<int, std::string> fFluxParameterNames;
@@ -140,7 +139,7 @@ class PDSPThinSliceFitter {
   std::map<int, TH1D*> fBestFitSelectionHists;
   std::map<int, std::vector<double>> fBestFitTruthVals;
 
-  std::vector<ThinSliceEvent> fEvents;
+  std::vector<ThinSliceEvent> fEvents, fFakeDataEvents;
 
   //Configurable members
   std::string fMCFileName;
@@ -166,8 +165,8 @@ class PDSPThinSliceFitter {
   bool fDoFluctuateStats;
   bool fSplitMC;
   int fSplitVal = 0;
-  int fFitFunctionType;
   bool fFillIncidentInFunction = false;
+  bool fUseFakeSamples = false;
   bool fFitFlux;
   size_t fNThrows, fMaxRethrows;
   std::string fFitType = "Normal";

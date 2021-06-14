@@ -421,6 +421,9 @@ private:
   std::vector<int> reco_beam_calo_TPC, reco_beam_calo_TPC_NoSCE;
 
   int reco_beam_trackID;
+  int n_beam_slices, n_beam_particles;
+  std::vector<int> beam_track_IDs;
+  std::vector<double> beam_particle_scores;
   bool reco_beam_flipped;
 
   //fix
@@ -927,6 +930,46 @@ void pduneana::PDSPAnalyzer::analyze(art::Event const & evt) {
   }
 
 
+  n_beam_slices = 0;
+  n_beam_particles = 0;
+  const std::map<unsigned int, std::vector<const recob::PFParticle*>> sliceMap
+      = pfpUtil.GetPFParticleSliceMap(evt, fPFParticleTag);
+  std::vector<std::vector<const recob::PFParticle*>> beam_slices;
+  for(auto slice : sliceMap){
+    for(auto particle : slice.second){
+      bool added = false;
+      if(pfpUtil.IsBeamParticle(*particle,evt, fPFParticleTag)){
+        if (!added) {
+          beam_slices.push_back(slice.second);
+          ++n_beam_slices;
+          added = true;
+        }
+        std::cout << "Slice: " << slice.first << " N Part: " <<
+                     slice.second.size() << std::endl;
+        for (const auto * p : slice.second) {
+          const recob::Track* track
+              = pfpUtil.GetPFParticleTrack(*p,evt,fPFParticleTag,fTrackerTag);
+          ++n_beam_particles;
+          beam_particle_scores.push_back(pfpUtil.GetBeamCosmicScore(*p, evt, fPFParticleTag));
+          if (track) {
+            std::cout << "Slice: " << slice.first << " ID: " << track->ID() <<
+                         std::endl;
+            beam_track_IDs.push_back(track->ID());
+          }
+          else {
+            beam_track_IDs.push_back(-999);
+          }
+        }
+      }
+      if (!added) {continue;}
+      //else {
+      //  std::cout << "Not beam particle" << std::endl;
+      //}
+    }
+  }
+  std::cout << "Got " << beam_slices.size() <<" beam slices" << std::endl;
+
+
   ///Gets the beam pfparticle
   std::vector<const recob::PFParticle*> beamParticles = pfpUtil.GetPFParticlesFromBeamSlice(evt,fPFParticleTag);
 
@@ -1337,6 +1380,10 @@ void pduneana::PDSPAnalyzer::beginJob()
   fTree->Branch("reco_beam_vertex_nHits", &reco_beam_vertex_nHits);
   fTree->Branch("reco_beam_vertex_michel_score", &reco_beam_vertex_michel_score);
   fTree->Branch("reco_beam_trackID", &reco_beam_trackID);
+  fTree->Branch("n_beam_slices", &n_beam_slices);
+  fTree->Branch("n_beam_particles", &n_beam_particles);
+  fTree->Branch("beam_track_IDs", &beam_track_IDs);
+  fTree->Branch("beam_particle_scores", &beam_particle_scores);
 
   fTree->Branch("reco_beam_dQdX_SCE", &reco_beam_dQdX_SCE);
   fTree->Branch("reco_beam_EField_SCE", &reco_beam_EField_SCE);
@@ -2115,6 +2162,11 @@ void pduneana::PDSPAnalyzer::reset()
   reco_beam_calo_TPC_NoSCE.clear();
 
   reco_beam_trackID = -999;
+
+  n_beam_slices =  -999;
+  n_beam_particles = -999;
+  beam_track_IDs.clear();
+  beam_particle_scores.clear();
 
   reco_beam_incidentEnergies.clear();
   reco_beam_interactingEnergy = -999.;

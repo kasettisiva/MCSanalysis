@@ -47,6 +47,15 @@ class ThinSliceSample {
     return fSystematicSplines.at(syst_name);
   };
 
+  const std::map<std::string, std::map<int, std::vector<TSpline3 *>>> &
+      GetAllSplines() const {
+    return fSystematicSplines;
+  };
+
+  void SetSystematicSplines(const std::map<std::string, std::map<int, std::vector<TSpline3 *>>> & input) {
+    fSystematicSplines = input;
+  };
+
   double GetSplineWeight(std::string syst_name, double par_val,
                          int selection_ID, double val) const {
     int bin = fSelectionHists.at(selection_ID)->FindBin(val);
@@ -260,6 +269,7 @@ class ThinSliceSample {
     for (auto it = fSelectionHists.begin(); it != fSelectionHists.end(); ++it) {
       it->second->Scale(val);
     }
+    RefillRebinnedHists();
 
     fTrueIncidentHist.Scale(val);
   };
@@ -305,6 +315,7 @@ class ThinSliceSample {
   void SetDataMCScale(double val) {
     fDataMCScale = val;
     ScaleHists(fDataMCScale);
+    ScaleIncidentEnergies(fDataMCScale);
     fNominalFlux *= val;
     fVariedFlux *= val;
   };

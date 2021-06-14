@@ -100,97 +100,101 @@ void protoana::AbsCexDriver::BuildMCSamples(
     }
 
     //Build the true incident energy vector based on the slice cut
-    std::vector<double> good_true_incEnergies;
-    if (fSliceMethod == "Traj") {
-      double next_slice_z = fTrajZStart;
-      //slice_cut = fExtraOptions.get<int>("SliceCut");
-      int next_slice_num = 0;
-      //bool found = false;
-      for (size_t j = 1; j < true_beam_traj_Z./*->*/size() - 1; ++j) {
-        double z = (/***/true_beam_traj_Z)[j];
-        double ke = (/***/true_beam_traj_KE)[j];
+    std::vector<double> good_true_incEnergies = MakeTrueIncidentEnergies(
+        true_beam_traj_Z, true_beam_traj_KE, true_beam_slices,
+        true_beam_incidentEnergies);
+    //if (fSliceMethod == "Traj") {
+    //  double next_slice_z = fTrajZStart;
+    //  //slice_cut = fExtraOptions.get<int>("SliceCut");
+    //  int next_slice_num = 0;
+    //  //bool found = false;
+    //  for (size_t j = 1; j < true_beam_traj_Z./*->*/size() - 1; ++j) {
+    //    double z = (/***/true_beam_traj_Z)[j];
+    //    double ke = (/***/true_beam_traj_KE)[j];
 
-        if (z < fTrajZStart) {
-          //std::cout << "Skipping " << z << std::endl;
-          continue;
-        }
+    //    if (z < fTrajZStart) {
+    //      //std::cout << "Skipping " << z << std::endl;
+    //      continue;
+    //    }
 
-        if (z >= next_slice_z) {
-          double temp_z = (/***/true_beam_traj_Z)[j-1];
-          double temp_e = (/***/true_beam_traj_KE)[j-1];
-          
-          //if (/*end_energy > 800. && !found &&*/ j == true_beam_traj_Z->size() - 2) {
-          //  //std::cout << "e, z i-1: " << temp_e << " " << temp_z <<
-          //  //             " e, z i: " << (*true_beam_traj_KE)[j] << " " << (*true_beam_traj_Z)[j] <<
-          //  //             " e, z i+1: " << (*true_beam_traj_KE)[j+1] << " " << (*true_beam_traj_Z)[j+1] << std::endl;
-          //  //std::cout << "end e: " << end_energy << " slices: " << ((*true_beam_traj_Z)[j+1] - (*true_beam_traj_Z)[j])/pitch << std::endl;
-          //  if (!(sample_ID == 4 || sample_ID == 5)) 
-          //    h.Fill(end_energy, ((*true_beam_traj_Z)[j+1] - (*true_beam_traj_Z)[j])/pitch);
-          //}
-          //found = true;
-          while (next_slice_z < z && next_slice_num < fSliceCut) {
-            double sub_z = next_slice_z - temp_z;
-            double delta_e = (/***/true_beam_traj_KE)[j-1] - ke;
-            double delta_z = z - (/***/true_beam_traj_Z)[j-1]/* - z*/;
-            temp_e -= (sub_z/delta_z)*delta_e;
-          /*  if (end_energy > 800.) {
-              std::cout << "delta_z: " << delta_z << std::endl;
-              std::cout << (sub_z/delta_z)*delta_e << std::endl;
-              std::cout << "\tNext: " << next_slice_z << " temp e: " << temp_e <<
-                           " Z: " << z << " E: " << ke << " slice: " <<
-                           next_slice_num << " " <<
-                           (next_slice_z - fExtraOptions.get<double>("TrajZStart"))/next_slice_num <<std::endl;
-              std::cout << "\t\tsub z: " << sub_z << " delta_z: " << delta_z << std::endl;
-            }*/
-            //if (temp_e < end_energy)
-            //  std::cout << "Warning adding energy less than end " << 
-            //               temp_e << " " << end_energy << std::endl;
-            good_true_incEnergies.push_back(temp_e);
-            temp_z = next_slice_z;
-            next_slice_z += fPitch;
-            ++next_slice_num;
-          }
-          //if (end_energy > 800.)
-          //std::cout << "Next: " << next_slice_z << " Z: " << z << " slice: " << next_slice_num << std::endl;
-        }
-      }
-      //double last_slice_z = fSliceCut*fPitch + fTrajZStart;
-      //std::cout << next_slice_num << " " <<
-      //             std::floor((true_beam_traj_Z[true_beam_traj_Z.size() - 2]
-      //                        - fTrajZStart)/fPitch) <<
-      //             " " << good_true_incEnergies.size() << std::endl;
-    }
-    else if (fSliceMethod == "Default") {
-      for (size_t j = 0; j < true_beam_incidentEnergies./*->*/size(); ++j) {
-        int slice = (/***/true_beam_slices)[j]; 
-        if (slice > fSliceCut) continue;
-        good_true_incEnergies.push_back((/***/true_beam_incidentEnergies)[j]);
-      }
-    }
-    else if (fSliceMethod == "Alt") {
-      //int bin = fEndSlices->GetXaxis()->FindBin(true_beam_traj_Z->back());
-      //std::cout << "alt 2 " << fEndSlices << std::endl;
-      int bin = fEndSlices->GetXaxis()->FindBin(true_beam_traj_Z.back());
-      //std::cout << bin << std::endl;
-      for (int i = 1; i <= bin; ++i) {
-        good_true_incEnergies.push_back(fMeans.at(i));
-      }
-    }
+    //    if (z >= next_slice_z) {
+    //      double temp_z = (/***/true_beam_traj_Z)[j-1];
+    //      double temp_e = (/***/true_beam_traj_KE)[j-1];
+    //      
+    //      //if (/*end_energy > 800. && !found &&*/ j == true_beam_traj_Z->size() - 2) {
+    //      //  //std::cout << "e, z i-1: " << temp_e << " " << temp_z <<
+    //      //  //             " e, z i: " << (*true_beam_traj_KE)[j] << " " << (*true_beam_traj_Z)[j] <<
+    //      //  //             " e, z i+1: " << (*true_beam_traj_KE)[j+1] << " " << (*true_beam_traj_Z)[j+1] << std::endl;
+    //      //  //std::cout << "end e: " << end_energy << " slices: " << ((*true_beam_traj_Z)[j+1] - (*true_beam_traj_Z)[j])/pitch << std::endl;
+    //      //  if (!(sample_ID == 4 || sample_ID == 5)) 
+    //      //    h.Fill(end_energy, ((*true_beam_traj_Z)[j+1] - (*true_beam_traj_Z)[j])/pitch);
+    //      //}
+    //      //found = true;
+    //      while (next_slice_z < z && next_slice_num < fSliceCut) {
+    //        double sub_z = next_slice_z - temp_z;
+    //        double delta_e = (/***/true_beam_traj_KE)[j-1] - ke;
+    //        double delta_z = z - (/***/true_beam_traj_Z)[j-1]/* - z*/;
+    //        temp_e -= (sub_z/delta_z)*delta_e;
+    //      /*  if (end_energy > 800.) {
+    //          std::cout << "delta_z: " << delta_z << std::endl;
+    //          std::cout << (sub_z/delta_z)*delta_e << std::endl;
+    //          std::cout << "\tNext: " << next_slice_z << " temp e: " << temp_e <<
+    //                       " Z: " << z << " E: " << ke << " slice: " <<
+    //                       next_slice_num << " " <<
+    //                       (next_slice_z - fExtraOptions.get<double>("TrajZStart"))/next_slice_num <<std::endl;
+    //          std::cout << "\t\tsub z: " << sub_z << " delta_z: " << delta_z << std::endl;
+    //        }*/
+    //        //if (temp_e < end_energy)
+    //        //  std::cout << "Warning adding energy less than end " << 
+    //        //               temp_e << " " << end_energy << std::endl;
+    //        good_true_incEnergies.push_back(temp_e);
+    //        temp_z = next_slice_z;
+    //        next_slice_z += fPitch;
+    //        ++next_slice_num;
+    //      }
+    //      //if (end_energy > 800.)
+    //      //std::cout << "Next: " << next_slice_z << " Z: " << z << " slice: " << next_slice_num << std::endl;
+    //    }
+    //  }
+    //  //double last_slice_z = fSliceCut*fPitch + fTrajZStart;
+    //  //std::cout << next_slice_num << " " <<
+    //  //             std::floor((true_beam_traj_Z[true_beam_traj_Z.size() - 2]
+    //  //                        - fTrajZStart)/fPitch) <<
+    //  //             " " << good_true_incEnergies.size() << std::endl;
+    //}
+    //else if (fSliceMethod == "Default") {
+    //  for (size_t j = 0; j < true_beam_incidentEnergies./*->*/size(); ++j) {
+    //    int slice = (/***/true_beam_slices)[j]; 
+    //    if (slice > fSliceCut) continue;
+    //    good_true_incEnergies.push_back((/***/true_beam_incidentEnergies)[j]);
+    //  }
+    //}
+    //else if (fSliceMethod == "Alt") {
+    //  //int bin = fEndSlices->GetXaxis()->FindBin(true_beam_traj_Z->back());
+    //  //std::cout << "alt 2 " << fEndSlices << std::endl;
+    //  int bin = fEndSlices->GetXaxis()->FindBin(true_beam_traj_Z.back());
+    //  //std::cout << bin << std::endl;
+    //  for (int i = 1; i <= bin; ++i) {
+    //    good_true_incEnergies.push_back(fMeans.at(i));
+    //  }
+    //}
 
     //Look for the coinciding energy bin
-    int bin = -1;
-    for (size_t j = 1; j < beam_energy_bins.size(); ++j) {
-      if ((beam_energy_bins[j-1] <= 1.e3*true_beam_startP) &&
-          (1.e3*true_beam_startP < beam_energy_bins[j])) {
-        bin = j - 1;
-        break;
-      }
-    }
-    if (bin == -1) {
-      std::string message = "Could not find beam energy bin for " +
-                            std::to_string(true_beam_startP);
-      throw std::runtime_error(message);
-    }
+    //int bin = -1;
+    //for (size_t j = 1; j < beam_energy_bins.size(); ++j) {
+    //  if ((beam_energy_bins[j-1] <= 1.e3*true_beam_startP) &&
+    //      (1.e3*true_beam_startP < beam_energy_bins[j])) {
+    //    bin = j - 1;
+    //    break;
+    //  }
+    //}
+    //if (bin == -1) {
+    //  std::string message = "Could not find beam energy bin for " +
+    //                        std::to_string(true_beam_startP);
+    //  throw std::runtime_error(message);
+    //}
+
+    int bin = GetBeamBin(beam_energy_bins, true_beam_startP);
 
 
     std::vector<ThinSliceSample> & samples_vec = samples.at(sample_ID)[bin];
@@ -375,64 +379,68 @@ void protoana::AbsCexDriver::RefillMCSamples(
     //Build the true incident energy vector based on the slice cut
     std::vector<double> good_true_incEnergies;
     if (fill_incident) {
-    if (fSliceMethod == "Traj") {
-      double next_slice_z = fTrajZStart;
-      //slice_cut = fExtraOptions.get<int>("SliceCut");
-      int next_slice_num = 0;
-      for (size_t j = 1; j < true_beam_traj_Z.size() - 1; ++j) {
-        double z = (true_beam_traj_Z)[j];
-        double ke = (true_beam_traj_KE)[j];
+      good_true_incEnergies = MakeTrueIncidentEnergies(
+        true_beam_traj_Z, true_beam_traj_KE, true_beam_slices,
+        true_beam_incidentEnergies);
+    //if (fSliceMethod == "Traj") {
+    //  double next_slice_z = fTrajZStart;
+    //  //slice_cut = fExtraOptions.get<int>("SliceCut");
+    //  int next_slice_num = 0;
+    //  for (size_t j = 1; j < true_beam_traj_Z.size() - 1; ++j) {
+    //    double z = (true_beam_traj_Z)[j];
+    //    double ke = (true_beam_traj_KE)[j];
 
-        if (z < fTrajZStart) {
-          continue;
-        }
+    //    if (z < fTrajZStart) {
+    //      continue;
+    //    }
 
-        if (z >= next_slice_z) {
-          double temp_z = (true_beam_traj_Z)[j-1];
-          double temp_e = (true_beam_traj_KE)[j-1];
-          
-          while (next_slice_z < z && next_slice_num < fSliceCut) {
-            double sub_z = next_slice_z - temp_z;
-            double delta_e = (true_beam_traj_KE)[j-1] - ke;
-            double delta_z = z - (true_beam_traj_Z)[j-1]/* - z*/;
-            temp_e -= (sub_z/delta_z)*delta_e;
-            good_true_incEnergies.push_back(temp_e);
-            temp_z = next_slice_z;
-            next_slice_z += fPitch;
-            ++next_slice_num;
-          }
-        }
-      }
-    }
-    else if (fSliceMethod == "Default") {
-      for (size_t j = 0; j < true_beam_incidentEnergies.size(); ++j) {
-        int slice = (true_beam_slices)[j]; 
-        if (slice > fSliceCut) continue;
-        good_true_incEnergies.push_back((true_beam_incidentEnergies)[j]);
-      }
-    }
-    else if (fSliceMethod == "Alt") {
-      int bin = fEndSlices->GetXaxis()->FindBin(true_beam_traj_Z.back());
-      for (int i = 1; i <= bin; ++i) {
-        good_true_incEnergies.push_back(fMeans.at(i));
-      }
-    }
+    //    if (z >= next_slice_z) {
+    //      double temp_z = (true_beam_traj_Z)[j-1];
+    //      double temp_e = (true_beam_traj_KE)[j-1];
+    //      
+    //      while (next_slice_z < z && next_slice_num < fSliceCut) {
+    //        double sub_z = next_slice_z - temp_z;
+    //        double delta_e = (true_beam_traj_KE)[j-1] - ke;
+    //        double delta_z = z - (true_beam_traj_Z)[j-1]/* - z*/;
+    //        temp_e -= (sub_z/delta_z)*delta_e;
+    //        good_true_incEnergies.push_back(temp_e);
+    //        temp_z = next_slice_z;
+    //        next_slice_z += fPitch;
+    //        ++next_slice_num;
+    //      }
+    //    }
+    //  }
+    //}
+    //else if (fSliceMethod == "Default") {
+    //  for (size_t j = 0; j < true_beam_incidentEnergies.size(); ++j) {
+    //    int slice = (true_beam_slices)[j]; 
+    //    if (slice > fSliceCut) continue;
+    //    good_true_incEnergies.push_back((true_beam_incidentEnergies)[j]);
+    //  }
+    //}
+    //else if (fSliceMethod == "Alt") {
+    //  int bin = fEndSlices->GetXaxis()->FindBin(true_beam_traj_Z.back());
+    //  for (int i = 1; i <= bin; ++i) {
+    //    good_true_incEnergies.push_back(fMeans.at(i));
+    //  }
+    //}
     }
 
     //Look for the coinciding energy bin
-    int bin = -1;
-    for (size_t j = 1; j < beam_energy_bins.size(); ++j) {
-      if ((beam_energy_bins[j-1] <= 1.e3*true_beam_startP) &&
-          (1.e3*true_beam_startP < beam_energy_bins[j])) {
-        bin = j - 1;
-        break;
-      }
-    }
-    if (bin == -1) {
-      std::string message = "Could not find beam energy bin for " +
-                            std::to_string(true_beam_startP);
-      throw std::runtime_error(message);
-    }
+    //int bin = -1;
+    //for (size_t j = 1; j < beam_energy_bins.size(); ++j) {
+    //  if ((beam_energy_bins[j-1] <= 1.e3*true_beam_startP) &&
+    //      (1.e3*true_beam_startP < beam_energy_bins[j])) {
+    //    bin = j - 1;
+    //    break;
+    //  }
+    //}
+    //if (bin == -1) {
+    //  std::string message = "Could not find beam energy bin for " +
+    //                        std::to_string(true_beam_startP);
+    //  throw std::runtime_error(message);
+    //}
+    int bin = GetBeamBin(beam_energy_bins, true_beam_startP);
 
     //Weight for the event
     //Possibly affected by signal, flux, and syst parameters
@@ -484,24 +492,7 @@ void protoana::AbsCexDriver::RefillMCSamples(
 
     double val[1] = {0};
     
-    //EffVar check
     int new_selection = selection_ID;
-    //if (fSetupSystEffVar && selection_ID < 3) {
-    //  for (size_t j = 0; j < daughter_thetas.size(); ++j) {
-    //    if (/*(abs((*daughter_true_PDG)[j]) == 211) &&*/
-    //        //(track_scores[j] > .3) &&
-    //        (daughter_thetas[j] > -999) &&
-    //        (daughter_thetas[j]*180./TMath::Pi() < 20.)) {
-    //      double r = fRNG.Uniform();
-    //      if (r < syst_pars.at("eff_var").GetValue()/*fEffVarSystVal*/) {
-    //        new_selection = 3;
-    //        break;
-    //      }
-    //    }
-    //  }
-    //  //selected_hists[new_selection]->Fill(val);
-    //}
-
     TH1D * selected_hist
         = (TH1D*)this_sample->GetSelectionHists().at(new_selection/*selection_ID*/);
     if (new_selection/*selection_ID*/ == 4) {
@@ -1197,19 +1188,20 @@ void protoana::AbsCexDriver::SetupSyst_G4RW(
       }
 
       //Look for the coinciding energy bin
-      int bin = -1;
-      for (size_t j = 1; j < beam_energy_bins.size(); ++j) {
-        if ((beam_energy_bins[j-1] <= 1.e3*true_beam_startP) &&
-            (1.e3*true_beam_startP < beam_energy_bins[j])) {
-          bin = j - 1;
-          break;
-        }
-      }
-      if (bin == -1) {
-        std::string message = "Could not find beam energy bin for " +
-                              std::to_string(true_beam_startP);
-        throw std::runtime_error(message);
-      }
+      //int bin = -1;
+      //for (size_t j = 1; j < beam_energy_bins.size(); ++j) {
+      //  if ((beam_energy_bins[j-1] <= 1.e3*true_beam_startP) &&
+      //      (1.e3*true_beam_startP < beam_energy_bins[j])) {
+      //    bin = j - 1;
+      //    break;
+      //  }
+      //}
+      //if (bin == -1) {
+      //  std::string message = "Could not find beam energy bin for " +
+      //                        std::to_string(true_beam_startP);
+      //  throw std::runtime_error(message);
+      //}
+      int bin = GetBeamBin(beam_energy_bins, true_beam_startP);
 
 
       std::vector<ThinSliceSample> & samples_vec = samples.at(sample_ID)[bin];
@@ -1728,7 +1720,9 @@ void protoana::AbsCexDriver::BuildFakeData(
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     const std::map<int, bool> & signal_sample_checks,
     ThinSliceDataSet & data_set, double & flux,
-    std::map<int, std::vector<double>> & sample_scales, int split_val) {
+    std::map<int, std::vector<double>> & sample_scales,
+    std::vector<double> & beam_energy_bins,
+    int split_val) {
   std::string routine = fExtraOptions.get<std::string>("FakeDataRoutine");
   if (routine == "SampleScales") {
     FakeDataSampleScales(tree, samples, signal_sample_checks, data_set, flux,
@@ -1740,7 +1734,8 @@ void protoana::AbsCexDriver::BuildFakeData(
   }
   else if (routine == "G4RWGrid") {
     FakeDataG4RWGrid(tree, samples, signal_sample_checks, data_set, flux,
-                 sample_scales, split_val);
+                 sample_scales, beam_energy_bins,
+                 split_val);
   }
   else if (routine == "EffVar") {
     FakeDataEffVar(tree, samples, signal_sample_checks, data_set, flux,
@@ -1751,7 +1746,8 @@ void protoana::AbsCexDriver::BuildFakeData(
                          sample_scales, split_val);
   }
   else if (routine == "dEdX") {
-    FakeDatadEdX(tree, data_set, flux, sample_scales, split_val);
+    FakeDatadEdX(tree, samples, signal_sample_checks, data_set, flux,
+                 sample_scales, split_val);
   }
   else if (routine == "PionAngle") {
     FakeDataPionAngle(tree, samples, signal_sample_checks, data_set, flux,
@@ -1778,7 +1774,9 @@ void protoana::AbsCexDriver::FakeDataSampleScales(
   double true_beam_interactingEnergy, reco_beam_interactingEnergy;
   double true_beam_endP;
   std::vector<double> * reco_beam_incidentEnergies = 0x0,
+                      * true_beam_traj_KE = 0x0,
                       * true_beam_traj_Z = 0x0;
+  std::vector<int>    * true_beam_slices = 0x0;
   double reco_beam_endZ;
   tree->SetBranchAddress("reco_beam_endZ", &reco_beam_endZ);
   tree->SetBranchAddress("new_interaction_topology", &sample_ID);
@@ -1787,16 +1785,20 @@ void protoana::AbsCexDriver::FakeDataSampleScales(
                          &true_beam_interactingEnergy);
   tree->SetBranchAddress("true_beam_endP", &true_beam_endP);
   tree->SetBranchAddress("true_beam_traj_Z", &true_beam_traj_Z);
+  tree->SetBranchAddress("true_beam_traj_KE", &true_beam_traj_KE);
+  tree->SetBranchAddress("true_beam_slices", &true_beam_slices);
   tree->SetBranchAddress("reco_beam_interactingEnergy",
                          &reco_beam_interactingEnergy);
   tree->SetBranchAddress("reco_beam_incidentEnergies",
                          &reco_beam_incidentEnergies);
+  std::vector<double> * true_beam_incidentEnergies = 0x0;
+  tree->SetBranchAddress("true_beam_incidentEnergies",
+                         &true_beam_incidentEnergies);
 
   TH1D & incident_hist = data_set.GetIncidentHist();
   std::map<int, TH1 *> & selected_hists = data_set.GetSelectionHists();
 
   double new_flux = 0.;
-  //flux = 0.;
   flux = tree->GetEntries() - split_val;
 
   std::map<int, std::vector<double>> nominal_samples;
@@ -1807,18 +1809,14 @@ void protoana::AbsCexDriver::FakeDataSampleScales(
   for (int i = split_val; i < tree->GetEntries(); ++i) {
     tree->GetEntry(i);
 
-    //double end_energy = (fExtraOptions.get<bool>("TrajSlices") ?
-    //                     sqrt(true_beam_endP*true_beam_endP*1.e6 + 139.57*139.57) - 139.57 :
-    //                     true_beam_interactingEnergy);
-    std::string slice_method = fExtraOptions.get<std::string>("SliceMethod");
     double end_energy = true_beam_interactingEnergy;
-    if (slice_method == "Traj") {
+    if (fSliceMethod == "Traj") {
       end_energy = sqrt(true_beam_endP*true_beam_endP*1.e6 + 139.57*139.57) - 139.57;
     }
-    else if (slice_method == "E") {
+    else if (fSliceMethod == "E") {
       end_energy = sqrt(true_beam_endP*true_beam_endP*1.e6 + 139.57*139.57) - 139.57;
     }
-    else if (slice_method == "Alt") {
+    else if (fSliceMethod == "Alt") {
       int bin = fEndSlices->GetXaxis()->FindBin(true_beam_traj_Z->back());
       if (bin > 0)
         end_energy = fMeans.at(bin);
@@ -1834,6 +1832,7 @@ void protoana::AbsCexDriver::FakeDataSampleScales(
     //If it's signal
     //Determine if the over/underflow bin 
     bool is_signal = signal_sample_checks.at(sample_ID);
+    ThinSliceSample * this_sample = 0x0;
     if (is_signal) {
       std::vector<ThinSliceSample> & samples_vec = samples[sample_ID][0];
       //Get the samples vec from the first beam energy bin
@@ -1844,16 +1843,22 @@ void protoana::AbsCexDriver::FakeDataSampleScales(
           found = true;
           sample_scales[sample_ID][j] += scale;
           nominal_samples[sample_ID][j] += 1.;
+          this_sample = &sample;
           break;
         }
       }
       if (!found) {//If in the under/overflow, just set to 1. 
+
         scale = 1.;
         if (end_energy < samples_vec[1].RangeLowEnd()) {
+          this_sample = &samples_vec[0];
           sample_scales[sample_ID][0] += scale;
           nominal_samples[sample_ID][0] += 1.;
         }
-        else {
+        else if (end_energy >
+                 samples_vec[samples_vec.size()-2].RangeHighEnd()) {
+
+          this_sample = &samples_vec.back();
           sample_scales[sample_ID].back() += scale;
           nominal_samples[sample_ID].back() += 1.;
         }
@@ -1862,8 +1867,10 @@ void protoana::AbsCexDriver::FakeDataSampleScales(
     else {
       sample_scales[sample_ID][0] += scale;
       nominal_samples[sample_ID][0] += 1.;
+      this_sample = &samples[sample_ID][0][0];
     }
 
+    //this_sample
     new_flux += scale; //1 or scaled
 
     double val = 0.;
@@ -1918,6 +1925,47 @@ void protoana::AbsCexDriver::FakeDataSampleScales(
     }
 
     selected_hists[selection_ID]->Fill(val, scale);
+    std::vector<double> good_true_incEnergies = MakeTrueIncidentEnergies(
+        *true_beam_traj_Z, *true_beam_traj_KE, *true_beam_slices,
+        *true_beam_incidentEnergies);
+    //if (fSliceMethod == "Traj") {
+    //  double next_slice_z = fTrajZStart;
+    //  int next_slice_num = 0;
+    //  for (size_t j = 1; j < true_beam_traj_Z->size() - 1; ++j) {
+    //    double z = (*true_beam_traj_Z)[j];
+    //    double ke = (*true_beam_traj_KE)[j];
+
+    //    if (z < fTrajZStart) {
+    //      //std::cout << "Skipping " << z << std::endl;
+    //      continue;
+    //    }
+
+    //    if (z >= next_slice_z) {
+    //      double temp_z = (*true_beam_traj_Z)[j-1];
+    //      double temp_e = (*true_beam_traj_KE)[j-1];
+    //      
+    //      while (next_slice_z < z && next_slice_num < fSliceCut) {
+    //        double sub_z = next_slice_z - temp_z;
+    //        double delta_e = (*true_beam_traj_KE)[j-1] - ke;
+    //        double delta_z = z - (*true_beam_traj_Z)[j-1]/* - z*/;
+    //        temp_e -= (sub_z/delta_z)*delta_e;
+    //        good_true_incEnergies.push_back(temp_e);
+    //        temp_z = next_slice_z;
+    //        next_slice_z += fPitch;
+    //        ++next_slice_num;
+    //      }
+    //    }
+    //  }
+    //}
+    //else if (fSliceMethod == "Default") {
+    //  for (size_t j = 0; j < true_beam_incidentEnergies->size(); ++j) {
+    //    int slice = (*true_beam_slices)[j]; 
+    //    if (slice > fSliceCut) continue;
+    //    good_true_incEnergies.push_back((*true_beam_incidentEnergies)[j]);
+    //  }
+    //}
+    this_sample->AddVariedFlux(scale);
+    this_sample->AddIncidentEnergies(good_true_incEnergies, scale);
   }
 
   for (auto it = sample_scales.begin(); it != sample_scales.end(); ++it) {
@@ -1955,7 +2003,9 @@ void protoana::AbsCexDriver::FakeDataBinnedScales(
   double true_beam_interactingEnergy, reco_beam_interactingEnergy;
   double true_beam_endP;
   std::vector<double> * reco_beam_incidentEnergies = 0x0,
+                      * true_beam_traj_KE = 0x0,
                       * true_beam_traj_Z = 0x0;
+  std::vector<int>    * true_beam_slices = 0x0;
   double reco_beam_endZ;
   tree->SetBranchAddress("reco_beam_endZ", &reco_beam_endZ);
   tree->SetBranchAddress("new_interaction_topology", &sample_ID);
@@ -1963,11 +2013,16 @@ void protoana::AbsCexDriver::FakeDataBinnedScales(
   tree->SetBranchAddress("true_beam_interactingEnergy",
                          &true_beam_interactingEnergy);
   tree->SetBranchAddress("true_beam_endP", &true_beam_endP);
+  tree->SetBranchAddress("true_beam_traj_KE", &true_beam_traj_KE);
+  tree->SetBranchAddress("true_beam_slices", &true_beam_slices);
   tree->SetBranchAddress("true_beam_traj_Z", &true_beam_traj_Z);
   tree->SetBranchAddress("reco_beam_interactingEnergy",
                          &reco_beam_interactingEnergy);
   tree->SetBranchAddress("reco_beam_incidentEnergies",
                          &reco_beam_incidentEnergies);
+  std::vector<double> * true_beam_incidentEnergies = 0x0;
+  tree->SetBranchAddress("true_beam_incidentEnergies",
+                         &true_beam_incidentEnergies);
 
   TH1D & incident_hist = data_set.GetIncidentHist();
   std::map<int, TH1 *> & selected_hists = data_set.GetSelectionHists();
@@ -1984,15 +2039,14 @@ void protoana::AbsCexDriver::FakeDataBinnedScales(
   for (int i = /*0*/split_val; i < tree->GetEntries(); ++i) {
     tree->GetEntry(i);
 
-    std::string slice_method = fExtraOptions.get<std::string>("SliceMethod");
     double end_energy = true_beam_interactingEnergy;
-    if (slice_method == "Traj") {
+    if (fSliceMethod == "Traj") {
       end_energy = sqrt(true_beam_endP*true_beam_endP*1.e6 + 139.57*139.57) - 139.57;
     }
-    else if (slice_method == "E") {
+    else if (fSliceMethod == "E") {
       end_energy = sqrt(true_beam_endP*true_beam_endP*1.e6 + 139.57*139.57) - 139.57;
     }
-    else if (slice_method == "Alt") {
+    else if (fSliceMethod == "Alt") {
       int bin = fEndSlices->GetXaxis()->FindBin(true_beam_traj_Z->back());
       if (bin > 0) {
         end_energy = fMeans.at(bin);
@@ -2010,7 +2064,8 @@ void protoana::AbsCexDriver::FakeDataBinnedScales(
     //If it's signal
     //Determine if the over/underflow bin 
     bool is_signal = signal_sample_checks.at(sample_ID);
-    if (is_signal && is_scaled) {
+    ThinSliceSample * this_sample = 0x0;
+    if (is_signal) {
       std::vector<ThinSliceSample> & samples_vec = samples[sample_ID][0];
       //Get the samples vec from the first beam energy bin
       bool found = false;
@@ -2018,30 +2073,42 @@ void protoana::AbsCexDriver::FakeDataBinnedScales(
         ThinSliceSample & sample = samples_vec.at(j);
         if (sample.CheckInSignalRange(end_energy)) {     
           found = true;
-          scale = fake_data_scales.at(sample_ID)[j];
-          sample_scales[sample_ID][j] += scale;
-          nominal_samples[sample_ID][j] += 1.;
+          if (is_scaled) {
+            scale = fake_data_scales.at(sample_ID)[j];
+            sample_scales[sample_ID][j] += scale;
+            nominal_samples[sample_ID][j] += 1.;
+          }
+          this_sample = &sample;
           break;
         }
       }
       if (!found) {
         if (end_energy < samples_vec[1].RangeLowEnd()) {
-          scale = fake_data_scales.at(sample_ID)[0];
-          sample_scales[sample_ID][0] += scale;
-          nominal_samples[sample_ID][0] += 1.;
+          this_sample = &samples_vec[0];
+          if (is_scaled) {
+            scale = fake_data_scales.at(sample_ID)[0];
+            sample_scales[sample_ID][0] += scale;
+            nominal_samples[sample_ID][0] += 1.;
+          }
         }
-        else {
-          scale = fake_data_scales.at(sample_ID).back();
-          sample_scales[sample_ID].back() += scale;
-          nominal_samples[sample_ID].back() += 1.;
+        else if (end_energy >
+                 samples_vec[samples_vec.size()-2].RangeHighEnd()) {
+          this_sample = &samples_vec.back();
+          if (is_scaled) {
+            scale = fake_data_scales.at(sample_ID).back();
+            sample_scales[sample_ID].back() += scale;
+            nominal_samples[sample_ID].back() += 1.;
+          }
         }
       }
     }
-
-    if (!is_signal && is_scaled) {
-      scale = fake_data_scales.at(sample_ID)[0];
-      sample_scales[sample_ID][0] += scale;
-      nominal_samples[sample_ID][0] += 1.;
+    if (!is_signal) {
+      if (is_scaled) {
+        scale = fake_data_scales.at(sample_ID)[0];
+        sample_scales[sample_ID][0] += scale;
+        nominal_samples[sample_ID][0] += 1.;
+      }
+      this_sample = &samples[sample_ID][0][0];
     }
 
 
@@ -2099,6 +2166,47 @@ void protoana::AbsCexDriver::FakeDataBinnedScales(
     }
 
     selected_hists[selection_ID]->Fill(val, scale);
+    std::vector<double> good_true_incEnergies = MakeTrueIncidentEnergies(
+        *true_beam_traj_Z, *true_beam_traj_KE, *true_beam_slices,
+        *true_beam_incidentEnergies);
+    //if (fSliceMethod == "Traj") {
+    //  double next_slice_z = fTrajZStart;
+    //  int next_slice_num = 0;
+    //  for (size_t j = 1; j < true_beam_traj_Z->size() - 1; ++j) {
+    //    double z = (*true_beam_traj_Z)[j];
+    //    double ke = (*true_beam_traj_KE)[j];
+
+    //    if (z < fTrajZStart) {
+    //      //std::cout << "Skipping " << z << std::endl;
+    //      continue;
+    //    }
+
+    //    if (z >= next_slice_z) {
+    //      double temp_z = (*true_beam_traj_Z)[j-1];
+    //      double temp_e = (*true_beam_traj_KE)[j-1];
+    //      
+    //      while (next_slice_z < z && next_slice_num < fSliceCut) {
+    //        double sub_z = next_slice_z - temp_z;
+    //        double delta_e = (*true_beam_traj_KE)[j-1] - ke;
+    //        double delta_z = z - (*true_beam_traj_Z)[j-1]/* - z*/;
+    //        temp_e -= (sub_z/delta_z)*delta_e;
+    //        good_true_incEnergies.push_back(temp_e);
+    //        temp_z = next_slice_z;
+    //        next_slice_z += fPitch;
+    //        ++next_slice_num;
+    //      }
+    //    }
+    //  }
+    //}
+    //else if (fSliceMethod == "Default") {
+    //  for (size_t j = 0; j < true_beam_incidentEnergies->size(); ++j) {
+    //    int slice = (*true_beam_slices)[j]; 
+    //    if (slice > fSliceCut) continue;
+    //    good_true_incEnergies.push_back((*true_beam_incidentEnergies)[j]);
+    //  }
+    //}
+    this_sample->AddVariedFlux(scale);
+    this_sample->AddIncidentEnergies(good_true_incEnergies, scale);
   }
 
   for (auto it = sample_scales.begin(); it != sample_scales.end(); ++it) {
@@ -2113,7 +2221,7 @@ void protoana::AbsCexDriver::FakeDataBinnedScales(
     }
   }
 
-  std::cout << "Flux: " << flux << " new_flux: " << new_flux << std::endl;
+  //std::cout << "Flux: " << flux << " new_flux: " << new_flux << std::endl;
 
   incident_hist.Scale(flux/new_flux);
   for (auto it = selected_hists.begin(); it != selected_hists.end(); ++it) {
@@ -2149,8 +2257,15 @@ void protoana::AbsCexDriver::FakeDataG4RW(
                          &reco_beam_interactingEnergy);
   tree->SetBranchAddress("reco_beam_incidentEnergies",
                          &reco_beam_incidentEnergies);
-  std::vector<double> * true_beam_traj_Z = 0x0;
+  std::vector<double> * true_beam_traj_Z = 0x0,
+                      * true_beam_traj_KE = 0x0;
+  std::vector<int>    * true_beam_slices = 0x0;
   tree->SetBranchAddress("true_beam_traj_Z", &true_beam_traj_Z);
+  tree->SetBranchAddress("true_beam_traj_KE", &true_beam_traj_KE);
+  tree->SetBranchAddress("true_beam_slices", &true_beam_slices);
+  std::vector<double> * true_beam_incidentEnergies = 0x0;
+  tree->SetBranchAddress("true_beam_incidentEnergies",
+                         &true_beam_incidentEnergies);
 
   if (g4rw_options.get<int>("Shift") > 0) {
     if (g4rw_options.get<bool>("Full")) {
@@ -2191,15 +2306,14 @@ void protoana::AbsCexDriver::FakeDataG4RW(
     if (samples.find(sample_ID) == samples.end())
       continue;
 
-    std::string slice_method = fExtraOptions.get<std::string>("SliceMethod");
     double end_energy = true_beam_interactingEnergy;
-    if (slice_method == "Traj") {
+    if (fSliceMethod == "Traj") {
       end_energy = sqrt(true_beam_endP*true_beam_endP*1.e6 + 139.57*139.57) - 139.57;
     }
-    else if (slice_method == "E") {
+    else if (fSliceMethod == "E") {
       end_energy = sqrt(true_beam_endP*true_beam_endP*1.e6 + 139.57*139.57) - 139.57;
     }
-    else if (slice_method == "Alt") {
+    else if (fSliceMethod == "Alt") {
       int bin = fEndSlices->GetXaxis()->FindBin(true_beam_traj_Z->back());
       if (bin > 0) {
         end_energy = fMeans.at(bin);
@@ -2212,6 +2326,7 @@ void protoana::AbsCexDriver::FakeDataG4RW(
     }
 
     bool is_signal = signal_sample_checks.at(sample_ID);
+    ThinSliceSample * this_sample = 0x0;
     if (is_signal) {
       std::vector<ThinSliceSample> & samples_vec = samples[sample_ID][0];
       //Get the samples vec from the first beam energy bin
@@ -2222,6 +2337,7 @@ void protoana::AbsCexDriver::FakeDataG4RW(
           found = true;
           sample_scales[sample_ID][j] += scale;
           nominal_samples[sample_ID][j] += 1.;
+          this_sample = &sample;
           break;
         }
       }
@@ -2229,14 +2345,18 @@ void protoana::AbsCexDriver::FakeDataG4RW(
         if (end_energy < samples_vec[1].RangeLowEnd()) {
           sample_scales[sample_ID][0] += scale;
           nominal_samples[sample_ID][0] += 1.;
+          this_sample = &samples_vec[0];
         }
-        else {
+        else if (end_energy >
+                 samples_vec[samples_vec.size()-2].RangeHighEnd()) {
+          this_sample = &samples_vec.back();
           sample_scales[sample_ID].back() += scale;
           nominal_samples[sample_ID].back() += 1.;
         }
       }
     }
     else {
+      this_sample = &samples[sample_ID][0][0];
       sample_scales[sample_ID][0] += scale;
       nominal_samples[sample_ID][0] += 1.;
     }
@@ -2294,6 +2414,47 @@ void protoana::AbsCexDriver::FakeDataG4RW(
     }
 
     selected_hists[selection_ID]->Fill(val, scale);
+    this_sample->AddVariedFlux(scale);
+    std::vector<double> good_true_incEnergies = MakeTrueIncidentEnergies(
+        *true_beam_traj_Z, *true_beam_traj_KE, *true_beam_slices,
+        *true_beam_incidentEnergies);
+    //if (fSliceMethod == "Traj") {
+    //  double next_slice_z = fTrajZStart;
+    //  int next_slice_num = 0;
+    //  for (size_t j = 1; j < true_beam_traj_Z->size() - 1; ++j) {
+    //    double z = (*true_beam_traj_Z)[j];
+    //    double ke = (*true_beam_traj_KE)[j];
+
+    //    if (z < fTrajZStart) {
+    //      //std::cout << "Skipping " << z << std::endl;
+    //      continue;
+    //    }
+
+    //    if (z >= next_slice_z) {
+    //      double temp_z = (*true_beam_traj_Z)[j-1];
+    //      double temp_e = (*true_beam_traj_KE)[j-1];
+    //      
+    //      while (next_slice_z < z && next_slice_num < fSliceCut) {
+    //        double sub_z = next_slice_z - temp_z;
+    //        double delta_e = (*true_beam_traj_KE)[j-1] - ke;
+    //        double delta_z = z - (*true_beam_traj_Z)[j-1]/* - z*/;
+    //        temp_e -= (sub_z/delta_z)*delta_e;
+    //        good_true_incEnergies.push_back(temp_e);
+    //        temp_z = next_slice_z;
+    //        next_slice_z += fPitch;
+    //        ++next_slice_num;
+    //      }
+    //    }
+    //  }
+    //}
+    //else if (fSliceMethod == "Default") {
+    //  for (size_t j = 0; j < true_beam_incidentEnergies->size(); ++j) {
+    //    int slice = (*true_beam_slices)[j]; 
+    //    if (slice > fSliceCut) continue;
+    //    good_true_incEnergies.push_back((*true_beam_incidentEnergies)[j]);
+    //  }
+    //}
+    this_sample->AddIncidentEnergies(good_true_incEnergies, scale);
   }
 
   for (auto it = sample_scales.begin(); it != sample_scales.end(); ++it) {
@@ -2321,7 +2482,9 @@ void protoana::AbsCexDriver::FakeDataG4RWGrid(
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     const std::map<int, bool> & signal_sample_checks,
     ThinSliceDataSet & data_set, double & flux,
-    std::map<int, std::vector<double>> & sample_scales, int split_val) {
+    std::map<int, std::vector<double>> & sample_scales,
+    std::vector<double> & beam_energy_bins,
+    int split_val) {
 
   //Build the map for fake data scales
   fhicl::ParameterSet g4rw_options 
@@ -2329,7 +2492,7 @@ void protoana::AbsCexDriver::FakeDataG4RWGrid(
 
   int sample_ID, selection_ID; 
   double true_beam_interactingEnergy, reco_beam_interactingEnergy;
-  double true_beam_endP;
+  double true_beam_startP, true_beam_endP;
   std::vector<double> * reco_beam_incidentEnergies = 0x0;
   double reco_beam_endZ;
   tree->SetBranchAddress("reco_beam_endZ", &reco_beam_endZ);
@@ -2342,8 +2505,16 @@ void protoana::AbsCexDriver::FakeDataG4RWGrid(
                          &reco_beam_interactingEnergy);
   tree->SetBranchAddress("reco_beam_incidentEnergies",
                          &reco_beam_incidentEnergies);
-  std::vector<double> * true_beam_traj_Z = 0x0;
+  tree->SetBranchAddress("true_beam_startP", &true_beam_startP);
+  std::vector<double> * true_beam_traj_Z = 0x0,
+                      * true_beam_traj_KE = 0x0;
+  std::vector<int>    * true_beam_slices = 0x0;
   tree->SetBranchAddress("true_beam_traj_Z", &true_beam_traj_Z);
+  tree->SetBranchAddress("true_beam_traj_KE", &true_beam_traj_KE);
+  tree->SetBranchAddress("true_beam_slices", &true_beam_slices);
+  std::vector<double> * true_beam_incidentEnergies = 0x0;
+  tree->SetBranchAddress("true_beam_incidentEnergies",
+                         &true_beam_incidentEnergies);
 
   //std::vector<double> * g4rw_weight = 0x0;
   std::vector<std::vector<double>> * g4rw_full_grid_weights = 0x0;
@@ -2373,15 +2544,14 @@ void protoana::AbsCexDriver::FakeDataG4RWGrid(
     if (samples.find(sample_ID) == samples.end())
       continue;
 
-    std::string slice_method = fExtraOptions.get<std::string>("SliceMethod");
     double end_energy = true_beam_interactingEnergy;
-    if (slice_method == "Traj") {
+    if (fSliceMethod == "Traj") {
       end_energy = sqrt(true_beam_endP*true_beam_endP*1.e6 + 139.57*139.57) - 139.57;
     }
-    else if (slice_method == "E") {
+    else if (fSliceMethod == "E") {
       end_energy = sqrt(true_beam_endP*true_beam_endP*1.e6 + 139.57*139.57) - 139.57;
     }
-    else if (slice_method == "Alt") {
+    else if (fSliceMethod == "Alt") {
       int bin = fEndSlices->GetXaxis()->FindBin(true_beam_traj_Z->back());
       if (bin > 0) {
         end_energy = fMeans.at(bin);
@@ -2402,13 +2572,32 @@ void protoana::AbsCexDriver::FakeDataG4RWGrid(
         size_t shift = g4rw_shift[j];
         if ((*g4rw_full_grid_weights)[pos].size() > 0) {
           scale *= (*g4rw_full_grid_weights)[pos][shift];
+          //std::cout << "Grid: " << j << " " << pos << " " << shift << " " <<
+          //             (*g4rw_full_grid_weights)[pos][shift] << std::endl;
         }
       }
     }
 
+    //Look for the coinciding energy bin
+    //int bin = -1;
+    //for (size_t j = 1; j < beam_energy_bins.size(); ++j) {
+    //  if ((beam_energy_bins[j-1] <= 1.e3*true_beam_startP) &&
+    //      (1.e3*true_beam_startP < beam_energy_bins[j])) {
+    //    bin = j - 1;
+    //    break;
+    //  }
+    //}
+    //if (bin == -1) {
+    //  std::string message = "Could not find beam energy bin for " +
+    //                        std::to_string(true_beam_startP);
+    //  throw std::runtime_error(message);
+    //}
+    int bin = GetBeamBin(beam_energy_bins, true_beam_startP);
+
     bool is_signal = signal_sample_checks.at(sample_ID);
+    ThinSliceSample * this_sample = 0x0;
     if (is_signal) {
-      std::vector<ThinSliceSample> & samples_vec = samples[sample_ID][0];
+      std::vector<ThinSliceSample> & samples_vec = samples[sample_ID][bin];
       //Get the samples vec from the first beam energy bin
       bool found = false;
       for (size_t j = 1; j < samples_vec.size()-1; ++j) {
@@ -2417,6 +2606,7 @@ void protoana::AbsCexDriver::FakeDataG4RWGrid(
           found = true;
           sample_scales[sample_ID][j] += scale;
           nominal_samples[sample_ID][j] += 1.;
+          this_sample = &sample;
           break;
         }
       }
@@ -2424,14 +2614,21 @@ void protoana::AbsCexDriver::FakeDataG4RWGrid(
         if (end_energy < samples_vec[1].RangeLowEnd()) {
           sample_scales[sample_ID][0] += scale;
           nominal_samples[sample_ID][0] += 1.;
+          this_sample = &samples_vec[0];
         }
-        else {
+        else if (end_energy >
+                 samples_vec[samples_vec.size()-2].RangeHighEnd()) {
+          this_sample = &samples_vec.back();
           sample_scales[sample_ID].back() += scale;
           nominal_samples[sample_ID].back() += 1.;
+        }
+        else {
+         std::cout << "Could not find the sample" << std::endl;
         }
       }
     }
     else {
+      this_sample = &samples[sample_ID][bin][0];
       sample_scales[sample_ID][0] += scale;
       nominal_samples[sample_ID][0] += 1.;
     }
@@ -2461,11 +2658,12 @@ void protoana::AbsCexDriver::FakeDataG4RWGrid(
       if (selected_hists.find(selection_ID) != selected_hists.end()) {
         if (selection_ID != 4 && selection_ID != 5 && selection_ID != 6) {
           double energy = reco_beam_interactingEnergy;
-          if (fExtraOptions.get<bool>("DoEnergyFix")) {
+         // if (fExtraOptions.get<bool>("DoEnergyFix")) {
+          if (fDoEnergyFix) {
             for (size_t k = 1; k < reco_beam_incidentEnergies->size(); ++k) {
               double deltaE = ((*reco_beam_incidentEnergies)[k-1] -
                                (*reco_beam_incidentEnergies)[k]);
-              if (deltaE > fExtraOptions.get<double>("EnergyFix")) {
+              if (deltaE > fEnergyFix) {
                 energy += deltaE; 
               }
             }
@@ -2489,6 +2687,47 @@ void protoana::AbsCexDriver::FakeDataG4RWGrid(
     }
 
     selected_hists[selection_ID]->Fill(val, scale);
+    this_sample->AddVariedFlux(scale);
+    std::vector<double> good_true_incEnergies = MakeTrueIncidentEnergies(
+        *true_beam_traj_Z, *true_beam_traj_KE, *true_beam_slices,
+        *true_beam_incidentEnergies);
+    //if (fSliceMethod == "Traj") {
+    //  double next_slice_z = fTrajZStart;
+    //  int next_slice_num = 0;
+    //  for (size_t j = 1; j < true_beam_traj_Z->size() - 1; ++j) {
+    //    double z = (*true_beam_traj_Z)[j];
+    //    double ke = (*true_beam_traj_KE)[j];
+
+    //    if (z < fTrajZStart) {
+    //      //std::cout << "Skipping " << z << std::endl;
+    //      continue;
+    //    }
+
+    //    if (z >= next_slice_z) {
+    //      double temp_z = (*true_beam_traj_Z)[j-1];
+    //      double temp_e = (*true_beam_traj_KE)[j-1];
+    //      
+    //      while (next_slice_z < z && next_slice_num < fSliceCut) {
+    //        double sub_z = next_slice_z - temp_z;
+    //        double delta_e = (*true_beam_traj_KE)[j-1] - ke;
+    //        double delta_z = z - (*true_beam_traj_Z)[j-1]/* - z*/;
+    //        temp_e -= (sub_z/delta_z)*delta_e;
+    //        good_true_incEnergies.push_back(temp_e);
+    //        temp_z = next_slice_z;
+    //        next_slice_z += fPitch;
+    //        ++next_slice_num;
+    //      }
+    //    }
+    //  }
+    //}
+    //else if (fSliceMethod == "Default") {
+    //  for (size_t j = 0; j < true_beam_incidentEnergies->size(); ++j) {
+    //    int slice = (*true_beam_slices)[j]; 
+    //    if (slice > fSliceCut) continue;
+    //    good_true_incEnergies.push_back((*true_beam_incidentEnergies)[j]);
+    //  }
+    //}
+    this_sample->AddIncidentEnergies(good_true_incEnergies, scale);
   }
 
   for (auto it = sample_scales.begin(); it != sample_scales.end(); ++it) {
@@ -2500,6 +2739,9 @@ void protoana::AbsCexDriver::FakeDataG4RWGrid(
         it->second[i] = 1.;
       }
       it->second[i] *= (flux/new_flux);
+      //for (size_t j = 0; j < samples[it->first][i].size(); ++j) {
+      //  samples[it->first][i][j].SetFactorAndScale(flux/new_flux);
+      //}
     }
   }
 
@@ -2551,8 +2793,15 @@ void protoana::AbsCexDriver::FakeDataPionAngle(
                          &reco_beam_interactingEnergy);
   tree->SetBranchAddress("reco_beam_incidentEnergies",
                          &reco_beam_incidentEnergies);
-  std::vector<double> * true_beam_traj_Z = 0x0;
+  std::vector<double> * true_beam_traj_Z = 0x0,
+                      * true_beam_traj_KE = 0x0;
+  std::vector<int>    * true_beam_slices = 0x0;
   tree->SetBranchAddress("true_beam_traj_Z", &true_beam_traj_Z);
+  tree->SetBranchAddress("true_beam_traj_KE", &true_beam_traj_KE);
+  tree->SetBranchAddress("true_beam_slices", &true_beam_slices);
+  std::vector<double> * true_beam_incidentEnergies = 0x0;
+  tree->SetBranchAddress("true_beam_incidentEnergies",
+                         &true_beam_incidentEnergies);
 
   TH1D & incident_hist = data_set.GetIncidentHist();
   std::map<int, TH1 *> & selected_hists = data_set.GetSelectionHists();
@@ -2582,15 +2831,14 @@ void protoana::AbsCexDriver::FakeDataPionAngle(
     if (samples.find(sample_ID) == samples.end())
       continue;
 
-    std::string slice_method = fExtraOptions.get<std::string>("SliceMethod");
     double end_energy = true_beam_interactingEnergy;
-    if (slice_method == "Traj") {
+    if (fSliceMethod == "Traj") {
       end_energy = sqrt(true_beam_endP*true_beam_endP*1.e6 + 139.57*139.57) - 139.57;
     }
-    else if (slice_method == "E") {
+    else if (fSliceMethod == "E") {
       end_energy = sqrt(true_beam_endP*true_beam_endP*1.e6 + 139.57*139.57) - 139.57;
     }
-    else if (slice_method == "Alt") {
+    else if (fSliceMethod == "Alt") {
       int bin = fEndSlices->GetXaxis()->FindBin(true_beam_traj_Z->back());
       if (bin > 0) {
         end_energy = fMeans.at(bin);
@@ -2642,6 +2890,7 @@ void protoana::AbsCexDriver::FakeDataPionAngle(
     }
 
     bool is_signal = signal_sample_checks.at(sample_ID);
+    ThinSliceSample * this_sample = 0x0;
     if (is_signal) {
       std::vector<ThinSliceSample> & samples_vec = samples[sample_ID][0];
       //Get the samples vec from the first beam energy bin
@@ -2652,6 +2901,7 @@ void protoana::AbsCexDriver::FakeDataPionAngle(
           found = true;
           sample_scales[sample_ID][j] += scale;
           nominal_samples[sample_ID][j] += 1.;
+          this_sample = &sample;
           break;
         }
       }
@@ -2659,14 +2909,17 @@ void protoana::AbsCexDriver::FakeDataPionAngle(
         if (end_energy < samples_vec[1].RangeLowEnd()) {
           sample_scales[sample_ID][0] += scale;
           nominal_samples[sample_ID][0] += 1.;
+          this_sample = &samples_vec[0];
         }
         else {
+          this_sample = &samples_vec.back();
           sample_scales[sample_ID].back() += scale;
           nominal_samples[sample_ID].back() += 1.;
         }
       }
     }
     else {
+      this_sample = &samples[sample_ID][0][0];
       sample_scales[sample_ID][0] += scale;
       nominal_samples[sample_ID][0] += 1.;
     }
@@ -2724,6 +2977,47 @@ void protoana::AbsCexDriver::FakeDataPionAngle(
     }
 
     selected_hists[selection_ID]->Fill(val, scale);
+    this_sample->AddVariedFlux(scale);
+    std::vector<double> good_true_incEnergies = MakeTrueIncidentEnergies(
+        *true_beam_traj_Z, *true_beam_traj_KE, *true_beam_slices,
+        *true_beam_incidentEnergies);
+    //if (fSliceMethod == "Traj") {
+    //  double next_slice_z = fTrajZStart;
+    //  int next_slice_num = 0;
+    //  for (size_t j = 1; j < true_beam_traj_Z->size() - 1; ++j) {
+    //    double z = (*true_beam_traj_Z)[j];
+    //    double ke = (*true_beam_traj_KE)[j];
+
+    //    if (z < fTrajZStart) {
+    //      //std::cout << "Skipping " << z << std::endl;
+    //      continue;
+    //    }
+
+    //    if (z >= next_slice_z) {
+    //      double temp_z = (*true_beam_traj_Z)[j-1];
+    //      double temp_e = (*true_beam_traj_KE)[j-1];
+    //      
+    //      while (next_slice_z < z && next_slice_num < fSliceCut) {
+    //        double sub_z = next_slice_z - temp_z;
+    //        double delta_e = (*true_beam_traj_KE)[j-1] - ke;
+    //        double delta_z = z - (*true_beam_traj_Z)[j-1]/* - z*/;
+    //        temp_e -= (sub_z/delta_z)*delta_e;
+    //        good_true_incEnergies.push_back(temp_e);
+    //        temp_z = next_slice_z;
+    //        next_slice_z += fPitch;
+    //        ++next_slice_num;
+    //      }
+    //    }
+    //  }
+    //}
+    //else if (fSliceMethod == "Default") {
+    //  for (size_t j = 0; j < true_beam_incidentEnergies->size(); ++j) {
+    //    int slice = (*true_beam_slices)[j]; 
+    //    if (slice > fSliceCut) continue;
+    //    good_true_incEnergies.push_back((*true_beam_incidentEnergies)[j]);
+    //  }
+    //}
+    this_sample->AddIncidentEnergies(good_true_incEnergies, scale);
   }
 
   for (auto it = sample_scales.begin(); it != sample_scales.end(); ++it) {
@@ -2747,7 +3041,10 @@ void protoana::AbsCexDriver::FakeDataPionAngle(
 }
 
 void protoana::AbsCexDriver::FakeDatadEdX(
-    TTree * tree, ThinSliceDataSet & data_set, double & flux,
+    TTree * tree,
+    std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+    const std::map<int, bool> & signal_sample_checks,
+    ThinSliceDataSet & data_set, double & flux,
     std::map<int, std::vector<double>> & sample_scales, int split_val) {
 
   fhicl::ParameterSet dEdX_options 
@@ -2779,12 +3076,13 @@ void protoana::AbsCexDriver::FakeDatadEdX(
   //double nominal_CCal = dEdX_options.get<double>("NominalCCal");
   double varied_CCal = dEdX_options.get<double>("VariedCCal");
 
-  int selection_ID; 
+  int selection_ID, sample_ID;
   double beam_inst_P;
   double reco_beam_endZ;
   std::vector<double> * calibrated_dQdX = 0x0, * beam_EField = 0x0,
                       * track_pitch = 0x0, * reco_beam_incidentEnergies = 0x0;
   tree->SetBranchAddress("selection_ID", &selection_ID);
+  tree->SetBranchAddress("new_interaction_topology", &sample_ID);
   tree->SetBranchAddress("reco_beam_calibrated_dQdX_SCE", &calibrated_dQdX);
   tree->SetBranchAddress("reco_beam_EField_SCE", &beam_EField);
   tree->SetBranchAddress("reco_beam_TrkPitch_SCE", &track_pitch);
@@ -2792,6 +3090,21 @@ void protoana::AbsCexDriver::FakeDatadEdX(
                          &reco_beam_incidentEnergies);
   tree->SetBranchAddress("beam_inst_P", &beam_inst_P);
   tree->SetBranchAddress("reco_beam_endZ", &reco_beam_endZ);
+
+  std::vector<double> * true_beam_traj_Z = 0x0,
+                      * true_beam_traj_KE = 0x0;
+  std::vector<int>    * true_beam_slices = 0x0;
+  tree->SetBranchAddress("true_beam_traj_Z", &true_beam_traj_Z);
+  tree->SetBranchAddress("true_beam_traj_KE", &true_beam_traj_KE);
+  tree->SetBranchAddress("true_beam_slices", &true_beam_slices);
+  std::vector<double> * true_beam_incidentEnergies = 0x0;
+  tree->SetBranchAddress("true_beam_incidentEnergies",
+                         &true_beam_incidentEnergies);
+  double true_beam_endP;
+  double true_beam_interactingEnergy;
+  tree->SetBranchAddress("true_beam_interactingEnergy",
+                         &true_beam_interactingEnergy);
+  tree->SetBranchAddress("true_beam_endP", &true_beam_endP);
 
   std::map<int, TH1 *> & selection_hists = data_set.GetSelectionHists();
   flux = tree->GetEntries() - split_val;
@@ -2851,7 +3164,78 @@ void protoana::AbsCexDriver::FakeDatadEdX(
       val = selection_hist->GetBinCenter(1);
     }
 
+    double end_energy = true_beam_interactingEnergy;
+    if (fSliceMethod == "Traj") {
+      end_energy = sqrt(true_beam_endP*true_beam_endP*1.e6 + 139.57*139.57) - 139.57;
+    }
     selection_hist->Fill(val);
+    bool is_signal = signal_sample_checks.at(sample_ID);
+    ThinSliceSample * this_sample = 0x0;
+    if (is_signal) {
+      std::vector<ThinSliceSample> & samples_vec = samples[sample_ID][0];
+      //Get the samples vec from the first beam energy bin
+      bool found = false;
+      for (size_t j = 1; j < samples_vec.size()-1; ++j) {
+        ThinSliceSample & sample = samples_vec.at(j);
+        if (sample.CheckInSignalRange(end_energy)) {     
+          this_sample = &sample;
+          break;
+        }
+      }
+      if (!found) {
+        if (end_energy < samples_vec[1].RangeLowEnd()) {
+          this_sample = &samples_vec[0];
+        }
+        else if (end_energy >
+                 samples_vec[samples_vec.size()-2].RangeHighEnd()) {
+          this_sample = &samples_vec.back();
+        }
+      }
+    }
+    else {
+      this_sample = &samples[sample_ID][0][0];
+    }
+    this_sample->AddVariedFlux();
+    std::vector<double> good_true_incEnergies = MakeTrueIncidentEnergies(
+        *true_beam_traj_Z, *true_beam_traj_KE, *true_beam_slices,
+        *true_beam_incidentEnergies);
+    //if (fSliceMethod == "Traj") {
+    //  double next_slice_z = fTrajZStart;
+    //  int next_slice_num = 0;
+    //  for (size_t j = 1; j < true_beam_traj_Z->size() - 1; ++j) {
+    //    double z = (*true_beam_traj_Z)[j];
+    //    double ke = (*true_beam_traj_KE)[j];
+
+    //    if (z < fTrajZStart) {
+    //      //std::cout << "Skipping " << z << std::endl;
+    //      continue;
+    //    }
+
+    //    if (z >= next_slice_z) {
+    //      double temp_z = (*true_beam_traj_Z)[j-1];
+    //      double temp_e = (*true_beam_traj_KE)[j-1];
+    //      
+    //      while (next_slice_z < z && next_slice_num < fSliceCut) {
+    //        double sub_z = next_slice_z - temp_z;
+    //        double delta_e = (*true_beam_traj_KE)[j-1] - ke;
+    //        double delta_z = z - (*true_beam_traj_Z)[j-1]/* - z*/;
+    //        temp_e -= (sub_z/delta_z)*delta_e;
+    //        good_true_incEnergies.push_back(temp_e);
+    //        temp_z = next_slice_z;
+    //        next_slice_z += fPitch;
+    //        ++next_slice_num;
+    //      }
+    //    }
+    //  }
+    //}
+    //else if (fSliceMethod == "Default") {
+    //  for (size_t j = 0; j < true_beam_incidentEnergies->size(); ++j) {
+    //    int slice = (*true_beam_slices)[j]; 
+    //    if (slice > fSliceCut) continue;
+    //    good_true_incEnergies.push_back((*true_beam_incidentEnergies)[j]);
+    //  }
+    //}
+    this_sample->AddIncidentEnergies(good_true_incEnergies);
 
   }
   for (auto it = sample_scales.begin(); it != sample_scales.end(); ++it) {
@@ -2887,8 +3271,15 @@ void protoana::AbsCexDriver::FakeDataEffVar(
                          &reco_beam_interactingEnergy);
   tree->SetBranchAddress("reco_beam_incidentEnergies",
                          &reco_beam_incidentEnergies);
-  std::vector<double> * true_beam_traj_Z = 0x0;
+  std::vector<double> * true_beam_traj_Z = 0x0,
+                      * true_beam_traj_KE = 0x0;
+  std::vector<int>    * true_beam_slices = 0x0;
   tree->SetBranchAddress("true_beam_traj_Z", &true_beam_traj_Z);
+  tree->SetBranchAddress("true_beam_traj_KE", &true_beam_traj_KE);
+  tree->SetBranchAddress("true_beam_slices", &true_beam_slices);
+  std::vector<double> * true_beam_incidentEnergies = 0x0;
+  tree->SetBranchAddress("true_beam_incidentEnergies",
+                         &true_beam_incidentEnergies);
 
   std::vector<double> * daughter_Theta = 0x0; 
   tree->SetBranchAddress("reco_daughter_allTrack_Theta",
@@ -2919,53 +3310,11 @@ void protoana::AbsCexDriver::FakeDataEffVar(
     if (samples.find(sample_ID) == samples.end())
       continue;
 
-    std::string slice_method = fExtraOptions.get<std::string>("SliceMethod");
-    //double end_energy = true_beam_interactingEnergy;
-    //if (slice_method == "Traj") {
-    //  end_energy = sqrt(true_beam_endP*true_beam_endP*1.e6 + 139.57*139.57) - 139.57;
-    //}
-    //else if (slice_method == "E") {
-    //  end_energy = sqrt(true_beam_endP*true_beam_endP*1.e6 + 139.57*139.57) - 139.57;
-    //}
-    //else if (slice_method == "Alt") {
-    //  int bin = fEndSlices->GetXaxis()->FindBin(true_beam_traj_Z->back());
-    //  if (bin > 0) {
-    //    end_energy = fMeans.at(bin);
-    //  }
-    //}
+    double end_energy = true_beam_interactingEnergy;
+    if (fSliceMethod == "Traj") {
+      end_energy = sqrt(true_beam_endP*true_beam_endP*1.e6 + 139.57*139.57) - 139.57;
+    }
 
-
-    //bool is_signal = signal_sample_checks.at(sample_ID);
-    //if (is_signal) {
-    //  std::vector<ThinSliceSample> & samples_vec = samples[sample_ID][0];
-    //  //Get the samples vec from the first beam energy bin
-    //  bool found = false;
-    //  for (size_t j = 1; j < samples_vec.size()-1; ++j) {
-    //    ThinSliceSample & sample = samples_vec.at(j);
-    //    if (sample.CheckInSignalRange(end_energy)) {     
-    //      found = true;
-    //      sample_scales[sample_ID][j] += scale;
-    //      nominal_samples[sample_ID][j] += 1.;
-    //      break;
-    //    }
-    //  }
-    //  if (!found) {
-    //    if (end_energy < samples_vec[1].RangeLowEnd()) {
-    //      sample_scales[sample_ID][0] += scale;
-    //      nominal_samples[sample_ID][0] += 1.;
-    //    }
-    //    else {
-    //      sample_scales[sample_ID].back() += scale;
-    //      nominal_samples[sample_ID].back() += 1.;
-    //    }
-    //  }
-    //}
-    //else {
-    //  sample_scales[sample_ID][0] += scale;
-    //  nominal_samples[sample_ID][0] += 1.;
-    //}
-
-    //new_flux ++;
     double val = 0.;
     if (selection_ID == 4) {
       if (selected_hists[selection_ID]->FindBin(reco_beam_endZ) == 0) {
@@ -3017,6 +3366,72 @@ void protoana::AbsCexDriver::FakeDataEffVar(
       val = selected_hists[selection_ID]->GetBinCenter(1);
     }
 
+    bool is_signal = signal_sample_checks.at(sample_ID);
+    ThinSliceSample * this_sample = 0x0;
+    if (is_signal) {
+      std::vector<ThinSliceSample> & samples_vec = samples[sample_ID][0];
+      //Get the samples vec from the first beam energy bin
+      bool found = false;
+      for (size_t j = 1; j < samples_vec.size()-1; ++j) {
+        ThinSliceSample & sample = samples_vec.at(j);
+        if (sample.CheckInSignalRange(end_energy)) {     
+          this_sample = &sample;
+          break;
+        }
+      }
+      if (!found) {
+        if (end_energy < samples_vec[1].RangeLowEnd()) {
+          this_sample = &samples_vec[0];
+        }
+        else if (end_energy >
+                 samples_vec[samples_vec.size()-2].RangeHighEnd()) {
+          this_sample = &samples_vec.back();
+        }
+      }
+    }
+    else {
+      this_sample = &samples[sample_ID][0][0];
+    }
+    this_sample->AddVariedFlux();
+    std::vector<double> good_true_incEnergies;
+    //if (fSliceMethod == "Traj") {
+    //  double next_slice_z = fTrajZStart;
+    //  int next_slice_num = 0;
+    //  for (size_t j = 1; j < true_beam_traj_Z->size() - 1; ++j) {
+    //    double z = (*true_beam_traj_Z)[j];
+    //    double ke = (*true_beam_traj_KE)[j];
+
+    //    if (z < fTrajZStart) {
+    //      //std::cout << "Skipping " << z << std::endl;
+    //      continue;
+    //    }
+
+    //    if (z >= next_slice_z) {
+    //      double temp_z = (*true_beam_traj_Z)[j-1];
+    //      double temp_e = (*true_beam_traj_KE)[j-1];
+    //      
+    //      while (next_slice_z < z && next_slice_num < fSliceCut) {
+    //        double sub_z = next_slice_z - temp_z;
+    //        double delta_e = (*true_beam_traj_KE)[j-1] - ke;
+    //        double delta_z = z - (*true_beam_traj_Z)[j-1]/* - z*/;
+    //        temp_e -= (sub_z/delta_z)*delta_e;
+    //        good_true_incEnergies.push_back(temp_e);
+    //        temp_z = next_slice_z;
+    //        next_slice_z += fPitch;
+    //        ++next_slice_num;
+    //      }
+    //    }
+    //  }
+    //}
+    //else if (fSliceMethod == "Default") {
+    //  for (size_t j = 0; j < true_beam_incidentEnergies->size(); ++j) {
+    //    int slice = (*true_beam_slices)[j]; 
+    //    if (slice > fSliceCut) continue;
+    //    good_true_incEnergies.push_back((*true_beam_incidentEnergies)[j]);
+    //  }
+    //}
+    this_sample->AddIncidentEnergies(good_true_incEnergies);
+
     if (selection_ID < 3) {
       int new_selection = selection_ID;
       for (size_t j = 0; j < daughter_Theta->size(); ++j) {
@@ -3038,24 +3453,6 @@ void protoana::AbsCexDriver::FakeDataEffVar(
     }
   }
 
-  //for (auto it = sample_scales.begin(); it != sample_scales.end(); ++it) {
-  //  for (size_t i = 0; i < it->second.size(); ++i) {
-  //    if (it->second[i] > 0.) {
-  //      it->second[i] /= nominal_samples[it->first][i];
-  //    }
-  //    else {
-  //      it->second[i] = 1.;
-  //    }
-  //    it->second[i] *= (flux/new_flux);
-  //  }
-  //}
-
-  //incident_hist.Scale(flux/new_flux);
-  //for (auto it = selected_hists.begin(); it != selected_hists.end(); ++it) {
-  //  it->second->Scale(flux/new_flux);
-  //}
-
-  //std::cout << "Fluxes: " << flux << " " << new_flux << std::endl;
   for (auto it = sample_scales.begin(); it != sample_scales.end(); ++it) {
     for (size_t i = 0; i < it->second.size(); ++i) {
       it->second[i] = 1.;
@@ -3124,11 +3521,11 @@ std::pair<double, size_t> protoana::AbsCexDriver::CalculateChi2(
       total_data += data_val;
     }
   }
+  //std::cout << "totals (data, mc): " << total_data << " " << total_mc << std::endl;
   /*
-  std::cout << "totals (data, mc): " << total_data << " " << total_mc << std::endl;
   if (total_data != total_mc) {
     std::cout << "Warning: data != mc " << total_data << " " << total_mc <<
-                 std::endl;
+                 " " << chi2 << std::endl;
   }*/
 
   return {chi2, nPoints};
@@ -3355,6 +3752,9 @@ void protoana::AbsCexDriver::CompareSelections(
     hDiff->Draw("ep");
 
     cDiff.Write();
+
+    ///Write in NoStacks here
+
   }
 }
 
@@ -3886,4 +4286,74 @@ double protoana::AbsCexDriver::TruncatedMean(const std::vector<double> & dEdX) {
   }
   if (temp.empty()) return -999.;
   return std::accumulate(temp.begin(), temp.end(), 0.0)/temp.size();
+}
+
+std::vector<double> protoana::AbsCexDriver::MakeTrueIncidentEnergies(
+    const std::vector<double> & true_beam_traj_Z,
+    const std::vector<double> & true_beam_traj_KE,
+    const std::vector<int> & true_beam_slices,
+    const std::vector<double> & true_beam_incidentEnergies) {
+  std::vector<double> results;
+  if (fSliceMethod == "Traj") {
+    double next_slice_z = fTrajZStart;
+    int next_slice_num = 0;
+    for (size_t j = 1; j < true_beam_traj_Z.size() - 1; ++j) {
+      double z = true_beam_traj_Z[j];
+      double ke = true_beam_traj_KE[j];
+
+      if (z < fTrajZStart) {
+        continue;
+      }
+
+      if (z >= next_slice_z) {
+        double temp_z = true_beam_traj_Z[j-1];
+        double temp_e = true_beam_traj_KE[j-1];
+        
+        while (next_slice_z < z && next_slice_num < fSliceCut) {
+          double sub_z = next_slice_z - temp_z;
+          double delta_e = true_beam_traj_KE[j-1] - ke;
+          double delta_z = z - true_beam_traj_Z[j-1];
+          temp_e -= (sub_z/delta_z)*delta_e;
+          results.push_back(temp_e);
+          temp_z = next_slice_z;
+          next_slice_z += fPitch;
+          ++next_slice_num;
+        }
+      }
+    }
+  }
+  else if (fSliceMethod == "Default") {
+    for (size_t j = 0; j < true_beam_incidentEnergies.size(); ++j) {
+      int slice = true_beam_slices[j]; 
+      if (slice > fSliceCut) continue;
+      results.push_back(true_beam_incidentEnergies[j]);
+    }
+  }
+  else if (fSliceMethod == "Alt") {
+    int bin = fEndSlices->GetXaxis()->FindBin(true_beam_traj_Z.back());
+    for (int i = 1; i <= bin; ++i) {
+      results.push_back(fMeans.at(i));
+    }
+  }
+
+  return results;
+}
+
+int protoana::AbsCexDriver::GetBeamBin(
+    const std::vector<double> & beam_energy_bins,
+    const double & true_beam_startP) {
+  int bin = -1;
+  for (size_t j = 1; j < beam_energy_bins.size(); ++j) {
+    if ((beam_energy_bins[j-1] <= 1.e3*true_beam_startP) &&
+        (1.e3*true_beam_startP < beam_energy_bins[j])) {
+      bin = j - 1;
+      break;
+    }
+  }
+  if (bin == -1) {
+    std::string message = "Could not find beam energy bin for " +
+                          std::to_string(true_beam_startP);
+    throw std::runtime_error(message);
+  }
+  return bin;
 }

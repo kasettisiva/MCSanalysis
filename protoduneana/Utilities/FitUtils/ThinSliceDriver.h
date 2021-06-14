@@ -31,6 +31,7 @@ class ThinSliceDriver {
     const std::map<int, bool> & signal_sample_checks,
     ThinSliceDataSet & data_set, double & flux,
     std::map<int, std::vector<double>> & sample_scales,
+    std::vector<double> & beam_energy_bins,
     int split_val = 0) = 0;
 
   virtual void BuildMCSamples(

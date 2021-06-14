@@ -26,6 +26,7 @@ class AbsCexDriver : public ThinSliceDriver {
     const std::map<int, bool> & signal_sample_checks,
     ThinSliceDataSet & data_set, double & flux,
     std::map<int, std::vector<double>> & sample_scales,
+    std::vector<double> & beam_energy_bins,
     int split_val = 0) override;
   void FakeDataSampleScales(
     TTree * tree,
@@ -54,6 +55,7 @@ class AbsCexDriver : public ThinSliceDriver {
     const std::map<int, bool> & signal_sample_checks,
     ThinSliceDataSet & data_set, double & flux,
     std::map<int, std::vector<double>> & sample_scales,
+    std::vector<double> & beam_energy_bins,
     int split_val = 0);
   void FakeDataEffVar(
     TTree * tree,
@@ -65,6 +67,8 @@ class AbsCexDriver : public ThinSliceDriver {
 
   void FakeDatadEdX(
     TTree * tree,
+    std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+    const std::map<int, bool> & signal_sample_checks,
     ThinSliceDataSet & data_set, double & flux,
     std::map<int, std::vector<double>> & sample_scales,
     int split_val = 0);
@@ -263,6 +267,17 @@ class AbsCexDriver : public ThinSliceDriver {
    double fEffVarF, fEffVarCut;
    double fEDivF, fEDivCut, fNoTrackF;
    ProtoDUNETrackUtils fTrackUtil;
+
+   std::vector<double> MakeTrueIncidentEnergies(
+     const std::vector<double> & true_beam_traj_Z,
+     const std::vector<double> & true_beam_traj_KE,
+     const std::vector<int> & true_beam_slices,
+     const std::vector<double> & true_beam_incidentEnergies);
+
+  
+   int GetBeamBin(
+     const std::vector<double> & beam_energy_bins,
+     const double & true_beam_startP);
 };
 }
 #endif

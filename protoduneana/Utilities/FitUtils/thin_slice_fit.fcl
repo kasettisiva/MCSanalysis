@@ -2,21 +2,11 @@
 #include "ProtoDUNECalibration.fcl"
 #include "FitSystematics.fcl"
 
-#MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_3_31_21/eventSelection_mc_all.root"
-#DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_3_31_21/eventSelection_mc_all.root"
-#MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_5_8_21_with_data2/eventSelection_mc_all.root"
-#DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_5_8_21_with_data2/eventSelection_mc_all.root"
-#MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4a_5_15_21_with_data/eventSelection_mc_all.root"
-#DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4a_5_15_21_with_data/eventSelection_mc_all.root"
-MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4a_5_18_21_with_data/eventSelection_mc_all.root"
-DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4a_5_18_21_with_data/eventSelection_mc_all.root"
+#MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4a_5_18_21_with_data/eventSelection_mc_all.root"
+#DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4a_5_18_21_with_data/eventSelection_mc_all.root"
+MCFileName:   "/dune/data/users/calcuttj/Prod4a_6_8_21_with_data/eventSelection_mc_all.root"
+DataFileName: "/dune/data/users/calcuttj/Prod4a_6_8_21_with_data/eventSelection_mc_all.root"
 TreeName: "pduneana/beamana"
-
-#MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_beamType.root"
-#DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_beamType.root"
-#MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4/eventSelection_mc_beamType.root"
-#DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4/eventSelection_mc_beamType.root"
-#TreeName: "pionana/beamana"
 
 DriverName: "protoana::AbsCexDriver"
 AnalysisOptions: {
@@ -25,9 +15,9 @@ AnalysisOptions: {
   #FakeDataRoutine: "G4RW"
   #FakeDataRoutine: "dEdX"
   #FakeDataRoutine: "EffVar"
-  #FakeDataRoutine: "G4RWGrid"
+  FakeDataRoutine: "G4RWGrid"
   #FakeDataRoutine: "PionAngle"
-  FakeDataRoutine: "Asimov"
+  #FakeDataRoutine: "Asimov"
   #FakeDataRoutine: "Toy"
 
   FakeDataScales: [
@@ -47,14 +37,8 @@ AnalysisOptions: {
   }
 
   FakeDataG4RWGrid: {
-    #Position: [0, 1]
-    #Shift: [15, 15]
-    #Position: [7, 8]
-    #Shift: [12, 12]
-    #Branch: "g4rw_full_grid_piplus_weights"
-
-    Position: [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 29, 20]
-    Shift:    [7, 8, 9, 10, 11, 12, 13, 18, 17, 16, 15, 07, 06, 05]
+    Position: [7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20 ]
+    Shift:    [12, 12, 12, 12, 12, 12, 12, 08, 08, 08, 08, 08, 08, 08 ]
     Branch: "g4rw_full_grid_piplus_weights_fake_data"
 
     ###(reac, 0), (abs, 1), (cex, 2), (dcex, 3), (prod, 4), (inel, 5) 
@@ -78,17 +62,12 @@ AnalysisOptions: {
     RatioNames: ["r1", "r2", "r3", "r4", "r5"]
   }
 
-  #EndZCut: 225.94353
   EndZCut: 222.10561
-  #SliceCut: 472
   SliceCut: 464
   WirePitch: .47974
   Z0: 0.56035
 
-  SliceMethod: "Traj"
-  #SliceMethod: "E"
-  #SliceMethod: "Alt"
-  #SliceMethod: "Default"
+  SliceMethod: "Traj" #E, Alt, Default
 
   TrajZStart: -.49375
 
@@ -106,6 +85,7 @@ Systematics: [
   @local::G4RWSysts.g4rw_QE1,
   @local::G4RWSysts.g4rw_QE2,
   @local::G4RWSysts.g4rw_Prod,
+  @local::G4RWSysts.g4rw_DCex,
   @local::G4RWSysts.g4rw_proton,
   @local::SystematicsList.beam_shift,
   @local::SystematicsList.ediv_weight,
@@ -113,18 +93,18 @@ Systematics: [
 ]
 
 AddSystTerm: true
-
 CovarianceBins: [
   ["dEdX_Cal_Spline", 0],
   ["g4rw_QE1", 1],
   ["g4rw_QE2", 2],
   ["g4rw_Prod", 3],
-  ["g4rw_proton", 4],
-  ["ediv_weight", 5],
-  ["beam_shift", 6],
-  ["no_track_weight", 7]
+  ["g4rw_DCex", 4],
+  ["g4rw_proton", 5],
+  ["ediv_weight", 6],
+  ["beam_shift", 7],
+  ["no_track_weight", 8]
 ]
-CovarianceFile: "full_with_no_track.root"
+CovarianceFile: "full_with_dcex.root"
 CovarianceMatrix: "m"
 
 Selections: [
@@ -291,7 +271,7 @@ UpperLimit: 10.0
 LowerLimit: 0.05
 ReducedIncidentChi2: false
 FitFlux: true
-ScaleDataToNorm: false 
+ScaleDataToNorm: true 
 DataNorm: 20500. 
 #RNGSeed: 0
 
@@ -307,18 +287,19 @@ DrawXSecUnderflow: false
 
 ## Validation
 RandomStart: false 
-SplitMC: false 
+SplitMC: false
 DoFakeData: true 
 FluctuateStats: false 
 DoThrows: true
 NThrows: 10 #00
 DoScans: false 
-Do1DShifts: true 
+Do1DShifts: true
 DoSysts: true
 MaxRethrows: 1000
 #####################
 
 FitType: "Normal"
+#FitType: "None"
 #FitType: "Pulls"
 #FitType: "Toy"
 
