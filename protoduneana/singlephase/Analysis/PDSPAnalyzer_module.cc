@@ -534,6 +534,7 @@ private:
   /////////////////////////////////////////////////////
   double beam_inst_P;
   bool beam_inst_valid;
+  int beam_inst_trigger;
   std::vector<double> beam_inst_TOF;
   std::vector< int > beam_inst_PDG_candidates, beam_inst_TOF_Chan;
   double beam_inst_X, beam_inst_Y, beam_inst_Z;
@@ -1735,6 +1736,7 @@ void pduneana::PDSPAnalyzer::beginJob()
   fTree->Branch("beam_inst_nTracks", &beam_inst_nTracks);
   fTree->Branch("beam_inst_nMomenta", &beam_inst_nMomenta);
   fTree->Branch("beam_inst_valid", &beam_inst_valid);
+  fTree->Branch("beam_inst_trigger", &beam_inst_trigger);
 
 
   fTree->Branch("reco_beam_Chi2_proton", &reco_beam_Chi2_proton);
@@ -2005,6 +2007,7 @@ void pduneana::PDSPAnalyzer::reset()
   beam_inst_nTracks = -999;
   beam_inst_nMomenta = -999;
   beam_inst_valid = true;
+  beam_inst_trigger = -999;
 
   reco_beam_Chi2_ndof = -999;
 
@@ -3521,6 +3524,7 @@ void pduneana::PDSPAnalyzer::BeamInstInfo(const art::Event & evt) {
   }
 
   const beam::ProtoDUNEBeamEvent & beamEvent = *(beamVec.at(0)); 
+  beam_inst_trigger = beamEvent.GetTimingTrigger();
   if (evt.isRealData() && !fBeamlineUtils.IsGoodBeamlineTrigger(evt)) {
     MF_LOG_WARNING("PDSPAnalyzer") << "Failed beam quality check" << std::endl;
     beam_inst_valid = false;

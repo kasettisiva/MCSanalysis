@@ -42,6 +42,227 @@ protoana::AbsCexDriver::AbsCexDriver(
   }
 }
 
+void protoana::AbsCexDriver::FillMCEvents(
+    TTree * tree, std::vector<ThinSliceEvent> & events,
+    std::vector<ThinSliceEvent> & fake_data_events,
+    int & split_val, const bool & do_split) {
+  std::cout << "Filling MC Events" << std::endl;
+
+  int sample_ID, selection_ID, event, run, subrun;
+  int true_beam_PDG;
+  double true_beam_interactingEnergy, reco_beam_interactingEnergy;
+  double true_beam_endP, true_beam_mass, true_beam_endZ;
+  double reco_beam_endZ, true_beam_startP;
+  double beam_inst_P;
+  std::vector<double> * reco_beam_incidentEnergies = 0x0,
+                      * true_beam_incidentEnergies = 0x0,
+                      * true_beam_traj_Z = 0x0,
+                      * true_beam_traj_KE = 0x0,
+                      * reco_daughter_track_thetas = 0x0,
+                      * reco_daughter_track_scores = 0x0;
+  std::vector<int> * true_beam_slices = 0x0;
+  tree->SetBranchAddress("event", &event);
+  tree->SetBranchAddress("subrun", &subrun);
+  tree->SetBranchAddress("run", &run);
+
+  tree->SetBranchAddress("true_beam_PDG", &true_beam_PDG);
+
+  tree->SetBranchAddress("new_interaction_topology", &sample_ID);
+  tree->SetBranchAddress("selection_ID", &selection_ID);
+  tree->SetBranchAddress("true_beam_interactingEnergy",
+                         &true_beam_interactingEnergy);
+  tree->SetBranchAddress("true_beam_endP", &true_beam_endP);
+  tree->SetBranchAddress("true_beam_endZ", &true_beam_endZ);
+  tree->SetBranchAddress("true_beam_mass", &true_beam_mass);
+  tree->SetBranchAddress("reco_beam_interactingEnergy",
+                         &reco_beam_interactingEnergy);
+  tree->SetBranchAddress("reco_beam_endZ", &reco_beam_endZ);
+  tree->SetBranchAddress("reco_beam_incidentEnergies",
+                         &reco_beam_incidentEnergies);
+  tree->SetBranchAddress("true_beam_incidentEnergies",
+                         &true_beam_incidentEnergies);
+  tree->SetBranchAddress("true_beam_slices",
+                         &true_beam_slices);
+  tree->SetBranchAddress("true_beam_startP", &true_beam_startP);
+  tree->SetBranchAddress("true_beam_traj_Z", &true_beam_traj_Z);
+  tree->SetBranchAddress("true_beam_traj_KE", &true_beam_traj_KE);
+  std::vector<double> * calibrated_dQdX = 0x0, * beam_EField = 0x0,
+                      * track_pitch = 0x0;
+  tree->SetBranchAddress("reco_beam_calibrated_dQdX_SCE", &calibrated_dQdX);
+  tree->SetBranchAddress("reco_beam_EField_SCE", &beam_EField);
+  tree->SetBranchAddress("reco_beam_TrkPitch_SCE", &track_pitch);
+  tree->SetBranchAddress("beam_inst_P", &beam_inst_P);
+  tree->SetBranchAddress("reco_daughter_allTrack_Theta", &reco_daughter_track_thetas);
+  tree->SetBranchAddress("reco_daughter_PFP_trackScore_collection",
+                            &reco_daughter_track_scores);
+
+  std::vector<double> * g4rw_alt_primary_plus_sigma_weight = 0x0,
+                      * g4rw_alt_primary_minus_sigma_weight = 0x0,
+                      * g4rw_full_primary_plus_sigma_weight = 0x0,
+                      * g4rw_full_primary_minus_sigma_weight = 0x0;
+  std::vector<std::vector<double>> * g4rw_primary_grid_weights = 0x0,
+                                   * g4rw_full_grid_weights = 0x0,
+                                   * g4rw_full_grid_proton_weights = 0x0;
+  tree->SetBranchAddress("g4rw_alt_primary_plus_sigma_weight",
+                            &g4rw_alt_primary_plus_sigma_weight);
+  tree->SetBranchAddress("g4rw_alt_primary_minus_sigma_weight",
+                            &g4rw_alt_primary_minus_sigma_weight);
+  tree->SetBranchAddress("g4rw_full_primary_plus_sigma_weight",
+                            &g4rw_full_primary_plus_sigma_weight);
+  tree->SetBranchAddress("g4rw_full_primary_minus_sigma_weight",
+                            &g4rw_full_primary_minus_sigma_weight);
+  tree->SetBranchAddress("g4rw_full_grid_weights", &g4rw_full_grid_weights);
+  tree->SetBranchAddress("g4rw_full_grid_proton_weights", &g4rw_full_grid_proton_weights);
+
+  tree->SetBranchAddress("g4rw_primary_grid_weights",
+                            &g4rw_primary_grid_weights);
+
+  std::vector<std::vector<double>> * daughter_dQdXs = 0x0,
+                                   * daughter_resRanges = 0x0,
+                                   * daughter_EFields = 0x0;
+  tree->SetBranchAddress(
+      "reco_daughter_allTrack_calibrated_dQdX_SCE", &daughter_dQdXs);
+  tree->SetBranchAddress(
+      "reco_daughter_allTrack_resRange_SCE", &daughter_resRanges);
+  tree->SetBranchAddress(
+      "reco_daughter_allTrack_EField_SCE", &daughter_EFields);
+  bool has_pi0_shower;
+  tree->SetBranchAddress("has_shower_dist_energy", &has_pi0_shower);
+
+  int nentries = tree->GetEntries();
+  if (do_split) {
+    split_val = tree->GetEntries()/2;
+    std::cout << "Note: Splitting MC in half. " <<
+                 split_val << "/" << tree->GetEntries() <<std::endl;
+    nentries = split_val;
+  }
+  for (int i = 0; i < nentries; ++i) {
+    tree->GetEntry(i);
+
+    events.push_back(ThinSliceEvent(event, subrun, run));
+    events.back().SetSampleID(sample_ID);
+    events.back().SetSelectionID(selection_ID);
+    events.back().SetTrueInteractingEnergy(true_beam_interactingEnergy);
+    events.back().SetRecoInteractingEnergy(reco_beam_interactingEnergy);
+    events.back().SetTrueEndP(true_beam_endP);
+    events.back().SetTrueEndZ(true_beam_endZ);
+    events.back().SetTrueStartP(true_beam_startP);
+    events.back().SetTrueMass(true_beam_mass);
+    events.back().SetRecoEndZ(reco_beam_endZ);
+
+    events.back().SetRecoIncidentEnergies(*reco_beam_incidentEnergies);
+    events.back().SetTrueIncidentEnergies(*true_beam_incidentEnergies);
+    events.back().SetTrueTrajZ(*true_beam_traj_Z);
+    events.back().SetTrueTrajKE(*true_beam_traj_KE);
+    events.back().SetTrueSlices(*true_beam_slices);
+    events.back().SetdQdXCalibrated(*calibrated_dQdX);
+    events.back().SetEField(*beam_EField);
+    events.back().SetTrackPitch(*track_pitch);
+    events.back().SetBeamInstP(beam_inst_P);
+    events.back().SetPDG(true_beam_PDG);
+    events.back().SetRecoDaughterTrackThetas(*reco_daughter_track_thetas);
+    events.back().SetRecoDaughterTrackScores(*reco_daughter_track_scores);
+    events.back().SetHasPi0Shower(has_pi0_shower);
+    events.back().MakeG4RWBranch("g4rw_alt_primary_plus_sigma_weight",
+                                  *g4rw_alt_primary_plus_sigma_weight);
+    events.back().MakeG4RWBranch("g4rw_alt_primary_minus_sigma_weight",
+                                  *g4rw_alt_primary_minus_sigma_weight);
+    events.back().MakeG4RWBranch("g4rw_full_primary_plus_sigma_weight",
+                                  *g4rw_full_primary_plus_sigma_weight);
+    events.back().MakeG4RWBranch("g4rw_full_primary_minus_sigma_weight",
+                                  *g4rw_full_primary_minus_sigma_weight);
+    for (size_t j = 0; j < daughter_dQdXs->size(); ++j) {
+      events.back().AddRecoDaughterTrackdQdX((*daughter_dQdXs)[j]);
+      events.back().AddRecoDaughterTrackResRange((*daughter_resRanges)[j]);
+      events.back().AddRecoDaughterEField((*daughter_EFields)[j]);
+    }
+
+    for (size_t j = 0; j < g4rw_primary_grid_weights->size(); ++j) {
+      std::string name_full = "g4rw_full_grid_weights_" + std::to_string(j);
+      //std::cout << "Adding " << name_full << std::endl;
+      //if (!(*g4rw_full_grid_weights)[j].size())
+      //  std::cout << "Adding empty branch " << event << " " << run << " " << subrun << std::endl;
+      events.back().MakeG4RWBranch(name_full, (*g4rw_full_grid_weights)[j]);
+
+      std::string name_primary = "g4rw_primary_grid_weights_" +
+                                 std::to_string(j);
+      //std::cout << "Adding " << name_primary << std::endl;
+      //if (!(*g4rw_primary_grid_weights)[j].size())
+      //  std::cout << "Adding empty branch " << event << " " << run << " " << subrun << std::endl;
+      events.back().MakeG4RWBranch(name_primary,
+                                    (*g4rw_primary_grid_weights)[j]);
+    }
+    events.back().MakeG4RWBranch("g4rw_full_grid_proton_weights",
+                                  (*g4rw_full_grid_proton_weights)[0]);
+  }
+
+  //if (fSplitMC) {
+    for (int i = split_val; i < tree->GetEntries(); ++i) {
+      tree->GetEntry(i);
+
+      fake_data_events.push_back(ThinSliceEvent(event, subrun, run));
+      fake_data_events.back().SetSampleID(sample_ID);
+      fake_data_events.back().SetSelectionID(selection_ID);
+      fake_data_events.back().SetTrueInteractingEnergy(true_beam_interactingEnergy);
+      fake_data_events.back().SetRecoInteractingEnergy(reco_beam_interactingEnergy);
+      fake_data_events.back().SetTrueEndP(true_beam_endP);
+      fake_data_events.back().SetTrueEndZ(true_beam_endZ);
+      fake_data_events.back().SetTrueStartP(true_beam_startP);
+      fake_data_events.back().SetTrueMass(true_beam_mass);
+      fake_data_events.back().SetRecoEndZ(reco_beam_endZ);
+
+      fake_data_events.back().SetRecoIncidentEnergies(*reco_beam_incidentEnergies);
+      fake_data_events.back().SetTrueIncidentEnergies(*true_beam_incidentEnergies);
+      fake_data_events.back().SetTrueTrajZ(*true_beam_traj_Z);
+      fake_data_events.back().SetTrueTrajKE(*true_beam_traj_KE);
+      fake_data_events.back().SetTrueSlices(*true_beam_slices);
+      fake_data_events.back().SetdQdXCalibrated(*calibrated_dQdX);
+      fake_data_events.back().SetEField(*beam_EField);
+      fake_data_events.back().SetTrackPitch(*track_pitch);
+      fake_data_events.back().SetBeamInstP(beam_inst_P);
+      fake_data_events.back().SetPDG(true_beam_PDG);
+      fake_data_events.back().SetRecoDaughterTrackThetas(*reco_daughter_track_thetas);
+      fake_data_events.back().SetRecoDaughterTrackScores(*reco_daughter_track_scores);
+      fake_data_events.back().SetHasPi0Shower(has_pi0_shower);
+      fake_data_events.back().MakeG4RWBranch("g4rw_alt_primary_plus_sigma_weight",
+                                    *g4rw_alt_primary_plus_sigma_weight);
+      fake_data_events.back().MakeG4RWBranch("g4rw_alt_primary_minus_sigma_weight",
+                                    *g4rw_alt_primary_minus_sigma_weight);
+      fake_data_events.back().MakeG4RWBranch("g4rw_full_primary_plus_sigma_weight",
+                                    *g4rw_full_primary_plus_sigma_weight);
+      fake_data_events.back().MakeG4RWBranch("g4rw_full_primary_minus_sigma_weight",
+                                    *g4rw_full_primary_minus_sigma_weight);
+      for (size_t j = 0; j < daughter_dQdXs->size(); ++j) {
+        fake_data_events.back().AddRecoDaughterTrackdQdX((*daughter_dQdXs)[j]);
+        fake_data_events.back().AddRecoDaughterTrackResRange((*daughter_resRanges)[j]);
+        fake_data_events.back().AddRecoDaughterEField((*daughter_EFields)[j]);
+      }
+
+      for (size_t j = 0; j < g4rw_primary_grid_weights->size(); ++j) {
+        std::string name_full = "g4rw_full_grid_weights_" + std::to_string(j);
+        //std::cout << "Adding " << name_full << std::endl;
+        //if (!(*g4rw_full_grid_weights)[j].size())
+        //  std::cout << "Adding empty branch " << event << " " << run << " " << subrun << std::endl;
+        fake_data_events.back().MakeG4RWBranch(name_full, (*g4rw_full_grid_weights)[j]);
+
+        std::string name_primary = "g4rw_primary_grid_weights_" +
+                                   std::to_string(j);
+        //std::cout << "Adding " << name_primary << std::endl;
+        //if (!(*g4rw_primary_grid_weights)[j].size())
+        //  std::cout << "Adding empty branch " << event << " " << run << " " << subrun << std::endl;
+        fake_data_events.back().MakeG4RWBranch(name_primary,
+                                      (*g4rw_primary_grid_weights)[j]);
+      }
+      fake_data_events.back().MakeG4RWBranch("g4rw_full_grid_proton_weights",
+                                    (*g4rw_full_grid_proton_weights)[0]);
+    }
+  //}
+
+  std::cout << "Filled MC Events" << std::endl;
+
+
+}
+
 void protoana::AbsCexDriver::BuildMCSamples(
     const std::vector<ThinSliceEvent> & events,
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,

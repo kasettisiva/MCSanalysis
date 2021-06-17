@@ -289,7 +289,9 @@ void protoana::PDSPThinSliceFitter::BuildMCSamples() {
   TFile fMCFile(fMCFileName.c_str(), "OPEN");
   fMCTree = (TTree*)fMCFile.Get(fTreeName.c_str());
 
-  FillMCEvents();
+  //FillMCEvents();
+  fThinSliceDriver->FillMCEvents(fMCTree, fEvents, fFakeDataEvents, fSplitVal,
+                                 fSplitMC);
   fThinSliceDriver->BuildMCSamples(fEvents, fSamples, fIsSignalSample,
                                    fNominalFluxes, fFluxesBySample,
                                    fBeamEnergyBins);
@@ -868,6 +870,11 @@ void protoana::PDSPThinSliceFitter::NormalFit() {
   else {
     std::vector<double> vals;
     std::cout << "Found minimimum: " << std::endl;
+
+
+    std::cout << "Running Hesse" << std::endl;
+    bool hesse_good = fMinimizer->Hesse();
+    std::cout << "hesse good? " << hesse_good << std::endl;
     /*
     std::cout <<
                  fTotalSignalParameters << " " <<
@@ -900,6 +907,7 @@ void protoana::PDSPThinSliceFitter::NormalFit() {
       toyParsHist_normal = (TH1D*)parsHist.Clone("toyPars_normal");
       toyParsHist_normal->Reset();
     }
+
 
 
     int n_par = 0;

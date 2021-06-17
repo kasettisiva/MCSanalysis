@@ -298,8 +298,8 @@ DoSysts: true
 MaxRethrows: 1000
 #####################
 
-FitType: "Normal"
-#FitType: "None"
+#FitType: "Normal"
+FitType: "None"
 #FitType: "Pulls"
 #FitType: "Toy"
 
