@@ -1260,7 +1260,7 @@ protoana::mcsXsection::mcsXsection(fhicl::ParameterSet const & p)
 	    auto vmeta=fmthm.data(i);
 	    for (size_t ii = 0; ii<vhit.size(); ++ii){ //loop over all meta data hit
 	      bool fBadhit = false;
-	      if (vmeta[ii]->Index() == std::numeric_limits<int>::max()){
+	      if (vmeta[ii]->Index() == static_cast<unsigned int>(std::numeric_limits<int>::max())){
 		fBadhit = true;
 		//cout<<"fBadHit"<<fBadhit<<endl;
 		continue;
@@ -1573,7 +1573,7 @@ protoana::mcsXsection::mcsXsection(fhicl::ParameterSet const & p)
 	  auto vmeta=fmthm.data(fprimaryID);
 	  for (size_t ii = 0; ii<vhit.size(); ++ii){ //loop over all meta data hit
 	    bool fBadhit = false;
-	    if (vmeta[ii]->Index() == std::numeric_limits<int>::max()){
+	    if (vmeta[ii]->Index() == static_cast<unsigned int>(std::numeric_limits<int>::max())){
 	      fBadhit = true;
 	      //cout<<"fBadHit"<<fBadhit<<endl;
 	      continue;

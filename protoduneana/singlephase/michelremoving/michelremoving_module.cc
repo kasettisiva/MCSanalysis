@@ -380,7 +380,7 @@ namespace dune{
 	  auto vmeta=fmthm.data(i);
 	  for (size_t ii = 0; ii<vhit.size(); ++ii){ //loop over all meta data hit
 	    bool fBadhit = false;
-	    if (vmeta[ii]->Index() == std::numeric_limits<int>::max()){
+	    if (vmeta[ii]->Index() == static_cast<unsigned int>(std::numeric_limits<int>::max())){
 	      fBadhit = true;
 	   
 	      continue;
@@ -426,7 +426,7 @@ namespace dune{
 	for(size_t hitl=0;hitl<hitlist.size();hitl++){
 	  auto & tracks = thass.at(hitlist[hitl].key());
 	  //auto & vmeta = thass.data(hitlist[hitl].key());
-	  //if (!tracks.empty()&&tracks[0].key() == ptrack.key()&&vmeta[0]->Index()!=std::numeric_limits<int>::max()) continue;
+	  //if (!tracks.empty()&&tracks[0].key() == ptrack.key()&&vmeta[0]->Index()!=static_cast<unsigned int>(std::numeric_limits<int>::max())) continue;
 	  //if (!tracks.empty()&&tracks[0].key() == ptrack.key()&&hitlist[hitl]->WireID().Plane==2)
 	  //if(!(hitlist[hitl]->WireID().Plane==2 && tracks[0].key() != ptrack.key() && hitlist[hitl]->PeakTime()>420 && hitlist[hitl]->PeakTime()<530 && hitlist[hitl]->WireID().TPC==9 && hitlist[hitl]->WireID().Wire>60 && hitlist[hitl]->WireID().Wire<80)) continue;
 	  //cout<<"wire no and peak time from hit to track association...................."<<hitlist[hitl]->WireID().Wire<<"  "<<hitlist[hitl]->PeakTime()<<endl;

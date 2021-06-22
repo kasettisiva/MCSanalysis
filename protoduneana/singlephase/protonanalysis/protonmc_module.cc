@@ -1776,7 +1776,7 @@ void protoana::protonmc::analyze(art::Event const & evt){
 						auto vmeta=fmthm.data(fprimaryID); //indices of meta data are the same as data 
 						for (size_t ii = 0; ii<vhit.size(); ++ii){ //loop over all meta data hit
 							bool fBadhit = false;
-							if (vmeta[ii]->Index() == std::numeric_limits<int>::max()){
+							if (vmeta[ii]->Index() == static_cast<unsigned int>(std::numeric_limits<int>::max())){
 								fBadhit = true;
 								//cout<<"fBadHit"<<fBadhit<<endl;
 								continue;
