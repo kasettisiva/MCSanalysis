@@ -21,15 +21,23 @@ class ThinSliceDriver {
   ThinSliceDriver(const fhicl::ParameterSet & extra_options);
   virtual ~ThinSliceDriver();
 
+  virtual void FillMCEvents(
+    TTree * tree, std::vector<ThinSliceEvent> & events,
+    std::vector<ThinSliceEvent> & fake_data_events,
+    int & split_val, const bool & do_split) = 0;
+
   virtual void BuildDataHists(
-    TTree * tree, ThinSliceDataSet & data_set, double & flux) = 0;
+    TTree * tree, ThinSliceDataSet & data_set, double & flux,
+    int split_val = 0) = 0;
 
   virtual void BuildFakeData(
     TTree * tree,
     std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
     const std::map<int, bool> & signal_sample_checks,
     ThinSliceDataSet & data_set, double & flux,
-    std::map<int, std::vector<double>> & sample_scales) = 0;
+    std::map<int, std::vector<double>> & sample_scales,
+    std::vector<double> & beam_energy_bins,
+    int split_val = 0) = 0;
 
   virtual void BuildMCSamples(
       //TTree * tree,

@@ -19,6 +19,7 @@ art_make_library( LIBRARY_NAME protodune_fitutils
 			    ${FHICLCPP}
 			    ${CETLIB}
 			    ${ROOT_BASIC_LIB_LIST}
+                            
 			    ${ROOT_ROOFITCORE}
 			    ${ROOT_ROOFIT}
 			    ${ROOT_ROOSTATS}
@@ -29,11 +30,20 @@ art_make_library( LIBRARY_NAME protodune_fitutils
 			    ${ROOT_MINUIT2}
 			    ${ROOT_CORE}
 			    ${ROOT_MATHCORE}
+                            ProtoDUNEUtilities
 	    )
+            #message(WARNING ${ROOT_TREEPLAYER})
 
 art_make_exec( NAME runProtoDUNEFit
 	       SOURCE runProtoDUNEFit.cc
 	       LIBRARIES protodune_fitutils
+	    )
+
+art_make_exec( NAME runEventSelection
+	       SOURCE runEventSelection.cc
+	       LIBRARIES protodune_fitutils
+                         ${ROOT_ROOTDATAFRAME}
+                         ${ROOT_TREEPLAYER}
 	    )
 
 art_make_exec( NAME Geant4ReweightSysts 

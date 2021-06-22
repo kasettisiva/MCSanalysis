@@ -810,7 +810,7 @@ protoana::mcsXsection::mcsXsection(fhicl::ParameterSet const & p)
 
 	std::cout << "Doing reweight" << std::endl;
 	if (true_beam_PDG == RW_PDG) { //if PDG=RW_PDG
-	  std::vector<G4ReweightTraj *> trajs = CreateNRWTrajs(*geantGoodParticle, pi_serv->ParticleList(),fGeometryService_rw, fevent, true);
+	  std::vector<G4ReweightTraj *> trajs = CreateNRWTrajs(*geantGoodParticle, pi_serv->ParticleList(),fGeometryService_rw, fevent, "LAr", true);
 	  //G4ReweightTraj theTraj(true_beam_ID, true_beam_PDG, 0, fevent, {0,0});
 	  int n_rw_array=200;
 	  double react_st=0.0;

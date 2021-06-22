@@ -122,6 +122,19 @@ CalorimetryParameters_SPProd4_Data_r5387.PlaneParameters: [
 ]
 ##########################################
 
+##Prod4 Data Run 5432 -- use with calorimetry object pandoracalinoxyzt
+CalorimetryParameters_SPProd4_Data_r5432: @local::CalorimetryParameters_SPProd2_MC_SCE
+CalorimetryParameters_SPProd4_Data_r5432.X_correction:       "CalorimetryCalibration/ProtoDUNESP/Prod4_Data/Xcalo_r5432.root"
+CalorimetryParameters_SPProd4_Data_r5432.YZ_correction:      "CalorimetryCalibration/ProtoDUNESP/Prod4_Data/YZcalo_r5432.root"
+CalorimetryParameters_SPProd4_Data_r5432.E_field_correction: "SpaceChargeProtoDUNE/SCE_DataDriven_180kV_v4.root"
+CalorimetryParameters_SPProd4_Data_r5432.PlaneParameters: [
+  {
+    PlaneID: 2
+    norm_factor: 0.977 
+    calib_factor: 1.033e-3
+  }
+]
+##########################################
 
 ##Data run 5387
 CalorimetryParameters_SPProd2_Data_r5387: @local::CalorimetryParameters_SPProd2_MC_SCE

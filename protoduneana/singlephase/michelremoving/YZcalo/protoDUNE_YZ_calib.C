@@ -145,12 +145,13 @@ void protoDUNE_YZ_calib::Loop(TString mn)
   TFile *file = new TFile(Form("YZcalo_mich%s_r%d.root",mn.Data(), run), "recreate");
 
   Long64_t nentries = fChain->GetEntriesFast();
+  Long64_t real_nentries = fChain->GetEntries();
   Long64_t nbytes = 0, nb = 0;
   for (Long64_t jentry=0; jentry<nentries;jentry++){
     Long64_t ientry = LoadTree(jentry);
     if (ientry < 0) break;
     nb = fChain->GetEntry(jentry);   nbytes += nb;
-    if(jentry%100==0) cout<<jentry<<"/"<<nentries<<endl;
+    if(jentry%100==0) cout<<jentry<<"/"<<real_nentries<<endl;
     for(int i=0; i<cross_trks; i++){
       if(!((TMath::Abs(trkstartx[i])>350||trkstarty[i]<50||trkstarty[i]>550||trkstartz[i]<50||trkstartz[i]>645)&&(TMath::Abs(trkendx[i])>350||trkendy[i]<50||trkendy[i]>550||trkendz[i]<50||trkendz[i]>645))) continue;
       filtered_tracks++;
@@ -501,7 +502,7 @@ int main(int argc, char *argv[]) {
   string michelnumber = argv[2];
   cout <<michelnumber <<endl;
 
-  if (!(michelnumber == "0"||michelnumber == "1"||michelnumber == "2")){
+  if (!(michelnumber == "0"||michelnumber == "1"||michelnumber == "2"||michelnumber == "3")){
     cout << "Error: Michel tree number must be 0,1, or 2" << endl;
     return 0;
     }
@@ -515,7 +516,7 @@ int main(int argc, char *argv[]) {
   if (infile.substr(infile.find_last_of(".") + 1) == "root"){
     shtree->Add(Form("%s/michelremoving%s/Event", infile.c_str(), michelnumber.c_str()));
   }
-  else if(infile.substr(infile.find_last_of(".") + 1) == "list"){
+  else/* if(infile.substr(infile.find_last_of(".") + 1) == "list" || infile.substr(infile.find_last_of(".") + 1) == "txt" )*/{
     std::ifstream in;
     in.open(infile.c_str());
     char line[1024];

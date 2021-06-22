@@ -46,10 +46,11 @@ physics:
  }
 
  filters: { 
-   fTruth: @local::beam_filter
+   #fTruth: @local::beam_filter
  }
 
- fpath: [fTruth]
+ #fpath: [fTruth]
+ fpath: []
 
  analyzers:
  {
@@ -65,8 +66,9 @@ physics:
 }
 
 outputs: {}
-physics.filters.fTruth.PDG: [211, -13, 2212]
-physics.analyzers.pduneana.SelectEvents: ["fpath"]
+#physics.filters.fTruth.PDG: [211, -13, 2212]
+#physics.analyzers.pduneana.SelectEvents: ["fpath"]
+physics.analyzers.pduneana.SelectEvents: []
 physics.analyzers.pduneana.CalorimetryTagSCE: "pandoracalinoxyzt"
 physics.analyzers.pduneana.CalorimetryTagNoSCE: "pandoracalonosce" ##For no-SCE sample
 physics.analyzers.pduneana.Pandora2CaloSCE: "pandora2calinoxyzt"

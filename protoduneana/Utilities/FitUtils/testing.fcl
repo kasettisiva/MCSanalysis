@@ -1,0 +1,3 @@
+TreeName: "tree"
+MCFile: "dataframe_test.root"
+DataFile: "dataframe_data.root"

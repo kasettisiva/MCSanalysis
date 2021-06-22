@@ -20,6 +20,14 @@ namespace protoana {
       const simb::MCParticle & part,
       const sim::ParticleList & plist,
       art::ServiceHandle < geo::Geometry > geo_serv, int event,
+      std::string material_name  = "LAr",
+      bool fVerbose=false);
+
+  std::vector<std::vector<G4ReweightTraj *>> BuildHierarchy(
+      int ID, int PDG,
+      const sim::ParticleList & plist,
+      art::ServiceHandle<geo::Geometry> geo_serv, int event,
+      std::string material_name = "LAr",
       bool fVerbose=false);
 
   double GetNTrajWeightFromSetPars(

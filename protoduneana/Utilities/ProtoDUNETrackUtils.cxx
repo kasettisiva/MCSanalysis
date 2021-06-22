@@ -431,8 +431,9 @@ std::pair< double, int > protoana::ProtoDUNETrackUtils::Chi2PID( const std::vect
   for( size_t i = 1; i < track_dedx.size()-1; ++i ){
 
     //Skip large pulse heights
-    if( track_dedx[i] > 1000. )
+    if( track_dedx[i] > 1000. || track_dedx[i] < 0.) {
       continue;
+    }
 
     int bin = profile->FindBin( range[i] );
     if( bin >= 1 && bin <= profile->GetNbinsX() ){

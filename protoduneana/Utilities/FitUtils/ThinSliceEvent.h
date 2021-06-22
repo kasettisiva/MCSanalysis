@@ -11,6 +11,7 @@ class ThinSliceEvent {
     reco_beam_interactingEnergy = -999;
     true_beam_endP = -999;
     true_beam_startP = -999;
+    true_beam_endZ = -999.;
     true_beam_mass = -999;
     reco_beam_endZ = -999;
     beam_inst_P = -999;
@@ -24,8 +25,15 @@ class ThinSliceEvent {
     beam_EField = std::vector<double>();
     track_pitch = std::vector<double>();
     g4rw_weights = std::map<std::string, std::vector<double>>();
+    reco_daughter_track_thetas = std::vector<double>();
+    reco_daughter_track_scores = std::vector<double>();
+    reco_daughter_track_dQdX = std::vector<std::vector<double>>();
+    reco_daughter_track_res_range = std::vector<std::vector<double>>();
+    reco_daughter_efield = std::vector<std::vector<double>>();
+    has_pi0_shower = false;
   };
 
+  /*
   int GetEventID() const {
     return event_ID;
   };
@@ -36,7 +44,7 @@ class ThinSliceEvent {
 
   int GetRunID() const {
     return run_ID;
-  };
+  };*/
 
   int GetSampleID() const {
     return sample_ID;
@@ -50,6 +58,13 @@ class ThinSliceEvent {
   };
   void SetSelectionID(int s) {
     selection_ID = s;
+  };
+
+  bool GetHasPi0Shower() const {
+    return has_pi0_shower;
+  };
+  void SetHasPi0Shower(bool s) {
+    has_pi0_shower = s;
   };
 
   double GetTrueInteractingEnergy() const {
@@ -71,6 +86,13 @@ class ThinSliceEvent {
   };
   void SetTrueEndP(double p) {
     true_beam_endP = p;
+  };
+
+  double GetTrueEndZ() const {
+    return true_beam_endZ;
+  };
+  void SetTrueEndZ(double z) {
+    true_beam_endZ = z;
   };
 
   double GetRecoEndZ() const {
@@ -120,6 +142,44 @@ class ThinSliceEvent {
   };
   void SetTrueTrajKE(std::vector<double> v) {
     true_beam_traj_KE = v;
+  };
+
+  const std::vector<double> & GetRecoDaughterTrackThetas() const {
+    return reco_daughter_track_thetas;
+  };
+  void SetRecoDaughterTrackThetas(std::vector<double> v) {
+    reco_daughter_track_thetas = v;
+  };
+
+  const std::vector<double> & GetRecoDaughterTrackScores() const {
+    return reco_daughter_track_scores;
+  };
+  void SetRecoDaughterTrackScores(std::vector<double> v) {
+    reco_daughter_track_scores = v;
+  };
+
+  const std::vector<std::vector<double>>
+      & GetRecoDaughterTrackResRanges() const {
+    return reco_daughter_track_res_range;
+  };
+  void AddRecoDaughterTrackResRange(std::vector<double> v) {
+    reco_daughter_track_res_range.push_back(v);
+  };
+
+  const std::vector<std::vector<double>>
+      & GetRecoDaughterTrackdQdXs() const {
+    return reco_daughter_track_dQdX;
+  };
+  void AddRecoDaughterTrackdQdX(std::vector<double> v) {
+    reco_daughter_track_dQdX.push_back(v);
+  };
+
+  const std::vector<std::vector<double>>
+      & GetRecoDaughterEFields() const {
+    return reco_daughter_efield;
+  };
+  void AddRecoDaughterEField(std::vector<double> v) {
+    reco_daughter_efield.push_back(v);
   };
 
   const std::vector<int> & GetTrueSlices() const {
@@ -181,6 +241,10 @@ class ThinSliceEvent {
     return (g4rw_weights.find(br) != g4rw_weights.end());
   };
 
+  int GetEventID() const {return event_ID;};
+  int GetSubrunID() const {return subrun_ID;};
+  int GetRunID() const {return run_ID;};
+
  private:
   int event_ID, subrun_ID, run_ID;
   int sample_ID;
@@ -188,12 +252,19 @@ class ThinSliceEvent {
   int pdg;
   double true_beam_interactingEnergy, reco_beam_interactingEnergy;
   double true_beam_endP, true_beam_mass;
-  double reco_beam_endZ, true_beam_startP;
+  double reco_beam_endZ, true_beam_startP, true_beam_endZ;
   double beam_inst_P;
+  bool has_pi0_shower;
   std::vector<double> reco_beam_incidentEnergies,
                       true_beam_incidentEnergies,
                       true_beam_traj_Z,
-                      true_beam_traj_KE;
+                      true_beam_traj_KE,
+                      reco_daughter_track_thetas,
+                      reco_daughter_track_scores;
+  std::vector<std::vector<double>> reco_daughter_track_dQdX,
+                                   reco_daughter_track_res_range,
+                                   reco_daughter_efield;
+
   std::vector<int> true_beam_slices;
   std::vector<double> calibrated_dQdX, beam_EField,
                       track_pitch;

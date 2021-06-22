@@ -1,22 +1,24 @@
 #include "FitterPlotStyle.fcl"
 #include "ProtoDUNECalibration.fcl"
+#include "FitSystematics.fcl"
 
-MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_3_31_21/eventSelection_mc_all.root"
-DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4_3_31_21/eventSelection_mc_all.root"
+#MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4a_5_18_21_with_data/eventSelection_mc_all.root"
+#DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4a_5_18_21_with_data/eventSelection_mc_all.root"
+MCFileName:   "/dune/data/users/calcuttj/Prod4a_6_8_21_with_data/eventSelection_mc_all.root"
+DataFileName: "/dune/data/users/calcuttj/Prod4a_6_8_21_with_data/eventSelection_mc_all.root"
 TreeName: "pduneana/beamana"
-
-#MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_beamType.root"
-#DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/eventSelection_mc_beamType.root"
-#MCFileName:   "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4/eventSelection_mc_beamType.root"
-#DataFileName: "/dune/app/users/calcuttj/PionStudies/rDataFrame/Prod4/eventSelection_mc_beamType.root"
-#TreeName: "pionana/beamana"
 
 DriverName: "protoana::AbsCexDriver"
 AnalysisOptions: {
   #FakeDataRoutine: "SampleScales"
   #FakeDataRoutine: "BinnedScales"
-  FakeDataRoutine: "G4RW"
+  #FakeDataRoutine: "G4RW"
   #FakeDataRoutine: "dEdX"
+  #FakeDataRoutine: "EffVar"
+  FakeDataRoutine: "G4RWGrid"
+  #FakeDataRoutine: "PionAngle"
+  #FakeDataRoutine: "Asimov"
+  #FakeDataRoutine: "Toy"
 
   FakeDataScales: [
     #[1, 2.]
@@ -31,7 +33,16 @@ AnalysisOptions: {
   FakeDataG4RW: {
     Position: 2 
     Shift: 1
-    Full: true 
+    Full: true
+  }
+
+  FakeDataG4RWGrid: {
+    Position: [7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20 ]
+    Shift:    [12, 12, 12, 12, 12, 12, 12, 08, 08, 08, 08, 08, 08, 08 ]
+    Branch: "g4rw_full_grid_piplus_weights_fake_data"
+
+    ###(reac, 0), (abs, 1), (cex, 2), (dcex, 3), (prod, 4), (inel, 5) 
+    ### x7 each (200 MeV bins) -- total range: 0, 41 (0, 1400)
   }
 
   FakeDatadEdX: {
@@ -39,16 +50,24 @@ AnalysisOptions: {
     VariedCCal: 1.051e-3
   }
 
-  #EndZCut: 226. 
-  EndZCut: 225.94353
-  SliceCut: 472
+  FakeDataEffVar: {
+    F: .333
+  }
+
+  FakeDataPionAngle: {
+    #RatioFile: "angle_weight.root"
+    #RatioFile: "flat_pion_weights.root"
+    RatioFile: "half_shift.root"
+    Limits: [0., .4, .6, .8, 1.]
+    RatioNames: ["r1", "r2", "r3", "r4", "r5"]
+  }
+
+  EndZCut: 222.10561
+  SliceCut: 464
   WirePitch: .47974
   Z0: 0.56035
 
-  #SliceMethod: "Traj"
-  #SliceMethod: "E"
-  SliceMethod: "Alt"
-  #SliceMethod: "Default"
+  SliceMethod: "Traj" #E, Alt, Default
 
   TrajZStart: -.49375
 
@@ -56,114 +75,37 @@ AnalysisOptions: {
   DoEnergyFix: true 
   EnergyFix: 80.
 
+  EventSelection: {
+  
+  }
 }
 
 Systematics: [
-  #{
-  #  Name: "dEdX_Cal"
-  #  Central: 1.
-  #  LowerLimit: 0.
-  #  UpperLimit: 2.
-
-  #  Options: {
-  #    Cal_set: @local::CalorimetryParameters_SPProd4_MC_SCE
-  #  }
-  #}
-  #{
-  #  Name: "dEdX_Cal_Spline"
-  #  Central: 1.011e-3
-  #  LowerLimit: .809e-3
-  #  UpperLimit: 1.2132e-3
-  #  Sigma: .101e-3
-  #
-  #  Options: {
-  #    Cal_set: @local::CalorimetryParameters_SPProd4_MC_SCE
-  #    C_cal_vars: [.809e-3, .910e-3, 1.121e-3, 1.2132e-3]
-  #  }
-  #} #,
-  #{
-  #  Name: "beam_res_width"
-  #  Central: 2.618e-2
-  #  LowerLimit: 0 #1.e-2
-  #  UpperLimit: 4.e-2
-  #  Sigma: 2.618e-3
-  #
-  #  Options: {
-  #    StaticMean: -1.89e-3
-  #    WeightCap: 50 
-  #  }
-  #} #,
-  #{
-  #  Name: "beam_res_mean"
-  #  Central: -1.89e-3
-  #  LowerLimit: -4.0e-3
-  #  UpperLimit: 1.0e-3
-  #  Sigma: 1.89e-4
-  #
-  #  Options: {
-  #    StaticWidth: 2.618e-2
-  #    WeightCap: 50
-  #  }
-  #} #,
-  {
-    Name: "g4rw_1"
-    Central: 1.
-    LowerLimit: 0.8
-    UpperLimit: 1.2
-    Sigma: .2
-
-    Options: {
-      Position: 0
-      PlusBranch: "g4rw_full_primary_plus_sigma_weight"
-      MinusBranch: "g4rw_full_primary_minus_sigma_weight"
-
-      IsGrid: true
-      GridBranch: "g4rw_full_grid_weights_0"
-      GridEnd: 2.0
-      GridStart: 0.1
-      GridN: 20
-    }
-  } ,
-  {
-    Name: "g4rw_2"
-    Central: 1.
-    LowerLimit: 0.1
-    UpperLimit: 2.0
-    Sigma: .2
-
-    Options: {
-      Position: 1
-      PlusBranch: "g4rw_full_primary_plus_sigma_weight"
-      MinusBranch: "g4rw_full_primary_minus_sigma_weight"
-
-      IsGrid: true
-      GridBranch: "g4rw_full_grid_weights_1"
-      GridEnd: 2.0
-      GridStart: 0.1
-      GridN: 20
-    }
-  },
-  {
-    Name: "g4rw_3"
-    Central: 1.
-    LowerLimit: 0.1
-    UpperLimit: 2.00
-    Sigma: .75
-
-    Options: {
-      Position: 2
-      PlusBranch: "g4rw_full_primary_plus_sigma_weight"
-      MinusBranch: "g4rw_full_primary_minus_sigma_weight"
-
-      IsGrid: true
-      GridBranch: "g4rw_full_grid_weights_2"
-      GridEnd: 2.0
-      GridStart: 0.1
-      GridN: 20
-    }
-  }
-
+  @local::SystematicsList.dEdX_Cal_Spline,
+  @local::G4RWSysts.g4rw_QE1,
+  @local::G4RWSysts.g4rw_QE2,
+  @local::G4RWSysts.g4rw_Prod,
+  @local::G4RWSysts.g4rw_DCex,
+  @local::G4RWSysts.g4rw_proton,
+  @local::SystematicsList.beam_shift,
+  @local::SystematicsList.ediv_weight,
+  @local::SystematicsList.no_track_weight
 ]
+
+AddSystTerm: true
+CovarianceBins: [
+  ["dEdX_Cal_Spline", 0],
+  ["g4rw_QE1", 1],
+  ["g4rw_QE2", 2],
+  ["g4rw_Prod", 3],
+  ["g4rw_DCex", 4],
+  ["g4rw_proton", 5],
+  ["ediv_weight", 6],
+  ["beam_shift", 7],
+  ["no_track_weight", 8]
+]
+CovarianceFile: "full_with_dcex.root"
+CovarianceMatrix: "m"
 
 Selections: [
   {
@@ -206,7 +148,7 @@ Selections: [
   {
     Name: "APA2"
     ID: 4
-    RecoBins: [[225, 275, 325, 375, 425, 580]]
+    RecoBins: [[222, 275, 325, 375, 425, 580]]
     AxisTitles: ["Reconstructed End Z (cm)"]
   },
   {
@@ -237,9 +179,9 @@ FluxTypes: [
 DefaultSignalBins: [0., 400., 800., 1000, 1200.]
 TrueIncidentBins: @local::DefaultSignalBins
 
-#BeamEnergyBins: [0., 800., 900., 1000., 1100., 1200., 4000.]
+BeamEnergyBins: [0., 800., 900., 1000., 1100., 1200., 4000.]
 #BeamEnergyBins: [0., 800., 1200., 4000.]
-BeamEnergyBins: [0., 4000.]
+#BeamEnergyBins: [0., 4000.]
 
 #For use identifying the true incident samples
 #used to make the final total pion incident histogram
@@ -329,6 +271,9 @@ UpperLimit: 10.0
 LowerLimit: 0.05
 ReducedIncidentChi2: false
 FitFlux: true
+ScaleDataToNorm: true 
+DataNorm: 20500. 
+#RNGSeed: 0
 
 FitFunctionType: 2
 #####################
@@ -342,10 +287,20 @@ DrawXSecUnderflow: false
 
 ## Validation
 RandomStart: false 
+SplitMC: false
 DoFakeData: true 
-DoThrows: false 
-NThrows: 1000
+FluctuateStats: false 
+DoThrows: true
+NThrows: 10 #00
+DoScans: false 
 Do1DShifts: true
-DoSysts: true 
+DoSysts: true
 MaxRethrows: 1000
 #####################
+
+#FitType: "Normal"
+FitType: "None"
+#FitType: "Pulls"
+#FitType: "Toy"
+
+NPulls: 10

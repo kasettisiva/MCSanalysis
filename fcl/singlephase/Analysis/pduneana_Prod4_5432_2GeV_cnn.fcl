@@ -1,4 +1,4 @@
-#include "pduneana_Prod4_5387_1GeV.fcl"
+#include "pduneana_Prod4_5432_2GeV.fcl"
 
 process_name: PDSPAna
 
