@@ -810,7 +810,7 @@ protoana::mcsXsection::mcsXsection(fhicl::ParameterSet const & p)
 
 	std::cout << "Doing reweight" << std::endl;
 	if (true_beam_PDG == RW_PDG) { //if PDG=RW_PDG
-	  std::vector<G4ReweightTraj *> trajs = CreateNRWTrajs(*geantGoodParticle, pi_serv->ParticleList(),fGeometryService_rw, fevent, true);
+	  std::vector<G4ReweightTraj *> trajs = CreateNRWTrajs(*geantGoodParticle, pi_serv->ParticleList(),fGeometryService_rw, fevent, "LAr", true);
 	  //G4ReweightTraj theTraj(true_beam_ID, true_beam_PDG, 0, fevent, {0,0});
 	  int n_rw_array=200;
 	  double react_st=0.0;
@@ -1260,7 +1260,7 @@ protoana::mcsXsection::mcsXsection(fhicl::ParameterSet const & p)
 	    auto vmeta=fmthm.data(i);
 	    for (size_t ii = 0; ii<vhit.size(); ++ii){ //loop over all meta data hit
 	      bool fBadhit = false;
-	      if (vmeta[ii]->Index() == std::numeric_limits<int>::max()){
+	      if (vmeta[ii]->Index() == static_cast<unsigned int>(std::numeric_limits<int>::max())){
 		fBadhit = true;
 		//cout<<"fBadHit"<<fBadhit<<endl;
 		continue;
@@ -1573,7 +1573,7 @@ protoana::mcsXsection::mcsXsection(fhicl::ParameterSet const & p)
 	  auto vmeta=fmthm.data(fprimaryID);
 	  for (size_t ii = 0; ii<vhit.size(); ++ii){ //loop over all meta data hit
 	    bool fBadhit = false;
-	    if (vmeta[ii]->Index() == std::numeric_limits<int>::max()){
+	    if (vmeta[ii]->Index() == static_cast<unsigned int>(std::numeric_limits<int>::max())){
 	      fBadhit = true;
 	      //cout<<"fBadHit"<<fBadhit<<endl;
 	      continue;

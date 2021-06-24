@@ -114,7 +114,8 @@ bool protoana::G4ReweightUtils::CreateRWTraj(
 
 std::vector<G4ReweightTraj *> protoana::G4ReweightUtils::CreateNRWTrajs(
     const simb::MCParticle & part, const sim::ParticleList & plist,
-    art::ServiceHandle < geo::Geometry > geo_serv, int event, bool fVerbose) {
+    art::ServiceHandle < geo::Geometry > geo_serv, int event,
+    std::string material_name, bool fVerbose) {
   std::vector<G4ReweightTraj *> results;
 
 
@@ -132,7 +133,7 @@ std::vector<G4ReweightTraj *> protoana::G4ReweightUtils::CreateNRWTrajs(
   std::vector<std::pair<size_t, size_t>> ranges;
 
   //bool found_last = false;
-  bool found_LAr = false;
+  bool found_material = false;
   size_t start = 0, end = 0;
   //G4ReweightTraj theTraj(part.TrackId(), part.PdgCode(), 0, event, {0,0});
   if (fVerbose) std::cout << "N traj pts: " <<
@@ -145,7 +146,8 @@ std::vector<G4ReweightTraj *> protoana::G4ReweightUtils::CreateNRWTrajs(
     geo::Point_t test_point{x, y, z};
     const TGeoMaterial * test_material = geo_serv->Material(test_point);
     if (!test_material) continue;
-    if (!strcmp(test_material->GetName(), "LAr")) {
+    //if (!strcmp(test_material->GetName(), material_name)) {
+    if (test_material->GetName() == material_name) {
       if (fVerbose) {
         std::cout << i << " " << "LAr: " << test_material->GetDensity() << " " <<
                      test_material->GetA() << " " << test_material->GetZ() <<
@@ -153,8 +155,8 @@ std::vector<G4ReweightTraj *> protoana::G4ReweightUtils::CreateNRWTrajs(
                      std::endl;
       }
 
-      if (!found_LAr) {
-        found_LAr = true;
+      if (!found_material) {
+        found_material = true;
         start = i;
       }
 
@@ -175,8 +177,8 @@ std::vector<G4ReweightTraj *> protoana::G4ReweightUtils::CreateNRWTrajs(
                      " " << x << " " << y << " " << z << 
                      std::endl;
       }
-      if (found_LAr) {
-        found_LAr = false;
+      if (found_material) {
+        found_material = false;
         end = i;
         ranges.push_back({start, end});
       }
@@ -185,7 +187,7 @@ std::vector<G4ReweightTraj *> protoana::G4ReweightUtils::CreateNRWTrajs(
     //if (i == part.NumberTrajectoryPoints() - 1)
     //  found_last = true;
   }
-  if (found_LAr) {
+  if (found_material) {
     //size_t np = part.NumberTrajectoryPoints();
     ranges.push_back({start, part.NumberTrajectoryPoints() - 1});
     //double x = part.Position(np - 1).X();
@@ -304,4 +306,44 @@ std::pair<double, double> protoana::G4ReweightUtils::GetNTrajPMSigmaWeights(
     }
   }
   return results;
+}
+
+std::vector<std::vector<G4ReweightTraj *>>
+    protoana::G4ReweightUtils::BuildHierarchy(
+        int ID, int PDG, const sim::ParticleList & plist,
+        art::ServiceHandle<geo::Geometry> geo_serv, int event,
+        std::string material_name, bool verbose) {
+
+  std::deque<int> to_create = {ID};
+  std::vector<std::vector<G4ReweightTraj *>> full_created;
+
+  while (to_create.size()) {
+    auto part = plist[to_create[0]];
+    std::vector<G4ReweightTraj *> temp_trajs =
+        CreateNRWTrajs(*part, plist, geo_serv,
+                       event, material_name, verbose);
+    for (int i = 0; i < part->NumberDaughters(); ++i) {
+      int daughter_ID = part->Daughter(i);
+      auto d_part = plist[daughter_ID];
+      if ((d_part->PdgCode() == 2212) || (d_part->PdgCode() == 2112) ||
+          (abs(d_part->PdgCode()) == 211)) {
+        to_create.push_back(daughter_ID);
+        std::cout << "Adding daughter " << to_create.back() << std::endl;
+      }
+    }
+  
+  
+    if (temp_trajs.size()) {
+      auto last_traj = temp_trajs.back();
+      std::cout << "created " << last_traj->GetTrackID() << " " <<
+                   last_traj->GetPDG() << std::endl;
+  
+      if (temp_trajs[0]->GetPDG() == PDG) {
+        full_created.push_back(temp_trajs);
+      }
+    }
+    to_create.pop_front();
+  }
+
+  return full_created;
 }

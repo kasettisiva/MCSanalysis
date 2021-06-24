@@ -1,0 +1,44 @@
+FieldMap: "SCE_DataDriven_180kV_v4.root"
+
+OutputFile: "dedx_cal_out.root"
+
+YZCaloFile: "/dune/data/users/mmote/calib_results/YZcalo_mich2_r5432.root"
+XCaloFile:  "/dune/data/users/mmote/calib_results/Xcalo_mich2_r5432.root"
+
+NormFactors: [
+  0.989,
+  0.975,
+  0.991
+]
+
+KE_Range: [
+  [10,  0.70437],
+  [14,  1.27937],
+  [20,  2.37894],
+  [30,  4.72636],
+  [40,  7.5788],
+  [80,  22.0917],
+  [100,  30.4441],
+  [140,  48.2235],
+  [200,  76.1461],
+  [300,  123.567],
+  [400,  170.845],
+  [800,  353.438],
+  [1000,  441.476]
+]
+
+#Plane0Start: 1.025e-3
+#Plane0End: 1.030e-3
+#Plane0Diff: .001e-3
+
+Plane0Start: 0.990e-3
+Plane0End: 1.030e-3
+Plane0Diff: .001e-3
+
+Plane1Start: 1.025e-3
+Plane1End: 1.026e-3
+Plane1Diff: .001e-3
+
+Plane2Start: 1.011e-3
+Plane2End: 1.012e-3
+Plane2Diff: .001e-3

@@ -12,6 +12,7 @@ protoana::ThinSliceSample::ThinSliceSample(
     const std::vector<fhicl::ParameterSet> & selections,
     const std::vector<double> & incident_bins,
     const std::vector<double> & true_incident_bins,
+    size_t beam_energy_bin,
     bool is_signal, std::pair<double, double> range)
     : fSampleName(name),
       fFluxType(flux_type),
@@ -28,13 +29,16 @@ protoana::ThinSliceSample::ThinSliceSample(
   if (is_signal) {
     inc_name = "sample_" + name + "_" +
                protoana::PreciseToString(range.first) + "_" +
-               protoana::PreciseToString(range.second) + "_incident_hist";
+               protoana::PreciseToString(range.second) + "_" +
+               "_incident_hist_" +
+               std::to_string(beam_energy_bin);
   }
   else {
-    inc_name = "sample_" + name + "_incident_hist";
+    inc_name = "sample_" + name + "_incident_hist_" + std::to_string(beam_energy_bin);
   }
-  fIncidentHist = TH1D(inc_name.c_str(), title.c_str(), incident_bins.size() - 1,
-                       &incident_bins[0]);
+  inc_name += ("_" + std::to_string(beam_energy_bin));
+  //fIncidentHist = TH1D(inc_name.c_str(), title.c_str(), incident_bins.size() - 1,
+  //                     &incident_bins[0]);
 
   inc_name += "_true";
   fTrueIncidentHist = TH1D(inc_name.c_str(), title.c_str(),
@@ -53,6 +57,7 @@ protoana::ThinSliceSample::ThinSliceSample(
       sel_name = "sample_" + name + "_selected_" +
                  it->get<std::string>("Name") + "_hist";
     }
+    sel_name += "_" + std::to_string(beam_energy_bin);
 
     std::vector<std::vector<double>> selected_bins
         = it->get<std::vector<std::vector<double>>>("RecoBins");
@@ -83,20 +88,20 @@ protoana::ThinSliceSample::ThinSliceSample(
 
 void protoana::ThinSliceSample::MakeRebinnedHists() {
   if (!fMadeRebinned) {
-    std::string inc_name = fIncidentHist.GetName();
-    inc_name += "Rebinned";
-    fIncidentHistRebinned = TH1D(inc_name.c_str(), fIncidentHist.GetTitle(),
-                                 fIncidentHist.GetNbinsX(), 0, fIncidentHist.GetNbinsX());
-    for (int i = 1; i <= fIncidentHist.GetNbinsX(); ++i) {
-      fIncidentHistRebinned.SetBinContent(i, fIncidentHist.GetBinContent(i));
+    //std::string inc_name = fIncidentHist.GetName();
+    //inc_name += "Rebinned";
+    //fIncidentHistRebinned = TH1D(inc_name.c_str(), fIncidentHist.GetTitle(),
+    //                             fIncidentHist.GetNbinsX(), 0, fIncidentHist.GetNbinsX());
+    //for (int i = 1; i <= fIncidentHist.GetNbinsX(); ++i) {
+    //  fIncidentHistRebinned.SetBinContent(i, fIncidentHist.GetBinContent(i));
 
-      double low_edge = fIncidentHist.GetXaxis()->GetBinLowEdge(i);
-      double up_edge = fIncidentHist.GetXaxis()->GetBinUpEdge(i);
-      std::string bin_label = (low_edge < 0. ? "< 0." :
-                               (protoana::PreciseToString(low_edge, 0) + " - " +
-                                protoana::PreciseToString(up_edge, 0)));
-      fIncidentHistRebinned.GetXaxis()->SetBinLabel(i, bin_label.c_str());
-    }
+    //  double low_edge = fIncidentHist.GetXaxis()->GetBinLowEdge(i);
+    //  double up_edge = fIncidentHist.GetXaxis()->GetBinUpEdge(i);
+    //  std::string bin_label = (low_edge < 0. ? "< 0." :
+    //                           (protoana::PreciseToString(low_edge, 0) + " - " +
+    //                            protoana::PreciseToString(up_edge, 0)));
+    //  fIncidentHistRebinned.GetXaxis()->SetBinLabel(i, bin_label.c_str());
+    //}
 
     for (auto it = fSelectionHists.begin(); it != fSelectionHists.end(); ++it) {
       TH1 * sel_hist = (TH1 *)it->second;
@@ -199,10 +204,9 @@ void protoana::ThinSliceSample::Rebin3D(TH1 * sel_hist, TH1 * rebinned) {
 }
 
 void protoana::ThinSliceSample::RefillRebinnedHists() {
-  for (int i = 1; i <= fIncidentHist.GetNbinsX(); ++i) {
-    fIncidentHistRebinned.SetBinContent(i, fIncidentHist.GetBinContent(i));
-  }
-
+  //for (int i = 1; i <= fIncidentHist.GetNbinsX(); ++i) {
+  //  fIncidentHistRebinned.SetBinContent(i, fIncidentHist.GetBinContent(i));
+  //}
   for (auto it = fSelectionHistsRebinned.begin();
        it != fSelectionHistsRebinned.end(); ++it) {
     for (int i = 1; i <= it->second->GetNbinsX(); ++i) {

@@ -3,6 +3,7 @@
 #include "ProtoDUNEFembFilter.fcl"
 #include "ProtoDUNEUnstableHVFilter.fcl"
 #include "protoDUNE_reco_data_prolog.fcl"
+#include "missingproductfilter.fcl"
 
 process_name: PDSPAna
 
@@ -46,9 +47,11 @@ physics:
  filters: { 
    f1: @local::HVfilter
    f2: @local::pdsp_fembfilter_beamside
+   f3: @local::standard_missingproductfilter
+   @table::protoDUNE_reco_data_filters
  }
 
- fpath: [f1, f2]
+ fpath: [f1, f2, f3]
 
  analyzers:
  {
@@ -72,8 +75,8 @@ physics.analyzers.pduneana.Verbose: true
 physics.analyzers.pduneana.DoReweight: false 
 physics.analyzers.pduneana.DoProtReweight: false 
 physics.analyzers.pduneana.GetTrackMichel: false 
-physics.analyzers.pduneana.CalibrationParsSCE: @local::CalorimetryParameters_SPProd4_MC_SCE #_eLT
-physics.analyzers.pduneana.CalibrationParsNoSCE: @local::CalorimetryParameters_SPProd4_MC_SCE #_eLT
+physics.analyzers.pduneana.CalibrationParsSCE: @local::CalorimetryParameters_SPProd4_Data_r5387 #_eLT
+physics.analyzers.pduneana.CalibrationParsNoSCE: @local::CalorimetryParameters_SPProd4_Data_r5387 #_eLT
 services.ParticleInventoryService.ParticleInventory.EveIdCalculator: "EmEveIdCalculator"
 physics.producers.emtrkmichelid.PointIdAlg.AdcMin: -10 # This was previously -50
 physics.producers.emtrkmichelid.PointIdAlg.AdcMax: 30  # This was previously 150

@@ -13,7 +13,8 @@
 # ======================================================================
 
 # use cmake 2.8 or later
-cmake_minimum_required (VERSION 2.8)
+#cmake_minimum_required (VERSION 2.8)
+cmake_minimum_required (VERSION 3.12...3.18 FATAL_ERROR)
 
 project(protoduneana)
 
@@ -76,9 +77,14 @@ find_ups_product( geant4reweight )
 if(DEFINED ENV{HEP_HPC_DIR} )
   find_ups_product( hep_hpc )
 endif()
+
 if(DEFINED ENV{HDF5_DIR} )
-  find_ups_product( hdf5 )
-  cet_find_library(HDF5 NAMES hdf5 PATHS ENV HDF5_LIB NO_DEFAULT_PATH)
+  string(TOUPPER ${CMAKE_BUILD_TYPE} BTYPE_UC )
+  if( ${BTYPE_UC} MATCHES "DEBUG" )
+    cet_find_library( HDF5 NAMES hdf5_debug PATHS ENV HDF5_LIB NO_DEFAULT_PATH )
+  else()
+    cet_find_library( HDF5 NAMES hdf5 PATHS ENV HDF5_LIB NO_DEFAULT_PATH )
+  endif()
 endif()
 
 # macros for dictionary and simple_plugin

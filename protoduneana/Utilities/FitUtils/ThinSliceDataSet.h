@@ -5,10 +5,12 @@
 #include <map>
 
 #include "fhiclcpp/ParameterSet.h"
+#include "ThinSliceSample.h"
 
 #include "TH1D.h"
 #include "TH2D.h"
 #include "TH3D.h"
+#include "TRandom3.h"
 
 namespace protoana {
 class ThinSliceDataSet {
@@ -84,6 +86,40 @@ class ThinSliceDataSet {
 
   void MakeRebinnedHists();
 
+  void GetCumulatives() {
+    fTotal = 0;
+    std::cout << "Making cumulatives" << std::endl;
+    for (auto it = fSelectionHists.begin();
+         it != fSelectionHists.end(); ++it) {
+      for (int i = 1; i <= it->second->GetNbinsX(); ++i) {
+        double val = it->second->GetBinContent(i);
+        if (fCumulatives.size()) {
+          val += fCumulatives.back().second;
+        }
+        fCumulatives.push_back({{it->first, i}, val});
+        fTotal += it->second->GetBinContent(i);
+        std::cout << fCumulatives.back().second << " " << fTotal << std::endl;
+      }
+    }
+
+    for (auto it = fCumulatives.begin(); it != fCumulatives.end(); ++it) {
+      it->second /= fTotal;
+    }
+
+    std::sort(fCumulatives.begin(), fCumulatives.end(),
+              [](auto a, auto b){return (a.second > b.second);});
+    std::cout << "N Cumulatives: " << fCumulatives.size() << std::endl;
+    for (auto c : fCumulatives) {
+      std::cout << c.second << std::endl;
+    }
+  };
+
+  void GenerateStatFluctuation();
+
+  void FillHistsFromSamples(
+      const std::map<int, std::vector<std::vector<ThinSliceSample>>> & samples,
+      double & flux);
+
  private:
   void Rebin1D(TH1 * sel_hist, TH1 * rebinned);
   void Rebin2D(TH1 * sel_hist, TH1 * rebinned);
@@ -94,6 +130,9 @@ class ThinSliceDataSet {
   TH1D fIncidentHistRebinned;
   bool fMadeRebinned = false;
   std::map<int, std::string> fSelectionNames;
+  std::vector<std::pair<std::pair<int, int>, double>> fCumulatives;
+  TRandom3 fRNG = TRandom3(0);
+  double fTotal;
 
 };
 }

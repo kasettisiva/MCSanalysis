@@ -26,10 +26,22 @@
 #include "nusimdata/SimulationBase/MCParticle.h"
 #include "nusimdata/SimulationBase/MCTruth.h"
 
+#include "TTree.h"
+#include "art_root_io/TFileService.h"
+
 #include <deque>
 
 namespace pionana {
   class TruthAnalyzer;
+
+  double K = .30705;
+  double A = 39.95;
+  double Z = 18;
+  double I = 188.e-6;
+  double me = .511;
+  double rho = 1.39;
+
+  std::vector<int> MakeSlices(double E0, double Ef, double p, const simb::MCParticle * part);
 
   std::map<size_t, double> GetEDepByTraj(
       const simb::MCParticle * part, int id,
@@ -39,6 +51,46 @@ namespace pionana {
   std::map<size_t, std::vector<int>> GetEMDaughterByTraj(
       const simb::MCParticle * part,
       const sim::ParticleList & plist);
+
+  double gamma(double KE, const simb::MCParticle * part) {
+    return (KE + part->Mass())/part->Mass();
+  }
+
+  double beta(double KE, const simb::MCParticle * part) {
+    return sqrt(1. - 1./(gamma(KE, part)*gamma(KE, part)));
+  }
+
+  double Tmax(double KE, const simb::MCParticle * part) {
+    return 2*me*(beta(KE, part)*beta(KE, part))*(gamma(KE, part)*gamma(KE, part))/(1 + 2*gamma(KE, part)*me/part->Mass() + (me*me)/(part->Mass()*part->Mass()));
+  }
+
+  double dEdX(double KE, const simb::MCParticle * part) {
+    double dedx = (rho*K*Z/A);
+    dedx /= (beta(KE, part)*beta(KE, part));
+    double post_factor = .5*log(2*me*(beta(KE, part)*beta(KE, part))*(gamma(KE, part)*gamma(KE, part))*Tmax(KE, part)/(I*I));
+    post_factor -= beta(KE, part)*beta(KE, part);
+    dedx *= post_factor;
+    return dedx;
+  }
+
+  double MPV(double KE, double p, const simb::MCParticle * part) {
+    return (K/2)*(Z/A)*(p*rho/(beta(KE, part)*beta(KE, part)))*(log(2*me*beta(KE, part)*beta(KE, part)*gamma(KE, part)*gamma(KE, part)/I) + log((K/2)*(Z/A)*p*rho/(beta(KE, part)*beta(KE, part)*I)) + .2 - beta(KE, part)*beta(KE, part));
+  }
+
+}
+
+std::vector<int> pionana::MakeSlices(double E0, double Ef, double p, const simb::MCParticle * part) {
+  std::vector<int> slices;
+  int s = 0;
+  while (E0 > Ef) {
+    slices.push_back(s);
+    ++s;
+    //std::cout << E0 - 1.e3*part->Mass() << " " << dEdX(E0 - 1.e3*part->Mass(), part) << " " << MPV(E0 - 1.e3*part->Mass(), part)<< std::endl;
+    //E0 -= dEdX(E0 - 1.e3*part->Mass(), part)*p;
+    E0 -= MPV(E0 - 1.e3*part->Mass(), p, part);
+  }
+
+  return slices;
 }
 
 std::map<size_t, double> pionana::GetEDepByTraj(
@@ -139,12 +191,27 @@ public:
   // Required functions.
   void analyze(art::Event const& e) override;
 
+  void beginJob() override;
+  void reset();
+
 private:
 
   // Declare member data here.
   art::InputTag fGeneratorTag;
   int fView;
   art::InputTag fSimEDepTag;
+  TTree *fTree;
+
+  double traj_delta_E;
+  double IDE_delta_E;
+  double true_beam_endZ;
+  int true_beam_PDG;
+  int output_first_point;
+  int event, run, subrun;
+  double first_IDE_Z;
+  double first_point_Z, first_point_E;
+
+  std::vector<double> true_traj_X, true_traj_Y, true_traj_Z, true_traj_E;
 
 };
 
@@ -158,6 +225,7 @@ pionana::TruthAnalyzer::TruthAnalyzer(fhicl::ParameterSet const& p)
 
 void pionana::TruthAnalyzer::analyze(art::Event const& e)
 {
+  reset();
   protoana::ProtoDUNETruthUtils truthUtil;
   art::ServiceHandle<cheat::BackTrackerService> bt_serv;
   art::ServiceHandle< cheat::ParticleInventoryService > pi_serv;
@@ -166,14 +234,19 @@ void pionana::TruthAnalyzer::analyze(art::Event const& e)
   art::ServiceHandle<geo::Geometry> geom;
   const simb::MCParticle* true_beam_particle
       = truthUtil.GetGeantGoodParticle((*mcTruths)[0],e);
+  if (!true_beam_particle) return;
   const simb::MCTrajectory & true_beam_trajectory = true_beam_particle->Trajectory();
 
+  run = e.run();
+  subrun = e.subRun();
+  event = e.id().event();
 
   double init_KE = 0.;
   //size_t init_pt = 0;
   //Get the mass for the beam particle
   int true_beam_ID = true_beam_particle->TrackId();
-  int true_beam_PDG = true_beam_particle->PdgCode();
+  true_beam_endZ = true_beam_particle->EndPosition().Z();
+  true_beam_PDG = true_beam_particle->PdgCode();
 
   //std::vector<int> daughters;
   //std::vector<std::vector<const sim::IDE *>> d_IDEs;
@@ -233,7 +306,12 @@ void pionana::TruthAnalyzer::analyze(art::Event const& e)
             [](const sim::IDE * i1, const sim::IDE * i2) {return (i1->z < i2->z);});
 
   double ide_z = (view2_IDEs.size() ? view2_IDEs[0]->z : -999.);
+  first_IDE_Z = ide_z;
   std::cout << "First IDE: " << ide_z << std::endl;
+
+  for (size_t i = 0; i < view2_IDEs.size(); ++i) {
+    std::cout << i << " " << view2_IDEs[i]->z << std::endl;
+  }
 
   std::sort(daughter_IDEs.begin(), daughter_IDEs.end(),
             [](const sim::IDE * i1, const sim::IDE * i2) {return (i1->z < i2->z);});
@@ -244,7 +322,7 @@ void pionana::TruthAnalyzer::analyze(art::Event const& e)
   std::map<size_t, unsigned char> proc_map(true_beam_procs.begin(),
                                            true_beam_procs.end());
 
-
+  size_t first_point_in_TPC = 0;
   for (size_t i = 1; i < true_beam_trajectory.size(); ++i) {
     double z0 = true_beam_trajectory.Z(i-1);
     double x0 = true_beam_trajectory.X(i-1);
@@ -257,6 +335,15 @@ void pionana::TruthAnalyzer::analyze(art::Event const& e)
                   true_beam_trajectory.KeyToProcess(proc_map[i-1]) :
                   "") << " " << 1.e3*true_beam_trajectory.E(i-1) << 
                  std::endl;
+    std::string proc_name =
+        (proc_map.find(i-1) != proc_map.end() ?
+         true_beam_trajectory.KeyToProcess(proc_map[i-1]) :
+         "");
+    std::string mat_name = mat->GetName();
+    if (mat_name == "LAr" && proc_name == "Transportation") {
+      first_point_in_TPC = i-1;
+      std::cout << "Found first point " << first_point_in_TPC << std::endl;
+    }
     if (view2_IDEs.size()) {
       double z1 = true_beam_trajectory.Z(i);
       double x1 = true_beam_trajectory.X(i);
@@ -285,9 +372,19 @@ void pionana::TruthAnalyzer::analyze(art::Event const& e)
     std::cout << std::endl;
   }
 
+  traj_delta_E = (true_beam_trajectory.E(first_point_in_TPC) - 
+                  true_beam_trajectory.E(true_beam_trajectory.size() - 2));
+  output_first_point = first_point_in_TPC;
+  first_point_Z = true_beam_trajectory.Z(first_point_in_TPC);
+  first_point_E = true_beam_trajectory.E(first_point_in_TPC);
+
   for (size_t i = 0; i < true_beam_trajectory.size(); ++i) {
     std::cout << "Z, E: " << true_beam_trajectory.Z(i) << " " <<
                  true_beam_trajectory.E(i) << std::endl;
+    true_traj_X.push_back(true_beam_trajectory.X(i));
+    true_traj_Y.push_back(true_beam_trajectory.Y(i));
+    true_traj_Z.push_back(true_beam_trajectory.Z(i));
+    true_traj_E.push_back(true_beam_trajectory.E(i));
   }
   if (view2_IDEs.size()) {
     std::cout << std::endl;
@@ -302,6 +399,7 @@ void pionana::TruthAnalyzer::analyze(art::Event const& e)
     std::cout << "Total edep: " << total_edep << std::endl;
     std::cout << "From daughters: " << total_d_edep << std::endl;
     std::cout << "Combined: " << total_edep + total_d_edep << std::endl;
+    IDE_delta_E = total_edep + total_d_edep;
     std::cout << "DeltaE: " << init_KE - (1.e3*true_beam_trajectory.E(true_beam_trajectory.size()-2)) << std::endl;
     std::cout << "IDE - traj: " << total_edep + total_d_edep - (init_KE - (1.e3*true_beam_trajectory.E(true_beam_trajectory.size()-2))) << std::endl;
     std::cout << "Energies: " << (1.e3*true_beam_trajectory.E(0)) << " " << init_KE << " " <<
@@ -363,6 +461,7 @@ void pionana::TruthAnalyzer::analyze(art::Event const& e)
     }
     std::cout << "Total Sim EDep: " << total_sim_edep << " " << true_beam_PDG << std::endl;
 
+    size_t first_point = 0;
     for (size_t i = 1; i < true_beam_trajectory.size(); ++i) {
       double z0 = true_beam_trajectory.Z(i-1);
       double x0 = true_beam_trajectory.X(i-1);
@@ -375,6 +474,7 @@ void pionana::TruthAnalyzer::analyze(art::Event const& e)
                          true_beam_trajectory.E(true_beam_trajectory.size()-2)) <<
                    std::endl;
       if (z0 <= dep_min_z && z1 > dep_min_z) {
+        first_point = i - 1;
         init_KE = 1.e3 * true_beam_trajectory.E(i-1);
         std::cout << "Found matching position " << z0 << " " << dep_min_z <<
                      " " << z1 << " " << mat->GetName() << std::endl;
@@ -405,11 +505,76 @@ void pionana::TruthAnalyzer::analyze(art::Event const& e)
                    1.e3*(true_beam_trajectory.E(it->first) -
                          true_beam_trajectory.E(it->first + 1)) << std::endl;
     }
+
+    std::cout << "First Point: " << first_point << " " <<
+                                    true_beam_trajectory.Z(first_point) << std::endl;
+    double total = 0.;
+    for (size_t i = first_point; i < true_beam_trajectory.size() - 2; ++i) {
+      std::cout << (true_beam_trajectory.Position(i+1) -
+                true_beam_trajectory.Position(i)).Vect().Mag() << std::endl;
+      total += (true_beam_trajectory.Position(i+1) -
+                true_beam_trajectory.Position(i)).Vect().Mag();
+    }
+    std::cout << "Total len in LAr: " << total << std::endl;
+     
+    double pitch = geom->WirePitch( 2, 1, 0);
+
+    std::vector<int> slices = MakeSlices(
+        1.e3*true_beam_trajectory.E(first_point),
+        1.e3*true_beam_trajectory.E(true_beam_trajectory.size() - 2),
+        pitch/.96,
+        true_beam_particle);
+    std::cout << "Slices: " << slices.size() << " " << slices.size() * pitch <<
+                 std::endl;
+
   }
   catch(const std::exception & e) {
     std::cout << "can't get sim edep. Moving on" << std::endl;
   }
 
+  fTree->Fill();
+
+}
+
+void pionana::TruthAnalyzer::reset() {
+  traj_delta_E = -999.;
+  IDE_delta_E = -999.;
+  true_beam_endZ = -999.;
+  true_beam_PDG = -999;
+  output_first_point = -999.;
+  first_point_Z = -999.;
+  first_point_E = -999.;
+  event = -999;
+  first_IDE_Z = -999.;
+  run = -999;
+  subrun = -999;
+
+  true_traj_X.clear();
+  true_traj_Y.clear();
+  true_traj_Z.clear();
+  true_traj_E.clear();
+}
+
+void pionana::TruthAnalyzer::beginJob() {
+
+  art::ServiceHandle<art::TFileService> tfs;
+  fTree = tfs->make<TTree>("beamana","beam analysis tree");
+
+  fTree->Branch("traj_delta_E", &traj_delta_E);
+  fTree->Branch("IDE_delta_E", &IDE_delta_E);
+  fTree->Branch("true_beam_endZ", &true_beam_endZ);
+  fTree->Branch("true_beam_PDG", &true_beam_PDG);
+  fTree->Branch("output_first_point", &output_first_point);
+  fTree->Branch("first_point_Z", &first_point_Z);
+  fTree->Branch("first_point_E", &first_point_E);
+  fTree->Branch("event", &event);
+  fTree->Branch("run", &run);
+  fTree->Branch("subrun", &subrun);
+  fTree->Branch("first_IDE_Z", &first_IDE_Z);
+  fTree->Branch("true_traj_X", &true_traj_X);
+  fTree->Branch("true_traj_Y", &true_traj_Y);
+  fTree->Branch("true_traj_Z", &true_traj_Z);
+  fTree->Branch("true_traj_E", &true_traj_E);
 }
 
 DEFINE_ART_MODULE(pionana::TruthAnalyzer)

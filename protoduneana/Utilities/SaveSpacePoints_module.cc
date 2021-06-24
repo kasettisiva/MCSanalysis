@@ -80,6 +80,7 @@ private:
   std::vector<double> vy;
   std::vector<double> vz;
   std::vector<double> vcharge;
+  std::vector<int> vtpc;
   std::vector<int> vtrackid;
   std::vector<int> vpdg;
   std::vector<int> vg4id;
@@ -133,6 +134,7 @@ void proto::SaveSpacePoints::analyze(art::Event const & evt)
   vy.clear();
   vz.clear();
   vcharge.clear();
+  vtpc.clear();
   vtrackid.clear();
   vpdg.clear();
   vg4id.clear();
@@ -213,12 +215,12 @@ void proto::SaveSpacePoints::analyze(art::Event const & evt)
     vz.push_back(sps[i]->XYZ()[2]);
     vcharge.push_back(pcs[i]->charge());
     vtrackid.push_back(-1);
+    auto const& hits = fmhsp.at(i);
     if (!evt.isRealData()){
-      auto const& hits = fmhsp.at(i);
       int TrackID = 0;
       std::map<int,double> trkide;
       for (auto const & hit : hits){
-        std::vector<sim::TrackIDE> TrackIDs = bt_serv->HitToEveTrackIDEs(clockData, hit);
+        std::vector<sim::TrackIDE> TrackIDs = bt_serv->HitToTrackIDEs(clockData, hit);
         for(size_t e = 0; e < TrackIDs.size(); ++e){
           trkide[TrackIDs[e].trackID] += TrackIDs[e].energy;
         }
@@ -250,6 +252,11 @@ void proto::SaveSpacePoints::analyze(art::Event const & evt)
       vpdg.push_back(0);
       vorigin.push_back(0);
     }
+    int spTPC = -1;
+    for (auto const & hit : hits){
+      spTPC = hit->WireID().TPC;
+    }
+    vtpc.push_back(spTPC);
   }
 
   art::Handle< std::vector<recob::Track> > trkHandle;
@@ -265,6 +272,7 @@ void proto::SaveSpacePoints::analyze(art::Event const & evt)
         vy.push_back(trk->TrajectoryPoint(j).position.Y());
         vz.push_back(trk->TrajectoryPoint(j).position.Z());
         vcharge.push_back(0);
+        vtpc.push_back(-1);
         vtrackid.push_back(trk->ID());
         vpdg.push_back(-1);
         vg4id.push_back(-1);
@@ -289,6 +297,7 @@ void proto::SaveSpacePoints::beginJob()
   fTree->Branch("vy",&vy);
   fTree->Branch("vz",&vz);
   fTree->Branch("vcharge",&vcharge);
+  fTree->Branch("vtpc",&vtpc);
   fTree->Branch("vtrackid",&vtrackid);
   fTree->Branch("vpdg",&vpdg);
   fTree->Branch("vg4id",&vg4id);

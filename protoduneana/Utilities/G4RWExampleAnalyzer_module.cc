@@ -73,7 +73,10 @@ private:
   double true_beam_startX, true_beam_startY, true_beam_startZ,
          true_beam_endX, true_beam_endY, true_beam_endZ;
   int true_beam_nTrajPts;
-  std::vector<double> true_beam_traj_dx;
+  std::vector<double> true_beam_traj_dx, true_beam_traj_X, true_beam_traj_Y,
+                      true_beam_traj_Z, true_beam_traj_KE,
+                      true_beam_traj_rx, true_beam_traj_ry, true_beam_traj_rz;
+  std::vector<std::string> true_beam_traj_procs;
   std::vector<double> true_beam_dEdX;
   std::vector<double> reco_beam_len,
                       reco_beam_startX, reco_beam_startY, reco_beam_startZ,
@@ -92,8 +95,8 @@ private:
   std::vector<double> g4rw_alt_primary_minus_sigma_weight;
   std::vector<double> g4rw_test_primary_plus_sigma_weight;
   std::vector<double> g4rw_test_primary_minus_sigma_weight;
-  /*std::vector<double> g4rw_full_primary_plus_sigma_weight;
-  std::vector<double> g4rw_full_primary_minus_sigma_weight;*/
+  std::vector<double> g4rw_full_primary_plus_sigma_weight;
+  std::vector<double> g4rw_full_primary_minus_sigma_weight;
   double g4rw_primary_singular_weight;
   std::vector<double> g4rw_set_weights;
 
@@ -107,6 +110,7 @@ private:
   G4ReweightParameterMaker ParMaker;
   G4ReweightManager RWManager;
   G4MultiReweighter MultiRW;
+  bool fDoFull;
   //G4MultiReweighter ProtMultiRW;
   //G4ReweighterFactory RWFactory;
   //G4Reweighter * theRW;
@@ -128,7 +132,8 @@ protoana::G4RWExampleAnalyzer::G4RWExampleAnalyzer(
       RWManager({p.get<fhicl::ParameterSet>("Material")}),
       MultiRW(RW_PDG, FracsFile, ParSet,
               p.get<fhicl::ParameterSet>("Material"),
-              &RWManager) {//,
+              &RWManager),
+      fDoFull(p.get<bool>("DoFull")) {//,
       //ProtMultiRW(2212, ProtXSecFile, ProtFracsFile, ParSet) {
 
   //theRW = RWFactory.BuildReweighter(RW_PDG, &XSecFile, &FracsFile,
@@ -253,9 +258,42 @@ void protoana::G4RWExampleAnalyzer::analyze(art::Event const& e) {
     std::cout << "No reco info. Moving on" << std::endl;
   }
 
+  std::cout << "mass: " << true_beam_particle->Mass() << std::endl;
   const simb::MCTrajectory & true_beam_trajectory =
       true_beam_particle->Trajectory();
+  std::cout << "E: " << true_beam_trajectory.E(0) << std::endl;
+
+  auto true_beam_proc_map = true_beam_trajectory.TrajectoryProcesses();
+  std::map<size_t, std::string> proc_map;
+  for (auto itProc = true_beam_proc_map.begin();
+       itProc != true_beam_proc_map.end(); ++itProc) {
+    //int index = itProc->first;
+    std::string process = true_beam_trajectory.KeyToProcess(itProc->second);
+    proc_map[itProc->first] = process;
+
+    if (process == "hadElastic") {
+      ++true_beam_nElasticScatters;
+    }
+  }
+
   true_beam_nTrajPts = true_beam_trajectory.size();
+  true_beam_traj_X.push_back(true_beam_trajectory.X(0));
+  true_beam_traj_Y.push_back(true_beam_trajectory.Y(0));
+  true_beam_traj_Z.push_back(true_beam_trajectory.Z(0));
+  true_beam_traj_KE.push_back(
+      1.e3*(true_beam_trajectory.E(0) - true_beam_particle->Mass()));
+  double p_mag = sqrt(true_beam_trajectory.Px(0)*true_beam_trajectory.Px(0) +
+                      true_beam_trajectory.Py(0)*true_beam_trajectory.Py(0) +
+                      true_beam_trajectory.Pz(0)*true_beam_trajectory.Pz(0));
+  true_beam_traj_rx.push_back(true_beam_trajectory.Px(0)/p_mag);
+  true_beam_traj_ry.push_back(true_beam_trajectory.Py(0)/p_mag);
+  true_beam_traj_rz.push_back(true_beam_trajectory.Pz(0)/p_mag);
+  if (proc_map.find(0) != proc_map.end()) {
+    true_beam_traj_procs.push_back(proc_map.at(0));
+  }
+  else {
+    true_beam_traj_procs.push_back("");
+  }
   for (int i = 1; i < true_beam_nTrajPts; ++i) {
     double x0 = true_beam_trajectory.X(i-1);
     double x1 = true_beam_trajectory.X(i);
@@ -267,18 +305,25 @@ void protoana::G4RWExampleAnalyzer::analyze(art::Event const& e) {
     true_beam_traj_dx.push_back(sqrt((x1 - x0)*(x1 - x0) +
                                      (y1 - y0)*(y1 - y0) +
                                      (z1 - z0)*(z1 - z0)));
-  }
-  auto true_beam_proc_map = true_beam_trajectory.TrajectoryProcesses();
- 
-  for (auto itProc = true_beam_proc_map.begin();
-       itProc != true_beam_proc_map.end(); ++itProc) {
-    //int index = itProc->first;
-    std::string process = true_beam_trajectory.KeyToProcess(itProc->second);
-
-    if (process == "hadElastic") {
-      ++true_beam_nElasticScatters;
+    true_beam_traj_X.push_back(true_beam_trajectory.X(i));
+    true_beam_traj_Y.push_back(true_beam_trajectory.Y(i));
+    true_beam_traj_Z.push_back(true_beam_trajectory.Z(i));
+    true_beam_traj_KE.push_back(
+        1.e3*(true_beam_trajectory.E(i) - true_beam_particle->Mass()));
+    double p_mag = sqrt(true_beam_trajectory.Px(i)*true_beam_trajectory.Px(i) +
+                        true_beam_trajectory.Py(i)*true_beam_trajectory.Py(i) +
+                        true_beam_trajectory.Pz(i)*true_beam_trajectory.Pz(i));
+    true_beam_traj_rx.push_back(true_beam_trajectory.Px(i)/p_mag);
+    true_beam_traj_ry.push_back(true_beam_trajectory.Py(i)/p_mag);
+    true_beam_traj_rz.push_back(true_beam_trajectory.Pz(i)/p_mag);
+    if (proc_map.find(i) != proc_map.end()) {
+      true_beam_traj_procs.push_back(proc_map.at(i));
+    }
+    else {
+      true_beam_traj_procs.push_back("");
     }
   }
+
 
   event = e.id().event();
   run = e.run();
@@ -330,7 +375,7 @@ void protoana::G4RWExampleAnalyzer::analyze(art::Event const& e) {
 
     std::vector<G4ReweightTraj *> trajs = CreateNRWTrajs(
         *true_beam_particle, plist,
-        fGeometryService, event, true);
+        fGeometryService, event, "LAr", true);
     std::cout << "Made " << trajs.size() << " trajs" << std::endl; 
     bool added = false;
     for (size_t i = 0; i < trajs.size(); ++i) {
@@ -376,61 +421,62 @@ void protoana::G4RWExampleAnalyzer::analyze(art::Event const& e) {
     //  double temp_w = GetNTrajWeightFromSetPars(trajs, MultiRW);
     //  g4rw_set_weights.push_back(temp_w);
 
-    /*
-    std::vector<int> to_create = {true_beam_ID};
-    std::vector<std::vector<G4ReweightTraj *>> created;
-    while (to_create.size()) {
-      auto part = plist[to_create[0]];
-      std::vector<G4ReweightTraj *> temp_trajs =
-          CreateNRWTrajs(*part, plist, fGeometryService,
-                         event, true);
-      std::cout << "size: " << temp_trajs.size() << std::endl;
-      if (temp_trajs.size()) {
-        auto last_traj = temp_trajs.back();
-        std::cout << "created " << last_traj->GetTrackID() << " " <<
-                     last_traj->GetPDG() << std::endl;
-        for (size_t i = 0; i < last_traj->GetNChilds(); ++i) {
-          if ((last_traj->GetChild(i)->GetPDG() == 2212) ||
-              (last_traj->GetChild(i)->GetPDG() == 2112) ||
-              (abs(last_traj->GetChild(i)->GetPDG()) == 211) ) {
-            to_create.push_back(last_traj->GetChild(i)->GetTrackID());
-            std::cout << "Adding daughter " << to_create.back() << std::endl;
+    if (fDoFull) {
+      std::vector<int> to_create = {true_beam_ID};
+      std::vector<std::vector<G4ReweightTraj *>> created;
+      while (to_create.size()) {
+        auto part = plist[to_create[0]];
+        std::vector<G4ReweightTraj *> temp_trajs =
+            CreateNRWTrajs(*part, plist, fGeometryService,
+                           event, "LAr", true);
+        std::cout << "size: " << temp_trajs.size() << std::endl;
+        if (temp_trajs.size()) {
+          auto last_traj = temp_trajs.back();
+          std::cout << "created " << last_traj->GetTrackID() << " " <<
+                       last_traj->GetPDG() << std::endl;
+          for (size_t i = 0; i < last_traj->GetNChilds(); ++i) {
+            if ((last_traj->GetChild(i)->GetPDG() == 2212) ||
+                (last_traj->GetChild(i)->GetPDG() == 2112) ||
+                (abs(last_traj->GetChild(i)->GetPDG()) == 211) ) {
+              to_create.push_back(last_traj->GetChild(i)->GetTrackID());
+              std::cout << "Adding daughter " << to_create.back() << std::endl;
+            }
+          }
+
+          if (temp_trajs[0]->GetPDG() == RW_PDG) {
+            created.push_back(temp_trajs);
           }
         }
+        to_create.erase(to_create.begin());
+      }
 
-        if (temp_trajs[0]->GetPDG() == RW_PDG) {
-          created.push_back(temp_trajs);
+      std::cout << "Created " << created.size() << " reweightable pi+" << std::endl;
+
+      bool new_added = false;
+      for (size_t i = 0; i < created.size(); ++i) {
+        std::vector<G4ReweightTraj *> temp_trajs = created[i];
+        std::cout << i << " n trajs: " << temp_trajs.size() << std::endl;
+        for (size_t j = 0; j < temp_trajs.size(); ++j) {
+          G4ReweightTraj * this_traj = temp_trajs[j];
+          if (this_traj->GetNSteps() > 0) {
+            for (size_t k = 0; k < ParSet.size(); ++k) {
+              std::pair<double, double> pm_weights =
+                  MultiRW.GetPlusMinusSigmaParWeight((*this_traj), k);
+
+              if (!new_added) {
+                g4rw_full_primary_plus_sigma_weight.push_back(pm_weights.first);
+                g4rw_full_primary_minus_sigma_weight.push_back(pm_weights.second);
+              }
+              else {
+                g4rw_full_primary_plus_sigma_weight[k] *= pm_weights.first;
+                g4rw_full_primary_minus_sigma_weight[k] *= pm_weights.second;
+              }
+            }
+            new_added = true;
+          }
         }
       }
-      to_create.erase(to_create.begin());
     }
-
-    std::cout << "Created " << created.size() << " reweightable pi+" << std::endl;
-
-    bool new_added = false;
-    for (size_t i = 0; i < created.size(); ++i) {
-      std::vector<G4ReweightTraj *> temp_trajs = created[i];
-      std::cout << i << " n trajs: " << temp_trajs.size() << std::endl;
-      for (size_t j = 0; j < temp_trajs.size(); ++j) {
-        G4ReweightTraj * this_traj = temp_trajs[j];
-        if (this_traj->GetNSteps() > 0) {
-          for (size_t k = 0; k < ParSet.size(); ++k) {
-            std::pair<double, double> pm_weights =
-                MultiRW.GetPlusMinusSigmaParWeight((*this_traj), k);
-
-            if (!new_added) {
-              g4rw_full_primary_plus_sigma_weight.push_back(pm_weights.first);
-              g4rw_full_primary_minus_sigma_weight.push_back(pm_weights.second);
-            }
-            else {
-              g4rw_full_primary_plus_sigma_weight[k] *= pm_weights.first;
-              g4rw_full_primary_minus_sigma_weight[k] *= pm_weights.second;
-            }
-          }
-          new_added = true;
-        }
-      }
-    }*/
   }
 
   fTree->Fill();
@@ -448,6 +494,14 @@ void protoana::G4RWExampleAnalyzer::beginJob() {
   fTree->Branch("true_beam_len", &true_beam_len);
   fTree->Branch("true_beam_nTrajPts", &true_beam_nTrajPts);
   fTree->Branch("true_beam_traj_dx", &true_beam_traj_dx);
+  fTree->Branch("true_beam_traj_X", &true_beam_traj_X);
+  fTree->Branch("true_beam_traj_Y", &true_beam_traj_Y);
+  fTree->Branch("true_beam_traj_Z", &true_beam_traj_Z);
+  fTree->Branch("true_beam_traj_rx", &true_beam_traj_rx);
+  fTree->Branch("true_beam_traj_ry", &true_beam_traj_ry);
+  fTree->Branch("true_beam_traj_rz", &true_beam_traj_rz);
+  fTree->Branch("true_beam_traj_KE", &true_beam_traj_KE);
+  fTree->Branch("true_beam_traj_procs", &true_beam_traj_procs);
   fTree->Branch("true_beam_startP", &true_beam_startP);
   fTree->Branch("true_beam_startX", &true_beam_startX);
   fTree->Branch("true_beam_startY", &true_beam_startY);
@@ -488,11 +542,11 @@ void protoana::G4RWExampleAnalyzer::beginJob() {
                 &g4rw_test_primary_plus_sigma_weight);
   fTree->Branch("g4rw_test_primary_minus_sigma_weight",
                 &g4rw_test_primary_minus_sigma_weight);
-  /*
+
   fTree->Branch("g4rw_full_primary_plus_sigma_weight",
                 &g4rw_full_primary_plus_sigma_weight);
   fTree->Branch("g4rw_full_primary_minus_sigma_weight",
-                &g4rw_full_primary_minus_sigma_weight);*/
+                &g4rw_full_primary_minus_sigma_weight);
   fTree->Branch("g4rw_set_weights", &g4rw_set_weights);
 }
 
@@ -502,6 +556,14 @@ void protoana::G4RWExampleAnalyzer::reset() {
   true_beam_len = -1.;
   true_beam_nTrajPts = -1;
   true_beam_traj_dx.clear();
+  true_beam_traj_X.clear();
+  true_beam_traj_Y.clear();
+  true_beam_traj_Z.clear();
+  true_beam_traj_KE.clear();
+  true_beam_traj_procs.clear();
+  true_beam_traj_rx.clear();
+  true_beam_traj_ry.clear();
+  true_beam_traj_rz.clear();
   true_beam_startP = -1.;
   true_beam_startX = -1.;
   true_beam_startY = -1.;
@@ -538,8 +600,8 @@ void protoana::G4RWExampleAnalyzer::reset() {
   g4rw_alt_primary_minus_sigma_weight.clear();
   g4rw_test_primary_plus_sigma_weight.clear();
   g4rw_test_primary_minus_sigma_weight.clear();
-  /*g4rw_full_primary_plus_sigma_weight.clear();
-  g4rw_full_primary_minus_sigma_weight.clear();*/
+  g4rw_full_primary_plus_sigma_weight.clear();
+  g4rw_full_primary_minus_sigma_weight.clear();
   g4rw_set_weights.clear();
 }
 DEFINE_ART_MODULE(protoana::G4RWExampleAnalyzer)
