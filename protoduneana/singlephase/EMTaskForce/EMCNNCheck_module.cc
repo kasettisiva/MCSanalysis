@@ -89,6 +89,7 @@ private:
   std::vector<double> score_mic;
   std::vector<int> pdg;
   std::vector<int> origin;
+  std::vector<std::string> process;
 
 };
 
@@ -117,7 +118,7 @@ void pdsp::EMCNNCheck::analyze(art::Event const& e)
   average_score_mic = 0.;
   track_endz = -1;
   ndaughterhits = 0;
-  average_daughter_score_mic = -1.;
+  average_daughter_score_mic = 0.;
   channel.clear();
   tpc.clear();
   plane.clear();
@@ -129,6 +130,7 @@ void pdsp::EMCNNCheck::analyze(art::Event const& e)
   score_mic.clear();
   pdg.clear();
   origin.clear();
+  process.clear();
 
   //Services
   art::ServiceHandle<cheat::BackTrackerService> bt_serv;
@@ -342,6 +344,7 @@ void pdsp::EMCNNCheck::analyze(art::Event const& e)
             score_mic.push_back(cnn_out[hitResults.getIndex("michel")]);
             int this_pdg = 0;
             int this_origin = -1;
+            std::string this_process = "null";
             if (!e.isRealData()){
               int TrackID = 0;
               std::map<int,double> trkide;
@@ -364,11 +367,14 @@ void pdsp::EMCNNCheck::analyze(art::Event const& e)
               const simb::MCParticle *particle = pi_serv->TrackIdToParticle_P(TrackID);
               if (particle){
                 this_pdg = particle->PdgCode();
+                this_process = particle->Process();
                 this_origin = pi_serv->ParticleToMCTruth_P(particle)->Origin();
               }
             }
             pdg.push_back(this_pdg);
             origin.push_back(this_origin);
+            process.push_back(this_process);
+            std::cout<<this_process<<std::endl;
           }
         }
       }
@@ -397,7 +403,7 @@ void pdsp::EMCNNCheck::analyze(art::Event const& e)
     for(size_t hitl=0;hitl<hitList.size();hitl++){
       std::array<float,4> cnn_out=hitResults.getOutput(hitList[hitl]);
       auto & tracks = thass.at(hitList[hitl].key());
-      // hit non on the track
+      // hit not on the track
       if (std::find(wirekeys.begin(), wirekeys.end(), hitl) != wirekeys.end()) continue;
       // hit not on a long track
       if (!tracks.empty() && int(tracks[0].key()) != trackid && trkList[tracks[0].key()]->Length()>25) continue;
@@ -410,7 +416,7 @@ void pdsp::EMCNNCheck::analyze(art::Event const& e)
       if(std::abs(wireh1-endwire)<15 && std::abs(peakth1-endpeakt)<100 && tpcid==endtpc){
         ++ndaughterhits;
         average_daughter_score_mic += cnn_out[hitResults.getIndex("michel")];
-        //std::cout<<cnn_out[hitResults.getIndex("michel")]<<std::endl;
+        std::cout<<hitList[hitl]->WireID().Wire<<" "<<hitList[hitl]->PeakTime()<<" "<<hitList[hitl]->Integral()<<" "<<cnn_out[hitResults.getIndex("michel")]<<std::endl;
       }
     }
   }
@@ -443,6 +449,7 @@ void pdsp::EMCNNCheck::beginJob(){
   ftree->Branch("score_mic", &score_mic);
   ftree->Branch("pdg", &pdg);
   ftree->Branch("origin", &origin);
+  ftree->Branch("process", &process);
 
 }
 
