@@ -21,6 +21,7 @@
 
 #include "lardata/ArtDataHelper/MVAReader.h"
 #include "lardata/DetectorInfoServices/DetectorClocksService.h"
+#include "lardata/DetectorInfoServices/DetectorPropertiesService.h"
 #include "larsim/MCCheater/BackTrackerService.h"
 #include "larsim/MCCheater/ParticleInventoryService.h"
 
@@ -28,6 +29,7 @@
 #include "protoduneana/Utilities/ProtoDUNEPFParticleUtils.h"
 #include "protoduneana/Utilities/ProtoDUNEBeamlineUtils.h"
 #include "protoduneana/Utilities/ProtoDUNEBeamCuts.h"
+#include "larevt/SpaceChargeServices/SpaceChargeService.h"
 
 #include "lardataobj/RecoBase/Vertex.h"
 #include "lardataobj/RecoBase/TrackHitMeta.h"
@@ -78,6 +80,9 @@ private:
   double track_endz;
   int ndaughterhits;
   double average_daughter_score_mic;
+  double vtxx, vtxy, vtxz;
+  double endx, endy, endz;
+  double dirx, diry, dirz;
   std::vector<short> channel;
   std::vector<short> tpc;
   std::vector<short> plane;
@@ -119,6 +124,15 @@ void pdsp::EMCNNCheck::analyze(art::Event const& e)
   track_endz = -1;
   ndaughterhits = 0;
   average_daughter_score_mic = 0.;
+  vtxx = -9999;
+  vtxy = -9999;
+  vtxz = -9999;
+  endx = -9999;
+  endy = -9999;
+  endz = -9999;
+  dirx = -9999;
+  diry = -9999;
+  dirz = -9999;
   channel.clear();
   tpc.clear();
   plane.clear();
@@ -135,7 +149,11 @@ void pdsp::EMCNNCheck::analyze(art::Event const& e)
   //Services
   art::ServiceHandle<cheat::BackTrackerService> bt_serv;
   art::ServiceHandle<cheat::ParticleInventoryService> pi_serv;
- 
+  auto const* SCE = lar::providerFrom<spacecharge::SpaceChargeService>();
+  auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(e);
+  auto const detProp = art::ServiceHandle<detinfo::DetectorPropertiesService>()->DataFor(e, clockData);
+  art::ServiceHandle<geo::Geometry const> geom;
+
   art::Handle < std::vector < recob::Slice > > sliceListHandle;
   std::vector < art::Ptr < recob::Slice > > sliceList;
   if (e.getByLabel("pandora", sliceListHandle)) {
@@ -190,7 +208,6 @@ void pdsp::EMCNNCheck::analyze(art::Event const& e)
 
   anab::MVAReader<recob::Hit,4> hitResults(e, fCNNTag);
 
-  auto const clockData = art::ServiceHandle<detinfo::DetectorClocksService>()->DataFor(e);
   if (!e.isRealData()){
     // Get the truth utility to help us out
     protoana::ProtoDUNETruthUtils truthUtil;
@@ -274,11 +291,33 @@ void pdsp::EMCNNCheck::analyze(art::Event const& e)
     const recob::Track* thisTrack = pfpUtil.GetPFParticleTrack(*particle,e,"pandora","pandoraTrack");
     const recob::Shower* thisShower = pfpUtil.GetPFParticleShower(*particle,e,"pandora","pandoraShower");
     if (thisTrack){
-      if (!beam_cuts.IsBeamlike(*thisTrack, e, "1")) return;
+      //if (!beam_cuts.IsBeamlike(*thisTrack, e, "1")) return;
       // Track ID
       trackid = thisTrack->ID();
       // Track end point z
       track_endz = thisTrack->End().Z();
+      vtxx = thisTrack->Vertex().X();
+      vtxy = thisTrack->Vertex().Y();
+      vtxz = thisTrack->Vertex().Z();
+      if (!geom->FindTPCAtPosition(geo::Point_t(vtxx, vtxy, vtxz)).isValid) return;
+      auto offset = SCE->GetCalPosOffsets(geo::Point_t(vtxx, vtxy, vtxz), (geom->FindTPCAtPosition(geo::Point_t(vtxx, vtxy, vtxz))).TPC);
+      std::cout<<"track "<<offset.X()<<" "<<offset.Y()<<" "<<offset.Z()<<std::endl;
+      vtxx -= offset.X();
+      vtxy += offset.Y();
+      vtxz += offset.Z();
+      endx = thisTrack->End().X();
+      endy = thisTrack->End().Y();
+      endz = thisTrack->End().Z();
+      if (!geom->FindTPCAtPosition(geo::Point_t(endx, endy, endz)).isValid) return;
+      offset = SCE->GetCalPosOffsets(geo::Point_t(endx, endy, endz), (geom->FindTPCAtPosition(geo::Point_t(endx, endy, endz))).TPC);
+      endx -= offset.X();
+      endy += offset.Y();
+      endz += offset.Z();
+      TVector3 dir(endx-vtxx, endy-vtxy, endz-vtxz);
+      dir = dir.Unit();
+      dirx = dir.X();
+      diry = dir.Y();
+      dirz = dir.Z();
       // Find the last wire number and peak time on the track
       if (fmthm.isValid()){
         float zlast0=-99999;
@@ -286,7 +325,7 @@ void pdsp::EMCNNCheck::analyze(art::Event const& e)
         auto vmeta=fmthm.data(trackid);
         for (size_t ii = 0; ii<vhit.size(); ++ii){ //loop over all meta data hit
           bool fBadhit = false;
-          if (vmeta[ii]->Index() == std::numeric_limits<int>::max()){
+          if (vmeta[ii]->Index() == static_cast<unsigned int>(std::numeric_limits<int>::max())){
             fBadhit = true;
             continue;
           }
@@ -314,7 +353,29 @@ void pdsp::EMCNNCheck::analyze(art::Event const& e)
       }
     }
     if (thisShower){
-      if (!beam_cuts.IsBeamlike(*thisShower, e, "1")) return;
+      //if (!beam_cuts.IsBeamlike(*thisShower, e, "1")) return;
+      vtxx = thisShower->ShowerStart().X();
+      vtxy = thisShower->ShowerStart().Y();
+      vtxz = thisShower->ShowerStart().Z();
+      endx = vtxx + thisShower->Direction().X();
+      endy = vtxy + thisShower->Direction().Y();
+      endz = vtxz + thisShower->Direction().Z();
+      if (!geom->FindTPCAtPosition(geo::Point_t(vtxx, vtxy, vtxz)).isValid) return;
+      auto offset = SCE->GetCalPosOffsets(geo::Point_t(vtxx, vtxy, vtxz), (geom->FindTPCAtPosition(geo::Point_t(vtxx, vtxy, vtxz))).TPC);
+      //std::cout<<"shower "<<offset.X()<<" "<<offset.Y()<<" "<<offset.Z()<<std::endl;
+      vtxx -= offset.X();
+      vtxy += offset.Y();
+      vtxz += offset.Z();
+      if (!geom->FindTPCAtPosition(geo::Point_t(endx, endy, endz)).isValid) return;
+      offset = SCE->GetCalPosOffsets(geo::Point_t(endx, endy, endz), (geom->FindTPCAtPosition(geo::Point_t(endx, endy, endz))).TPC);
+      endx -= offset.X();
+      endy += offset.Y();
+      endz += offset.Z();
+      TVector3 dir(endx-vtxx, endy-vtxy, endz-vtxz);
+      dir = dir.Unit();
+      dirx = dir.X();
+      diry = dir.Y();
+      dirz = dir.Z();
     }
   }
 
@@ -374,7 +435,6 @@ void pdsp::EMCNNCheck::analyze(art::Event const& e)
             pdg.push_back(this_pdg);
             origin.push_back(this_origin);
             process.push_back(this_process);
-            std::cout<<this_process<<std::endl;
           }
         }
       }
@@ -398,7 +458,7 @@ void pdsp::EMCNNCheck::analyze(art::Event const& e)
   }
 
   // Get the hits near the track end (Michel candidate)
-  std::cout<<trackid<<std::endl;
+  //std::cout<<trackid<<std::endl;
   if (trackid!=-1){
     for(size_t hitl=0;hitl<hitList.size();hitl++){
       std::array<float,4> cnn_out=hitResults.getOutput(hitList[hitl]);
@@ -416,7 +476,7 @@ void pdsp::EMCNNCheck::analyze(art::Event const& e)
       if(std::abs(wireh1-endwire)<15 && std::abs(peakth1-endpeakt)<100 && tpcid==endtpc){
         ++ndaughterhits;
         average_daughter_score_mic += cnn_out[hitResults.getIndex("michel")];
-        std::cout<<hitList[hitl]->WireID().Wire<<" "<<hitList[hitl]->PeakTime()<<" "<<hitList[hitl]->Integral()<<" "<<cnn_out[hitResults.getIndex("michel")]<<std::endl;
+        //std::cout<<hitList[hitl]->WireID().Wire<<" "<<hitList[hitl]->PeakTime()<<" "<<hitList[hitl]->Integral()<<" "<<cnn_out[hitResults.getIndex("michel")]<<std::endl;
       }
     }
   }
@@ -438,6 +498,15 @@ void pdsp::EMCNNCheck::beginJob(){
   ftree->Branch("track_endz", &track_endz, "track_endz/D");
   ftree->Branch("ndaughterhits", &ndaughterhits, "ndaughterhits/I");
   ftree->Branch("average_daughter_score_mic", &average_daughter_score_mic, "average_daughter_score_mic/D");
+  ftree->Branch("vtxx", &vtxx, "vtxx/D");
+  ftree->Branch("vtxy", &vtxy, "vtxy/D");
+  ftree->Branch("vtxz", &vtxz, "vtxz/D");
+  ftree->Branch("endx", &endx, "endx/D");
+  ftree->Branch("endy", &endy, "endy/D");
+  ftree->Branch("endz", &endz, "endz/D");
+  ftree->Branch("dirx", &dirx, "dirx/D");
+  ftree->Branch("diry", &diry, "diry/D");
+  ftree->Branch("dirz", &dirz, "dirz/D");
   ftree->Branch("channel", &channel);
   ftree->Branch("tpc", &tpc);
   ftree->Branch("plane", &plane);
