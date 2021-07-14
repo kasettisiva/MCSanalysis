@@ -496,7 +496,7 @@ std::map< size_t, const recob::Hit * > protoana::ProtoDUNETrackUtils::GetRecoHit
 
      for( size_t i = 0; i < beamHits.size(); ++i ){
 
-       if( beamMetas[i]->Index() == std::numeric_limits<int>::max() )
+       if( beamMetas[i]->Index() == static_cast<unsigned int>(std::numeric_limits<int>::max()) )
          continue;
 
        if( !track.HasValidPoint( beamMetas[i]->Index() ) ){
@@ -815,7 +815,7 @@ std::pair<double, int> protoana::ProtoDUNETrackUtils::GetVertexMichelScoreAlt(
     auto vmeta=fmthm.data(track.ID());
     for (size_t ii = 0; ii<vhit.size(); ++ii){ //loop over all meta data hit
       bool fBadhit = false;
-      if (vmeta[ii]->Index() == std::numeric_limits<int>::max()){
+      if (vmeta[ii]->Index() == static_cast<unsigned int>(std::numeric_limits<int>::max())){
         fBadhit = true;
         continue;
       }

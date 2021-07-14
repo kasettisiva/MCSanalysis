@@ -44,6 +44,7 @@ art_make_exec( NAME runEventSelection
 	       LIBRARIES protodune_fitutils
                          ${ROOT_ROOTDATAFRAME}
                          ${ROOT_TREEPLAYER}
+                         ${ROOT_ROOTVECOPS}
 	    )
 
 art_make_exec( NAME Geant4ReweightSysts 
