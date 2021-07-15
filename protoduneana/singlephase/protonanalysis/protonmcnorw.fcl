@@ -1,0 +1,116 @@
+#include "services_dune.fcl"
+#include "hitfindermodules_dune.fcl"
+#include "filters.fcl"
+#include "signalservices_dune.fcl"
+#include "caldata_dune.fcl"
+#include "trackfindermodules_dune.fcl"
+
+#include "ecalibration.fcl"
+#include "triggeralgo_service.fcl"
+#include "photpropservices_dune.fcl"
+#include "ProtoDUNEDataUtils.fcl"
+#include "ProtoDUNEBeamlineFilter.fcl"
+#include "ProtoDUNEBeamCuts.fcl"
+
+#include "protodune_tools_dune.fcl"
+
+
+process_name: protonmcnorw
+
+services:
+{
+  #Load the service that manages root files for histograms.
+  TFileService: { fileName: "mcproton.root" }
+  RandomNumberGenerator: {}                     #ART native random number generator
+  #@table::protodune_services
+  @table::protodune_reco_services
+  message:      @local::standard_info
+  #message: @local::dune_message_services_prod_debug
+
+  FileCatalogMetadata: @local::art_file_catalog_mc
+		        @table::protodune_services
+
+  PdspChannelMapService:        @local::pdspchannelmap
+  ChannelStatusService:         @local::pdsp_channel_status
+
+}
+
+#source is now a root file
+source:
+{
+  module_type: RootInput
+  maxEvents:  -1            # Number of events to create
+}
+
+outputs:
+{
+ out1:
+ {
+   module_type: RootOutput
+   fileName:    "mcproton.root"    #default file name, can override from command line with -o or --output
+   dataTier: "reconstructed"
+   fastCloning: false
+ } 
+}
+
+physics:
+{
+ producers:{
+
+  }
+ #filters:  {
+    #f1: @local::standard_protodunebeamlinefilter_Proton_1GeV	
+ #}
+ #fpath: [f1]
+
+ analyzers:{
+   protonmcnorw:
+   {
+     module_type:             "protonmcnorw"
+     BeamModuleLabel:         "beamevent"
+     #Warning!! The code will use CalorimetryTag to do sce correction
+     #CalorimetryTag:          "pandoracalo"	
+     #CalorimetryTag:         "pandoracaloSCE"
+     #CalorimetryTag:         "pandoracalo"
+     #pandoracalo + electron lifetime correction (recommended)
+     #CalorimetryTag:         "pandoracali"
+     CalorimetryTag:         "pandoracalinoxyzt"
+
+     TrackerTag:              "pandoraTrack"
+     HitTag:                  "hitpdune"
+     ShowerTag:               "pandoraShower"
+     PFParticleTag:           "pandora"
+     GeneratorTag:            "generator"
+     Verbose:                 true
+     DataUtils:               @local::standard_protodunedatautils
+     #NNetModuleLabel:         "vtxid:emtrack"
+
+     #hy:: for sce on, disable the comment of Prod2BeamCuts
+     #BeamCuts:             @local::Prod2BeamCuts
+
+ 
+   }
+ }
+ 
+ ana:  [ protonmcnorw ]
+ stream1:  [ out1 ]
+ end_paths:     [  ana ] 
+}
+
+#disable the following line for the prod 2
+services.BackTrackerService.BackTracker.SimChannelModuleLabel: "tpcrawdecoder:simpleSC"
+#add to prod4a
+services.BackTrackerService.BackTracker.G4ModuleLabel: "largeant"
+services.BackTrackerService.BackTracker.MinimumHitEnergyFraction: 1e-1
+
+#physics.analyzers.protonmcnorw.TrackModuleLabel:        "pandoraTrack"
+#physics.analyzers.protonmcnorw.CalorimetryModuleLabel:  "pandoracalo"
+#physics.analyzers.protonmcnorw.CalorimetryModuleLabel:  "pandoracaloSCE"
+#physics.analyzers.protonmcnorw.CalorimetryModuleLabel:  "pandoracalo"
+#physics.analyzers.protonmcnorw.CalorimetryModuleLabel:  "pandoracali"
+physics.analyzers.protonmcnorw.CalorimetryModuleLabel:  "pandoracalinoxyzt"
+#physics.analyzers.protonmcnorw.HitsModuleLabel:  "linecluster"
+#physics.analyzers.protonmcnorw.HitsModuleLabel:  "hitpdune"
+physics.analyzers.protonmcnorw.SaveTrackInfo: true
+#services.Geometry: @local::protodunev7_geo
+
