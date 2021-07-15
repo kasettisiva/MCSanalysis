@@ -94,8 +94,11 @@ physics:
      TimeDecoderModuleLabel: "timingrawdecoder:daq"
 
      #CalorimetryTag:         "pandoracalo"
-     CalorimetryTag:         "pandoracaloSCE"
+     #CalorimetryTag:         "pandoracaloSCE"
+     #CalorimetryTag:         "pandoracalinoxyzt"
+     CalorimetryTag:         "pandoracali"
      TrackerTag:             "pandoraTrack"
+     HitTag:                 "hitpdune"
      ShowerTag:              "pandoraShower"
      PFParticleTag:          "pandora"
      GeneratorTag:           "generator"
@@ -146,15 +149,19 @@ physics.analyzers.ana.SelectEvents: [fpath]
 services.IFBeam:  {}
 #physics.filters.f1.BeamlineUtils.TOFOffset: 0.
 #physics.filters.f1.BeamlineUtils.UseCERNCalibSelection: true
-services.PdspChannelMapService:        @local::pdspchannelmap
+
+#services.PdspChannelMapService:        @local::pdspchannelmap
 physics.analyzers.protonbeamana.BeamlineUtils.UseCERNCalibSelection: true
 
 
 physics.analyzers.protonbeamana.TrackModuleLabel:        "pandoraTrack"
 #physics.analyzers.protonbeamana.CalorimetryModuleLabel:  "pandoracalo"
-physics.analyzers.protonbeamana.CalorimetryModuleLabel:  "pandoracaloSCE"
+#physics.analyzers.protonbeamana.CalorimetryModuleLabel:  "pandoracaloSCE"
+#physics.analyzers.protonbeamana.CalorimetryModuleLabel:  "pandoracali"
+#physics.analyzers.protonbeamana.CalorimetryModuleLabel:  "pandoracalinoxyzt"
+physics.analyzers.protonbeamana.CalorimetryModuleLabel:  "pandoracali"
 #physics.analyzers.protonbeamana.HitsModuleLabel:  "linecluster"
-physics.analyzers.protonbeamana.HitsModuleLabel:  "hitpdune"
+#physics.analyzers.protonbeamana.HitsModuleLabel:  "hitpdune"
 physics.analyzers.protonbeamana.SaveTrackInfo: true
 
 #physics.analyzers.protonbeamana.CalorimetryTag:  "pandoracalo"
