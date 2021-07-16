@@ -290,7 +290,8 @@ class protoana::protonmcnorw : public art::EDAnalyzer {
 		int ftruthpdg;  
 		int fprimary_truth_TrackId;
 		int fprimary_truth_Pdg;
-		int fprimary_truth_byE_origin;
+		int fprimary_truth_byE_origin, fprimary_truth_byE_PDG;  //What is the origin of the reconstructed beam track?
+		int fprimary_truth_byE_ID;
 		double fprimary_truth_StartPosition[4];
 		double fprimary_truth_StartPosition_MC[4];
 		double fprimary_truth_EndPosition[4];
@@ -589,6 +590,8 @@ void protoana::protonmcnorw::beginJob(){
 	fPandoraBeam->Branch("primaryT0",                     &fprimaryT0,                    "primaryT0/D");
 
   	fPandoraBeam->Branch("primary_truth_byE_origin", &fprimary_truth_byE_origin);
+  	fPandoraBeam->Branch("primary_truth_byE_PDG", &fprimary_truth_byE_PDG);
+  	fPandoraBeam->Branch("primary_truth_byE_ID", &fprimary_truth_byE_ID);
 	fPandoraBeam->Branch("primary_truth_TrackId",         &fprimary_truth_TrackId,         "primary_truth_TrackId/I");
 	fPandoraBeam->Branch("primary_truth_Pdg",             &fprimary_truth_Pdg,             "primary_truth_Pdg/I");
 	fPandoraBeam->Branch("truthpdg",                      &ftruthpdg,                      "truthpdg/I");
@@ -856,7 +859,6 @@ void protoana::protonmcnorw::analyze(art::Event const & evt){
 		const simb::MCParticle* geantGoodParticle = truthUtil.GetGeantGoodParticle((*mcTruths)[0],evt);
 
 
-
 		if(geantGoodParticle != 0x0){
 			std::cout << "Found GEANT particle corresponding to the good particle with pdg = " << geantGoodParticle->PdgCode() 
 				<< " , track id = " << geantGoodParticle->TrackId()
@@ -953,7 +955,6 @@ void protoana::protonmcnorw::analyze(art::Event const & evt){
 			//Get Truth info
 			fprimary_truth_TrackId          = geantGoodParticle->TrackId();
 			fprimary_truth_Pdg              = geantGoodParticle->PdgCode();
-    			fprimary_truth_byE_origin = pi_serv->TrackIdToMCTruth_P(geantGoodParticle->TrackId())->Origin();
 
 			beamid                          = geantGoodParticle->TrackId();
 			fprimary_truth_StartPosition[3] = geantGoodParticle->T();
@@ -1143,6 +1144,20 @@ void protoana::protonmcnorw::analyze(art::Event const & evt){
 		trkf::TrackMomentumCalculator trkm{1.};
 		recob::MCSFitResult res;
 
+
+		//HY:Get truth info --------------------------------------------------------------------------------//
+		const simb::MCParticle* trueParticle = 0x0;
+		trueParticle = truthUtil.GetMCParticleFromPFParticle(clockData, *particle, evt, fPFParticleTag);
+		if (trueParticle) {
+    			fprimary_truth_byE_origin = pi_serv->TrackIdToMCTruth_P(trueParticle->TrackId())->Origin();
+			fprimary_truth_byE_PDG = trueParticle->PdgCode();
+			fprimary_truth_byE_ID = trueParticle->TrackId();
+			std::cout<<"fprimary_truth_byE_origin:"<<fprimary_truth_byE_origin<<std::endl;
+			std::cout<<"fprimary_truth_byE_PDG:"<<fprimary_truth_byE_PDG<<std::endl;
+			std::cout<<"fprimary_truth_byE_ID:"<<fprimary_truth_byE_ID<<std::endl;
+		}
+
+
 		if(thisTrack != 0x0) { //this track
 			// Get the true mc particle
                          const simb::MCParticle* mcparticle0 = truthUtil.GetMCParticleFromRecoTrack(clockData, *thisTrack, evt, fTrackerTag);
@@ -1154,7 +1169,7 @@ void protoana::protonmcnorw::analyze(art::Event const & evt){
 				truthid=mcparticle0->TrackId();
 				fprimary_truth_Isbeammatched=0;
 				if(beamid==truthid) fprimary_truth_Isbeammatched=1;
-
+				std::cout<<"fprimary_truth_Isbeammatched:"<<fprimary_truth_Isbeammatched<<std::endl;	
 
 
 			}
@@ -2207,7 +2222,8 @@ void protoana::protonmcnorw::analyze(art::Event const & evt){
 				}
 
 				fprimary_truth_byE_origin=-999;
-				
+				fprimary_truth_byE_PDG=-999;	
+				fprimary_truth_byE_ID=-999;	
 
 				fbeamtrigger = -999;
 				ftof = -999.0;
