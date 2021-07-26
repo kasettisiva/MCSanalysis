@@ -1,0 +1,62 @@
+#include "services_dune.fcl"
+#include "services_refactored_pdune.fcl"
+#include "trackproducerfrompfparticle.fcl"
+
+process_name: kalman
+
+services:
+{
+	TFileService: { fileName: "kalman_protoDUNE_hist.root" }
+	TimeTracker:    @local::dune_time_tracker
+	MemoryTracker:	@local::dune_memory_tracker
+	RandomNumberGenerator:	{}
+	message:		@local::dune_message_services_prod
+	FileCatalogMetadata:	@local::art_file_catalog_mc
+	@table::protodune_services
+	IFDH: {}
+}
+
+source:
+{
+	module_type: RootInput
+	maxEvents: -1
+}
+
+physics:
+{
+	producers:
+	{
+		pandoraKalmanTrack:	@local::trackproducerfrompfparticle
+	}
+
+	kalman:
+	[
+		pandoraKalmanTrack
+	]
+
+	stream1: [ out1 ]
+
+	trigger_paths: [ kalman ]
+	end_paths:     [ stream1 ]
+}
+
+outputs:
+{
+	out1:
+	{
+		module_type:		RootOutput
+		fileName:		"%ifb_kalman.root"
+		dataTier:		"kalman"
+		compressionLevel:	1
+		fastCloning:		false
+		outputCommands:		["keep *"]
+	}
+}
+
+physics.producers.pandoraKalmanTrack.inputCollection:				"pandora"
+physics.producers.pandoraKalmanTrack.trackInputTag:				"pandoraTrack"
+#physics.producers.pandoraKalmanTrack.trackMaker.options.momFromCombAndPid:	true
+#physics.producers.pandoraKalmanTrack.trackMaker.options.contInputTag:		"crtreco"
+#physics.producers.pandoraKalmanTrack.trackMaker.options.pidFromLengthCut:	35.0
+physics.producers.pandoraKalmanTrack.trackFromPF:				true
+physics.producers.pandoraKalmanTrack.showerFromPF:				false
