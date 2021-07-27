@@ -14,10 +14,6 @@ using Angles_t = MCSMomentumCalculator::Angles_t;
 MCSMomentumResult MCSMomentumCalculator::GetResult(const MCSAngleResult angleResult, Int_t angleMethod) const {
   std::vector<Angles_t> angles_vec = angleResult.GetAngles_vec();
   std::vector<Float_t> segmentLength_vec = angleResult.GetSegmentLength_vec();
- 
-  std::cout << "angleMethod = " << angleMethod << std::endl;
-  std::cout << "angles_vec.size() = " << angles_vec.size() << std::endl;
-  std::cout << "segmentLength_vec.size() = " << segmentLength_vec.size() << std::endl;
 
   // Will set in switch statement:
   std::vector<Float_t> logLikelihood_vec;
@@ -181,9 +177,7 @@ std::vector<Float_t> MCSMomentumCalculator::SetLogLikelihood_vec(std::vector<Ang
     llh = /*0.5**/(anglePair_vec.size())*log(2*TMath::Pi());
     for(size_t i = 0; i < anglePair_vec.size(); i++) {
       if(mom > 0) {
-	std::cout << "Here1" << std::endl;
 	Float_t thetaXZprime = anglePair_vec.at(i).first, thetaYZprime = anglePair_vec.at(i).second, l = segmentLength_vec.at(i+1);
-	std::cout << "Here2" << std::endl;
 
 	double sigma = highland(mom/1000, l, fParticleMass);
 	sigma = pow(1*(sigma*sigma + fSigmaRES*fSigmaRES), 0.5);
@@ -210,9 +204,7 @@ std::vector<Float_t> MCSMomentumCalculator::SetLogLikelihood_vec(std::vector<Flo
     llh = 0.5*(rawAngle_vec.size())*log(2*TMath::Pi());
     for(size_t i = 0; i < rawAngle_vec.size(); i++) {
       if(mom > 0) {
-	std::cout << "Here3" << std::endl;
 	Float_t rawAngle = rawAngle_vec.at(i), l = segmentLength_vec.at(i+1);
-	std::cout << "Here4" << std::endl;
 
 	double sigma = highland(mom/1000,l, fParticleMass);
 	sigma = pow(1.72*(sigma*sigma + fSigmaRES*fSigmaRES), 0.5);

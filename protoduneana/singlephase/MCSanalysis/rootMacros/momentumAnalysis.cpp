@@ -11,7 +11,8 @@ void momentumAnalysis() {
   gSystem->Exec("mkdir MA_plots");
 
   // Get Root File
-  const char* path = "/dune/app/users/hmeyer5/curvyTrackFix2/srcs/dunetpc/dune/LSU/CompareMCS_hist.root";
+  // const char* path = "/dune/app/users/hmeyer5/work_mcs_analysis/srcs/protoduneana/protoduneana/singlephase/MCSanalysis/CompareMCS_hist.root";
+  const char* path = "../CompareMCS_hist.root";
   TFile* file = new TFile(path);
 
   file->ls();

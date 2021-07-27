@@ -43,7 +43,7 @@ void angleDistributionAnalysis() {
 
   // Get Root File
   //const char* path = "/dune/app/users/hmeyer5/curvyTrackFix2/srcs/dunetpc/dune/LSU/500_mu_0.5-4.5_GeV_start_beam-entry_dir_beam-dir_standardReco.root";
-  const char* path = "/dune/app/users/hmeyer5/curvyTrackFix2/srcs/dunetpc/dune/LSU/MCSAngleAnalysis_hist.root";
+  const char* path = "../MCSAngleAnalysis_hist.root";
   TFile* file = new TFile(path);
 
   // TODO: Add polygonal 3D angles

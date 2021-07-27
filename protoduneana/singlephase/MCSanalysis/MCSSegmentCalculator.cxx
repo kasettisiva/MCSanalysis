@@ -8,50 +8,40 @@ using Barycenter_t = MCSSegmentCalculator::Barycenter_t;
 using MCSSegmentResult = MCSSegmentCalculator::MCSSegmentResult;
 using Segment_t = MCSSegmentCalculator::Segment_t;
 
-// TODO: GetResult functions
-// TODO: Documentation
+/**
+Create an MCSSegmentResult using a vector of points, optionally create virtual points to force the segment length to be 14-cm.
+ */
 MCSSegmentResult MCSSegmentCalculator::GetResult(const std::vector<Point_t> points, const Bool_t shouldCreateVirtualPoints) const {
-  std::vector<Segment_t> segment_vec = CreateSegments(points, shouldCreateVirtualPoints);
-
-  std::vector<Float_t> rawSegmentLength_vec;
-  std::vector<size_t> segmentStartPoint_vec = SetSegmentStartPoint_vec(points, rawSegmentLength_vec);
-  std::vector<Barycenter_t> barycenter_vec = SetBarycenter_vec(points, segmentStartPoint_vec);
-  Point_t startPoint = points.at(segmentStartPoint_vec.at(0));
+  // Create the vector of segments
+  std::vector<Segment_t> segment_vec = CreateSegment_vec(points, shouldCreateVirtualPoints);
+  // Calculate the vector of the "raw length" of each segment.
+  std::vector<Float_t> rawSegmentLength_vec = SetRawSegmentLength_vec(segment_vec);
+  // Calculate the vector of barycenters
+  std::vector<Barycenter_t> barycenter_vec = SetBarycenter_vec(segment_vec);
+  // Get the first trajectory point of the trajectory, used by polygonal segments as the first-point.
+  Point_t startPoint = segment_vec.at(0).at(0);
+  // Calculate the vector of the "polygonal segment lengths" (distance between barycenters)
   std::vector<Float_t> polygonalSegmentLength_vec = SetPolygonalSegmentLength_vec(barycenter_vec, startPoint);
-
-  std::vector<Vector_t> linearFit_vec = SetLinearFit_vec(points, segmentStartPoint_vec);
+  // Create the vector of linear segment vectors. (Linear fit of each segment)
+  std::vector<Vector_t> linearSegmentVector_vec = SetLinearSegmentVector_vec(segment_vec);
+  // Calculate the vector of polygonal segment vectors. (Vector connecting barycenters of each segment)
   std::vector<Vector_t> polygonalSegmentVector_vec = SetPolygonalSegmentVector_vec(barycenter_vec, startPoint);
 
-  // Temporary testing to ensure that the CreateSegments function works properly:
-  std::vector<Float_t> testRawSegmentLength_vec = SetRawSegmentLength_vec(segment_vec);
-  std::vector<Barycenter_t> testBarycenter_vec = SetBarycenter_vec(segment_vec);
-  Point_t testStartPoint = segment_vec.at(0).at(0);
-  std::vector<Vector_t> testLinearSegmentVector_vec = SetLinearSegmentVector_vec(segment_vec);
-  std::vector<Vector_t> testPolygonalSegmentVector_vec = SetPolygonalSegmentVector_vec(testBarycenter_vec, testStartPoint);
+  // TODO: Allow for other segment defintions.
 
-  // TODO: Crossover vectors
-  // TODO: LastPoint vectors
-  // TODO: More segment defintions
+  // TODO: Add assertions/exceptions to make sure that the relative sizes of these vectors are correct.
 
+  // Create the MCSSegmentResult
   return MCSSegmentResult(
 			  segment_vec,
-			  segmentStartPoint_vec,
-			  testBarycenter_vec,
-			  testLinearSegmentVector_vec,
-			  testPolygonalSegmentVector_vec,
-			  testRawSegmentLength_vec,
+			  barycenter_vec,
+			  linearSegmentVector_vec,
+			  polygonalSegmentVector_vec,
+			  rawSegmentLength_vec,
 			  polygonalSegmentLength_vec
 			  );
-}
+} // MCSSegmentCalculator::GetResult(const std::vector<Point_t>, const Bool_t)
 
-/* TODO: Consider changing the other get result function to just take a list of generic points?  Each function can just be a template function?
-
-We can just add some notes in the documentation about what methods these points must have.  Alternatively, we can make our own internal Point type that can be constructed from the various types of points, just with a bunch of constructors.  This will be more type-safe.  
-
-We could potentially also work with the direction of the point, which are different types of method calls for an MCTrajectory (just take trajectory.Momentum(i).Vect()) vs. a Track (takes a track.MomentumVectorAtPoint(i)).
-
-This will allow for the LastPoint method to work for Track's (depending on the accuracy of that method call)
-*/
 // TODO: Documentation
 MCSSegmentResult MCSSegmentCalculator::GetResult(const simb::MCTrajectory trajectory, const Bool_t shouldCreateVirtualPoints) const {
 
@@ -67,11 +57,11 @@ MCSSegmentResult MCSSegmentCalculator::GetResult(const simb::MCTrajectory trajec
   MCSSegmentResult result = GetResult(trajPoint_vec, shouldCreateVirtualPoints);
 
   return result;
-}
+} // MCSSegmentCalculator::GetResult(const simb::MCTrajectory, const Bool_t)
 
 // TODO: Documentation
 // This will create segments, optionally with virtual points.
-std::vector<Segment_t> MCSSegmentCalculator::CreateSegments(const std::vector<Point_t> points, Bool_t shouldCreateVirtualPoints) const {
+std::vector<Segment_t> MCSSegmentCalculator::CreateSegment_vec(const std::vector<Point_t> points, Bool_t shouldCreateVirtualPoints) const {
   std::vector<Segment_t> segments;
   Float_t currLength = 0; // cm
   Float_t prevLength = 0; // cm
@@ -248,7 +238,7 @@ std::vector<Segment_t> MCSSegmentCalculator::CreateSegments(const std::vector<Po
   segments.push_back(currSegment);
 
   return segments;
-} // MCSSegmentCalculator::CreateSegments
+} // MCSSegmentCalculator::CreateSegment_vec
 
 // TODO: Documentation
 Float_t MCSSegmentCalculator::CalculateRawSegmentLength(const Segment_t segment) const {
@@ -282,90 +272,90 @@ std::vector<Float_t> MCSSegmentCalculator::SetRawSegmentLength_vec(const std::ve
 } // MCSSegmentCalculator:SetRawSegmentLength_vec
 
 // TODO: Documentation
-std::vector<size_t> MCSSegmentCalculator::SetSegmentStartPoint_vec(const std::vector<Point_t> trajPoint_vec, std::vector<Float_t>& rawSegmentLength_vec) const {
-  std::vector<size_t> segmentStartPoint_vec;
-  Float_t length = 0; //cm
-  Float_t oldLength = 0; //cm
-  Float_t diff;
-  segmentStartPoint_vec.push_back(0); // First point in detector
-  // Loop through trajectory points to form segments as close to segmentLength as possible.
-  for(size_t i = 1; i < trajPoint_vec.size(); i++) {
-    // Once you get to the invalid trajectory points at the end, break.
-    if(trajPoint_vec.at(i).X() == -999)
-      break;
+// std::vector<size_t> MCSSegmentCalculator::SetSegmentStartPoint_vec(const std::vector<Point_t> trajPoint_vec, std::vector<Float_t>& rawSegmentLength_vec) const {
+//   std::vector<size_t> segmentStartPoint_vec;
+//   Float_t length = 0; //cm
+//   Float_t oldLength = 0; //cm
+//   Float_t diff;
+//   segmentStartPoint_vec.push_back(0); // First point in detector
+//   // Loop through trajectory points to form segments as close to segmentLength as possible.
+//   for(size_t i = 1; i < trajPoint_vec.size(); i++) {
+//     // Once you get to the invalid trajectory points at the end, break.
+//     if(trajPoint_vec.at(i).X() == -999)
+//       break;
 
-    // Calculate the distance between two points, add that to the current raw segment length.
-    diff = pow((trajPoint_vec.at(i).underlying()-trajPoint_vec.at(i-1).underlying()).Mag2(),0.5);
-    length += diff;
+//     // Calculate the distance between two points, add that to the current raw segment length.
+//     diff = pow((trajPoint_vec.at(i).underlying()-trajPoint_vec.at(i-1).underlying()).Mag2(),0.5);
+//     length += diff;
 
-    if(diff >= 2*fSegmentLength) {
-      segmentStartPoint_vec.push_back(i);
-      rawSegmentLength_vec.push_back(oldLength);
-      length = 0;
-    } else if((oldLength < fSegmentLength && length >= fSegmentLength) || oldLength > fSegmentLength) {
-      if(fabs(oldLength - fSegmentLength) <= fabs(length - fSegmentLength)) {
-	segmentStartPoint_vec.push_back(i-1);
-	rawSegmentLength_vec.push_back(oldLength);
-	length-=oldLength;
-      } else {
-	segmentStartPoint_vec.push_back(i);
-	rawSegmentLength_vec.push_back(length);
-	length = 0;
-      }
-    }
-    // Update the oldLength
-    oldLength = length;
-  } // for i if less than # of traj pts
+//     if(diff >= 2*fSegmentLength) {
+//       segmentStartPoint_vec.push_back(i);
+//       rawSegmentLength_vec.push_back(oldLength);
+//       length = 0;
+//     } else if((oldLength < fSegmentLength && length >= fSegmentLength) || oldLength > fSegmentLength) {
+//       if(fabs(oldLength - fSegmentLength) <= fabs(length - fSegmentLength)) {
+// 	segmentStartPoint_vec.push_back(i-1);
+// 	rawSegmentLength_vec.push_back(oldLength);
+// 	length-=oldLength;
+//       } else {
+// 	segmentStartPoint_vec.push_back(i);
+// 	rawSegmentLength_vec.push_back(length);
+// 	length = 0;
+//       }
+//     }
+//     // Update the oldLength
+//     oldLength = length;
+//   } // for i if less than # of traj pts
 
-  return segmentStartPoint_vec;
-  /* Structure of vector<int> segmentStartPoint_vec
+//   return segmentStartPoint_vec;
+//   /* Structure of vector<int> segmentStartPoint_vec
 
-     N = segmentStartPoint_vec.size() = The number of full-length raw segments + 1.
+//      N = segmentStartPoint_vec.size() = The number of full-length raw segments + 1.
 
-     index of vector, i, goes from 0 to N-1 where N is the number of segments.
+//      index of vector, i, goes from 0 to N-1 where N is the number of segments.
 
-     index 0 is of the first point in the detector, the start point of the first raw segment.
-     index N-1 is the start point of the partial segment at the end. (not 14-cm)
-  */
-}
+//      index 0 is of the first point in the detector, the start point of the first raw segment.
+//      index N-1 is the start point of the partial segment at the end. (not 14-cm)
+//   */
+// }
 
-// TODO: Documentation
-std::vector<Barycenter_t> MCSSegmentCalculator::SetBarycenter_vec(const std::vector<Point_t> trajPoint_vec, std::vector<size_t> segmentStartPoint_vec) const {
+// // TODO: Documentation
+// std::vector<Barycenter_t> MCSSegmentCalculator::SetBarycenter_vec(const std::vector<Point_t> trajPoint_vec, std::vector<size_t> segmentStartPoint_vec) const {
 
-  // Declare an initial vector of barycenters
-  std::vector<Barycenter_t> barycenter_vec;
+//   // Declare an initial vector of barycenters
+//   std::vector<Barycenter_t> barycenter_vec;
 
-  // Loop through segment start points
-  for(size_t i = 0; i < segmentStartPoint_vec.size()-1; ++i) {
+//   // Loop through segment start points
+//   for(size_t i = 0; i < segmentStartPoint_vec.size()-1; ++i) {
 
-    // Declare the list of points in this segment.
-    std::vector<Point_t> segment;
-    for(size_t j = segmentStartPoint_vec.at(i); j <= segmentStartPoint_vec.at(i+1); ++j)
-      segment.push_back(trajPoint_vec.at(j));
+//     // Declare the list of points in this segment.
+//     std::vector<Point_t> segment;
+//     for(size_t j = segmentStartPoint_vec.at(i); j <= segmentStartPoint_vec.at(i+1); ++j)
+//       segment.push_back(trajPoint_vec.at(j));
 
-    // Calculate the barycenter for this segment.
-    Barycenter_t barycenter = CalculateBarycenter(segment);
+//     // Calculate the barycenter for this segment.
+//     Barycenter_t barycenter = CalculateBarycenter(segment);
     
-    // Fill the barycenter_vec
-    barycenter_vec.push_back(barycenter);
-  } // for i
+//     // Fill the barycenter_vec
+//     barycenter_vec.push_back(barycenter);
+//   } // for i
 
-  // Return the barycenter_vec.
-  return barycenter_vec;
-  // TODO: Update this for new Barycenter_t type.
-  /* Structure of barycenters vector<std::array<double,3> >
+//   // Return the barycenter_vec.
+//   return barycenter_vec;
+//   // TODO: Update this for new Barycenter_t type.
+//   /* Structure of barycenters vector<std::array<double,3> >
 
-     N = segmentStartPoint_vec.size() = The number of full-length raw segments + 1.
+//      N = segmentStartPoint_vec.size() = The number of full-length raw segments + 1.
 
-     x of i'th barycenter = barycenters.at(i)[0]
-     y of i'th barycenter = barycenters.at(i)[1]
-     z of i'th barycenter = barycenters.at(i)[2]
-     index of vector, i, goes from 0 to N-1 where N is the number of segments.
+//      x of i'th barycenter = barycenters.at(i)[0]
+//      y of i'th barycenter = barycenters.at(i)[1]
+//      z of i'th barycenter = barycenters.at(i)[2]
+//      index of vector, i, goes from 0 to N-1 where N is the number of segments.
 
-     The first barycenter is the barycenter of the first segment, i = 0 and is the average xyz of all trajectory points from segmentStartPoints[0] to [1]
+//      The first barycenter is the barycenter of the first segment, i = 0 and is the average xyz of all trajectory points from segmentStartPoints[0] to [1]
 
-  */
-} // MCSSegmentCalculator::SetBarycenter_vec
+//   */
+// } // MCSSegmentCalculator::SetBarycenter_vec
 
 // TODO: Documentation
 std::vector<Barycenter_t> MCSSegmentCalculator::SetBarycenter_vec(const std::vector<Segment_t> segment_vec) const {
@@ -406,28 +396,28 @@ std::vector<Float_t> MCSSegmentCalculator::SetPolygonalSegmentLength_vec(const s
 }
 
 // TODO: Documentation
-std::vector<Vector_t> MCSSegmentCalculator::SetLinearFit_vec(const std::vector<Point_t> trajPoint_vec, std::vector<size_t> segmentStartPoint_vec) const {
+// std::vector<Vector_t> MCSSegmentCalculator::SetLinearFit_vec(const std::vector<Point_t> trajPoint_vec, std::vector<size_t> segmentStartPoint_vec) const {
 
-  // Create an initial linearFit_vec.
-  std::vector<Vector_t> linearFit_vec;
+//   // Create an initial linearFit_vec.
+//   std::vector<Vector_t> linearFit_vec;
 
-  // Loop through the segment start points.
-  for(size_t i = 0; i < segmentStartPoint_vec.size() - 1; i++) {
+//   // Loop through the segment start points.
+//   for(size_t i = 0; i < segmentStartPoint_vec.size() - 1; i++) {
 
-    // Create the vector of Point_t for this segment.
-    std::vector<Point_t> segment;
-    for(size_t j = segmentStartPoint_vec.at(i); j <= segmentStartPoint_vec.at(i+1); ++j)
-      segment.push_back(trajPoint_vec.at(j));
+//     // Create the vector of Point_t for this segment.
+//     std::vector<Point_t> segment;
+//     for(size_t j = segmentStartPoint_vec.at(i); j <= segmentStartPoint_vec.at(i+1); ++j)
+//       segment.push_back(trajPoint_vec.at(j));
 
-    // Calculate the linear fit for this segment
-    Vector_t linearFit = CalculateLinearFit(segment);
-    linearFit_vec.push_back(linearFit);
+//     // Calculate the linear fit for this segment
+//     Vector_t linearFit = CalculateLinearFit(segment);
+//     linearFit_vec.push_back(linearFit);
 
-  } // for i
+//   } // for i
 
-  // Return the vector of linear fits.
-  return linearFit_vec;
-}
+//   // Return the vector of linear fits.
+//   return linearFit_vec;
+// }
 
 // TODO: Documentation
 std::vector<Vector_t> MCSSegmentCalculator::SetLinearSegmentVector_vec(const std::vector<Segment_t> segment_vec) const {
@@ -536,6 +526,3 @@ Vector_t MCSSegmentCalculator::CalculateLinearFit(const std::vector<Point> segme
   return linearFit;
 } // MCSSegmentCalculator::CalculateLinearFit
 
-
-
-// TODO: Finish implementing the alternative segment definitions

@@ -32,32 +32,12 @@ namespace trkf {
     using Barycenter_t = recob::tracking::Point_t;
     using Segment_t = std::vector<Point_t>;
 
-    // struct Segment_t_test {
-    // public:
-    //   // Public Properties
-    //   std::vector<Point_t> points;
-    //   Double_t segmentMomentum;
+    /**
+       A custom Point type, that contains position information and momentum.
 
-    //   // TODO: Rely on default constructor?
-      
-    //   // Public methods
-
-    //   // Add a point to the underlying trajectory point vector.
-    //   void push_back(Point_t point) {
-    // 	return points.push_back(point);
-    //   }
-
-    //   // Access the underlying point at the specified index of the underlying trajectory point vector.
-    //   Point_t at(size_t index) const {
-    // 	return points.at(index);
-    //   }
-
-    //   // Access the underlying trajectory point vector's size.
-    //   size_t size() const {
-    // 	return points.size();
-    //   }
-    // }; // Segment_t_test TODO: Rename
-
+       This is required due to virtual points being added.  If virtual points are removed from the code, this could be removed
+       and the typealias 'using Point_t = Point_tt' could be changed to 'using Point_t = recob::tracking::Point_t'
+     */
     struct Point_tt {
     
       // Explicitly create point
@@ -96,7 +76,7 @@ namespace trkf {
       Double_t fZ;
       Double_t fMomentum;
 
-    }; // Point_t_test TODO: Rename to Point
+    }; // Point_tt
 
     // fhicl Configuration
     struct Config {
@@ -169,21 +149,17 @@ namespace trkf {
       explicit MCSSegmentResult(
 				// Basic Segment Info
 				std::vector<Segment_t> segment_vec,
-				std::vector<size_t> segmentStartPoint_vec,
 				std::vector<Barycenter_t> barycenter_vec,
 
 				// Various Segment Vectors
 				std::vector<Vector_t> linearFit_vec,
 				std::vector<Vector_t> polygonalSegmentVector_vec,
-				//std::vector<Vector_t> lastPointVector_vec,
-				//std::vector<Vector_t> crossover_vec,
 
 				// Various Segment Length Defintions
 				std::vector<Float_t> rawSegmentLength_vec,
 				std::vector<Float_t> polygonalSegmentLength_vec
 				) : 
 	fSegment_vec(segment_vec),
-	fSegmentStartPoint_vec(segmentStartPoint_vec),
 	fBarycenter_vec(barycenter_vec),
 	fLinearFit_vec(linearFit_vec),
 	fPolygonalSegmentVector_vec(polygonalSegmentVector_vec),
@@ -193,7 +169,6 @@ namespace trkf {
 
       // Public Get Functions
       inline std::vector<Segment_t> GetSegment_vec() const { return fSegment_vec; }
-      inline std::vector<size_t> GetSegmentStartPoint_vec() const { return fSegmentStartPoint_vec; }
       inline std::vector<Barycenter_t> GetBarycenter_vec() const { return fBarycenter_vec; }
       inline std::vector<Vector_t> GetLinearFit_vec() const { return fLinearFit_vec; }
       inline std::vector<Vector_t> GetPolygonalSegmentVector_vec() const { return fPolygonalSegmentVector_vec; }
@@ -204,7 +179,6 @@ namespace trkf {
 
     private:
       const std::vector<Segment_t> fSegment_vec;
-      const std::vector<size_t> fSegmentStartPoint_vec;
       const std::vector<Barycenter_t> fBarycenter_vec;
       
       // List of Segment Vectors
@@ -226,34 +200,36 @@ namespace trkf {
     // Private Set Functions
 
     // Calculate the vector of segments, optionally creating virtual points.
-    std::vector<Segment_t> CreateSegments(const std::vector<Point_t> points, Bool_t shouldCreateVirtualPoints) const;
+    std::vector<Segment_t> CreateSegment_vec(const std::vector<Point_t> points, Bool_t shouldCreateVirtualPoints) const;
 
     // Calculate the vector of raw segment lengths using the provided vector of segments.
     std::vector<Float_t> SetRawSegmentLength_vec(const std::vector<Segment_t> segment_vec) const;
 
     // Calculate the vector segment start points for the provided vector of trajectory points, also setting the provided vector of segment lengths.
-    std::vector<size_t> SetSegmentStartPoint_vec(const std::vector<Point_t> trajPoint_vec, std::vector<Float_t>& rawSegmentLength_vec) const;
+    // std::vector<size_t> SetSegmentStartPoint_vec(const std::vector<Point_t> trajPoint_vec, std::vector<Float_t>& rawSegmentLength_vec) const;
 
     // Calculate the vector of barycenters for the provided vector of trajectory points, using the provided vector of segment start points as segment breakpoints.
     // TODO: Consider SetBarycenter_vec(std::vector<std::vector<Point_t> > where it's a vector of a segment where the segment is a vector of points
-    std::vector<Barycenter_t> SetBarycenter_vec(const std::vector<Point_t> trajPoint_vec, const std::vector<size_t> segmentStartPoint_vec) const;
+    // std::vector<Barycenter_t> SetBarycenter_vec(const std::vector<Point_t> trajPoint_vec, const std::vector<size_t> segmentStartPoint_vec) const;
     std::vector<Barycenter_t> SetBarycenter_vec(const std::vector<Segment_t> segment_vec) const;
     
     // Calculate the vector of polygonal segment lengths for the provided vector of barycenters, where the polygonal segment length is the distance between barycenters.  The first entry of the returned vector is the length between the provided startPoint (which should be the first point in the vector) and the first barycenter.
     std::vector<Float_t> SetPolygonalSegmentLength_vec(const std::vector<Barycenter_t> barycenter_vec, const Point_t startPoint) const;
 
     // Calculate the vector linear fit vectors for the provided vector of trajectory points, using the provided vector of segment start points as segment breakpoints.
-    std::vector<Vector_t> SetLinearFit_vec(const std::vector<Point_t> trajPoint_vec, const std::vector<size_t> segmentStartPoint_vec) const;
+    // std::vector<Vector_t> SetLinearFit_vec(const std::vector<Point_t> trajPoint_vec, const std::vector<size_t> segmentStartPoint_vec) const;
     std::vector<Vector_t> SetLinearSegmentVector_vec(const std::vector<Segment_t> segment_vec) const;
 
     // TODO: Documenatation
     std::vector<Vector_t> SetPolygonalSegmentVector_vec(const std::vector<Barycenter_t> barycenter_vec, const Point_t startPoint) const;
 
     // TODO: Implement these functions later:
+    /*
     //    std::vector<Vector_t> SetLastPointVector_vec( idk what goes here
 
     // This will take a linear fit just the points on either side of a segment start point.
     std::vector<Vector_t> SetCrossover_vec(const std::vector<Point_t> trajPoint_vec, const std::vector<size_t> segmentStartPoint_vec) const;
+    */
 
   }; // class MCSSegmentCalculator
 

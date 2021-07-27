@@ -292,14 +292,8 @@ void CompareMCSAnalyzer::analyze(art::Event const & e) {
       simb::MCParticle particle = backtracker.getMCParticle(track, e, fTrackModuleLabel.label()); // TODO: BackTrackerAlg should probably take the label as the input parameter in the constructor.
       double trueMomentum = particle.P();
 
-      std::cout << "Test" << std::endl;
-
       trkf::MCSSegmentCalculator::MCSSegmentResult trueSegmentResult = segmentCalculator.GetResult(particle, fShouldCreateVirtualPoints);
-
-      std::cout << "test2" << std::endl;
       trkf::MCSSegmentCalculator::MCSSegmentResult recoSegmentResult = segmentCalculator.GetResult(*track, fShouldCreateVirtualPoints);
-
-      std::cout << "test3" << std::endl;
 
       trkf::MCSMomentumCalculator::Result trueLinear_MCS = mcsMomentumCalculator.GetResult(trueSegmentResult, 0);
       trkf::MCSMomentumCalculator::Result truePolygonal_MCS = mcsMomentumCalculator.GetResult(trueSegmentResult, 1);
