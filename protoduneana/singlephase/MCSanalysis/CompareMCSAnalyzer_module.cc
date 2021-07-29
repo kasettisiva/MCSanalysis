@@ -62,7 +62,6 @@ public:
 
     fhicl::Table<trkf::MCSMomentumCalculator::Config> momentumCalculator { fhicl::Name("momentumCalculator") };
   };
-  using Parameters = art::EDAnalyzer::Table<Config>;
 
   //explicit CompareMCSAnalyzer(fhicl::ParameterSet const & p);
   explicit CompareMCSAnalyzer(art::EDAnalyzer::Table<Config> const & t);
@@ -275,22 +274,17 @@ void CompareMCSAnalyzer::analyze(art::Event const & e) {
     wellReconstructedTrack = lastMuonTrack;
   }
 
-  //* Comment is for if we switch back to now using wellReconstructedTrack selection criteria.
   if(trackIsWellReconstructed) {
     art::Ptr<recob::Track> track = wellReconstructedTrack;
-    // */
-    /* Comment is for if we use wellReconstructedTrack selection criteria.
-    // Commented out since we added the wellReconstructedTrack stuff earlier.
-    // Loop through well-reconstructed tracks.
-    for(size_t iTrack = 0; iTrack < nTracks; iTrack++) {
-    art::Ptr<recob::Track> track = trackList.at(iTrack);
-    // */
     // Only run this analysis if the track length is greater than 100 cm
     if(track->Length() >= 100) {
 
       // True Momentum
-      simb::MCParticle particle = backtracker.getMCParticle(track, e, fTrackModuleLabel.label()); // TODO: BackTrackerAlg should probably take the label as the input parameter in the constructor.
+      // (Attempt to) Backtracker the track to an MCParticle.
+      simb::MCParticle particle = backtracker.getMCParticle(track, e, fTrackModuleLabel.label());
+      // Get the trueMomentum of this MCParticle
       double trueMomentum = particle.P();
+      trueMomentum_HIST->Fill(trueMomentum);
 
       trkf::MCSSegmentCalculator::MCSSegmentResult trueSegmentResult = segmentCalculator.GetResult(particle, fShouldCreateVirtualPoints);
       trkf::MCSSegmentCalculator::MCSSegmentResult recoSegmentResult = segmentCalculator.GetResult(*track, fShouldCreateVirtualPoints);
@@ -299,24 +293,12 @@ void CompareMCSAnalyzer::analyze(art::Event const & e) {
       trkf::MCSMomentumCalculator::Result truePolygonal_MCS = mcsMomentumCalculator.GetResult(trueSegmentResult, 1);
       trkf::MCSMomentumCalculator::Result trueLinear3D_MCS = mcsMomentumCalculator.GetResult(trueSegmentResult, 2);
       trkf::MCSMomentumCalculator::Result truePolygonal3D_MCS = mcsMomentumCalculator.GetResult(trueSegmentResult, 3);
-      // trkf::MCSMomentumCalculator::Result trueLinear_MCS = mcsMomentumCalculator.GetResult(particle, 0);
-      // trkf::MCSMomentumCalculator::Result truePolygonal_MCS = mcsMomentumCalculator.GetResult(particle, 1);
-      // trkf::MCSMomentumCalculator::Result trueLinear3D_MCS = mcsMomentumCalculator.GetResult(particle, 2);
-      // trkf::MCSMomentumCalculator::Result truePolygonal3D_MCS = mcsMomentumCalculator.GetResult(particle, 3);
-      trueMomentum_HIST->Fill(trueMomentum); // TODO: If there are multiple tracks that reconstruct back to the same MCParticle, then this will be filled twice. This should probably be filled not in the trackList loop.
 
       trkf::MCSMomentumCalculator::Result recoLinear_MCS = mcsMomentumCalculator.GetResult(recoSegmentResult, 0);
       trkf::MCSMomentumCalculator::Result recoPolygonal_MCS = mcsMomentumCalculator.GetResult(recoSegmentResult, 1);
       trkf::MCSMomentumCalculator::Result recoLinear3D_MCS = mcsMomentumCalculator.GetResult(recoSegmentResult, 2);
       trkf::MCSMomentumCalculator::Result recoPolygonal3D_MCS = mcsMomentumCalculator.GetResult(recoSegmentResult, 3);
-      // trkf::MCSMomentumCalculator::Result recoLinear_MCS = mcsMomentumCalculator.GetResult(*track);
-      // trkf::MCSMomentumCalculator::Result recoPolygonal_MCS = mcsMomentumCalculator.GetResult(*track, 1);
-      // trkf::MCSMomentumCalculator::Result recoLinear3D_MCS = mcsMomentumCalculator.GetResult(*track, 2);
-      // trkf::MCSMomentumCalculator::Result recoPolygonal3D_MCS = mcsMomentumCalculator.GetResult(*track, 3);
-      // TODO: Verify that curvy tracks were no longer occuring, then show that they are now fixed...
       // TODO: Plot the theta/sigma plots as well. (or in MCSAngleAnalysis_module.cc) (derived in the trkf::MCSMomentumCalculator::Result?)
-      // TODO: Consider adding the sqrt(2) term, what happens to these plots?
-      // TODO: Add momentum fractional bias and resolution.
 
       // Linear MCS Momentum
       double recoLinear_MCSMomentum = recoLinear_MCS.GetMCSMomentum();
