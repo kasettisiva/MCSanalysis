@@ -102,11 +102,11 @@ void plotAndSave_anglesVsSegmentMomentum(TH2F* hist, const char* namePrefix, con
 // TODO: DOcumentation
 void plotAndSave_MCSMomentumVsTrueMomentum(TH2F* hist, const char* namePrefix, const char* filePrefix) {
   TCanvas* canvas = new TCanvas("", "", 1500, 1500);
-  hist->GetXaxis()->SetRangeUser(0, 5);
-  hist->GetYaxis()->SetRangeUser(0,5);
+  hist->GetXaxis()->SetRangeUser(0, 6.1);
+  hist->GetYaxis()->SetRangeUser(0, 6.1);
   hist->SetStats(0);
   hist->Draw("box");
-  TLine* line = new TLine(0, 0, 5, 5);
+  TLine* line = new TLine(0, 0, 6, 6);
   line->SetLineColor(kRed);
   line->Draw("same");
 
@@ -127,7 +127,7 @@ void plotAndSave_fractionalBiasAndResolution(TH2F* hist, const char* namePrefix,
   TGraph* line = new TGraph(2);
   line->SetLineStyle(kDashed);
   line->SetPoint(0, 0, 0);
-  line->SetPoint(1, 5, 0);
+  line->SetPoint(1, 6, 0);
   
 
   TProfile* fracBias_PROFILE = GetProfileX(hist, fracBiasName_ss.str().c_str(), fracBiasTitle_ss.str().c_str(), "");

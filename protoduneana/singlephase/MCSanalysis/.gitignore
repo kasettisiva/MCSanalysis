@@ -1,2 +1,6 @@
-log
+*log*
 samplesToAnalyze.txt
+samplesToAnalyzeKalman.txt
+truePosInfo.txt
+recoPosInfo.txt
+Bee_Event_Display/bee/

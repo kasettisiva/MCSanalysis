@@ -55,6 +55,15 @@ TF1* GetSigma_function(const  char* name, Double_t fitMin, Double_t fitMax) {
 
 // TODO: Documentation
 
+// Fit sigmaRMS using kappa_a, kappa_c, and sigmaRES as fit parameters. (raw sigmaRMS fit)
+TF1* GetSigmaRMSraw_function(const char* name, Double_t fitMin, Double_t fitMax) {
+  TF1* sigmaRMSraw_function = GetSigma_function(name, fitMin, fitMax);
+
+  sigmaRMSraw_function->FixParameter(3, 1); // Fix gamma_3D to 1.
+
+  return sigmaRMSraw_function;
+}
+
 TF1* GetSigmaHL_function(const char* name, Double_t fitMin, Double_t fitMax) {
   TF1* sigmaHL_function = GetSigma_function(name, fitMin, fitMax);
 

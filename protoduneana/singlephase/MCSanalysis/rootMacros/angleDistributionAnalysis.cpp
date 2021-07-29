@@ -2,32 +2,6 @@
 #include "PlottingFunctions.cpp"
 #include "AngleFittingFunctions.cpp"
 
-// Declare Functions
-// See individual function definitions for documentation
-
-// TGraphErrors* GetRawSigmaGraph(TH2F* hist2D, const char* name, const char* title);
-// Double_t SigmaHL(Double_t* x, Double_t* paras);
-// Double_t SigmaHL_3D(Double_t* x, Double_t* paras);
-// Double_t SigmaRMS(Double_t* x, Double_t* paras);
-// Double_t Gaus(Double_t* x, Double_t* paras);
-// Double_t HalfGaus(Double_t* x, Double_t* paras);
-
-// Double_t Sigma(Double_t* x, Double_t* paras); // Fitting function
-// TF1* GetSigma_function(const char* name, Double_t fitMin, Double_t fitMax);
-// TF1* GetSigmaHL_function(const char* name, Double_t fitMin, Double_t fitMax);
-// TF1* GetSigmaHL_3D_function(const char* name, Double_t fitMin, Double_t fitMax, Double_t kappa_a, Double_t kappa_c);
-// TF1* GetSigmaRMS_function(const char* name, Double_t fitMin, Double_t fitMax, Double_t kappa_a, Double_t kappa_c);
-// TF1* GetSigmaRMS_3D_function(const char* name, Double_t fitMin, Double_t fitMax, Double_t kappa_a, Double_t kappa_c);
-// TF1* GetSigmaRMS_3D_function_fixSigmaRES(const char* name, Double_t fitMin, Double_t fitMax, Double_t kappa_a, Double_t kappa_c, Double_t sigmaRES);
-// TF1* GetSigmaRMS_3D_function_fixGamma3D(const char* name, Double_t fitMin, Double_t fitMax, Double_t kappa_a, Double_t kappa_c, Double_t gamma3D);
-
-// oid plotAndSave_anglesVsSegmentMomentum(TH2F* hist, const char* namePrefix);
-// TLegend* GetSigmaHL_LEGEND(TFitResultPtr sigmaHL_fit);
-// TLegend* GetSigmaRMS_LEGEND(TFitResultPtr sigmaRMS_fit);
-// TLegend* GetSigmaHL_3D_LEGEND(TFitResultPtr sigmaHL_3D_fit);
-// TLegend* GetSigma_LEGEND(TFitResultPtr sigma_fit, const char* options = "");
-// void plotAndSave_sigmaFitVsSegmentMomentum(TGraphErrors* sigma_GRAPH, TF1* function, TLegend* legend, Double_t yMin, Double_t yMax, const char* namePrefix);
-
 // Root MACRO Function
 void angleDistributionAnalysis() {
 
@@ -256,6 +230,9 @@ void angleDistributionAnalysis() {
   // Subsubsection 2.3.1: Fit sigma of combined angle directions.
   TF1* recoLinear_sigmaRMS_function = GetSigmaRMS_function("recoLinear_sigmaRMS_function", fitMin, fitMax, trueLinear_kappa_a, trueLinear_kappa_c);
   TFitResultPtr recoLinear_sigmaRMS_fit = recoLinear_sigmaRMSVsSegmentMomentum->Fit(recoLinear_sigmaRMS_function, "QS0");
+
+  TF1* recoLinear_sigmaRMSraw_function = GetSigmaRMSraw_function("recoLinear_sigmaRMSraw_function", fitMin, fitMax);
+  TFitResultPtr recoLinear_sigmaRMSraw_fit = recoLinear_sigmaRMSVsSegmentMomentum->Fit(recoLinear_sigmaRMSraw_function, "QS0");
 
   TF1* recoPolygonal_sigmaRMS_function = GetSigmaRMS_function("recoPolygonal_sigmaRMS_function", fitMin, fitMax, truePolygonal_kappa_a, truePolygonal_kappa_c);
   TFitResultPtr recoPolygonal_sigmaRMS_fit = recoPolygonal_sigmaRMSVsSegmentMomentum->Fit(recoPolygonal_sigmaRMS_function, "QS0");
@@ -538,6 +515,7 @@ void angleDistributionAnalysis() {
   TLegend* truePolygonal3D_sigmaHL_LEGEND = GetSigma_LEGEND(truePolygonal3D_sigmaHL_fit, "acs");
 
   TLegend* recoLinear_sigmaRMS_LEGEND = GetSigma_LEGEND(recoLinear_sigmaRMS_fit, "acg");
+  TLegend* recoLinear_sigmaRMSraw_LEGEND = GetSigma_LEGEND(recoLinear_sigmaRMSraw_fit, "g");
   TLegend* recoLinearXZ_sigmaRMS_LEGEND = GetSigma_LEGEND(recoLinearXZ_sigmaRMS_fit, "acg");
   TLegend* recoLinearYZ_sigmaRMS_LEGEND = GetSigma_LEGEND(recoLinearYZ_sigmaRMS_fit, "acg");
 
@@ -584,6 +562,7 @@ void angleDistributionAnalysis() {
 
   // Reco Linear 2D
   plotAndSave_sigmaFitVsSegmentMomentum(recoLinear_sigmaRMSVsSegmentMomentum, recoLinear_sigmaRMS_function, recoLinear_sigmaRMS_LEGEND, yMin, yMax, "recoLinear_sigmaRMS", "ADA_plots/");
+  plotAndSave_sigmaFitVsSegmentMomentum(recoLinear_sigmaRMSVsSegmentMomentum, recoLinear_sigmaRMSraw_function, recoLinear_sigmaRMSraw_LEGEND, yMin, yMax, "recoLinear_sigmaRMSraw", "ADA_plots/");
   plotAndSave_sigmaFitVsSegmentMomentum(recoLinearXZ_sigmaRMSVsSegmentMomentum, recoLinearXZ_sigmaRMS_function, recoLinearXZ_sigmaRMS_LEGEND, yMin, yMax, "recoLinearXZ_sigmaRMS", "ADA_plots/");
   plotAndSave_sigmaFitVsSegmentMomentum(recoLinearYZ_sigmaRMSVsSegmentMomentum, recoLinearYZ_sigmaRMS_function, recoLinearYZ_sigmaRMS_LEGEND, yMin, yMax, "recoLinearYZ_sigmaRMS", "ADA_plots/");
 

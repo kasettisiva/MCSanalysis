@@ -32,7 +32,7 @@ physics:
     comparemcsanalyzer: {
 
 	module_type:	"CompareMCSAnalyzer"
-    	TrackModuleLabel: "pandoraTrack"
+    	TrackModuleLabel: "pandoraKalmanTrack"
 	ShouldCreateVirtualPoints: true
 
 	trajectorymcsfitter: {
@@ -54,11 +54,14 @@ physics:
 			}
 		}
 		#sigmaRES: 0.003951
+		#sigmaRES: 0.005555
 		sigmaRES: 0
 		momentumMinimum: 0.1
 		momentumMaximum: 6.0
 		momentumStep: 0.01
 		particleMass: 105.6
+		#kappa_a: 0.278
+		#kappa_c: 7.108
 		kappa_a: 0.100
 		kappa_c: 11.920
 	}

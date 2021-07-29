@@ -1,19 +1,20 @@
 #include "services_dune.fcl"
 #include "services_refactored_pdune.fcl"
-#include "trackproducerfrompfparticle.fcl"
 
-process_name: MCSAngleAnalysis
+process_name: OutputPosInfoAna
 
 services:
 {
   # Load the service that manages root files for histograms.
-  TFileService: { fileName: "MCSAngleAnalysis_hist.root" }
+  TFileService: { fileName: "OPI_hist.root" }
   #MemoryTracker:     {}
   #TimeTracker:       {}
   RandomNumberGenerator: {}
   #FileCatalogMetadata:  @local::art_file_catalog_mc
   @table::protodune_services
 }
+
+services.BackTrackerService.BackTracker.SimChannelModuleLabel: "tpcrawdecoder:simpleSC"
 
 source:
 {
@@ -26,28 +27,22 @@ source:
 # Modules are grouped by type.
 physics:
 {
-
   analyzers:
   {
-    mcsAngleAnalysis: {
+    outputpositioninfo: {
 
-	module_type:	"MCSAngleAnalysis"
+	module_type:	"OutputPositionInfo"
     	TrackModuleLabel: "pandoraTrack"
-	ShouldCreateVirtualPoints: false
+	ShouldOutputToFiles: false
+	TruePosStreamFileName: "truePosInfo.txt"
+	RecoPosStreamFileName: "recoPosInfo.txt"
 
-	angleCalculator: {
-		segmentCalculator: {
-			segmentLength: 14.0
-		}
-	}
     }	
   }
 
   #define the producer and filter modules for this path, order matters, 
   #filters reject all following items.  see lines starting physics.producers below
-  ana:  [
-  	mcsAngleAnalysis
-	]
+  ana:  [ outputpositioninfo ]
 
   #end_paths is a keyword and contains the paths that do not modify the art::Event, 
   #ie analyzers and output streams.  these all run simultaneously
@@ -55,5 +50,3 @@ physics:
 }
 
 ### Here, we overwrite ALL module Labels with the ones defined above.
-
-services.BackTrackerService.BackTracker.SimChannelModuleLabel: "tpcrawdecoder:simpleSC"
