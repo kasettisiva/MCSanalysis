@@ -249,13 +249,10 @@ void MCSAngleAnalysis::analyze(art::Event const & e) {
   for(size_t iParticle = 0; iParticle < nParticles; ++iParticle) {
     art::Ptr<simb::MCParticle> particle = particleList.at(iParticle);
     if(particle->Trajectory().TotalLength() >= 100 && particle->PdgCode() == 13) {
-      // Calculate MCS Angles
-      // TODO: Update to just calculate the MCSSegmentResult here and pass to GetResult methods once those are added to prevent having to run the segmentation algorithms multiple times.
       // Get an MCSSegmentResult
       trkf::MCSSegmentCalculator::MCSSegmentResult trueSegmentResult = segmentCalculator.GetResult(*particle, fShouldCreateVirtualPoints);
 
       // Extract data from the true segment result.
-      // std::vector<size_t> trueSegmentStartPoint_vec = trueSegmentResult.GetSegmentStartPoint_vec();
       std::vector<Float_t> trueRawSegmentLength_vec = trueSegmentResult.GetRawSegmentLength_vec();
 
       // Get an MCSAngleResult for various methods using the true segment result.
@@ -267,23 +264,19 @@ void MCSAngleAnalysis::analyze(art::Event const & e) {
       std::vector<Angles_t> truePolygonalAngles_vec = truePolygonalMCS.GetAngles_vec();
 
       // Loop through angle measurements for each segment.
-      for(size_t i = 0; i < trueLinearAngles_vec.size() /* && i < trueSegmentStartPoint_vec.size() - 1 */; ++i) {
-	std::cout << "i = " << i << std::endl;
-	// The i+1 is here since our first angle is for the second segment.
-	// _unused size_t segmentStartPoint = trueSegmentStartPoint_vec.at(i+1);
-	// Momentum for segment.
-	// Double_t segmentMomentum = particle->P(segmentStartPoint);
+      for(size_t i = 0; i < trueLinearAngles_vec.size(); ++i) {
+	// TODO: Assumption: Relative sizes of vectors
+	// Momentum for segment. The i+1 is here since our first angle is for the second segment.
 	Double_t segmentMomentum = trueSegmentResult.GetMomentumForSegment(i+1);
 	Double_t segmentLength = trueRawSegmentLength_vec.at(i+1);
 
-	// TODO: This momentum is only actual valid for the start of linear segments, but it's pretty close for the polygonal segments.
-	//     Consider alternative: Bethe-Bloch energy loss for polyognal segments?
-	// TODO: Use average segment momentum?
+	// TODO: Invalid momentum for polygonal segments.
 
 	// Angles for segment.
 	Angles_t linearAngles = trueLinearAngles_vec.at(i);
 	Angles_t polygonalAngles = truePolygonalAngles_vec.at(i);
 
+	// Get individual angles for this segment.
 	Float_t linearTheta3D = std::get<0>(linearAngles)*1000.0;
 	Float_t linearThetaXZprime = std::get<1>(linearAngles)*1000.0;
 	Float_t linearThetaYZprime = std::get<2>(linearAngles)*1000.0;
@@ -291,10 +284,12 @@ void MCSAngleAnalysis::analyze(art::Event const & e) {
 	Float_t polygonalThetaXZprime = std::get<1>(polygonalAngles)*1000.0;
 	Float_t polygonalThetaYZprime = std::get<2>(polygonalAngles)*1000.0;
 
+	// Directly Compare 3D angles with projected angles added in quadrature. Should be one-to-one.
+	// TODO: Assumption: Small angle assumption
 	trueLinear_theta3DVsTheta2DInQuadrature_HIST->Fill(pow(linearThetaXZprime*linearThetaXZprime + linearThetaYZprime*linearThetaYZprime,0.5), linearTheta3D);
 	truePolygonal_theta3DVsTheta2DInQuadrature_HIST->Fill(pow(polygonalThetaXZprime*polygonalThetaXZprime + polygonalThetaYZprime*polygonalThetaYZprime,0.5), polygonalTheta3D);
 
-	// Fill histograms with projected angles vs. segment momentum.
+	// Fill histograms with angles vs. segment momentum.
 	trueLinear_theta3DVsSegmentMomentum_HIST->Fill(segmentMomentum, linearTheta3D);
 	trueLinear_thetaXZprimeVsSegmentMomentum_HIST->Fill(segmentMomentum, linearThetaXZprime);
 	trueLinear_thetaYZprimeVsSegmentMomentum_HIST->Fill(segmentMomentum, linearThetaYZprime);
@@ -302,7 +297,7 @@ void MCSAngleAnalysis::analyze(art::Event const & e) {
 	truePolygonal_thetaXZprimeVsSegmentMomentum_HIST->Fill(segmentMomentum, polygonalThetaXZprime);
 	truePolygonal_thetaYZprimeVsSegmentMomentum_HIST->Fill(segmentMomentum, polygonalThetaYZprime);
 
-	// Update angles within sigma counts
+	// Update counters that count the number of angles within n*sigma.
 	Double_t sigmaHL = 1000.0*highland(segmentMomentum, segmentLength);
 	// LinearThetaXZprime
 	if(fabs(linearThetaXZprime) <= sigmaHL)
@@ -355,6 +350,7 @@ void MCSAngleAnalysis::analyze(art::Event const & e) {
     art::Ptr<recob::Track> track = trackList.at(iTrack);
 
     // (attempt to) Backtrack this track to an MCParticle
+    // TODO: Backtracking error handling.
     simb::MCParticle particle = backtracker.getMCParticle(track, e, fTrackModuleLabel.label());
 
     // Only run this analysis if the track length is greater than 100 cm
@@ -364,46 +360,47 @@ void MCSAngleAnalysis::analyze(art::Event const & e) {
 
       // Extract data from the reco segment result
       std::vector<Float_t> rawSegmentLength_vec = recoSegmentResult.GetRawSegmentLength_vec();
-      // std::vector<size_t> reco_segmentStartPoint_vec = recoSegmentResult.GetSegmentStartPoint_vec();
       std::vector<Segment_t> reco_segment_vec = recoSegmentResult.GetSegment_vec();
       std::vector<Vector_t> reco_linearFit_vec = recoSegmentResult.GetLinearFit_vec();
 
       // Calculate Reco MCSAngleResult for various methods
-      trkf::MCSAngleCalculator::MCSAngleResult recoLinearMCS = angleCalculator.GetResult(recoSegmentResult, 0);
-      trkf::MCSAngleCalculator::MCSAngleResult recoPolygonalMCS = angleCalculator.GetResult(recoSegmentResult, 1);
+      trkf::MCSAngleCalculator::MCSAngleResult recoLinearAngleResult = angleCalculator.GetResult(recoSegmentResult, 0);
+      trkf::MCSAngleCalculator::MCSAngleResult recoPolygonalAngleResult = angleCalculator.GetResult(recoSegmentResult, 1);
+      // TODO: Alternative segment defintions
 
       // Extract data from the various reco angle results
-      std::vector<Angles_t> recoLinearAngles_vec = recoLinearMCS.GetAngles_vec();
-      std::vector<Angles_t> recoPolygonalAngles_vec = recoPolygonalMCS.GetAngles_vec();
+      std::vector<Angles_t> recoLinearAngles_vec = recoLinearAngleResult.GetAngles_vec();
+      std::vector<Angles_t> recoPolygonalAngles_vec = recoPolygonalAngleResult.GetAngles_vec();
       
-      // Calculate the True MCSSegmentResult
+      // Calculate the True MCSSegmentResult for the backtracked MCParticle.
       trkf::MCSSegmentCalculator::MCSSegmentResult trueSegmentResult = segmentCalculator.GetResult(particle, fShouldCreateVirtualPoints);
 
       // Extract data from the true segment result
-      // std::vector<size_t> true_segmentStartPoint_vec = trueSegmentResult.GetSegmentStartPoint_vec();
       std::vector<Segment_t> true_segment_vec = trueSegmentResult.GetSegment_vec();
       std::vector<Float_t> true_rawSegmentLength_vec = trueSegmentResult.GetRawSegmentLength_vec();
       std::vector<Vector_t> true_linearFit_vec = trueSegmentResult.GetLinearFit_vec();
 
       // Calculate an True MCSAngleResult for various methods
-      trkf::MCSAngleCalculator::MCSAngleResult trueLinearMCS = angleCalculator.GetResult(particle, 0);
-      // TODO: truePolygonalMCS
+      trkf::MCSAngleCalculator::MCSAngleResult trueLinearAngleResult = angleCalculator.GetResult(particle, 0);
+      // TODO: truePolygonalAngleResult
 
       // Extract data from the various true angle results
-      std::vector<Angles_t> trueLinearAngles_vec = trueLinearMCS.GetAngles_vec();
+      std::vector<Angles_t> trueLinearAngles_vec = trueLinearAngleResult.GetAngles_vec();
 
       // Loop through angle measurements for each segment.
       for(size_t i = 0; i < recoLinearAngles_vec.size(); ++i) {
 
-	// Get the segment momentum of this reco segment using the "closest Z" method.
-	// size_t recoSegmentStartPoint = reco_segmentStartPoint_vec.at(i);
+	// Get the segment momentum of this reco segment using the "closest Z" method, described here: TODO: Move to general documentation.
+	// Get the first reco point in this segment.  
+	// Find the MCParticle trajectory point index that has the closest position with that reco point.
+	// Get the momentum of that MCParticle traj. pt. index
+	// TODO: Assumption: Relative Vector sizes.
 	Segment_t recoSegment = reco_segment_vec.at(i+1);
-	Point_t recoPoint = recoSegment.at(0);
-	// TVector3 recoPoint = angleCalculator.convert<Point_t, TVector3>(track->LocationAtPoint(recoSegmentStartPoint));
-	size_t truePointIndex = TrajectoryPointWithClosestZ(particle, recoPoint);
+	Point_t recoFirstPoint = recoSegment.at(0);
+	size_t truePointIndex = TrajectoryPointWithClosestZ(particle, recoFirstPoint);
 	Double_t segmentMomentum = particle.P(truePointIndex);
 
-	// Get the collection of angles for this segment.
+	// Get the angles for this segment.
 	Angles_t recoLinearAngles = recoLinearAngles_vec.at(i);
 	Angles_t recoPolygonalAngles = recoPolygonalAngles_vec.at(i);
 
@@ -415,11 +412,12 @@ void MCSAngleAnalysis::analyze(art::Event const & e) {
 	Float_t polygonalThetaXZprime = std::get<1>(recoPolygonalAngles)*1000.0;
 	Float_t polygonalThetaYZprime = std::get<2>(recoPolygonalAngles)*1000.0;
 
-	// Fill hyistograms comparing 3D and 2D added in quadrature. (1-to-1) graph.
+	// Directly Compare 3D angles with projected angles added in quadrature. Should be one-to-one.
+	// TODO: Assumption: small angle assumption
 	recoLinear_theta3DVsTheta2DInQuadrature_HIST->Fill(pow(linearThetaXZprime*linearThetaXZprime + linearThetaYZprime*linearThetaYZprime,0.5), linearTheta3D);
 	recoPolygonal_theta3DVsTheta2DInQuadrature_HIST->Fill(pow(polygonalThetaXZprime*polygonalThetaXZprime + polygonalThetaYZprime*polygonalThetaYZprime,0.5), polygonalTheta3D);
 
-	// Fill histograms with projected angles vs. segment momentum.
+	// Fill histograms with angles vs. segment momentum.
 	recoLinear_theta3DVsSegmentMomentum_HIST->Fill(segmentMomentum, linearTheta3D);
 	recoLinear_thetaXZprimeVsSegmentMomentum_HIST->Fill(segmentMomentum, linearThetaXZprime);
 	recoLinear_thetaYZprimeVsSegmentMomentum_HIST->Fill(segmentMomentum, linearThetaYZprime);
@@ -429,13 +427,16 @@ void MCSAngleAnalysis::analyze(art::Event const & e) {
 
       } // for i (segment angle)
 
+      // ========================================================================
+      // Direct Angle Comparison and First Segment Analysis
+      // ========================================================================
+
       // Calculate and plot the distance between vertices the true and reconstructed vertex.
-      TVector3 initialPosition = startingPositionFor(particle);
+      TVector3 initialPosition = startingPositionFor(particle); // The first point of the MCParticle that's within the detector.
       recob::tracking::Point_t reco_vertex = track->Vertex();
       Double_t vertexDifference = distanceBetween(initialPosition, reco_vertex);
       reco_vertexDifference_HIST->Fill(vertexDifference);
 
-      // Direct Comparison Analysis and First Segment Analysis
       // Only run for events with the same number of segments.
       if(vertexDifference < 1.0) {
 	// ========================================================================
@@ -448,7 +449,7 @@ void MCSAngleAnalysis::analyze(art::Event const & e) {
 
 	    Angles_t trueLinearAngles = trueLinearAngles_vec.at(i);
 	    Angles_t recoLinearAngles = recoLinearAngles_vec.at(i);
-	    // TODO: Polygonal and/or other segment definitions direct comparison.
+	    // TODO: Alternative Segment Defintions.
 	    
 	    // True/Reco angles for this segment
 	    Double_t trueLinearThetaXZprime = std::get<1>(trueLinearAngles)*1000.0;
@@ -464,52 +465,41 @@ void MCSAngleAnalysis::analyze(art::Event const & e) {
 
 	// ========================================================================
 	// First Segment Analysis
+	// The first segment's linear-fit typically serves as the intial direction for the second segment.
+	// The first angles in the (true/reco)LinearAngles_vecare calculated between the first and second segments.
+	// We're about to calculate the angles of this segment relative to the initial direction.
+	// We'll then optionally add the next few segment's angles, up to how many are stated in the "numberOf(True/Reco)Segments" variable.
+	//
+	// A note about the SegmentBBMomentum plots:
+	// If numberOf(True/Reco)Segments == 0, these should be exactly the same as the regular SegmentMomentum plots.
+	//
+	// TODO: Alternative Segment Defintions.
 	// ========================================================================
 
 	// Initial Info (prior to first segment being formed)
 	Double_t initialMomentum = particle.P();
 	TVector3 initialDirection = startingDirectionFor(particle);
 	
-	// Get initial vector of trueMCS / recoMCS first segment.
+	// Get initial linear-fit vectors of first segment.
 
-	// TODO: This is a test for the MCSSegemntCalculator.convert methods.
-	// trkf::MCSSegmentCalculator segmentCalculator(14.0);
-
-	// First Segment Vectors
-	// TVector3 trueLastPoint_firstSegment = particle.Momentum(true_segmentStartPoint_vec.at(1)).Vect().Unit();
-	// TODO: Alternative segment defintions
+	// Calculate the TVector3 of the linear-fit of the first segment.
 	TVector3 trueLinear_firstSegment = angleCalculator.convert<Vector_t, TVector3>(true_linearFit_vec.at(0));
 	TVector3 recoLinear_firstSegment = angleCalculator.convert<Vector_t, TVector3>(reco_linearFit_vec.at(0));
 
-	// Calculate first segment angles
-	// Angles_t trueLastPoint_firstSegmentAngles = angleCalculator.calculateAngles(trueLastPoint_firstSegment, initialDirection);
+	// Calculate angles of the first segment relative to the initial direction.
 	Angles_t trueLinear_firstSegmentAngles = angleCalculator.calculateAngles(angleCalculator.convert<Vector_t, TVector3>(true_linearFit_vec.at(1)), trueLinear_firstSegment);
 	Angles_t recoLinear_firstSegmentAngles = angleCalculator.calculateAngles(recoLinear_firstSegment, initialDirection);
-	
-	// First True Segment Angles, individually
-	// _unused Float_t trueLastPoint_theta3D = std::get<0>(trueLastPoint_firstSegmentAngles)*1000.0;
-	// _unused Float_t trueLastPoint_thetaXZprime = std::get<1>(trueLastPoint_firstSegmentAngles)*1000.0;
-	// _unused Float_t trueLastPoint_thetaYZprime = std::get<2>(trueLastPoint_firstSegmentAngles)*1000.0;
 
-	_unused Float_t trueLinear_theta3D = std::get<0>(trueLinear_firstSegmentAngles)*1000.0;
-	_unused Float_t trueLinear_thetaXZprime = std::get<1>(trueLinear_firstSegmentAngles)*1000.0;
-	_unused Float_t trueLinear_thetaYZprime = std::get<2>(trueLinear_firstSegmentAngles)*1000.0;
-	
-	// TODO: true dots segments
+	// Extract the individual true angles
+	Float_t trueLinear_theta3D = std::get<0>(trueLinear_firstSegmentAngles)*1000.0;
+	Float_t trueLinear_thetaXZprime = std::get<1>(trueLinear_firstSegmentAngles)*1000.0;
+        Float_t trueLinear_thetaYZprime = std::get<2>(trueLinear_firstSegmentAngles)*1000.0;
 
-	// First Reco Segment Angles, individually
-	_unused Float_t recoLinear_theta3D = std::get<0>(recoLinear_firstSegmentAngles)*1000.0;
-	_unused Float_t recoLinear_thetaXZprime = std::get<1>(recoLinear_firstSegmentAngles)*1000.0;
-	_unused Float_t recoLinear_thetaYZprime = std::get<2>(recoLinear_firstSegmentAngles)*1000.0;
+	// Extract the individual reco angles
+        Float_t recoLinear_theta3D = std::get<0>(recoLinear_firstSegmentAngles)*1000.0;
+	Float_t recoLinear_thetaXZprime = std::get<1>(recoLinear_firstSegmentAngles)*1000.0;
+        Float_t recoLinear_thetaYZprime = std::get<2>(recoLinear_firstSegmentAngles)*1000.0;
 
-	// TODO: reco dots segments
-	
-	// Fill True Histograms
-	// first_trueLastPoint_theta3DVsSegmentMomentum_HIST->Fill(initialMomentum, trueLastPoint_theta3D);
-	// first_trueLastPoint_thetaXZprimeVsSegmentMomentum_HIST->Fill(initialMomentum, trueLastPoint_thetaXZprime);
-	// first_trueLastPoint_thetaYZprimeVsSegmentMomentum_HIST->Fill(initialMomentum, trueLastPoint_thetaYZprime);
-
-	// TODO: Alternative Segment Definitions
 	// Fill True Histograms
 	// True Momentum
 	first_trueLinear_theta3DVsSegmentMomentum_HIST->Fill(initialMomentum, trueLinear_theta3D);
@@ -532,11 +522,6 @@ void MCSAngleAnalysis::analyze(art::Event const & e) {
 	first_recoLinear_thetaXZprimeVsSegmentBBMomentum_HIST->Fill(initialMomentum, recoLinear_thetaXZprime);
 	first_recoLinear_thetaYZprimeVsSegmentBBMomentum_HIST->Fill(initialMomentum, recoLinear_thetaYZprime);
 
-	// Optionally, add to the first-segment analysis plots using the first few segments.
-	// The momentum is not as well-defined, which is the point of the Bethe-Bloch verification that is also being done (code is after this section).
-	// I'll update this documentation if we can conclude that the momentum IS well-defined and we're using the updated/correct method.
-	// Ideally, we can use a reco-formula rather than the MC info, but we might need it instead (if we use the closest Z method, for instance).
-
 	// Loop through the next few segments and add to the first segment plots.
 	
 	// We'll begin by defining the number of segments to be all of the segments.
@@ -544,54 +529,49 @@ void MCSAngleAnalysis::analyze(art::Event const & e) {
 	size_t numberOfRecoSegments = recoLinearAngles_vec.size();
 
 	// Optionally reset the number of segments to some value to just look at the first couple of segments.
-	// numberOfTrueSegments = 4;
-	// numberOfRecoSegments = 4;
+	// Set to 0 to not add any additional segments to the first segment angles histograms
+	// TODO: Consider making this a fhicl parameter.
+	numberOfTrueSegmentsToIncludeInFirst = 1;
+	numberOfRecoSegmentsToIncludeInFirst = 1;
 
 	// Calculate the inital true momentum
-	// _unused Double_t initialTrueSegmentStartPoint = true_segmentStartPoint_vec.at(0);
 	Double_t initialTrueMomentum = trueSegmentResult.GetMomentumForSegment(0);
-	// Double_t initialTrueMomentum = particle.P(initialTrueSegmentStartPoint);
 
 	// The segment momentum at the start of the first segment.
 	Double_t trueSegmentBBMomentum = initialTrueMomentum;
 
-	// Plot the first few true segments and perform BB verification.
-	for(size_t i = 0; i < true_rawSegmentLength_vec.size() /* && i < true_segmentStartPoint_vec.size() - 1 */; ++i) { // TODO: Tempororary i < true_segmentStartPoint_vec.size()
-
-	  std::cout << "i true = " << i << std::endl;
+	// Perform BB verification and optionally add the first-few segment angles to the first segment angle graphs.
+	for(size_t i = 0; i < true_rawSegmentLength_vec.size(); ++i) {
+	  // TODO: Assumption: Relative Sizes of vectors. Should add about what we're looping through.
 
 	  // Update the true segment BB momentum for this segment.
 	  Double_t trueRawSegmentLength = true_rawSegmentLength_vec.at(i);
 	  trueSegmentBBMomentum -= deltaP(trueSegmentBBMomentum*1000.0, trueRawSegmentLength)/1000.0;
 
 	  // Calculate the true segment momentum for the start of this segment.
-	  // _unused size_t trueSegmentStartPoint = true_segmentStartPoint_vec.at(i+1);
 	  Double_t trueSegmentMomentum = trueSegmentResult.GetMomentumForSegment(i+1);
-	  // Double_t trueSegmentMomentum = particle.P(trueSegmentStartPoint);
 
 	  // Fill BB momentum verification histograms
 	  trueBBMomentumVsTrueMomentum_HIST->Fill(trueSegmentMomentum, trueSegmentBBMomentum);
 
-	  // Compare the straight-line distance between adjacent segment start points with this segment's raw segment length:
-	  // size_t trueSegmentStartPoint_beginning = true_segmentStartPoint_vec.at(i);
+	  // Compare the straight-line distance between segment end points with this segment's raw segment length:
+	  // Calculate the straight-line distance between the segment end points.
 	  Segment_t trueSegment = true_segment_vec.at(i);
 	  Point_t truePoint_beginning = trueSegment.front();
 	  Point_t truePoint_end = trueSegment.back();
-	  // TVector3 truePoint_beginning = particle.Position(trueSegmentStartPoint_beginning).Vect();
-	  // TVector3 truePoint_end = particle.Position(trueSegmentStartPoint).Vect();
 	  Double_t straightLineDistance = distanceBetween(truePoint_beginning, truePoint_end);
 
-	  // Fill segment length histogram
+	  // Fill segment length comparison histograms
 	  true_rawSegmentLengthVsStraightLineDistance_HIST->Fill(straightLineDistance, trueRawSegmentLength);
 	  true_rawSegmentLengthVsSegmentMomentum_HIST->Fill(trueSegmentMomentum, trueRawSegmentLength);
 
 	  // If we should add the first few segments to the first segment angles plots.
 	  // numberOfTrueSegments will be 0 if not.
-	  // TODO: Re-add the Bool?
-	  if(i > 0 && i < numberOfTrueSegments) {
+	  if(i > 0 && i < numberOfTrueSegmentsToIncludeInFirst+1) { // TODO: Assumption i-1 and numberOfTrueSegmentToIncludeInFirst+1 is to make sure the segment momentum is correct.
 
 	    // Get the True Angles
 	    // The i-1 is because of the relative sizes of the vectors and because we have the i > 0 condition.
+	    // This was needed to the segment momentum is correct.
 	    Angles_t trueLinearAngles = trueLinearAngles_vec.at(i-1);
 
 	    // Extract the True Angles
@@ -615,22 +595,15 @@ void MCSAngleAnalysis::analyze(art::Event const & e) {
 	Double_t recoSegmentBBMomentum = initialTrueMomentum;
 
 	// Plot the first few reco segments.
-	for(size_t i = 0; i < rawSegmentLength_vec.size() /* && i < reco_segmentStartPoint_vec.size() - 1 */; ++i) { // TODO: Tempororary i < reco_segmentStartPoint_vec.size()
+	for(size_t i = 0; i < rawSegmentLength_vec.size(); ++i) {
 
-	  std::cout << "i reco = " << i << std::endl;
-
-	  // Calculate the reco segment momentum.
-	  // This is currently using the TrajectoryPointWithClosestZ method, TODO: we should quantify the changes this has compared with using BB.
-	  // TODO: Overlay sigmaHL/sigmaRMS vs. segment momentum using BB and closest Z momentum measurement.  We should see right-shifted sigma values, right?   Why do we still see sigmaHL > sigmaRMS at low p right now?  What happens if we get sigmaHL using BB momentum rather than particle.P(trueTrajectoryPoint)?  Solve on Friday.
-	  // TODO: Combine Bethe-Bloch Verification / Analysis with this for loop, use those values to additionally plot: first_recoLinear_theta...SegmentBBMomentum_HIST->Fill(recoSegmentBBMomentum, recoLinear_theta...);
+	  // TODO: Assumption: Relative vector sizes
 
 	  // Calculate the true segment momentum for the true point that is closest in Z to the reco segment start point
-	  // size_t recoSegmentStartPoint = reco_segmentStartPoint_vec.at(i+1);
-	  // Point_t recoPoint_t = track->LocationAtPoint(recoSegmentStartPoint);
-	  // TVector3 recoPoint = TVector3(recoPoint_t.X(), recoPoint_t.Y(), recoPoint_t.Z());
+	  // TODO: Assumption that this is the best way to have the "true momentum" for the start of the reco segment.  Can this be done using sim::IDE?
 	  Segment_t recoSegment = reco_segment_vec.at(i+1);
 	  Point_t recoPoint = recoSegment.at(0);
-	  _unused size_t truePointClosestZ_index = TrajectoryPointWithClosestZ(particle, recoPoint);
+	  size_t truePointClosestZ_index = TrajectoryPointWithClosestZ(particle, recoPoint);
 	  Double_t trueSegmentMomentumClosestZ = particle.P(truePointClosestZ_index);
 
 	  // Update the reco segment BB momentum for the next segment.
@@ -641,28 +614,20 @@ void MCSAngleAnalysis::analyze(art::Event const & e) {
 	  recoBBMomentumVsTrueMomentumClosestZ_HIST->Fill(trueSegmentMomentumClosestZ, recoSegmentBBMomentum);	  
 
 	  // Compare the straight-line distance between adjacent segment start points with this segment's raw segment length:
+	  // TODO: Assumption that the end of one segment is the start of the next segment.
 	  Point_t recoPoint_beginning = recoSegment.front();
 	  Point_t recoPoint_end = recoSegment.back();
-
-	  // size_t recoSegmentStartPoint_beginning = reco_segmentStartPoint_vec.at(i);
-	  // Point_t recoPoint_beginning = track->LocationAtPoint(recoSegmentStartPoint_beginning);
-	  // Point_t recoPoint_end = track->LocationAtPoint(recoSegmentStartPoint);
 	  Double_t straightLineDistance = distanceBetween(recoPoint_beginning, recoPoint_end);
-	  // TVector3 recoPoint_beginning = angleCalculator.convert<Point_t, TVector3>(track->LocationAtPoint(recoSegmentStartPoint_beginning));
-	  // TVector3 recoPoint_end = angleCalculator.convert<Point_t, TVector3>(track->LocationAtPoint(recoSegmentStartPoint));
-	  // Point_t recoPoint_beginning_t = track->LocationAtPoint(recoSegmentStartPoint_beginning);
-	  // Point_t recoPoint_end_t = track->LocationAtPoint(recoSegmentStartPoint);
-	  // TVector3 recoPoint_beginning = TVector3(recoPoint_beginning_t.X(), recoPoint_beginning_t.Y(), recoPoint_beginning_t.Z());
-	  // TVector3 recoPoint_end = TVector3(recoPoint_end_t.X(), recoPoint_end_t.Y(), recoPoint_end_t.Z());
-	  // Double_t straightLineDistance = distanceBetween(recoPoint_beginning, recoPoint_end);
 
 	  // Fill segment length histogram
 	  reco_rawSegmentLengthVsStraightLineDistance_HIST->Fill(straightLineDistance, recoRawSegmentLength);
 	  reco_rawSegmentLengthVsSegmentMomentumClosestZ_HIST->Fill(trueSegmentMomentumClosestZ, recoRawSegmentLength);
 
-	  if(i > 0 && i < numberOfRecoSegments) {
+	  // If we should add the first few segments to the first segment angles plots.
+	  // numberOfRecoSegments will be 0 if not.
+	  if(i > 0 && i < numberOfTrueSegmentsToIncludeInFirst+1) { // TODO: Assumption, same as true version
 	    // Get the Reco Angles
-	    Angles_t recoLinearAngles = recoLinearAngles_vec.at(i-1);
+	    Angles_t recoLinearAngles = recoLinearAngles_vec.at(i-1); // TODO: Assumption
 
 	    // Extract the Reco Angles
 	    Float_t recoLinear_theta3D = std::get<0>(recoLinearAngles)*1000.0;
@@ -680,41 +645,21 @@ void MCSAngleAnalysis::analyze(art::Event const & e) {
 	    first_recoLinear_thetaYZprimeVsSegmentBBMomentum_HIST->Fill(recoSegmentBBMomentum, recoLinear_thetaYZprime);
 	  } // if i > 0  && i < numberOfRecoSegments
 	} // for i in numberOfRecoSegments
-
-	// ========================================================================
-	// Bethe-Bloch Verification
-	// Some of these plots are a little more abstract (think segment analysis, not angle analysis or momentum analysis).
-	// If we do the MCSSegmentCalcualtor, some of this can actually move to an analysis module there).
-	// MCSSegmentAnalysis_module.cc, as opposed to MCSAngleAnalysis_module.cc or CompareMCSAnalyzer_module.cc (which should be renamed or moved to MCSMomentumAnalysis_module.cc).
-	// ========================================================================
 	
 	// Segment Analysis:
-	// TODO: Plot length of segment calculated using straight-line distance between first and last point, compare with raw segment length vec
-	// Not technically Bethe-Bloch Verification, but it will tell us something about the segments that we can use to better interpret the BB verification.
+	// Tells us about our segment length measurements and the closest Z momentum ethod, which can be used to interpret the validity of the momentum estimation
+
 	// Calculate the distance between segment start points for true and reco segment start points for tracks that have the same number of segments.
-	// for(size_t i = 0; i < true_segmentStartPoint_vec.size() && i < reco_segmentStartPoint_vec.size(); ++i) {
 	for(size_t i = 0; i < true_segment_vec.size() && i < reco_segment_vec.size(); ++i) {
-	  std::cout << "i = " << i << std::endl;
 	  // Define this segment.
 	  Segment_t trueSegment = true_segment_vec.at(i);
-	  std::cout << "in between" << std::endl;
 	  Segment_t recoSegment = reco_segment_vec.at(i);
-
-	  std::cout << "HERE" << std::endl;
 
 	  // Define various points.
 	  Point_t recoPoint = recoSegment.front();
-	  // size_t recoSegmentStartPoint = reco_segmentStartPoint_vec.at(i);
-	  // Point_t recoPoint = track->LocationAtPoint(recoSegmentStartPoint);
-	  // Point_t recoPoint_t = track->LocationAtPoint(recoSegmentStartPoint);
-	  // TVector3 recoPoint = TVector3(recoPoint_t.X(), recoPoint_t.Y(), recoPoint_t.Z());
-	  
-	  // size_t trueSegmentStartPoint = true_segmentStartPoint_vec.at(i);
-	  // TVector3 truePoint = particle.Position(trueSegmentStartPoint).Vect();
 	  Point_t truePoint = trueSegment.front();
 
 	  size_t truePointWithClosestZToRecoPoint_index = TrajectoryPointWithClosestZ(particle, recoPoint);
-	  std::cout << "Here?" << std::endl;
 	  TVector3 truePointWithClosestZToRecoPoint = particle.Position(truePointWithClosestZToRecoPoint_index).Vect();
 
 	  // Plot distances between various points
@@ -731,8 +676,6 @@ void MCSAngleAnalysis::analyze(art::Event const & e) {
 	  distanceBetweenRecoPointWithTruePointWithClosestZVsSegmentNumber_HIST->Fill(i, distanceBetweenRecoPointWithTruePointWithClosestZ);
 	  distanceBetweenTruePointWithTruePointWithClosestZVsSegmentNumber_HIST->Fill(i, distanceBetweenTruePointWithTruePointWithClosestZ);
 
-	  std::cout << "I'm confused" << std::endl;
-
 	} // for i in trueSegmentStartPoints.size() && recoSegmentStartPoints.size()
 
 	// TODO: Plot reco BB momentum vs. true momentum of true point with closest Z to the reco point
@@ -748,8 +691,6 @@ void MCSAngleAnalysis::analyze(art::Event const & e) {
 
 void MCSAngleAnalysis::beginJob() {
   art::ServiceHandle<art::TFileService> tfs; // Consider moving to private class scope, rather than function scope, if we do endJob analysis that needs to be saved (such as sigmaRES analysis).
-
-  // TODO: You *must* expand the angle range today.
 
   // True Data
   // ========================================================================

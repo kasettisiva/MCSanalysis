@@ -33,7 +33,7 @@ physics:
 
 	module_type:	"MCSAngleAnalysis"
     	TrackModuleLabel: "pandoraTrack"
-	ShouldCreateVirtualPoints: false
+	ShouldCreateVirtualPoints: true
 
 	angleCalculator: {
 		segmentCalculator: {

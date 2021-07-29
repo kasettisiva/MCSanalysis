@@ -61,6 +61,9 @@ namespace trkf {
 
     // Public Methods
     // Primary GetResult methods
+    // TODO: Add a GetResult method that will also calculate the angles of the firstSegment relative to a vector that is passed.  
+    //     For example, if you know the initial direction of your particle from beam-info, then there's no need to only use the first-segment as the initial direction.
+    //     We should add a flag if this occured to the MCSAngleResult so that the MCSMomentumCalculator doesn't add back that first segment momentum.
     MCSAngleResult GetResult(const MCSSegmentResult segmentResult, const int angleMethod) const;
     MCSAngleResult GetResult(const std::vector<Point_t> points, const int angleMethod) const;
     MCSAngleResult GetResult(const simb::MCTrajectory trajectory, const int angleMethod) const;

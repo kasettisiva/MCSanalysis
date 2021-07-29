@@ -12,21 +12,24 @@ void firstSegmentAnalysis() {
   // Get plots from root file
   /////////////////////////////////////////////////////////////////////////////////////
 
+  // Reset the output directory.
   gSystem->Exec("rm -r FSA_plots");
   gSystem->Exec("mkdir FSA_plots");
 
   // Get Root File
-  //const char* path = "/dune/app/users/hmeyer5/curvyTrackFix2/srcs/dunetpc/dune/LSU/500_mu_0.5-4.5_GeV_start_beam-entry_dir_beam-dir_standardReco.root";
   const char* path = "../MCSAngleAnalysis_hist.root";
   TFile* file = new TFile(path);
 
-  // FYI: These are all old todo items, need to clear them out / change some.
-  // TODO: Add polygonal 3D angles
-  // TODO: Verify that all plots are made in the exact same way.
-  // TODO: Fit the 3D angles using a different equation than the 2D angles, use factor that SHOULD fit to sqrt(2)*sqrt(1-2/pi) or something like that...
-  // TODO: Formally compare 3D and 2D angles over a variety of new metrics.
-  // TODO: Verify angle distributions.  Are they Gaussian/Half-Gaussian? How to quantify this?
-  // TODO: Extract similar code to be done in separate functions, similar to what is done in momentumAnalysis.cpp?
+  // TODO: Add to GitHub Issues:
+  // TODO: Functionalize the flow to allow for other segmentation methods easily.
+  // TODO: Can we put individual plots that are made into individual function calls?
+  // TODO: For functionalized fits, can we add a Properties struct that contains ALL of the possible changes that can be made into the fits? This allows for us to make only ONE function that just takes a BUNCH of parameters wrapped into one struct.
+  // TODO: Are 3D angles being fit to all possible scenarios?
+  // TODO: Are reco angles being fit to all possible scenarios?
+  // TODO: Polygonal Fits
+  // TODO: Plot the fit-statistics of each TH1F fit. Chi2, "Gaussian"-ness, etc.
+  // TODO: Fit the 3D angles using a half-gaussian metric.
+  // TODO: Combine firstSegmentAnalysis with angleDistributionAnalysis.
 
   // Get each histogram from the root file
 
@@ -404,9 +407,9 @@ void firstSegmentAnalysis() {
 
   // True Linear 2D
   // True Momentum
-  plotAndSave_sigmaFitVsSegmentMomentum(trueLinear_sigmaHLVsSegmentBBMomentum, trueLinearBB_sigmaHL_function, trueLinearBB_sigmaHL_LEGEND, yMin, yMax, "trueLinearBB_sigmaHL", "FSA_plots/");
-  plotAndSave_sigmaFitVsSegmentMomentum(trueLinearXZ_sigmaHLVsSegmentBBMomentum, trueLinearXZBB_sigmaHL_function, trueLinearXZBB_sigmaHL_LEGEND, yMin, yMax, "trueLinearXZBB_sigmaHL", "FSA_plots/");
-  plotAndSave_sigmaFitVsSegmentMomentum(trueLinearYZ_sigmaHLVsSegmentBBMomentum, trueLinearYZBB_sigmaHL_function, trueLinearYZBB_sigmaHL_LEGEND, yMin, yMax, "trueLinearYZBB_sigmaHL", "FSA_plots/");
+  plotAndSave_sigmaFitVsSegmentMomentum(trueLinear_sigmaHLVsSegmentMomentum, trueLinear_sigmaHL_function, trueLinear_sigmaHL_LEGEND, yMin, yMax, "trueLinear_sigmaHL", "FSA_plots/");
+  plotAndSave_sigmaFitVsSegmentMomentum(trueLinearXZ_sigmaHLVsSegmentMomentum, trueLinearXZ_sigmaHL_function, trueLinearXZ_sigmaHL_LEGEND, yMin, yMax, "trueLinearXZ_sigmaHL", "FSA_plots/");
+  plotAndSave_sigmaFitVsSegmentMomentum(trueLinearYZ_sigmaHLVsSegmentMomentum, trueLinearYZ_sigmaHL_function, trueLinearYZ_sigmaHL_LEGEND, yMin, yMax, "trueLinearYZ_sigmaHL", "FSA_plots/");
 
   // BB Momentum
   plotAndSave_sigmaFitVsSegmentMomentum(trueLinear_sigmaHLVsSegmentBBMomentum, trueLinearBB_sigmaHL_function, trueLinearBB_sigmaHL_LEGEND, yMin, yMax, "trueLinearBB_sigmaHL", "FSA_plots/");
