@@ -525,8 +525,8 @@ void MCSAngleAnalysis::analyze(art::Event const & e) {
 	// Loop through the next few segments and add to the first segment plots.
 	
 	// We'll begin by defining the number of segments to be all of the segments.
-	size_t numberOfTrueSegments = trueLinearAngles_vec.size();
-	size_t numberOfRecoSegments = recoLinearAngles_vec.size();
+	size_t numberOfTrueSegmentsToIncludeInFirst = trueLinearAngles_vec.size();
+	size_t numberOfRecoSegmentsToIncludeInFirst = recoLinearAngles_vec.size();
 
 	// Optionally reset the number of segments to some value to just look at the first couple of segments.
 	// Set to 0 to not add any additional segments to the first segment angles histograms
@@ -625,7 +625,7 @@ void MCSAngleAnalysis::analyze(art::Event const & e) {
 
 	  // If we should add the first few segments to the first segment angles plots.
 	  // numberOfRecoSegments will be 0 if not.
-	  if(i > 0 && i < numberOfTrueSegmentsToIncludeInFirst+1) { // TODO: Assumption, same as true version
+	  if(i > 0 && i < numberOfRecoSegmentsToIncludeInFirst+1) { // TODO: Assumption, same as true version
 	    // Get the Reco Angles
 	    Angles_t recoLinearAngles = recoLinearAngles_vec.at(i-1); // TODO: Assumption
 
