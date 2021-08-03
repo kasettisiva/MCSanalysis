@@ -135,7 +135,7 @@ namespace trkf {
 
     // Public Methods
 
-    /// Retrieve an `MCSSegmentResult` using a vector of points.  This is the base method that all other GetResult methods call.
+    /// Retrieve an `MCSSegmentResult` using a vector of points.  This is the base method that all other `GetResult` methods call.
     /// @param points The points to use to create the `MCSSegmentResult`.
     /// @param shouldCreateVirtualPoints A boolean tag that specifies whether or not virtual points should be created with the segments, forcing the segments to be 14-cm.
     MCSSegmentResult GetResult(const std::vector<Point_t> points, const Bool_t shouldCreateVirtualPoints) const;
@@ -146,7 +146,7 @@ namespace trkf {
     /// 
     /// @param trajectory The trajectory to use to create the `MCSSegmentResult`.
     /// @param shouldCreateVirtualPoints A boolean tag that specifies whether or not virtual points should be created with the segments, forcing the segments to be 14-cm.
-    /// @see trkf::MCSSegmentCalculator::GetResult(const std::vector<Point_t> points, const Bool_t shouldCreateVirtualPoints) const
+    /// @see GetResult(const std::vector<Point_t> points, const Bool_t shouldCreateVirtualPoints) const
     MCSSegmentResult GetResult(const simb::MCTrajectory trajectory, const Bool_t shouldCreateVirtualPoints) const;
 
     /// Retrieve an `MCSSegmentResult` using a `simb::MCParticle`.
@@ -186,7 +186,7 @@ namespace trkf {
        Retrieve an `MCSSegmentResult` using a `recob::Track`.
        @param track The track to use to create the `MCSSegmentResult`
        @param shouldCreateVirtualPoints A boolean tag that specifies whether or not virtual points should be created with the segments, forcing the segments to be 14-cm.
-       @see MCSSegmentResult GetResult(const recob::TrackTrajectory trackTrajectory, const Bool_t shouldCreateVirtualPoints) const 
+       @see GetResult(const recob::TrackTrajectory trackTrajectory, const Bool_t shouldCreateVirtualPoints) const 
      */
     inline MCSSegmentResult GetResult(const recob::Track track, const Bool_t shouldCreateVirtualPoints) const {
       return GetResult(track.Trajectory(), shouldCreateVirtualPoints);
@@ -234,7 +234,7 @@ namespace trkf {
        
        @todo Should the details of the various segment defintions be outlined here?
        @todo Document the relative lengths of vectors.
-       @todo Consider moving to lardataobj instead of larreco, as was done in the TrajectoryMCSFitter
+       @todo Consider moving to lardataobj instead of larreco, as was done in the `TrajectoryMCSFitter`
      */
     struct MCSSegmentResult {
     public:
