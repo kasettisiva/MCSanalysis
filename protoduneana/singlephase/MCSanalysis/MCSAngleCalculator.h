@@ -164,7 +164,6 @@ namespace trkf {
        
        @brief A container for angle information, including the parsed vectors and segment lengths.  Depending on the segmentMethod that was given in the appropriate `GetResult` method, the appropriate segment vectors/segment lengths will be retrieved from an `MCSSegmentResult`.
        
-       @todo 
        @todo Consider moving to lardataobj instead of larreco, as was done in the `TrajectoryMCSFitter`
        @todo Document the relative lengths of vectors.
        @todo Should the lengths just be stored in the length of vectors?
