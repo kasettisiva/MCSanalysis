@@ -32,7 +32,7 @@ physics:
     comparemcsanalyzer: {
 
 	module_type:	"CompareMCSAnalyzer"
-    	TrackModuleLabel: "pandoraKalmanTrack"
+    	TrackModuleLabel: "pandoraTrack"
 	ShouldCreateVirtualPoints: true
 
 	trajectorymcsfitter: {

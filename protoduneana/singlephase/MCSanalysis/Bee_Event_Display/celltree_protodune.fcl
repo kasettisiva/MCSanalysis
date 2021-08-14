@@ -38,8 +38,7 @@ physics:
 
 physics.analyzers.wirecell.nRawSamples : 6000
 physics.analyzers.wirecell.saveJSON : true
-#physics.analyzers.wirecell.SpacePointLabels : ["truthDepo", "PandoraTrack", "PandoraKalmanTrack"]
-physics.analyzers.wirecell.SpacePointLabels : ["pandora", "pandoraKalmanTrack"]
+physics.analyzers.wirecell.SpacePointLabels : ["pandora", "reco3d"]
 physics.analyzers.wirecell.saveMC : true
 
 services.BackTrackerService.BackTracker.SimChanncelModuleLabel: "tpcrawdecoder:simpleSC"
