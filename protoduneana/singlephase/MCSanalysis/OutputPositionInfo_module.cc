@@ -74,7 +74,9 @@ public:
 
   // Other Functions
   template<typename Vector1, typename Vector2> Double_t distanceBetween(Vector1 vector1, Vector2 vector2) const;
-  template<typename Point> Bool_t inDetector(Point point);
+  template<typename Point> Bool_t inDetector(Point point) const;
+  TVector3 startingPositionFor(simb::MCParticle particle) const;
+
 
 private:
   // Retrieved from fhicl parameters
@@ -111,6 +113,17 @@ private:
 
   std::ofstream recoPosStream;
   // #####################################################
+
+  // Comparing True and Reco Vertex Differences
+  TH1F* vertexDeltaX_HIST;
+  TH1F* vertexDeltaY_HIST;
+  TH1F* vertexDeltaZ_HIST;
+  TH1F* vertexDelta3D_HIST;
+
+  TH1F* firstSegmentEndDeltaX_HIST;
+  TH1F* firstSegmentEndDeltaY_HIST;
+  TH1F* firstSegmentEndDeltaZ_HIST;
+  TH1F* firstSegmentEndDelta3D_HIST;
 };
 
 OutputPositionInfo::OutputPositionInfo(art::EDAnalyzer::Table<OutputPositionInfo::Config> const & t) :
@@ -181,8 +194,50 @@ void OutputPositionInfo::analyze(art::Event const & e) {
   std::cout << "Number of Tracks: " << nTracks << std::endl;
   for(size_t iTrack = 0; iTrack < nTracks; iTrack++) {
     art::Ptr<recob::Track> track = trackList.at(iTrack);
+    simb::MCParticle particle = backtracker.getMCParticle(track, e, fTrackModuleLabel.label());
+
     // Only run this analysis if the track length is greater than 100 cm
     if(track->Length() >= 100) {
+
+      // Get a reco segment result, not creating virtual points.
+      MCSSegmentResult recoSegmentResult = fSegmentCalculator.GetResult(*track, false);
+      std::vector<Segment_t> recoSegment_vec = recoSegmentResult.GetSegment_vec();
+      std::vector<Float_t> recoRawSegmentLength_vec = recoSegmentResult.GetRawSegmentLength_vec();
+
+      // Get a true segment result, not creaint virutal points
+      MCSSegmentResult trueSegmentResult = fSegmentCalculator.GetResult(particle, false);
+      std::vector<Segment_t> trueSegment_vec = trueSegmentResult.GetSegment_vec();
+      std::vector<Float_t> trueRawSegmentLength_vec = trueSegmentResult.GetRawSegmentLength_vec();
+
+      // Get the true and reco vertex
+      recob::tracking::Point_t recoVertex = recoSegment_vec.at(0).front().underlying();
+      recob::tracking::Point_t trueVertex = trueSegment_vec.at(0).front().underlying();
+
+      // Calculate the differences between the true and reco vertices (Difference between the start of the first true and reco segments).
+      recob::tracking::Vector_t vertexDifference = recoVertex - trueVertex;
+
+      // Plot the directional differences.
+      vertexDeltaX_HIST->Fill(vertexDifference.X());
+      vertexDeltaY_HIST->Fill(vertexDifference.Y());
+      vertexDeltaZ_HIST->Fill(vertexDifference.Z());
+      vertexDelta3D_HIST->Fill(sqrt(vertexDifference.Mag2()));
+
+      // Optionally check if the 3D vertex difference is less than 1 cm. (with an override)
+      Bool_t override = false;
+      if(vertexDifference.Mag2() < 1 || override) {
+	// Compare the last points in the first reco and true segments.
+	recob::tracking::Point_t recoFirstSegmentEnd = recoSegment_vec.at(0).back().underlying();
+	recob::tracking::Point_t trueFirstSegmentEnd = trueSegment_vec.at(0).back().underlying();
+
+	// Calculate the differences between the end of the first true and reco segment.
+	recob::tracking::Vector_t firstSegmentEndDifference = recoFirstSegmentEnd - trueFirstSegmentEnd;
+
+	// Plot diretional differences.
+	firstSegmentEndDeltaX_HIST->Fill(firstSegmentEndDifference.X());
+	firstSegmentEndDeltaY_HIST->Fill(firstSegmentEndDifference.Y());
+	firstSegmentEndDeltaZ_HIST->Fill(firstSegmentEndDifference.Z());
+	firstSegmentEndDelta3D_HIST->Fill(sqrt(firstSegmentEndDifference.Mag2()));
+      } // if vertexDifference.Mag2() < 1
 
       for(size_t i = 0; i < track->NumberTrajectoryPoints(); ++i) {
 	// Output position info to XvsZ & YvsZ histograms.
@@ -200,11 +255,6 @@ void OutputPositionInfo::analyze(art::Event const & e) {
 			<< std::endl;
 	} // if the fhicl parameter specifies that the position info should be written to a file
       } // for i
-
-      // Get a reco segment result, not creating virtual points.
-      MCSSegmentResult recoSegmentResult = fSegmentCalculator.GetResult(*track, false);
-      std::vector<Segment_t> recoSegment_vec = recoSegmentResult.GetSegment_vec();
-      std::vector<Float_t> recoRawSegmentLength_vec = recoSegmentResult.GetRawSegmentLength_vec();
 
       // Loop through the segments, print the number of points in a segment.
       for(size_t i = 0; i < recoRawSegmentLength_vec.size(); ++i) {
@@ -290,6 +340,16 @@ void OutputPositionInfo::beginJob() {
 
   // ########################################################################
   // END Reco Data
+
+  vertexDeltaX_HIST = tfs->make<TH1F>("vertexDeltaX_HIST", "True/Reco Vertex Delta X; Delta X (cm); Hist Counts", 500, 0, 50);
+  vertexDeltaY_HIST = tfs->make<TH1F>("vertexDeltaY_HIST", "True/Reco Vertex Delta Y; Delta Y (cm); Hist Counts", 500, 0, 50);
+  vertexDeltaZ_HIST = tfs->make<TH1F>("vertexDeltaZ_HIST", "True/Reco Vertex Delta Z; Delta Z (cm); Hist Counts", 500, 0, 50);
+  vertexDelta3D_HIST = tfs->make<TH1F>("vertexDelta3D_HIST", "True/Reco Vertex Delta 3D; Delta 3D (cm); Hist Counts", 500, 0, 50);
+
+  firstSegmentEndDeltaX_HIST = tfs->make<TH1F>("firstSegmentEndDeltaX_HIST", "True/Reco First Segment End Delta X; Delta X (cm); Hist Counts", 500, 0, 50);
+  firstSegmentEndDeltaY_HIST = tfs->make<TH1F>("firstSegmentEndDeltaY_HIST", "True/Reco First Segment End Delta Y; Delta Y (cm); Hist Counts", 500, 0, 50);
+  firstSegmentEndDeltaZ_HIST = tfs->make<TH1F>("firstSegmentEndDeltaZ_HIST", "True/Reco First Segment End Delta Z; Delta Z (cm); Hist Counts", 500, 0, 50);
+  firstSegmentEndDelta3D_HIST = tfs->make<TH1F>("firstSegmentEndDelta3D_HIST", "True/Reco First Segment End  Delta 3D; Delta 3D (cm); Hist Counts", 500, 0, 50);
 }
 
 void OutputPositionInfo::endJob() {
@@ -298,7 +358,7 @@ void OutputPositionInfo::endJob() {
 }
 
 template<typename Point>
-Bool_t OutputPositionInfo::inDetector(Point point) {
+Bool_t OutputPositionInfo::inDetector(Point point) const {
   return 
     point.Z() <= 700 && point.Z() >= 0 &&
     point.X() <= 300  && point.X() >= -300 &&
@@ -319,5 +379,15 @@ Double_t OutputPositionInfo::distanceBetween(Vector1 vector1, Vector2 vector2) c
   Double_t diff = sqrt(deltaX*deltaX + deltaY*deltaY + deltaZ*deltaZ);
   return diff;
 } // MCSAngleAnalysis::distanceBetween(Vector1, Vector2)
+
+// Returns the first point in the detector for the specified MCParticle
+TVector3 OutputPositionInfo::startingPositionFor(simb::MCParticle particle) const {
+  for(size_t i = 0; i < particle.NumberTrajectoryPoints(); ++i) {
+    if(inDetector(particle.Position(i)))
+      return particle.Position(i).Vect();
+  }
+
+  return TVector3(-999,-999,-999);
+}
 
 DEFINE_ART_MODULE(OutputPositionInfo)

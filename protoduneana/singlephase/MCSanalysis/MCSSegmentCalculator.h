@@ -14,6 +14,10 @@
 #include "lardataobj/RecoBase/Trajectory.h"
 #include "lardataobj/RecoBase/TrackingTypes.h"
 
+// LArSoft Includes for SCE offset
+#include "larevt/SpaceChargeServices/SpaceChargeService.h"
+#include "larcore/Geometry/Geometry.h"
+
 // C++ Includes
 #include <iostream>
 
@@ -24,7 +28,9 @@ namespace trkf {
      @class trkf::MCSSegmentCalculator MCSSegmentCalculator.h "protoduneana/singlephase/MCSanalysis/MCSSegmentCalculator.h"
      @brief A calculator that will generate segments of a true or reconstructed trajectory.
      
-     For the fhicl configuration, see `trkf::MCSSegmentCalculator::Config`
+     SCE corrections will be made for reconstructed tracks if `services.SpaceCharge.EnableCalSpatialSCE` is set to true in the fhicl configuration.
+     
+     For the fhicl configuration, see `trkf::MCSSegmentCalculator::Config`.
      
      @todo Move to `larreco/RecoAlg/MCSSegmentCalculator.h` and update documentation.
      @todo For helper functions, consider making static functions, or moving to an MCSUtilities class/struct?  Or possibly in `protoduneana/Utilities/`?
@@ -115,7 +121,7 @@ namespace trkf {
 
       fhicl::Atom<Float_t> segmentLength { Name("segmentLength"), Comment("Length of raw segments that the trajectory will be broken into. (cm)"), 14.0 };
     }; // struct Config
-
+    
     // Public Constructors
     /// Default Constructor, using an empty `fhicl::ParameterSet` for the fhicl configuration, leading to default values being used in `trkf::MCSSegmentCalculator::Config`
     explicit MCSSegmentCalculator() :
@@ -128,9 +134,11 @@ namespace trkf {
 			   )
     {}
     /// Constructor where you can pass each parameter in `trkf::MCSSegmentCalculator::Config` explicitly.
-    /// @param segmentLength The length of each raw-segment. See `trkf::MCSSegmentCalculator::CreateSegments`
+    /// @param segmentLength The length of each raw-segment. See `trkf::MCSSegmentCalculator::CreateSegments`.
     explicit MCSSegmentCalculator(const Float_t segmentLength) :
-      fSegmentLength(segmentLength)
+      fSegmentLength(segmentLength),
+      fSCE(lar::providerFrom<spacecharge::SpaceChargeService>()),
+      fGeom(art::ServiceHandle<geo::Geometry const>())
     {}
 
     // Public Methods
@@ -160,14 +168,51 @@ namespace trkf {
     /// Retrieve an `MCSSegmentResult` using a `recob::Trajectory`.
     /// 
     /// @details A vector of Points will be created by looping through `trajectory.Positions()`, each with an invalid momentum.
+    /// SCE corrections are made if `services.SpaceCharge.EnableCalSpatialSCE` is set to true in the fhicl configuration.
+    /// 
+    /// @todo Delete commented out code.  Currently kept for if it is needed.
     /// 
     /// @param trajectory The trajectory used to create the `MCSSegmentResult`.
     /// @param shouldCreateVirtualPoints A boolean tag that specifies whether or not virtual points should be created with the segments, forcing the segments to be 14-cm.
     /// @see GetResult(const std::vector<Point_t> points, const Bool_t shouldCreateVirtualPoints)
     inline MCSSegmentResult GetResult(const recob::Trajectory trajectory, const Bool_t shouldCreateVirtualPoints) const {
+
       std::vector<Point_t> points;
-      for(recob::tracking::Point_t position: trajectory.Positions())
+
+      for(recob::tracking::Point_t position: trajectory.Positions()) {
+
+	// This should not be required, as if this was false, then an offset of 0 is used.  I've included this conditional it for clarity.
+	if(fSCE->EnableCalSpatialSCE()) {
+
+	  // private members fGeom & fSCE set in constructor.
+	  // spacecharge::SpaceCharge const* SCE = lar::providerFrom<spacecharge::SpaceChargeService>();
+	  // art::ServiceHandle<geo::Geometry const> geom;
+
+	  geo::Point_t point = convert<recob::tracking::Point_t, geo::Point_t>(position);
+	
+	  auto tpc = fGeom->FindTPCAtPosition(point).TPC;
+	  geo::Vector_t offset = fSCE->GetCalPosOffsets(point, tpc);
+
+	  Double_t xOffset = -offset.X(); // not sure why this is negative.
+	  Double_t yOffset = offset.Y();
+	  Double_t zOffset = offset.Z();
+
+	  /*
+	    std::cout << std::endl;
+	    std::cout << "Point = (" << point.X() << ", " << point.Y() << ", " << point.Z() << ")" << std::endl;
+	    std::cout << "TPC = " << tpc << std::endl;
+	    std::cout << "SCE Offset = (" << xOffset << ", " << yOffset << ", " << zOffset << ")" << std::endl;
+	  // */
+
+	  position.SetX(position.X() + xOffset);
+	  position.SetY(position.Y() + yOffset);
+	  position.SetZ(position.Z() + zOffset);
+
+	} // if SCE corrections should be applied
+
 	points.push_back(Point_t(position));
+      }
+
       return GetResult(points, shouldCreateVirtualPoints);
     }
 
@@ -235,6 +280,7 @@ namespace trkf {
        @todo Should the details of the various segment defintions be outlined here?
        @todo Document the relative lengths of vectors.
        @todo Consider moving to lardataobj instead of larreco, as was done in the `TrajectoryMCSFitter`
+       @todo Specify whether or not SCE corrections were applied.
      */
     struct MCSSegmentResult {
     public:
@@ -292,7 +338,10 @@ namespace trkf {
     }; // struct MCSSegmentResult
 
   private:
-    Float_t fSegmentLength; /// The length to use for segments, set during construction.
+    // Set in constructor.
+    const Float_t fSegmentLength; /// The length to use for segments, set during construction.
+    const spacecharge::SpaceCharge* fSCE;
+    const art::ServiceHandle<geo::Geometry const> fGeom;
 
     // Private Set Functions
 

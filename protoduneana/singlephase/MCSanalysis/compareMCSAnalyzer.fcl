@@ -78,4 +78,4 @@ physics:
 }
 
 ### Here, we overwrite ALL module Labels with the ones defined above.
-services.BackTrackerService.BackTracker.SimChannelModuleLabel: "tpcrawdecoder:simpleSC"
+services.SpaceCharge.EnableCalSpatialSCE: true

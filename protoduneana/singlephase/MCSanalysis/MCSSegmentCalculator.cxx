@@ -82,6 +82,9 @@ std::vector<Segment_t> MCSSegmentCalculator::CreateSegment_vec(const std::vector
 
   Segment_t currSegment;
   
+  // Add the first point to the first segment.
+  currSegment.push_back(points.front());
+
   // Loop through the trajectory points
   for(size_t i = 1; i < points.size(); ++i) {
     // Define the current and previous trajectory point.
@@ -147,7 +150,7 @@ std::vector<Segment_t> MCSSegmentCalculator::CreateSegment_vec(const std::vector
 	currSegment.push_back(currPoint);
 	currLength = 0;
 	/* Temporary removal for testing purposes.
-	// With this commented out, it's the same as the previous segmentation methods, though that was actually wrong.
+	// With this commented out, it's the same as the previous segmentation methods, though I think that may have  actually been wrong.
 	if(currSegment.size() == 1) {
 	  // Add the current point to the current segment.
 	  currSegment.push_back(currPoint);

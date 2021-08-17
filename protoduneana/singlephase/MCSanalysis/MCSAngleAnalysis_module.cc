@@ -438,7 +438,7 @@ void MCSAngleAnalysis::analyze(art::Event const & e) {
       reco_vertexDifference_HIST->Fill(vertexDifference);
 
       // Only run for events with the same number of segments.
-      if(vertexDifference < 1.0) {
+      // if(vertexDifference < 1.0) {
 	// ========================================================================
 	// Direct Comparison Analysis across many segments
 	// Only possible if they're the same size (same # of segments)
@@ -531,8 +531,8 @@ void MCSAngleAnalysis::analyze(art::Event const & e) {
 	// Optionally reset the number of segments to some value to just look at the first couple of segments.
 	// Set to 0 to not add any additional segments to the first segment angles histograms
 	// TODO: Consider making this a fhicl parameter.
-	numberOfTrueSegmentsToIncludeInFirst = 1;
-	numberOfRecoSegmentsToIncludeInFirst = 1;
+	numberOfTrueSegmentsToIncludeInFirst = 0;
+	numberOfRecoSegmentsToIncludeInFirst = 0;
 
 	// Calculate the inital true momentum
 	Double_t initialTrueMomentum = trueSegmentResult.GetMomentumForSegment(0);
@@ -681,10 +681,10 @@ void MCSAngleAnalysis::analyze(art::Event const & e) {
 	// TODO: Plot reco BB momentum vs. true momentum of true point with closest Z to the reco point
 	// TODO: Plot true BB momentum vs. true momentum of true point
 
-      } // if nTracks == 1
-      else {
-	counter++;
-      }
+	// } // if vertexDifference < 1
+      // else {
+      // 	counter++;
+      // }
     } // if length > 100
   } // for iTrack
 } // analyze function

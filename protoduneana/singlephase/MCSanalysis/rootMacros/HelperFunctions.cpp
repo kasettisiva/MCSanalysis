@@ -76,6 +76,8 @@ TGraphErrors* GetSigmaGraph(TH2F* hist2D, const char* name, const char* title) {
     Int_t count = 0;
     // Loop through ybins for this x-bin to fill the 1D histogram
     for(Int_t yBin = 0; yBin < nYbins; ++yBin) {
+      // Must use SetBinContent, not Fill, as that is how weights are supposed to be used according to Tom Junk.
+
       // Double_t y = yAxis->GetBinCenter(yBin);
       Double_t weight = hist2D->GetBinContent(xBin, yBin);
       // Double_t binError = hist2D->GetBinError(xBin, yBin);

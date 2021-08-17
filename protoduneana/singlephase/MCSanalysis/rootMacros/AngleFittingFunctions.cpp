@@ -40,10 +40,10 @@ TF1* GetSigma_function(const  char* name, Double_t fitMin, Double_t fitMax) {
   sigma_function->SetLineColor(kGreen);
 
   // Set Parameter Names
-  sigma_function->SetParName(0, "kappa_a");
-  sigma_function->SetParName(1, "kappa_c");
-  sigma_function->SetParName(2, "sigma_RES");
-  sigma_function->SetParName(3, "gamma_3D");
+  sigma_function->SetParName(0, "kappa_a"); // Used in modified highland formula (true angles)
+  sigma_function->SetParName(1, "kappa_c"); // Used in modified highland formula (true angles)
+  sigma_function->SetParName(2, "sigma_RES"); // Used for angular resolution (reco angles)
+  sigma_function->SetParName(3, "gamma_3D"); // Used for converting to 3D angle fits (3D angles, true or reco)
 
   // Set Initial Parameters, using kappa_a & kappa_c from MicroBooNE, sigmaRES = 3 (MicroBooNE), & gamma_3D = 0.8525 (typical conversion for Half-Gaussian distribution).
   // These correspond to estimates of parameters that would show up for reco3D angles distributions.

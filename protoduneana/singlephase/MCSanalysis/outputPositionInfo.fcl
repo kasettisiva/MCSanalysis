@@ -50,3 +50,4 @@ physics:
 }
 
 ### Here, we overwrite ALL module Labels with the ones defined above.
+services.SpaceCharge.EnableCalSpatialSCE: true

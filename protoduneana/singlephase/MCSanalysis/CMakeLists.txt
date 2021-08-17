@@ -26,6 +26,7 @@ LIB_LIBRARIES
 	# LArSoft reco
 	lardataobj_RecoBase
 	larreco_RecoAlg
+	larcorealg_Geometry
 
 	# LArSoft Truth
 	nusimdata_SimulationBase
