@@ -12,8 +12,10 @@
 TLegend* GetSigma_LEGEND(TFitResultPtr sigma_fit, const char* options) {
   // Define legend
   TLegend* legend = new TLegend(0.5, 0.55, 0.9, 0.9);
+  //TLegend* legend = new TLegend(0.6, 0.55, 0.9, 0.9);
   legend->SetHeader("Fit Parameters", "C");
   legend->SetTextSize(0.035);
+  legend->SetMargin(0.05);
 
   // Define Legend Entry stringstreams
   std::stringstream kappa_a;
@@ -105,13 +107,13 @@ void plotAndSave_MCSMomentumVsTrueMomentum(TH2F* hist, const char* namePrefix, c
   hist->GetXaxis()->SetRangeUser(0, 6.1);
   hist->GetYaxis()->SetRangeUser(0, 6.1);
   hist->SetStats(0);
-  hist->Draw("box");
+  hist->Draw();
   TLine* line = new TLine(0, 0, 6, 6);
   line->SetLineColor(kRed);
   line->Draw("same");
 
   std::stringstream fileName_ss;
-  fileName_ss << filePrefix << namePrefix << "_MCSMomentumVsTrueMomentum.png";
+  fileName_ss << filePrefix << namePrefix << "_MCSMomentumVsTrueMomentum.C";
 
   canvas->SaveAs(fileName_ss.str().c_str());
 }
@@ -182,6 +184,8 @@ void plotAndSave_sigmaHL_sigmaRMS_overlay(TGraphErrors* sigmaHL_GRAPH, TF1* sigm
   // Draw graph and fit-functions
   multiGraph->Draw("AP");
   sigmaHL_FUNC->Draw("same");
+  //sigmaRMS_FUNC->SetLineStyle(6);
+  sigmaRMS_FUNC->SetLineColor(kRed);
   sigmaRMS_FUNC->Draw("same");
 
   TLegend* legend = new TLegend(0.7, 0.7, 0.9, 0.9);
